@@ -1,0 +1,65 @@
+# Python build / cache artefacts
+__pycache__
+**/__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.coverage
+.coverage.*
+htmlcov
+coverage.xml
+*.cover
+.hypothesis
+
+# Virtual environments
+.venv
+venv
+env
+.env
+.env.*
+!.env.example
+
+# Tests are not needed in the runtime image
+tests
+**/tests
+
+# Editor / IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Build artefacts
+build
+dist
+*.egg-info
+.eggs
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docs / docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+README*.md
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+
+# Logs
+*.log
+logs
+
+# Alembic local artefacts (versions are mounted/copied separately)
+alembic/__pycache__
