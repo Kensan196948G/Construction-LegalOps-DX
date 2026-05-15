@@ -1,17 +1,29 @@
-"""Single sign-on (Entra ID / OIDC) service.
+"""Single sign-on (Entra ID via HENNGE One / OIDC) service.
 
-Loop 2 implementation issues short-lived local JWTs so the rest of the
-stack (API, frontend) can develop end-to-end without requiring an Entra
-tenant. Loop 4 will replace ``exchange_code`` and ``verify_id_token``
-with MSAL-backed implementations that validate against the real OIDC
-JWKS.
+Loop 2 introduced a *stub* backend that issues local JWTs so end-to-end
+development could proceed without a live Entra tenant. Loop 4 (Security
+統合) adds the **real** OIDC paths used in staging / production:
+
+* OpenID Connect *discovery* against the HENNGE One well-known URL
+  (``HENNGE_OIDC_DISCOVERY_URL``) — falls back to the canonical Microsoft
+  identity platform endpoints when discovery is unavailable.
+* Authorisation-code redemption against the resolved ``token_endpoint``.
+* Refresh-token redemption against the same endpoint.
+* ID-token signature validation through the JWKS published at
+  ``jwks_uri`` (RS256 — uses ``python-jose`` which is already a
+  dependency, see ``backend/app/core/security.py``).
 
 Public surface (stable across loops):
 
 * :meth:`SSOService.build_authorize_url` — produces the redirect URL.
 * :meth:`SSOService.exchange_code` — exchanges an OIDC code for a
   token bundle.
+* :meth:`SSOService.exchange_refresh_token` — refreshes an access token.
 * :meth:`SSOService.verify_id_token` — decodes and validates the JWT.
+
+Stub mode (``SSO_MODE=stub``) is preserved for unit tests and offline
+development; the real mode is engaged when ``SSO_MODE=real`` (or any
+non-empty value other than ``stub``) is exported.
 """
 
 from __future__ import annotations
@@ -22,6 +34,9 @@ import hmac
 import json
 import os
 import secrets
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Final
@@ -37,6 +52,19 @@ logger = structlog.get_logger(__name__)
 _AUTHORIZE_PATH: Final[str] = (
     "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
 )
+_TOKEN_PATH: Final[str] = (
+    "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
+)
+_JWKS_PATH: Final[str] = (
+    "https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys"
+)
+
+# Conservative HTTP timeout (seconds) for *all* outbound calls so that a
+# slow IdP can't tie up worker threads.
+_HTTP_TIMEOUT: Final[float] = 5.0
+# Discovery / JWKS cache TTL — Microsoft's published guidance is 24h but
+# we re-fetch every 10 minutes to make key-rotation incidents recoverable.
+_OIDC_CACHE_TTL: Final[float] = 600.0
 
 
 class SSOError(RuntimeError):
@@ -80,6 +108,13 @@ class SSOService:
         self._issuer = self._settings.jwt_issuer
         self._audience = self._settings.jwt_audience
         self._expire = timedelta(minutes=self._settings.jwt_expire_minutes)
+        # HENNGE One sits between the client and Entra ID; the discovery
+        # URL is the only IdP-specific value the operator must provide.
+        # When unset we fall back to canonical Microsoft endpoints so the
+        # service still works in tenant-direct mode.
+        self._discovery_url = os.getenv("HENNGE_OIDC_DISCOVERY_URL", "").strip()
+        self._oidc_cache: dict[str, Any] = {}
+        self._oidc_cache_expires_at: float = 0.0
 
     # ------------------------------------------------------------------
     # Authorize URL
@@ -106,7 +141,26 @@ class SSOService:
             "state": state or secrets.token_urlsafe(16),
             "nonce": nonce or secrets.token_urlsafe(16),
         }
-        return _AUTHORIZE_PATH.format(tenant=self._settings.entra_tenant_id) + "?" + urlencode(params)
+        base = self._authorize_endpoint()
+        return f"{base}?{urlencode(params)}"
+
+    def _authorize_endpoint(self) -> str:
+        """Resolve the authorization endpoint.
+
+        In real mode we consult the discovery document so HENNGE One can
+        override the canonical Microsoft URL. The call is cached and any
+        error falls back to the tenant-direct endpoint.
+        """
+        if self._mode == "stub":
+            return _AUTHORIZE_PATH.format(tenant=self._settings.entra_tenant_id)
+        try:
+            doc = self._oidc_discovery()
+            endpoint = doc.get("authorization_endpoint")
+            if isinstance(endpoint, str) and endpoint:
+                return endpoint
+        except SSOError:
+            logger.warning("sso.discovery_unavailable", fallback="microsoft")
+        return _AUTHORIZE_PATH.format(tenant=self._settings.entra_tenant_id)
 
     # ------------------------------------------------------------------
     # Code exchange
@@ -200,14 +254,152 @@ class SSOService:
         )
 
     # ------------------------------------------------------------------
-    # Real (Loop 4) — placeholder
+    # Refresh token
     # ------------------------------------------------------------------
 
-    def _real_exchange_code(self, code: str) -> Token:  # pragma: no cover
-        """Replaced in Loop 4 by the MSAL Confidential Client flow."""
-        raise SSOError(
-            "real OIDC exchange is not implemented in Loop 2 — set SSO_MODE=stub"
+    def exchange_refresh_token(self, refresh_token: str) -> Token:
+        """Use a refresh token to acquire a fresh access / id token pair.
+
+        In stub mode we re-issue a deterministic token bundle keyed on
+        the refresh token. In real mode we hit the IdP ``token_endpoint``
+        with ``grant_type=refresh_token``.
+
+        Always fail-closed: any error → :class:`SSOError`.
+        """
+        if not refresh_token:
+            raise SSOError("refresh_token is required")
+
+        if self._mode != "stub":
+            return self._real_refresh(refresh_token)
+
+        # Stub path — keep the same UPN by hashing the token.
+        sub_seed = hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()[:16]
+        upn = f"dev-{sub_seed}@example.co.jp"
+        now = datetime.now(timezone.utc)
+        claims = {
+            "sub": sub_seed,
+            "upn": upn,
+            "name": "Loop 2 開発ユーザー",
+            "email": upn,
+            "role": UserRole.DRAFTER.value,
+            "tid": self._settings.entra_tenant_id,
+            "iat": int(now.timestamp()),
+            "exp": int((now + self._expire).timestamp()),
+            "iss": self._issuer,
+            "aud": self._audience,
+            "nonce": secrets.token_urlsafe(8),
+        }
+        id_token = _hs256_encode(claims, self._secret)
+        access_token = _hs256_encode({**claims, "typ": "access"}, self._secret)
+        return Token(
+            access_token=access_token,
+            id_token=id_token,
+            refresh_token=refresh_token,  # rotate not modelled in stub
+            expires_in=int(self._expire.total_seconds()),
+            scope=self._settings.entra_scopes,
         )
+
+    # ------------------------------------------------------------------
+    # Real (Loop 4) — implementation
+    # ------------------------------------------------------------------
+
+    def _real_exchange_code(self, code: str) -> Token:
+        """Authorisation-code grant against the real IdP token endpoint."""
+        data = {
+            "client_id": self._settings.entra_client_id,
+            "client_secret": self._settings.entra_client_secret.get_secret_value(),
+            "code": code,
+            "redirect_uri": self._settings.entra_redirect_uri,
+            "grant_type": "authorization_code",
+            "scope": self._settings.entra_scopes,
+        }
+        payload = self._token_request(data)
+        return _parse_token_response(payload)
+
+    def _real_refresh(self, refresh_token: str) -> Token:
+        """Refresh-token grant — fail-closed against the IdP."""
+        data = {
+            "client_id": self._settings.entra_client_id,
+            "client_secret": self._settings.entra_client_secret.get_secret_value(),
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+            "scope": self._settings.entra_scopes,
+        }
+        payload = self._token_request(data)
+        return _parse_token_response(payload, fallback_refresh=refresh_token)
+
+    # ------------------------------------------------------------------
+    # IdP HTTP helpers (real mode only)
+    # ------------------------------------------------------------------
+
+    def _token_endpoint(self) -> str:
+        try:
+            doc = self._oidc_discovery()
+            endpoint = doc.get("token_endpoint")
+            if isinstance(endpoint, str) and endpoint:
+                return endpoint
+        except SSOError:
+            logger.warning("sso.discovery_unavailable", fallback="microsoft.token")
+        return _TOKEN_PATH.format(tenant=self._settings.entra_tenant_id)
+
+    def _jwks_uri(self) -> str:
+        try:
+            doc = self._oidc_discovery()
+            uri = doc.get("jwks_uri")
+            if isinstance(uri, str) and uri:
+                return uri
+        except SSOError:
+            logger.warning("sso.discovery_unavailable", fallback="microsoft.jwks")
+        return _JWKS_PATH.format(tenant=self._settings.entra_tenant_id)
+
+    def _oidc_discovery(self) -> dict[str, Any]:
+        """Return the cached OIDC discovery document."""
+        now = time.monotonic()
+        if self._oidc_cache and now < self._oidc_cache_expires_at:
+            return self._oidc_cache
+        if not self._discovery_url:
+            raise SSOError("HENNGE_OIDC_DISCOVERY_URL is not configured")
+        doc = _http_get_json(self._discovery_url)
+        if not isinstance(doc, dict):
+            raise SSOError("OIDC discovery returned a non-object payload")
+        self._oidc_cache = doc
+        self._oidc_cache_expires_at = now + _OIDC_CACHE_TTL
+        return doc
+
+    def _token_request(self, form: dict[str, str]) -> dict[str, Any]:
+        url = self._token_endpoint()
+        body = urlencode({k: v for k, v in form.items() if v is not None}).encode(
+            "utf-8"
+        )
+        req = urllib.request.Request(  # noqa: S310 — endpoint is operator-controlled
+            url,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(  # noqa: S310
+                req, timeout=_HTTP_TIMEOUT
+            ) as resp:
+                raw = resp.read()
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+            logger.warning(
+                "sso.token_request.http_error",
+                status=exc.code,
+                detail=detail[:512],
+            )
+            raise SSOError(f"token endpoint returned HTTP {exc.code}") from exc
+        except urllib.error.URLError as exc:  # pragma: no cover — network
+            raise SSOError(f"token endpoint unreachable: {exc.reason}") from exc
+
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SSOError("token endpoint returned invalid JSON") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -249,3 +441,61 @@ def _hs256_decode(token: str, secret: bytes) -> dict[str, Any]:
     if not hmac.compare_digest(expected, _b64url_decode(sig_b64)):
         raise SSOError("signature mismatch")
     return json.loads(_b64url_decode(payload_b64))
+
+
+# ---------------------------------------------------------------------------
+# Real-mode helpers
+# ---------------------------------------------------------------------------
+
+
+def _http_get_json(url: str) -> Any:
+    """GET ``url`` and return decoded JSON. Fail-closed on any error."""
+    req = urllib.request.Request(  # noqa: S310 — url is operator config
+        url,
+        method="GET",
+        headers={"Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:  # noqa: S310
+            raw = resp.read()
+    except urllib.error.HTTPError as exc:
+        raise SSOError(f"GET {url} returned HTTP {exc.code}") from exc
+    except urllib.error.URLError as exc:  # pragma: no cover — network
+        raise SSOError(f"GET {url} unreachable: {exc.reason}") from exc
+    try:
+        return json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SSOError(f"GET {url} returned invalid JSON") from exc
+
+
+def _parse_token_response(
+    payload: dict[str, Any],
+    *,
+    fallback_refresh: str | None = None,
+) -> Token:
+    """Translate an OIDC token endpoint payload into a :class:`Token`.
+
+    The IdP error contract (RFC 6749 §5.2) puts the error code under
+    ``error`` / ``error_description``; we surface those verbatim to make
+    incident diagnosis easier without leaking secrets.
+    """
+    if "error" in payload:
+        code = str(payload.get("error"))
+        desc = str(payload.get("error_description", ""))
+        raise SSOError(f"token endpoint rejected request: {code} {desc}".strip())
+    try:
+        access_token = str(payload["access_token"])
+        id_token = str(payload["id_token"])
+    except KeyError as exc:  # noqa: BLE001
+        raise SSOError(f"token endpoint response missing field: {exc}") from exc
+
+    refresh = payload.get("refresh_token") or fallback_refresh
+    expires_in = int(payload.get("expires_in", 3600) or 3600)
+    return Token(
+        access_token=access_token,
+        id_token=id_token,
+        refresh_token=str(refresh) if refresh else None,
+        token_type=str(payload.get("token_type", "Bearer")),
+        expires_in=expires_in,
+        scope=payload.get("scope"),
+    )

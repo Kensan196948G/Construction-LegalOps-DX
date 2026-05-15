@@ -1,19 +1,42 @@
 # ============================================================
-# Construction-LegalOps-DX docker-compose
-# Loop 1: サービス枠の定義のみ。各 Dockerfile / 実装は Loop 2 以降。
+# Construction-LegalOps-DX docker-compose (base)
+# Loop 4: Redis / Celery 追加・全 healthcheck・non-root・profile 分割
+#
+# Profiles:
+#   - default (none specified): postgres / redis / backend / frontend / nginx
+#   - worker : celery-worker / celery-beat (`--profile worker`)
+#   - tools  : 補助 (init-db 等)        (`--profile tools`)
+#
+# 本番設定は `docker-compose.prod.yml` をオーバーレイで適用すること。
+#   例: docker compose -f infra/docker/docker-compose.yml \
+#                      -f infra/docker/docker-compose.prod.yml up -d
 # ============================================================
 name: construction-legalops-dx
 
+x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-development}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  TZ: ${TZ:-Asia/Tokyo}
+
+x-restart: &restart
+  restart: unless-stopped
+
 services:
+  # ----------------------------------------------------------
+  # PostgreSQL 16
+  # ----------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: legalops-postgres
-    restart: unless-stopped
+    <<: *restart
+    # 公式 postgres image は USER=postgres (uid 70) で動作。non-root を確保。
+    user: "70:70"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-legalops}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-legalops_dev}
       POSTGRES_DB: ${POSTGRES_DB:-legalops}
       TZ: ${TZ:-Asia/Tokyo}
+      PGTZ: ${TZ:-Asia/Tokyo}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -23,69 +46,227 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - legalops-net
+    security_opt:
+      - no-new-privileges:true
 
+  # ----------------------------------------------------------
+  # Redis 7 (cache + Celery broker/result backend)
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: legalops-redis
+    <<: *restart
+    user: "999:1000"  # redis (uid 999, gid 1000) — 公式イメージ既定
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "allkeys-lru"]
+    environment:
+      TZ: ${TZ:-Asia/Tokyo}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+
+  # ----------------------------------------------------------
+  # Backend (FastAPI)
+  # ----------------------------------------------------------
   backend:
-    # Loop 2 以降で backend/Dockerfile を追加
     build:
       context: ../../backend
       dockerfile: Dockerfile
     image: construction-legalops-dx/backend:dev
     container_name: legalops-backend
-    restart: unless-stopped
+    <<: *restart
+    # backend/Dockerfile 側で USER appuser (uid 10001) を想定
+    user: "10001:10001"
     env_file:
       - ../../.env
     environment:
-      APP_ENV: ${APP_ENV:-development}
+      <<: *app-env
       DB_URL: ${DB_URL:-postgresql+asyncpg://legalops:legalops_dev@postgres:5432/legalops}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
       BACKEND_PORT: ${BACKEND_PORT:-8000}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # FastAPI 側の /healthz エンドポイントを叩く (Loop 2 backend 実装と整合)
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz',timeout=3).status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - legalops-net
+    security_opt:
+      - no-new-privileges:true
 
+  # ----------------------------------------------------------
+  # Celery worker (非同期ジョブ: 契約書解析 / SharePoint sync 等)
+  # `--profile worker` で起動
+  # ----------------------------------------------------------
+  celery-worker:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: construction-legalops-dx/backend:dev
+    container_name: legalops-celery-worker
+    <<: *restart
+    user: "10001:10001"
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
+    env_file:
+      - ../../.env
+    environment:
+      <<: *app-env
+      DB_URL: ${DB_URL:-postgresql+asyncpg://legalops:legalops_dev@postgres:5432/legalops}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["worker"]
+
+  # ----------------------------------------------------------
+  # Celery beat (定時バッチ: 監査ログローテーション等)
+  # ----------------------------------------------------------
+  celery-beat:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: construction-legalops-dx/backend:dev
+    container_name: legalops-celery-beat
+    <<: *restart
+    user: "10001:10001"
+    command: ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
+    env_file:
+      - ../../.env
+    environment:
+      <<: *app-env
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # beat はプロセス存在確認のみ
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["worker"]
+
+  # ----------------------------------------------------------
+  # Frontend (Next.js 15 / standalone)
+  # ----------------------------------------------------------
   frontend:
-    # Loop 2 以降で frontend/Dockerfile を追加
     build:
       context: ../../frontend
       dockerfile: Dockerfile
     image: construction-legalops-dx/frontend:dev
     container_name: legalops-frontend
-    restart: unless-stopped
+    <<: *restart
+    # frontend/Dockerfile 側で USER nextjs (uid 1001) を想定
+    user: "1001:1001"
     env_file:
       - ../../.env
     environment:
+      <<: *app-env
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
       FRONTEND_PORT: ${FRONTEND_PORT:-3000}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # Next.js standalone は /api/health 等を持たないため、TCP/HTTP 200 確認
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - legalops-net
+    security_opt:
+      - no-new-privileges:true
 
+  # ----------------------------------------------------------
+  # Nginx (リバースプロキシ / TLS termination)
+  # ----------------------------------------------------------
   nginx:
     image: nginx:1.27-alpine
     container_name: legalops-nginx
-    restart: unless-stopped
+    <<: *restart
+    # 公式 nginx image は master を root で起動するが worker は nginx user (uid 101)
+    # non-root 化は本番 overlay 側で user 指定 + ポート 8080/8443 化を検討。
+    environment:
+      TZ: ${TZ:-Asia/Tokyo}
     ports:
       - "${NGINX_PORT:-80}:80"
+      - "${NGINX_TLS_PORT:-443}:443"
     volumes:
-      - ../nginx:/etc/nginx/conf.d:ro
+      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
+      # TLS 証明書 (staging: self-signed / production: Let's Encrypt をマウント)
+      - nginx-certs:/etc/nginx/certs:ro
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - legalops-net
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   pgdata:
     name: legalops-pgdata
+  redisdata:
+    name: legalops-redisdata
+  nginx-certs:
+    name: legalops-nginx-certs
 
 networks:
   legalops-net:

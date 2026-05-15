@@ -275,3 +275,68 @@
 | 版 | 日付 | 改訂者 | 内容 |
 |----|------|--------|------|
 | 1.0 | 2026-05-16 | 法務 DX チーム | 初版 |
+| 1.1 | 2026-05-16 | Loop 4 Security 統合 | 19 章 RBAC マッピング表 (security_policy ↔ api_design 整合) を追加。`backend/app/middleware/security_headers.py` `sensitive_masking.py` を新規追加。HENNGE One 経由 Entra ID OIDC の実モード (`SSOService._real_exchange_code` / `exchange_refresh_token`) を実装。フロント `auth.config.ts` の `jwt` callback で backend `/api/v1/auth/me` を必須化、`lib/auth/refresh-token.ts` を追加。 |
+
+---
+
+## 19. RBAC マッピング表 (security_policy ↔ api_design)
+
+本章は `docs/api_design.md` §17「認可マトリクス」と本文書 §16「ロール権限詳細マトリクス」のロール対応を整合させるための **正規化マッピング** を提供する。
+api_design 側のロール (`viewer / drafter / reviewer / approver / admin / auditor / guest`) は backend `app/models/enums.py::UserRole` と 1:1 で一致し、これが **DB / JWT / フロント `session.user.role` の正本** である。
+
+### 19.1 ロール名対応 (security_policy §16 ↔ enums)
+
+| security_policy §16 表記 | UserRole (enum) | 説明 |
+|--------------------------|-----------------|------|
+| admin                    | `admin`         | システム管理。RBAC・SSO・テナント設定の管理権限。 |
+| legal                    | `reviewer`      | 法務部門のレビュアー (`legal_reviewer` 相当)。契約レビュー、雛形編集、AI 推論。 |
+| legal (承認実行を伴う)     | `approver`      | 法務マネージャ。レビュー結果の承認 / 差戻し。 |
+| manager                  | `approver`      | 事業部承認者。配下契約の承認実行。 |
+| site                     | `drafter`       | 現場ユーザー (起票担当)。契約 draft / submit。 |
+| (閲覧専用)                | `viewer`        | 自部署の契約閲覧のみ。 |
+| auditor                  | `auditor`       | 監査人。監査ログ閲覧 / エクスポート (改変不可)。 |
+| (外部ゲスト)              | `guest`         | 外部閲覧 (期間限定共有リンク等)。書き込み不可。 |
+
+> 旧表記 `legal` は **レビュー実行は `reviewer`、承認は `approver`** に分離する。
+> 旧表記 `manager` は事業部承認者として `approver` に集約する。
+
+### 19.2 API エンドポイント別 RBAC (api_design §17 を正本に再掲)
+
+`o` = 許可、`-` = 拒否 (403)、`△` = 条件付き (RLS / オーナーシップ判定が追加で必要)。
+
+| エンドポイント                          | viewer | drafter | reviewer | approver | admin | auditor | guest |
+|----------------------------------------|:------:|:-------:|:--------:|:--------:|:-----:|:-------:|:-----:|
+| GET  /auth/me                          | o      | o       | o        | o        | o     | o       | o     |
+| GET  /users                            | -      | -       | -        | -        | o     | o       | -     |
+| PATCH /users/{id}                      | -      | -       | -        | -        | o     | -       | -     |
+| GET  /contracts                        | △      | o       | o        | o        | o     | o       | △     |
+| POST /contracts                        | -      | o       | o        | o        | o     | -       | -     |
+| PATCH /contracts/{id}                  | -      | △       | o        | △        | o     | -       | -     |
+| DELETE /contracts/{id}                 | -      | -       | -        | -        | o     | -       | -     |
+| POST /contracts/{id}/submit            | -      | o       | -        | -        | o     | -       | -     |
+| POST /contracts/{id}/reviews           | -      | o       | o        | -        | o     | -       | -     |
+| POST /reviews/{id}/accept              | -      | -       | o        | o        | o     | -       | -     |
+| POST /reviews/{id}/reject              | -      | -       | o        | o        | o     | -       | -     |
+| POST /workflow-steps/{id}/approve      | -      | -       | -        | o        | o     | -       | -     |
+| POST /workflow-steps/{id}/reject       | -      | -       | -        | o        | o     | -       | -     |
+| POST /workflow-steps/{id}/send-back    | -      | -       | o        | o        | o     | -       | -     |
+| GET  /audit-logs                       | -      | -       | -        | -        | △     | o       | -     |
+| POST /audit-logs/verify                | -      | -       | -        | -        | o     | o       | -     |
+| GET  /risks                            | △      | o       | o        | o        | o     | o       | -     |
+| PATCH /risks/{id}                      | -      | -       | o        | o        | o     | -       | -     |
+
+凡例:
+- **viewer の △**: 自身が所属する `department_id` 配下の契約 / リスクのみ可視 (RLS)。
+- **drafter の △ (PATCH /contracts)**: `status == draft` かつ `created_by == self` の場合のみ可。
+- **approver の △ (PATCH /contracts)**: 承認フロー中で自身が assignee のステップに紐づく契約のみ可。
+- **admin の △ (GET /audit-logs)**: 書込不可 (改ざんはハッシュチェーンで検知)。
+- **guest の △ (GET /contracts)**: 期間限定共有リンクで明示的に共有された 1 件のみ。
+
+### 19.3 RBAC 実装ポイント (Loop 4)
+
+1. **backend**: `app/core/security.py::role_can` / `ensure_role` は **fail-closed**。未知ロール・空ロールは常に拒否し `AuthorizationError` (= HTTP 403) を送出する。例外を握り潰さない。
+2. **JWT**: `aud=construction-legalops-dx-api`, `iss=construction-legalops-dx`。`access_token` 15 分、`refresh_token` 8 時間 (本番)。検証失敗は 401。
+3. **frontend**: `auth.config.ts` の `jwt` callback で backend `/api/v1/auth/me` から正規ロールを解決。失敗時は `session.user.role = "viewer"` (最小権限) + `session.error = "BackendUnauthorized"` を立て、UI 層で再ログイン誘導。
+4. **PII**: `app/middleware/sensitive_masking.py` がレスポンスをマイナンバー / 電話 / メールでマスク。`my_number` 系フィールド名は **完全削除** (マスク版すら返さない)。
+5. **CSP**: `app/middleware/security_headers.py` で `default-src 'self'` を強制。SharePoint 画像許可はフロント `next.config.mjs` 側の責務とし、本ミドルウェアでは静的に許可しない。
+

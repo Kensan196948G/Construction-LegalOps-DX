@@ -20,6 +20,59 @@ from passlib.context import CryptContext
 from app.core.config import settings
 
 # ---------------------------------------------------------------------------
+# RBAC role taxonomy
+# ---------------------------------------------------------------------------
+#
+# The canonical list lives in ``app.models.enums.UserRole`` but is duplicated
+# here as a *flat tuple* so this module stays import-light (no SQLAlchemy /
+# Pydantic dependency). Tests assert the two stay in lock-step.
+
+ROLE_VIEWER: Final[str] = "viewer"
+ROLE_DRAFTER: Final[str] = "drafter"
+ROLE_REVIEWER: Final[str] = "reviewer"
+ROLE_APPROVER: Final[str] = "approver"
+ROLE_ADMIN: Final[str] = "admin"
+ROLE_AUDITOR: Final[str] = "auditor"
+ROLE_GUEST: Final[str] = "guest"
+
+ALL_ROLES: Final[tuple[str, ...]] = (
+    ROLE_VIEWER,
+    ROLE_DRAFTER,
+    ROLE_REVIEWER,
+    ROLE_APPROVER,
+    ROLE_ADMIN,
+    ROLE_AUDITOR,
+    ROLE_GUEST,
+)
+
+
+class AuthorizationError(PermissionError):
+    """Raised when an RBAC check fails. Always maps to HTTP 403."""
+
+
+def role_can(user_role: str | None, allowed: tuple[str, ...] | set[str]) -> bool:
+    """Fail-closed RBAC predicate.
+
+    Returns ``True`` only when ``user_role`` is one of ``allowed``. Empty /
+    unknown roles always fail. ``admin`` is *not* automatically wildcarded —
+    each endpoint must list it explicitly so the matrix in
+    ``docs/security_policy.md`` stays authoritative.
+    """
+    if not user_role:
+        return False
+    if user_role not in ALL_ROLES:
+        return False
+    return user_role in set(allowed)
+
+
+def ensure_role(user_role: str | None, allowed: tuple[str, ...] | set[str]) -> None:
+    """Fail-closed companion to :func:`role_can` that raises on denial."""
+    if not role_can(user_role, allowed):
+        raise AuthorizationError(
+            f"role '{user_role or '<anonymous>'}' is not authorized"
+        )
+
+# ---------------------------------------------------------------------------
 # Password hashing (bcrypt via passlib)
 # ---------------------------------------------------------------------------
 
@@ -227,13 +280,97 @@ def mask_sensitive(text: str) -> str:
     return masked
 
 
+# ---------------------------------------------------------------------------
+# Structured (recursive) masking — used by the response middleware
+# ---------------------------------------------------------------------------
+
+
+# Field-name allowlist that the middleware will completely drop from
+# responses regardless of value. The DB layer is *already* expected to
+# omit My Number from contract responses; this is the defence-in-depth
+# net that ensures the literal column never escapes accidentally.
+DROP_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "my_number",
+        "myNumber",
+        "individual_number",
+        "mynumber",
+    }
+)
+
+# Field-name allowlist whose *string* value will be passed through
+# :func:`mask_sensitive` even if the value itself doesn't match a regex
+# (e.g. an already-normalised phone column).
+MASK_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "phone",
+        "phone_number",
+        "phoneNumber",
+        "tel",
+        "email",
+        "mail",
+        "contact",
+    }
+)
+
+
+def mask_value(value: Any, *, _depth: int = 0) -> Any:
+    """Recursively mask PII inside arbitrary JSON-like structures.
+
+    * Strings are routed through :func:`mask_sensitive`.
+    * ``dict`` keys in :data:`DROP_FIELDS` are removed wholesale.
+    * ``dict`` keys in :data:`MASK_FIELDS` are forcibly masked even when
+      the raw regex would have missed them (e.g. ``"taro"`` in an
+      ``email`` field).
+    * ``list`` / ``tuple`` / ``set`` are recursed element-wise.
+    * Everything else is returned untouched.
+
+    Recursion is bounded at 64 levels to fail-closed against pathological
+    payloads (cycles aren't expected in JSON but a safety net is cheap).
+    """
+    if _depth > 64:
+        return None
+    if isinstance(value, str):
+        return mask_sensitive(value)
+    if isinstance(value, dict):
+        out: dict[Any, Any] = {}
+        for key, child in value.items():
+            if isinstance(key, str) and key in DROP_FIELDS:
+                # Drop the field entirely; never echo even a masked form.
+                continue
+            if isinstance(key, str) and key in MASK_FIELDS and isinstance(child, str):
+                out[key] = mask_sensitive(child)
+            else:
+                out[key] = mask_value(child, _depth=_depth + 1)
+        return out
+    if isinstance(value, (list, tuple)):
+        return type(value)(mask_value(v, _depth=_depth + 1) for v in value)
+    if isinstance(value, set):
+        return {mask_value(v, _depth=_depth + 1) for v in value}
+    return value
+
+
 __all__ = [
+    "ALL_ROLES",
+    "AuthorizationError",
+    "DROP_FIELDS",
+    "MASK_FIELDS",
+    "ROLE_ADMIN",
+    "ROLE_APPROVER",
+    "ROLE_AUDITOR",
+    "ROLE_DRAFTER",
+    "ROLE_GUEST",
+    "ROLE_REVIEWER",
+    "ROLE_VIEWER",
     "compute_hash_chain",
     "create_access_token",
     "decode_token",
+    "ensure_role",
     "generate_csrf_token",
     "hash_password",
     "mask_sensitive",
+    "mask_value",
+    "role_can",
     "verify_api_key",
     "verify_csrf_token",
     "verify_hash_chain",

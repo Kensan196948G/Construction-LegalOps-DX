@@ -1,0 +1,174 @@
+# ============================================================
+# Construction-LegalOps-DX docker-compose (production overlay)
+# 利用例:
+#   docker compose \
+#     -f infra/docker/docker-compose.yml \
+#     -f infra/docker/docker-compose.prod.yml \
+#     --profile worker up -d
+#
+# 守るべき方針:
+#   - 秘匿値は `${VAR:?required in production}` で fail-fast
+#   - resource limits (mem/cpu) を全サービスに設定
+#   - ポートは Nginx (443/80) のみ公開、他は internal
+#   - ログドライバは json-file + rotation (将来 OTel/Loki に切替予定)
+#   - TLS: ACME (Let's Encrypt) で `/etc/nginx/certs/{fullchain.pem,privkey.pem}` を更新
+#     TODO(Ops): certbot コンテナ or external ACME client (e.g. acme.sh) を追加
+# ============================================================
+name: construction-legalops-dx
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?required in production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required in production}
+      POSTGRES_DB: ${POSTGRES_DB:?required in production}
+      TZ: ${TZ:-Asia/Tokyo}
+      PGTZ: ${TZ:-Asia/Tokyo}
+    # 本番ではホスト公開しない (Nginx 越し or VPC 内のみ)
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.5"
+        reservations:
+          memory: 512m
+          cpus: "0.25"
+    logging: *default-logging
+
+  redis:
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--maxmemory"
+      - "512mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
+      - "--requirepass"
+      - "${REDIS_PASSWORD:?required in production}"
+    environment:
+      TZ: ${TZ:-Asia/Tokyo}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?required in production}
+    ports: !reset []
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+          cpus: "0.5"
+        reservations:
+          memory: 128m
+          cpus: "0.1"
+    logging: *default-logging
+
+  backend:
+    container_name: !reset null
+    environment:
+      APP_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-Asia/Tokyo}
+      DB_URL: ${DB_URL:?required in production}
+      REDIS_URL: ${REDIS_URL:?required in production}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:?required in production}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:?required in production}
+      JWT_SECRET: ${JWT_SECRET:?required in production}
+      ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:?required in production}
+      ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:?required in production}
+      ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:?required in production}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:?required in production}
+      HENNGE_TENANT_ID: ${HENNGE_TENANT_ID:?required in production}
+      HENNGE_API_KEY: ${HENNGE_API_KEY:?required in production}
+    # 本番では nginx 越しでのみ公開
+    ports: !reset []
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+          cpus: "0.25"
+    logging: *default-logging
+
+  celery-worker:
+    container_name: !reset null
+    environment:
+      APP_ENV: production
+      DB_URL: ${DB_URL:?required in production}
+      REDIS_URL: ${REDIS_URL:?required in production}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:?required in production}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:?required in production}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:?required in production}
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+          cpus: "0.25"
+    logging: *default-logging
+
+  celery-beat:
+    environment:
+      APP_ENV: production
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:?required in production}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:?required in production}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
+    logging: *default-logging
+
+  frontend:
+    container_name: !reset null
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?required in production}
+      TZ: ${TZ:-Asia/Tokyo}
+    ports: !reset []
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/.next/cache:size=128m,mode=1777
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+        reservations:
+          memory: 256m
+          cpus: "0.25"
+    logging: *default-logging
+
+  nginx:
+    # 本番のみ 443 を公開。80 → 443 redirect は default.conf で実施。
+    ports:
+      - "80:80"
+      - "443:443"
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+        reservations:
+          memory: 64m
+          cpus: "0.1"
+    logging: *default-logging

@@ -217,6 +217,39 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+// --- Request interceptor: 自動 Idempotency-Key 付与 -------------------------
+//
+// POST / PUT / PATCH / DELETE には Idempotency-Key を自動付与する。
+// 既に呼出側で `withIdempotencyKey()` 経由でヘッダを設定済みの場合はそれを
+// 尊重し、上書きしない。GET / HEAD / OPTIONS には付けない (副作用なし)。
+
+const IDEMPOTENT_METHODS = new Set(["post", "put", "patch", "delete"]);
+
+apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const method = (config.method ?? "get").toLowerCase();
+  if (!IDEMPOTENT_METHODS.has(method)) return config;
+
+  config.headers = config.headers ?? {};
+  const headers = config.headers as unknown as {
+    get?: (k: string) => unknown;
+    set?: (k: string, v: string) => void;
+  } & Record<string, unknown>;
+
+  const existing =
+    typeof headers.get === "function"
+      ? headers.get("Idempotency-Key")
+      : headers["Idempotency-Key"] ?? headers["idempotency-key"];
+  if (existing) return config;
+
+  const key = generateIdempotencyKey();
+  if (typeof headers.set === "function") {
+    headers.set("Idempotency-Key", key);
+  } else {
+    headers["Idempotency-Key"] = key;
+  }
+  return config;
+});
+
 // --- Response interceptor: ProblemDetails → ApiError 正規化 -----------------
 
 function isProblemDetails(value: unknown): value is ProblemDetails {

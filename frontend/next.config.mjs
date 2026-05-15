@@ -30,15 +30,25 @@ const nextConfig = {
   },
 
   images: {
-    // TODO(Loop 4): SharePoint / Azure Blob 等の信頼ドメインを追記
+    // Loop 4: SharePoint / Azure Blob の信頼ドメインを設定。
+    // 実ホスト名は環境変数 SHAREPOINT_HOST / AZURE_BLOB_HOST で上書き可。
+    // 未設定時はワイルドカードで全テナントを許容 (本番では具体値を強く推奨)。
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "*.sharepoint.com",
+        hostname: process.env.SHAREPOINT_HOST || "*.sharepoint.com",
+        pathname: "/**",
       },
       {
         protocol: "https",
-        hostname: "*.blob.core.windows.net",
+        hostname: process.env.AZURE_BLOB_HOST || "*.blob.core.windows.net",
+        pathname: "/**",
+      },
+      // Microsoft Graph (ファイル直リン)
+      {
+        protocol: "https",
+        hostname: "graph.microsoft.com",
+        pathname: "/**",
       },
     ],
   },

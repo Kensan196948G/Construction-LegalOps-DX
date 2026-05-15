@@ -1,0 +1,205 @@
+name: Security (weekly deep scan)
+
+# 毎週月曜 03:00 JST (= UTC 18:00 日曜) に実行 + 手動実行
+on:
+  schedule:
+    - cron: "0 18 * * 1"  # 月曜 03:00 JST
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/security.yml"
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+env:
+  TZ: Asia/Tokyo
+
+jobs:
+  # ----------------------------------------------------------
+  # Bandit (Python)
+  # ----------------------------------------------------------
+  bandit:
+    name: Bandit (Python SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Bandit
+        run: pip install "bandit[toml,sarif]"
+
+      - name: Bandit scan (SARIF)
+        run: |
+          bandit -r backend/app -ll -ii -f sarif -o bandit.sarif || true
+
+      - name: Upload Bandit SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit.sarif
+          category: bandit
+
+  # ----------------------------------------------------------
+  # Trivy (filesystem + config + secrets)
+  # ----------------------------------------------------------
+  trivy:
+    name: Trivy (fs / config / secret)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan (SARIF)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          scanners: vuln,secret,misconfig
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  # ----------------------------------------------------------
+  # pip-audit (Python dependencies)
+  # ----------------------------------------------------------
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: pip-audit (requirements)
+        working-directory: backend
+        run: |
+          set -e
+          if [ -f requirements.txt ]; then
+            pip-audit -r requirements.txt --strict --format json --output ../pip-audit.json
+          elif [ -f pyproject.toml ]; then
+            pip-audit --strict --format json --output ../pip-audit.json
+          else
+            echo "No Python dependency file found." > ../pip-audit.json
+          fi
+
+      - name: Upload pip-audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: pip-audit.json
+          if-no-files-found: ignore
+
+  # ----------------------------------------------------------
+  # npm audit (Node dependencies)
+  # ----------------------------------------------------------
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (production+dev)
+        run: npm ci || npm install
+
+      - name: npm audit (high+)
+        run: |
+          set +e
+          npm audit --audit-level=high --json > ../npm-audit.json
+          status=$?
+          if [ $status -ne 0 ]; then
+            echo "::error::npm audit found high/critical vulnerabilities"
+          fi
+          exit $status
+
+      - name: Upload npm audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: npm-audit.json
+          if-no-files-found: ignore
+
+  # ----------------------------------------------------------
+  # Docker image scan (Trivy image)
+  # ----------------------------------------------------------
+  trivy-image:
+    name: Trivy (container image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image (for scan)
+        if: hashFiles('backend/Dockerfile') != ''
+        run: docker build -t legalops/backend:scan backend
+
+      - name: Build frontend image (for scan)
+        if: hashFiles('frontend/Dockerfile') != ''
+        run: docker build -t legalops/frontend:scan frontend
+
+      - name: Trivy scan backend image (SARIF)
+        if: hashFiles('backend/Dockerfile') != ''
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: legalops/backend:scan
+          format: sarif
+          output: trivy-backend.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Trivy scan frontend image (SARIF)
+        if: hashFiles('frontend/Dockerfile') != ''
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: legalops/frontend:scan
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Trivy backend SARIF
+        if: hashFiles('trivy-backend.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-backend.sarif
+          category: trivy-image-backend
+
+      - name: Upload Trivy frontend SARIF
+        if: hashFiles('trivy-frontend.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-image-frontend

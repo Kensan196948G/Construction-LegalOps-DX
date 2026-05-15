@@ -17,6 +17,7 @@ import {
 import { lazy, Suspense, useState, type ReactNode } from "react";
 
 import { ApiError } from "@/lib/api/client";
+import { useInitApiClient } from "@/lib/api/init-client";
 
 // devtools は optional dep として扱う。未インストールでも本コンポーネントが動作するよう
 // 動的 import の specifier を式経由で渡し、型解決を任意化する。
@@ -82,6 +83,10 @@ export interface QueryProviderProps {
 export function QueryProvider({ children, state }: QueryProviderProps): JSX.Element {
   // useState の初期化子で 1 度だけ生成する (SSR-safe)
   const [client] = useState(() => getQueryClient());
+
+  // next-auth `useSession()` → API client への token bridge を install。
+  // `SessionProvider` 未配置時は session-bridge 側で握り潰す。
+  useInitApiClient();
 
   return (
     <QueryClientProvider client={client}>

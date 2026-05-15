@@ -397,8 +397,66 @@ frontend/
 
 ---
 
-## 16. 変更履歴
+## 16. API 統合 (Frontend ↔ Backend Integration, Loop 4 追記)
+
+### 16.1 全体図
+
+```
++--------------------------------------------------------------+
+|                  Next.js 15 (App Router)                     |
+|                                                              |
+|  Server Component                Client Component             |
+|  -----------------               --------------------          |
+|   bindServerSession()             <QueryProvider>             |
+|        |                              |                       |
+|        v                              v                       |
+|   setAuthTokenProvider          useInitApiClient()             |
+|        |                              |  (useBindClientSession) |
+|        +-------------+----------------+                       |
+|                      v                                        |
+|             frontend/lib/api/client.ts                        |
+|             (axios + interceptors)                            |
+|                      |                                        |
+|                      |  Authorization: Bearer <accessToken>   |
+|                      |  Idempotency-Key (POST/PUT/PATCH/DELETE) |
+|                      v                                        |
+|             Backend /api/v1/* (FastAPI)                       |
++--------------------------------------------------------------+
+```
+
+### 16.2 token bridge
+
+| 経路 | エントリ | bind 関数 |
+|------|----------|-----------|
+| Server Component / RSC | `app/(authenticated)/**/page.tsx` 冒頭で `await bindServerSession()` | `lib/auth/session-bridge#bindServerSession` |
+| Client Component (mutations / refetch) | `<QueryProvider>` 内の `useInitApiClient()` | `lib/auth/session-bridge#useBindClientSession` |
+
+- `next-auth` v5 の `auth()` (server) / `useSession()` (client) から `session.user.accessToken` を取得。
+- `setAuthTokenProvider(provider)` で `frontend/lib/api/client.ts` の request interceptor に注入。
+- 401 受領時は `setOnUnauthorized` 経由で `signOut({ callbackUrl: "/login" })`。
+
+### 16.3 エラー / リトライ
+
+- `ApiError` (RFC 7807 正規化) を `@tanstack/react-query` の `retry` 判定で利用。
+- **4xx はリトライしない**: 401/403/404/409/422 は業務エラー。
+- 5xx / transport error のみ最大 2 回リトライ。
+
+### 16.4 Idempotency-Key
+
+- `POST` / `PUT` / `PATCH` / `DELETE` には request interceptor が `crypto.randomUUID()` の値を自動付与。
+- 呼出側で `withIdempotencyKey()` 経由で指定済みの場合はそれを尊重。
+
+### 16.5 MSW (テスト用)
+
+- `frontend/__mocks__/msw/handlers.ts`: `{ data, meta }` エンベロープ規約に従ったフィクスチャを既定値として持つ。
+- 各テストで `server.use(http.get(..., () => HttpResponse.json(...)))` で個別 override。
+- `frontend/__mocks__/msw/server.ts`: Node (Jest) 用 setupServer。
+
+---
+
+## 17. 変更履歴
 
 | 日付 | 版 | 変更内容 |
 |------|----|---------|
 | 2026-05-16 | v1.0 | 初版作成 |
+| 2026-05-16 | v1.1 | Loop 4: API 統合 (token bridge / Idempotency / MSW) 追記 |

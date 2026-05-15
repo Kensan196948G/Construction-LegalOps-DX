@@ -14,7 +14,6 @@ from __future__ import annotations
 import pytest
 
 
-@pytest.mark.skip(reason="ASGI app not fully wired in Loop 2 — implemented in Loop 3")
 async def test_health_returns_200(client):
     """Arrange: live client. Act: GET /health. Assert: 200 + JSON status."""
     # Arrange / Act
@@ -25,7 +24,6 @@ async def test_health_returns_200(client):
     assert body.get("status") in ("ok", "healthy", "up")
 
 
-@pytest.mark.skip(reason="API prefix endpoint implemented in Loop 3")
 async def test_api_v1_health_returns_200(client):
     """Arrange: live client. Act: GET /api/v1/health. Assert: 200 + JSON status."""
     # Arrange / Act
