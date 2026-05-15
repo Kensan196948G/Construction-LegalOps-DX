@@ -1,0 +1,42 @@
+# ---- Node / Next.js ----
+node_modules
+.next
+out
+dist
+coverage
+.turbo
+
+# ---- VCS / IDE ----
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+.DS_Store
+
+# ---- Local env / secrets (NEVER ship into image) ----
+.env
+.env.*
+!.env.local.example
+
+# ---- Test / Tooling artifacts ----
+__mocks__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+jest.config.ts
+jest.setup.ts
+
+# ---- Docs / CI ----
+README.md
+CHANGELOG.md
+docs
+.github
+
+# ---- Misc ----
+*.log
+npm-debug.log*
+yarn-error.log*
+Dockerfile
+.dockerignore

@@ -1,0 +1,56 @@
+/**
+ * API 関連の TypeScript 型は **全て** zod スキーマから `z.infer<>` で派生させる。
+ * 直接 type を書かない方針 (スキーマと型のドリフトを防ぐ)。
+ */
+
+export type {
+  // Pagination
+  Paginated,
+  PaginationMeta,
+  // Enums
+  Role,
+  ContractStatus,
+  ContractType,
+  Confidentiality,
+  RiskLevel,
+  RiskStatus,
+  ReviewStatus,
+  ReviewType,
+  WorkflowStepStatus,
+  WorkflowStepType,
+  NotificationChannel,
+  NotificationStatus,
+  UploadStorage,
+  // Entities
+  Department,
+  UserRef,
+  User,
+  Attachment,
+  Comment,
+  Clause,
+  Contract,
+  ContractCreate,
+  ContractUpdate,
+  ReviewFinding,
+  LegalReview,
+  ReviewCreate,
+  RiskItem,
+  RiskUpdate,
+  RiskHeatmap,
+  WorkflowStepDefinition,
+  Workflow,
+  WorkflowStep,
+  ComplianceChecklist,
+  ComplianceRun,
+  ClauseLibraryEntry,
+  Template,
+  KnowledgeArticle,
+  AuditLog,
+  AuditVerifyResult,
+  Notification,
+  DashboardKpis,
+  DashboardTimeseries,
+} from "@/lib/api/schemas";
+
+export type { ProblemDetails } from "@/lib/api/client";
+export { ApiError } from "@/lib/api/client";

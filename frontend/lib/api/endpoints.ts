@@ -1,0 +1,534 @@
+/**
+ * API endpoint functions — Construction-LegalOps-DX
+ *
+ * 各 router (auth / users / contracts / reviews / workflows / risks / compliance
+ *  / templates / knowledge / audit_logs / uploads / notifications / dashboard)
+ * を関数として export する。
+ *
+ * - レスポンスは zod スキーマで parse して型安全に返す。
+ * - エラーは client.ts の response interceptor で ApiError に正規化される。
+ */
+
+import type { AxiosRequestConfig } from "axios";
+import { z } from "zod";
+
+import { apiClient, withIdempotencyKey } from "./client";
+import {
+  // envelopes
+  apiResponse,
+  paginatedSchema,
+  // schemas
+  attachmentSchema,
+  auditLogSchema,
+  auditVerifyResultSchema,
+  clauseSchema,
+  clauseLibrarySchema,
+  complianceChecklistSchema,
+  complianceRunSchema,
+  contractSchema,
+  contractCreateSchema,
+  contractUpdateSchema,
+  dashboardKpisSchema,
+  dashboardTimeseriesSchema,
+  healthSchema,
+  knowledgeArticleSchema,
+  legalReviewSchema,
+  notificationSchema,
+  reviewCreateSchema,
+  riskHeatmapSchema,
+  riskItemSchema,
+  riskUpdateSchema,
+  templateSchema,
+  userSchema,
+  versionSchema,
+  workflowSchema,
+  workflowStepSchema,
+  type ContractCreate,
+  type ContractUpdate,
+  type Paginated,
+  type ReviewCreate,
+  type RiskUpdate,
+} from "./schemas";
+
+// ---------------------------------------------------------------------------
+// Shared types
+// ---------------------------------------------------------------------------
+
+export interface ListParams {
+  page?: number;
+  page_size?: number;
+  q?: string;
+  sort?: string;
+  [key: string]: unknown;
+}
+
+function buildParams(params?: ListParams): Record<string, unknown> | undefined {
+  if (!params) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null || v === "") continue;
+    out[k] = v;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** schema を parse して返すヘルパ */
+async function getParsed<T extends z.ZodTypeAny>(
+  schema: T,
+  url: string,
+  config?: AxiosRequestConfig,
+): Promise<z.infer<T>> {
+  const res = await apiClient.get(url, config);
+  return schema.parse(res.data) as z.infer<T>;
+}
+
+async function postParsed<T extends z.ZodTypeAny>(
+  schema: T,
+  url: string,
+  body?: unknown,
+  config?: AxiosRequestConfig,
+): Promise<z.infer<T>> {
+  const res = await apiClient.post(url, body, config);
+  return schema.parse(res.data) as z.infer<T>;
+}
+
+async function patchParsed<T extends z.ZodTypeAny>(
+  schema: T,
+  url: string,
+  body?: unknown,
+  config?: AxiosRequestConfig,
+): Promise<z.infer<T>> {
+  const res = await apiClient.patch(url, body, config);
+  return schema.parse(res.data) as z.infer<T>;
+}
+
+// ===========================================================================
+// 1. Auth
+// ===========================================================================
+
+export const authApi = {
+  /** 現在のログインユーザー */
+  me: () => getParsed(apiResponse(userSchema), "/auth/me"),
+
+  /** サインアウト (Cookie 破棄 + Entra ID end_session) */
+  logout: () => apiClient.post<void>("/auth/sso/logout").then(() => undefined),
+};
+
+// ===========================================================================
+// 2. Users
+// ===========================================================================
+
+export interface UserListParams extends ListParams {
+  role?: string;
+  department_id?: number | string;
+  is_active?: boolean;
+}
+
+export const usersApi = {
+  list: (params?: UserListParams) =>
+    getParsed(paginatedSchema(userSchema), "/users", { params: buildParams(params) }),
+
+  get: (id: number | string) => getParsed(apiResponse(userSchema), `/users/${id}`),
+
+  update: (
+    id: number | string,
+    data: Partial<{
+      role: string;
+      department_id: number | string;
+      is_active: boolean;
+      version: number;
+    }>,
+  ) => patchParsed(apiResponse(userSchema), `/users/${id}`, data),
+
+  /** Microsoft Graph 同期 (202 Accepted) */
+  sync: () =>
+    apiClient.post<{ data: { job_id: string } }>("/users/sync").then((r) => r.data.data),
+};
+
+// ===========================================================================
+// 3. Contracts
+// ===========================================================================
+
+export interface ContractListParams extends ListParams {
+  status?: string;
+  contract_type?: string;
+  department_id?: number | string;
+  from?: string;
+  to?: string;
+  confidentiality?: string;
+}
+
+export const contractsApi = {
+  list: (params?: ContractListParams) =>
+    getParsed(paginatedSchema(contractSchema), "/contracts", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) => getParsed(apiResponse(contractSchema), `/contracts/${id}`),
+
+  create: (data: ContractCreate, opts?: { idempotencyKey?: string }) =>
+    postParsed(
+      apiResponse(contractSchema),
+      "/contracts",
+      contractCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  update: (id: number | string, data: ContractUpdate) =>
+    patchParsed(
+      apiResponse(contractSchema),
+      `/contracts/${id}`,
+      contractUpdateSchema.parse(data),
+    ),
+
+  delete: (id: number | string) =>
+    apiClient.delete(`/contracts/${id}`).then(() => undefined),
+
+  submit: (id: number | string) =>
+    postParsed(apiResponse(contractSchema), `/contracts/${id}/submit`),
+
+  clauses: (id: number | string) =>
+    getParsed(
+      z.object({ data: z.array(clauseSchema) }).transform((r) => r.data),
+      `/contracts/${id}/clauses`,
+    ),
+
+  auditTrail: (id: number | string) =>
+    getParsed(
+      z.object({ data: z.array(auditLogSchema) }).transform((r) => r.data),
+      `/contracts/${id}/audit-trail`,
+    ),
+
+  workflowSteps: (id: number | string) =>
+    getParsed(
+      z.object({ data: z.array(workflowStepSchema) }).transform((r) => r.data),
+      `/contracts/${id}/workflow-steps`,
+    ),
+};
+
+// ===========================================================================
+// 4. Reviews
+// ===========================================================================
+
+export interface ReviewListParams extends ListParams {
+  contract_id?: number | string;
+  status?: string;
+}
+
+export const reviewsApi = {
+  list: (params?: ReviewListParams) =>
+    getParsed(paginatedSchema(legalReviewSchema), "/reviews", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(legalReviewSchema), `/reviews/${id}`),
+
+  /** AI レビューを起動 (202 Accepted) */
+  startForContract: (
+    contractId: number | string,
+    data: ReviewCreate,
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      apiResponse(legalReviewSchema),
+      `/contracts/${contractId}/reviews`,
+      reviewCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  accept: (id: number | string) =>
+    postParsed(apiResponse(legalReviewSchema), `/reviews/${id}/accept`),
+
+  reject: (id: number | string, reason: string) =>
+    postParsed(apiResponse(legalReviewSchema), `/reviews/${id}/reject`, { reason }),
+};
+
+// ===========================================================================
+// 5. Workflows
+// ===========================================================================
+
+export const workflowsApi = {
+  list: (params?: ListParams) =>
+    getParsed(paginatedSchema(workflowSchema), "/workflows", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(workflowSchema), `/workflows/${id}`),
+
+  create: (data: {
+    code: string;
+    name: string;
+    contract_type?: string;
+    definition: { steps: unknown[] };
+  }) => postParsed(apiResponse(workflowSchema), "/workflows", data),
+
+  update: (id: number | string, data: Partial<{ name: string; is_active: boolean }>) =>
+    patchParsed(apiResponse(workflowSchema), `/workflows/${id}`, data),
+
+  delete: (id: number | string) =>
+    apiClient.delete(`/workflows/${id}`).then(() => undefined),
+
+  // --- step actions ---
+  approveStep: (stepId: number | string, comment?: string) =>
+    postParsed(apiResponse(workflowStepSchema), `/workflow-steps/${stepId}/approve`, {
+      comment,
+    }),
+
+  rejectStep: (stepId: number | string, comment: string) =>
+    postParsed(apiResponse(workflowStepSchema), `/workflow-steps/${stepId}/reject`, {
+      comment,
+    }),
+
+  sendBackStep: (stepId: number | string, toSeq: number, comment?: string) =>
+    postParsed(apiResponse(workflowStepSchema), `/workflow-steps/${stepId}/send-back`, {
+      to_seq: toSeq,
+      comment,
+    }),
+
+  delegateStep: (stepId: number | string, toUserId: number | string, comment?: string) =>
+    postParsed(apiResponse(workflowStepSchema), `/workflow-steps/${stepId}/delegate`, {
+      to_user_id: toUserId,
+      comment,
+    }),
+};
+
+// ===========================================================================
+// 6. Risks
+// ===========================================================================
+
+export interface RiskListParams extends ListParams {
+  severity?: string;
+  status?: string;
+  contract_id?: number | string;
+  owner_id?: number | string;
+}
+
+export const risksApi = {
+  list: (params?: RiskListParams) =>
+    getParsed(paginatedSchema(riskItemSchema), "/risks", { params: buildParams(params) }),
+
+  get: (id: number | string) => getParsed(apiResponse(riskItemSchema), `/risks/${id}`),
+
+  update: (id: number | string, data: RiskUpdate) =>
+    patchParsed(apiResponse(riskItemSchema), `/risks/${id}`, riskUpdateSchema.parse(data)),
+
+  heatmap: () => getParsed(apiResponse(riskHeatmapSchema), "/risks/heatmap"),
+};
+
+// ===========================================================================
+// 7. Compliance
+// ===========================================================================
+
+export const complianceApi = {
+  checklists: (params?: ListParams) =>
+    getParsed(paginatedSchema(complianceChecklistSchema), "/compliance/checklists", {
+      params: buildParams(params),
+    }),
+
+  /** 契約に対するチェックリスト適用 (202 Accepted) */
+  runForContract: (
+    contractId: number | string,
+    data: { checklist_id: number | string },
+  ) => postParsed(apiResponse(complianceRunSchema), `/contracts/${contractId}/compliance-runs`, data),
+
+  getRun: (id: number | string) =>
+    getParsed(apiResponse(complianceRunSchema), `/compliance-runs/${id}`),
+};
+
+// ===========================================================================
+// 8. Templates / Clause library
+// ===========================================================================
+
+export const templatesApi = {
+  list: (params?: ListParams) =>
+    getParsed(paginatedSchema(templateSchema), "/templates", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(templateSchema), `/templates/${id}`),
+
+  create: (data: { code: string; name: string; contract_type?: string; body?: string }) =>
+    postParsed(apiResponse(templateSchema), "/templates", data),
+
+  update: (id: number | string, data: Partial<{ name: string; body: string; is_active: boolean }>) =>
+    patchParsed(apiResponse(templateSchema), `/templates/${id}`, data),
+
+  delete: (id: number | string) =>
+    apiClient.delete(`/templates/${id}`).then(() => undefined),
+
+  // Clause library is part of templates domain
+  clauseLibraryList: (params?: ListParams & { category?: string; tag?: string; recommendation?: string }) =>
+    getParsed(paginatedSchema(clauseLibrarySchema), "/clauses-library", {
+      params: buildParams(params),
+    }),
+
+  clauseLibraryCreate: (data: { title: string; body: string; category?: string }) =>
+    postParsed(apiResponse(clauseLibrarySchema), "/clauses-library", data),
+};
+
+// ===========================================================================
+// 9. Knowledge
+// ===========================================================================
+
+export const knowledgeApi = {
+  list: (params?: ListParams & { tag?: string }) =>
+    getParsed(paginatedSchema(knowledgeArticleSchema), "/knowledge", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(knowledgeArticleSchema), `/knowledge/${id}`),
+
+  create: (data: { title: string; body: string; tags?: string[] }) =>
+    postParsed(apiResponse(knowledgeArticleSchema), "/knowledge", data),
+
+  update: (id: number | string, data: Partial<{ title: string; body: string; tags: string[] }>) =>
+    patchParsed(apiResponse(knowledgeArticleSchema), `/knowledge/${id}`, data),
+
+  delete: (id: number | string) =>
+    apiClient.delete(`/knowledge/${id}`).then(() => undefined),
+};
+
+// ===========================================================================
+// 10. Audit logs
+// ===========================================================================
+
+export interface AuditLogListParams extends ListParams {
+  target_type?: string;
+  target_id?: number | string;
+  action?: string;
+  actor_id?: number | string;
+  from?: string;
+  to?: string;
+}
+
+export const auditLogsApi = {
+  list: (params?: AuditLogListParams) =>
+    getParsed(paginatedSchema(auditLogSchema), "/audit-logs", {
+      params: buildParams(params),
+    }),
+
+  verify: () => postParsed(apiResponse(auditVerifyResultSchema), "/audit-logs/verify"),
+
+  /** CSV エクスポート — Blob で返す */
+  exportCsv: async (params?: AuditLogListParams): Promise<Blob> => {
+    const res = await apiClient.get("/audit-logs/export", {
+      params: buildParams(params),
+      responseType: "blob",
+    });
+    return res.data as Blob;
+  },
+};
+
+// ===========================================================================
+// 11. Uploads
+// ===========================================================================
+
+export interface UploadFileParams {
+  file: File | Blob;
+  filename?: string;
+  contract_id?: number | string;
+  is_primary?: boolean;
+}
+
+export const uploadsApi = {
+  upload: async (params: UploadFileParams, opts?: { idempotencyKey?: string }) => {
+    const form = new FormData();
+    form.append(
+      "file",
+      params.file,
+      params.filename ?? (params.file instanceof File ? params.file.name : "upload.bin"),
+    );
+    if (params.contract_id !== undefined) {
+      form.append("contract_id", String(params.contract_id));
+    }
+    if (params.is_primary !== undefined) {
+      form.append("is_primary", String(params.is_primary));
+    }
+    const res = await apiClient.post("/uploads", form, {
+      ...withIdempotencyKey({}, opts?.idempotencyKey),
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return apiResponse(attachmentSchema).parse(res.data);
+  },
+
+  /** ダウンロード用 302 URL を取得 (axios の追従を許容) */
+  downloadUrl: (id: number | string) => `/uploads/${id}/download`,
+
+  delete: (id: number | string) =>
+    apiClient.delete(`/uploads/${id}`).then(() => undefined),
+};
+
+// ===========================================================================
+// 12. Notifications
+// ===========================================================================
+
+export interface NotificationListParams extends ListParams {
+  status?: string;
+  channel?: string;
+}
+
+export const notificationsApi = {
+  list: (params?: NotificationListParams) =>
+    getParsed(paginatedSchema(notificationSchema), "/notifications", {
+      params: buildParams(params),
+    }),
+
+  markAsRead: (id: number | string) =>
+    apiClient.post(`/notifications/${id}/read`).then(() => undefined),
+
+  /** バッジ用カウント取得 */
+  unreadCount: async (): Promise<number> => {
+    const result = await notificationsApi.list({ status: "unread", page: 1, page_size: 1 });
+    return (result as Paginated<unknown>).total;
+  },
+};
+
+// ===========================================================================
+// 13. Dashboard
+// ===========================================================================
+
+export const dashboardApi = {
+  kpis: () => getParsed(apiResponse(dashboardKpisSchema), "/dashboard/kpis"),
+
+  timeseries: (metric: string, params?: { from?: string; to?: string }) =>
+    getParsed(apiResponse(dashboardTimeseriesSchema), "/dashboard/timeseries", {
+      params: buildParams({ metric, ...params }),
+    }),
+};
+
+// ===========================================================================
+// Meta / Health
+// ===========================================================================
+
+export const metaApi = {
+  health: () => getParsed(healthSchema, "/healthz"),
+  ready: () => getParsed(healthSchema, "/readyz"),
+  version: () => getParsed(versionSchema, "/version"),
+};
+
+// ===========================================================================
+// 単一エクスポート — まとめて参照したい場合
+// ===========================================================================
+
+export const api = {
+  auth: authApi,
+  users: usersApi,
+  contracts: contractsApi,
+  reviews: reviewsApi,
+  workflows: workflowsApi,
+  risks: risksApi,
+  compliance: complianceApi,
+  templates: templatesApi,
+  knowledge: knowledgeApi,
+  auditLogs: auditLogsApi,
+  uploads: uploadsApi,
+  notifications: notificationsApi,
+  dashboard: dashboardApi,
+  meta: metaApi,
+} as const;
