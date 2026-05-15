@@ -32,6 +32,8 @@ from app.core.logging import (
     set_request_context,
 )
 from app.db.session import dispose_engine
+from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.sensitive_masking import SensitiveMaskingMiddleware
 
 # Router import is intentionally lazy at module level to avoid pulling
 # the entire API layer into worker processes that don't need it.
@@ -141,7 +143,21 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ----- Middleware (outer-most last) -----
+    # ----- Middleware -----
+    # Starlette wraps middleware in LIFO order, so the last call below is
+    # the OUTERMOST layer that touches the raw request first. We want:
+    #
+    #   CORS (outermost) -> TrustedHost -> SecurityHeaders ->
+    #     SensitiveMasking -> request_context (innermost)
+    #
+    # so add them in reverse, ending with CORS.
+    app.middleware("http")(request_context_middleware)
+    app.add_middleware(SensitiveMaskingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=settings.trusted_hosts,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -150,11 +166,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["X-Request-Id"],
     )
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=settings.trusted_hosts,
-    )
-    app.middleware("http")(request_context_middleware)
 
     # ----- Exception handlers -----
     register_exception_handlers(app)
@@ -193,7 +204,10 @@ def create_app() -> FastAPI:
             error=str(exc),
         )
     else:
-        app.include_router(api_router, prefix=settings.api_v1_prefix)
+        # ``api_router`` already declares ``prefix="/api/v1"`` so we mount it
+        # without an additional prefix. Adding ``settings.api_v1_prefix`` here
+        # would yield duplicated ``/api/v1/api/v1/...`` paths.
+        app.include_router(api_router)
 
     logger.info(
         "app_created",

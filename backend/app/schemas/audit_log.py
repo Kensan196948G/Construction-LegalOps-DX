@@ -50,3 +50,15 @@ class AuditLogVerifyResult(BaseModel):
         description="ID of the first row whose hash does not match (None if intact).",
     )
     checked_at: datetime
+
+
+# v1 API alias names (used by ``app.api.v1.audit_logs``). Kept as plain
+# subclasses so OpenAPI surfaces the friendly ``Out`` / ``Response`` names.
+class AuditLogOut(AuditLogRead):
+    """Public read schema for ``GET /audit-logs`` (v1 alias)."""
+
+
+class AuditVerifyResponse(AuditLogVerifyResult):
+    """Public response for ``POST /audit-logs/verify`` (v1 alias)."""
+
+    ok: bool = True

@@ -98,3 +98,17 @@ class IdResponse(BaseModel):
 
     id: int
     extra: Optional[dict[str, Any]] = None
+
+
+class Page(BaseModel, Generic[T]):
+    """Generic paginated list payload used across the v1 API.
+
+    Routers populate ``items`` with their concrete read schema and report
+    pagination metadata side-by-side; this avoids the per-endpoint
+    boilerplate of redeclaring ``items / total / page / size`` everywhere.
+    """
+
+    items: List[T] = Field(default_factory=list)
+    total: Annotated[int, Field(ge=0)] = 0
+    page: Annotated[int, Field(ge=1)] = 1
+    size: Annotated[int, Field(ge=1, le=500)] = 20

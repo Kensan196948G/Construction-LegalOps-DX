@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user, require_role
+from app.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.upload import (

@@ -85,3 +85,62 @@ class WorkflowActionResult(BaseModel):
     step_id: int
     status: WorkflowStepStatus
     decided_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# v1 public-API aliases (see ``docs/api_design.md`` section 7)
+# ---------------------------------------------------------------------------
+
+
+class WorkflowDefinitionCreate(WorkflowCreate):
+    """Body of ``POST /workflows``."""
+
+
+class WorkflowDefinitionOut(WorkflowRead):
+    """Row schema for ``GET /workflows`` and ``/workflows/{id}``."""
+
+
+class WorkflowStartRequest(BaseModel):
+    """Body of ``POST /contracts/{id}/workflows``."""
+
+    workflow_id: int
+    note: Optional[str] = Field(default=None, max_length=2000)
+
+
+class WorkflowInstanceOut(ORMModel):
+    """Read schema for a workflow instance attached to a contract."""
+
+    id: int
+    workflow_id: int
+    contract_id: int
+    status: Annotated[
+        str, Field(pattern="^(pending|in_progress|approved|rejected|cancelled)$")
+    ]
+    current_seq: Optional[int] = None
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+
+
+class WorkflowStepOut(WorkflowStepRead):
+    """Step row returned by ``GET /workflows/{id}/steps``."""
+
+
+class WorkflowActionRequest(WorkflowAction):
+    """Body of approve / reject / send-back / delegate endpoints."""
+
+
+__all__ = [
+    "WorkflowAction",
+    "WorkflowActionRequest",
+    "WorkflowActionResult",
+    "WorkflowCreate",
+    "WorkflowDefinition",
+    "WorkflowDefinitionCreate",
+    "WorkflowDefinitionOut",
+    "WorkflowInstanceOut",
+    "WorkflowRead",
+    "WorkflowStartRequest",
+    "WorkflowStepDefinition",
+    "WorkflowStepOut",
+    "WorkflowStepRead",
+]

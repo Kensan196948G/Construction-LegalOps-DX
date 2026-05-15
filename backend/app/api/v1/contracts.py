@@ -16,7 +16,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user, require_role
+from app.deps import get_current_user, require_role
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.audit_log import AuditLogOut

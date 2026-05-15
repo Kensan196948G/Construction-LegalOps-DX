@@ -19,7 +19,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import get_current_user
+from app.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
@@ -97,16 +97,54 @@ async def sso_callback(
     "/refresh",
     response_model=RefreshResponse,
     summary="アクセストークン更新",
-    description="リフレッシュトークンを用いて新しいアクセストークンを払い出す。",
+    description=(
+        "リフレッシュトークン (JWT) を検証し、新しいアクセストークンを払い出す。"
+        " 認証は fail-closed: 検証失敗時は 401 を返す。"
+    ),
 )
 async def refresh_token(
     payload: RefreshRequest,
-    session: AsyncSession = Depends(get_db),
 ) -> RefreshResponse:
+    """Validate the refresh JWT and mint a fresh access token.
+
+    The Loop 4 auth core (:mod:`app.core.security`) provides
+    :func:`decode_token` and :func:`create_access_token`; the router is
+    intentionally storage-free so it can run before the persistent
+    session store ships.
+    """
+    from app.core.security import create_access_token, decode_token
+
     try:
-        return await auth_service.refresh(session, refresh_token=payload.refresh_token)
+        claims = decode_token(payload.refresh_token)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"invalid refresh token: {exc}",
+        ) from exc
+
+    if claims.get("type") not in (None, "refresh"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="token is not a refresh token",
+        )
+    subject = claims.get("sub")
+    if not subject:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="refresh token missing subject",
+        )
+
+    extra = {
+        k: v
+        for k, v in claims.items()
+        if k in {"role", "department_ids", "email"}
+    }
+    new_access = create_access_token(subject=str(subject), extra_claims=extra)
+    return RefreshResponse(
+        access_token=new_access,
+        token_type="Bearer",
+        expires_in=settings.jwt_expire_minutes * 60,
+    )
 
 
 @router.get(

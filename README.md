@@ -18,11 +18,14 @@
 2. [目的とスコープ](#目的とスコープ)
 3. [技術スタック](#技術スタック)
 4. [ディレクトリ構造](#ディレクトリ構造)
-5. [起動手順](#起動手順)
-6. [開発フロー](#開発フロー)
-7. [AI 利用に関する免責](#ai-利用に関する免責)
-8. [コントリビューション](#コントリビューション)
-9. [ライセンス](#ライセンス)
+5. [Quick Start](#quick-start)
+6. [起動手順](#起動手順)
+7. [開発フロー](#開発フロー)
+8. [AI 利用に関する免責](#ai-利用に関する免責)
+9. [Compliance & Disclaimer](#compliance--disclaimer)
+10. [Project Timeline](#project-timeline)
+11. [コントリビューション](#コントリビューション)
+12. [ライセンス](#ライセンス)
 
 ---
 
@@ -103,6 +106,79 @@ Construction-LegalOps-DX/
 ├── LICENSE                   # Apache License 2.0
 └── README.md
 ```
+
+## Quick Start
+
+最短手順でローカル開発環境を起動するためのガイドです。詳細は後続の「起動手順」セクションを参照してください。
+
+### 必要環境
+
+- **Docker** 24.x 以上 + docker compose v2 系
+- **Python** 3.12（ローカル backend 開発時）
+- **Node.js** 20.x（ローカル frontend 開発時）
+- **OS**: Linux / macOS / WSL2
+
+### 1. リポジトリ取得と環境変数
+
+```bash
+git clone https://github.com/Construction-LegalOps-DX/Construction-LegalOps-DX.git
+cd Construction-LegalOps-DX
+cp .env.example .env
+```
+
+`.env` を開き、以下の値を必ず埋めてください（本番では Secrets Manager / Vault 経由を推奨）。
+
+| キー | 用途 | 取得元 |
+|------|------|--------|
+| `POSTGRES_PASSWORD` | DB パスワード | 任意の強力な値 |
+| `JWT_SECRET_KEY` | JWT 署名鍵 (HS256 暫定) | `openssl rand -hex 32` |
+| `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` | Entra ID SSO | Azure Portal |
+| `ANTHROPIC_API_KEY` | Claude API | Anthropic Console |
+| `SHAREPOINT_TENANT_ID` / `SHAREPOINT_CLIENT_ID` | SharePoint 連携 | Microsoft 365 管理センター |
+| `HENNGE_*` | HENNGE Access Control (任意) | HENNGE 管理画面 |
+
+### 2. docker compose で一括起動
+
+```bash
+docker compose -f infra/docker/docker-compose.yml up -d
+```
+
+- 全コンテナ起動後、`http://localhost` (nginx 経由) でフロントエンドへアクセス。
+- API は nginx 経由で `http://localhost/api/` にプロキシされます。
+- 初回起動時は `alembic upgrade head` を backend コンテナで実行してください。
+
+```bash
+docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade head
+```
+
+### 3. 開発モード（ホットリロード）
+
+backend のみ手元で動かす場合:
+
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+frontend のみ手元で動かす場合:
+
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:3000
+```
+
+### 4. 動作確認
+
+```bash
+curl http://localhost/healthz       # nginx 経由のヘルスチェック
+curl http://localhost:8000/healthz  # backend 直接
+open http://localhost               # フロントエンド
+```
+
+---
 
 ## 起動手順
 
@@ -189,6 +265,48 @@ cd frontend && npm run lint && npm run typecheck && npm test
 - PR は最低 1 名の人間レビュアー + AI レビュー両方の承認を経てマージ。
 - セキュリティ関連の指摘（Trivy/Bandit）は Critical/High を必ず解消。
 
+## Compliance & Disclaimer
+
+本システムは建設業法・電子帳簿保存法・下請法等の業務遵守を支援するための **社内 DX 基盤** です。生成 AI を含むすべての自動処理は法的助言を構成せず、最終判断は人間に帰属します。
+
+- **AI は法的判断を確定しません。** Claude API を含む AI 出力はあくまで一次下書き・参考情報であり、契約締結・法的助言・社内意思決定の根拠となるものではありません。
+- **最終判断は法務担当者および顧問弁護士に帰属します。** AI 出力をそのまま外部送付・契約相手方への回答に用いることは禁止です。
+- **弁護士法第 72 条遵守。** 個別具体的な法律相談に対する回答代行（非弁行為）には利用しないでください。
+- **監査ログの保管。** プロンプト・モデルバージョン・応答メタは法定保存期間に従い `audit_logs` テーブルおよびトリガーで保全されます。
+- **データガバナンス。** AI に投入する情報は社内データガバナンス規程・個人情報保護法・営業秘密保護を前提に取扱います。機微情報のマスキング処理は backend サービス層で実施されます。
+- **ハルシネーション前提運用。** 根拠条文・出典の人間確認を必須プロセスとして UI / ワークフローに組み込んでいます。
+
+詳細は [`docs/ai_disclaimer_policy.md`](./docs/ai_disclaimer_policy.md) および [`docs/legal_playbook.md`](./docs/legal_playbook.md) を参照してください。
+
+## Project Timeline
+
+本プロジェクトは **登録日から 6 ヶ月の固定スコープ** で運営されます。リリース期限は絶対厳守です。
+
+| 項目 | 日付 |
+|------|------|
+| プロジェクト登録日 | **2026-05-16** |
+| 本番リリース期限 | **2026-11-16** |
+| 期間 | 6 ヶ月 (約 184 日) |
+
+### 6 ヶ月分割計画
+
+| 期間 | フォーカス |
+|------|------------|
+| Month 1〜2 (2026-05-16 〜 2026-07-15) | 基盤整備・主要機能実装 (Loop 1〜3) |
+| Month 3〜4 (2026-07-16 〜 2026-09-15) | 品質向上・テスト整備 (Loop 4) |
+| Month 5 (2026-09-16 〜 2026-10-15) | 統合テスト・バグ修正 (Loop 5) |
+| Month 6 (2026-10-16 〜 2026-11-16) | リリース準備・本番移行 |
+
+### 残日数による自動縮退ルール
+
+リリース期限 **2026-11-16** までの残日数に応じ、以下のルールで開発スコープを自動縮退します。
+
+- **残 30 日以内**: Improvement フェーズを縮退し、Verify / リリース準備を最優先。
+- **残 14 日以内**: 新機能開発禁止。バグ修正・安定化のみ許可。
+- **残 7 日以内**: リリース準備のみ (CHANGELOG / README / タグ付け / RELEASE_CHECKLIST 完遂)。
+
+詳細な本番移行手順は [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)、次セッション引き継ぎは [`docs/HANDOVER.md`](./docs/HANDOVER.md) を参照してください。
+
 ## ライセンス
 
 本プロジェクトは [Apache License 2.0](./LICENSE) のもとで公開されています。
@@ -197,5 +315,5 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-> 本 README は Loop 1（プロジェクト基盤構築）時点のものです。
-> 実装の進捗に応じて、章立て・コマンド・サービス構成は更新されます。
+> 本 README は Loop 5（Integration & Finalization, 2026-05-16 更新）時点のものです。
+> 本番リリース (2026-11-16) までに残課題（CSP enforce 化、RS256 移行、`/readyz` 本番チューニング等）を解消する計画です。

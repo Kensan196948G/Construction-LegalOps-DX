@@ -68,3 +68,9 @@ class AttachmentRead(BaseModel):
     version: int
 
     model_config = {"from_attributes": True}
+
+
+class UploadOut(AttachmentRead):
+    """Public ``Out`` alias used by ``GET /uploads/{id}``."""
+
+    download_url: Optional[str] = None

@@ -129,3 +129,39 @@ class ContractSubmitResponse(ORMModel):
     id: int
     status: ContractStatus
     submitted_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# v1 public-API aliases (see ``docs/api_design.md`` section 5)
+# ---------------------------------------------------------------------------
+
+
+class ContractOut(ContractDetail):
+    """``GET /contracts/{id}`` and list-row schema."""
+
+
+class ContractVersionOut(ORMModel):
+    """One historical version row for ``GET /contracts/{id}/versions``."""
+
+    id: int
+    contract_id: int
+    version: int
+    title: Optional[str] = None
+    status: Optional[ContractStatus] = None
+    sharepoint_item_id: Optional[str] = None
+    created_at: datetime
+    created_by: Optional[int] = None
+
+
+__all__ = [
+    "ContractBase",
+    "ContractCreate",
+    "ContractDetail",
+    "ContractList",
+    "ContractOut",
+    "ContractRead",
+    "ContractSubmitResponse",
+    "ContractUpdate",
+    "ContractVersionOut",
+    "UserBrief",
+]

@@ -73,3 +73,36 @@ class UserMe(ORMModel):
     display_name: str
     role: UserRole
     department: Optional[DepartmentBrief] = None
+
+
+# ---------------------------------------------------------------------------
+# v1 public-API aliases (see ``docs/api_design.md`` section 4)
+# ---------------------------------------------------------------------------
+
+
+class UserOut(UserRead):
+    """``GET /users`` / ``/users/{id}`` row schema."""
+
+
+class UserSyncJob(BaseModel):
+    """Response of ``POST /users/sync`` (Microsoft Graph delta sync)."""
+
+    job_id: str
+    status: Annotated[
+        str, Field(pattern="^(queued|running|completed|failed)$")
+    ] = "queued"
+    triggered_by: Optional[int] = None
+    queued_at: datetime
+    note: Optional[str] = None
+
+
+__all__ = [
+    "DepartmentBrief",
+    "UserBase",
+    "UserCreate",
+    "UserMe",
+    "UserOut",
+    "UserRead",
+    "UserSyncJob",
+    "UserUpdate",
+]
