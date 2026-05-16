@@ -68,9 +68,8 @@ def role_can(user_role: str | None, allowed: tuple[str, ...] | set[str]) -> bool
 def ensure_role(user_role: str | None, allowed: tuple[str, ...] | set[str]) -> None:
     """Fail-closed companion to :func:`role_can` that raises on denial."""
     if not role_can(user_role, allowed):
-        raise AuthorizationError(
-            f"role '{user_role or '<anonymous>'}' is not authorized"
-        )
+        raise AuthorizationError(f"role '{user_role or '<anonymous>'}' is not authorized")
+
 
 # ---------------------------------------------------------------------------
 # Password hashing (bcrypt via passlib)
@@ -105,6 +104,25 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _jwt_sign_key() -> str:
+    """Return the signing key (RS256 private PEM or HS256 secret)."""
+    if settings.use_rs256 and settings.jwt_private_key:
+        return settings.jwt_private_key.get_secret_value()
+    return settings.jwt_secret.get_secret_value()
+
+
+def _jwt_verify_key() -> str:
+    """Return the verification key (RS256 public PEM or HS256 secret)."""
+    if settings.use_rs256 and settings.jwt_public_key:
+        return settings.jwt_public_key
+    return settings.jwt_secret.get_secret_value()
+
+
+def _jwt_algorithm() -> str:
+    """Return the active JWT algorithm (RS256 when keys are configured)."""
+    return "RS256" if settings.use_rs256 else settings.jwt_algorithm
+
+
 def create_access_token(
     subject: str,
     *,
@@ -113,9 +131,9 @@ def create_access_token(
 ) -> str:
     """Create a signed JWT access token.
 
-    ``subject`` is set as ``sub``; ``extra_claims`` are merged but cannot
-    override reserved claims (``sub``, ``exp``, ``iat``, ``nbf``, ``iss``,
-    ``aud``).
+    Uses RS256 (asymmetric) when ``JWT_PRIVATE_KEY`` / ``JWT_PUBLIC_KEY`` are
+    configured; falls back to HS256 otherwise.  ``subject`` is set as ``sub``;
+    ``extra_claims`` are merged but cannot override reserved claims.
     """
     if not subject:
         raise ValueError("subject must not be empty")
@@ -138,11 +156,7 @@ def create_access_token(
                 continue
             payload[key] = value
 
-    return jwt.encode(
-        payload,
-        settings.jwt_secret.get_secret_value(),
-        algorithm=settings.jwt_algorithm,
-    )
+    return jwt.encode(payload, _jwt_sign_key(), algorithm=_jwt_algorithm())
 
 
 def decode_token(token: str) -> dict[str, Any]:
@@ -152,8 +166,8 @@ def decode_token(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(
             token,
-            settings.jwt_secret.get_secret_value(),
-            algorithms=[settings.jwt_algorithm],
+            _jwt_verify_key(),
+            algorithms=[_jwt_algorithm()],
             audience=settings.jwt_audience,
             issuer=settings.jwt_issuer,
         )
