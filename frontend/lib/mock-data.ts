@@ -357,3 +357,96 @@ export const MOCK_RISK_DISTRIBUTION = [
   { level: "high" as RiskLevel, count: MOCK_RISKS.filter(r => r.level === "high").length },
   { level: "critical" as RiskLevel, count: MOCK_RISKS.filter(r => r.level === "critical").length },
 ];
+
+// ============================================================
+// Compliance Mock Data
+// ============================================================
+export type ComplianceStatus = "compliant" | "warning" | "non_compliant";
+export const COMPLIANCE_STATUS_LABELS: Record<ComplianceStatus, string> = {
+  compliant: "適合", warning: "要確認", non_compliant: "不適合",
+};
+
+export interface ComplianceItem {
+  id: string; law: string; item: string;
+  status: ComplianceStatus; lastCheck: string; detail: string;
+}
+
+export const MOCK_COMPLIANCE_ITEMS: ComplianceItem[] = [
+  { id: "cp1", law: "建設業法", item: "第19条 — 契約書面の交付義務", status: "compliant", lastCheck: "2026/05/10", detail: "書面交付済み。全契約で要件充足を確認。" },
+  { id: "cp2", law: "建設業法", item: "第24条の3 — 下請代金の支払", status: "compliant", lastCheck: "2026/05/10", detail: "引渡し後50日以内の支払を確認済み。" },
+  { id: "cp3", law: "下請法", item: "第2条の4 — 支払期日（60日ルール）", status: "warning", lastCheck: "2026/05/08", detail: "一部契約で支払期日が75日に設定されており要是正。" },
+  { id: "cp4", law: "下請法", item: "第4条 — 書面の交付義務", status: "compliant", lastCheck: "2026/05/08", detail: "3条書面の交付を全契約で確認済み。" },
+  { id: "cp5", law: "電子帳簿保存法", item: "第7条 — 電子取引データの保存", status: "compliant", lastCheck: "2026/05/01", detail: "電子データの適切な保存を確認。" },
+  { id: "cp6", law: "電子帳簿保存法", item: "検索要件の充足", status: "warning", lastCheck: "2026/05/01", detail: "取引金額での検索機能が未実装。システム対応が必要。" },
+  { id: "cp7", law: "個人情報保護法", item: "第23条 — 第三者提供の制限", status: "compliant", lastCheck: "2026/04/25", detail: "個人情報の第三者提供は適切な同意のもとで実施。" },
+  { id: "cp8", law: "建設業法", item: "第26条 — 主任技術者の配置", status: "non_compliant", lastCheck: "2026/05/12", detail: "東名高速補修工事で主任技術者の配置届が未提出。至急対応要。" },
+];
+
+export const MOCK_COMPLIANCE_FRAMEWORKS = [
+  { id: "construction_business_act", label: "建設業法",
+    passed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "建設業法" && c.status === "compliant").length,
+    failed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "建設業法" && c.status === "non_compliant").length,
+    na: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "建設業法" && c.status === "warning").length },
+  { id: "subcontract_act", label: "下請代金支払遅延等防止法",
+    passed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "下請法" && c.status === "compliant").length,
+    failed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "下請法" && c.status === "non_compliant").length,
+    na: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "下請法" && c.status === "warning").length },
+  { id: "electronic_books", label: "電子帳簿保存法",
+    passed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "電子帳簿保存法" && c.status === "compliant").length,
+    failed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "電子帳簿保存法" && c.status === "non_compliant").length,
+    na: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "電子帳簿保存法" && c.status === "warning").length },
+  { id: "personal_info", label: "個人情報保護法",
+    passed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "個人情報保護法" && c.status === "compliant").length,
+    failed: MOCK_COMPLIANCE_ITEMS.filter(c => c.law === "個人情報保護法" && c.status === "non_compliant").length,
+    na: 0 },
+];
+
+// ============================================================
+// Review Detail Mock (issues / suggestions)
+// ============================================================
+export interface ReviewIssue {
+  id: string; target: string; summary: string;
+  severity: RiskLevel; detail: string;
+}
+export interface ReviewSuggestion {
+  id: string; target: string; summary: string;
+  original: string; proposed: string; rationale: string; confidence: number;
+}
+
+export const MOCK_REVIEW_ISSUES: ReviewIssue[] = [
+  { id: "i1", target: "第3条 契約金額", summary: "支払条件が下請法に抵触する可能性", severity: "high", detail: "支払期日が納品後90日に設定されており、下請法第2条の4（60日ルール）に違反する可能性があります。至急是正が必要です。" },
+  { id: "i2", target: "第7条 解除条項", summary: "一方的解除条項に建設業法上のリスク", severity: "critical", detail: "発注者側からの一方的解除が不当に広く認められており、建設業法第19条の3「不当な使用資材等の購入強制の禁止」に抵触する恐れがあります。" },
+  { id: "i3", target: "第12条 損害賠償", summary: "賠償上限が設定されていない", severity: "medium", detail: "損害賠償の上限条項がなく、過大なリスク負担となる可能性があります。契約金額を上限とする条項の追加を推奨します。" },
+  { id: "i4", target: "第5条 工期", summary: "工期延長条件が不明確", severity: "medium", detail: "天候不順や不可抗力による工期延長の条件が具体的に定められていません。明確な基準の設定を推奨します。" },
+  { id: "i5", target: "第15条 秘密保持", summary: "秘密情報の定義が広すぎる", severity: "low", detail: "秘密情報の範囲が「一切の情報」と定義されており、実務上の運用が困難です。具体的な定義を設けることを推奨します。" },
+];
+
+export const MOCK_REVIEW_SUGGESTIONS: ReviewSuggestion[] = [
+  { id: "s1", target: "第3条 契約金額", summary: "支払期日を60日以内に短縮", original: "支払いは、納品確認後90日以内に行うものとする。", proposed: "支払いは、納品確認後60日以内に行うものとする。なお、下請法の適用がある場合は同法の定めに従う。", rationale: "下請法第2条の4により、下請代金の支払期日は物品等の受領日から60日以内と定められています。", confidence: 92 },
+  { id: "s2", target: "第7条 解除条項", summary: "解除事由の限定と催告手続の追加", original: "甲は、いつでも本契約を解除することができる。", proposed: "甲は、乙が本契約に重大な違反をし、書面による催告後30日以内に是正されない場合に限り、本契約を解除することができる。", rationale: "建設業法第19条の3の趣旨に照らし、一方的な解除権は制限すべきです。", confidence: 88 },
+  { id: "s3", target: "第12条 損害賠償", summary: "賠償上限条項の追加", original: "（上限条項なし）", proposed: "本契約に基づく損害賠償の総額は、契約金額を上限とする。ただし、故意または重過失による場合はこの限りでない。", rationale: "無制限の賠償責任は過大なリスクとなるため、契約金額を上限とする条項の追加を推奨します。", confidence: 85 },
+];
+
+// Workflow steps for mock
+export interface MockWorkflowStep {
+  id: string; order: number; label: string; assigneeRole: string; assigneeName: string | null;
+  status: "pending" | "in_progress" | "approved" | "rejected" | "returned" | "skipped"; decidedAt: string | null;
+}
+
+export const MOCK_WORKFLOW_STEPS: Record<string, MockWorkflowStep[]> = {
+  "WF-0001": [
+    { id: "s1", order: 1, label: "法務担当レビュー", assigneeRole: "法務担当", assigneeName: "鈴木 花子", status: "approved", decidedAt: "2026/05/12" },
+    { id: "s2", order: 2, label: "法務リード承認", assigneeRole: "法務リード", assigneeName: "田中 太郎", status: "approved", decidedAt: "2026/05/13" },
+    { id: "s3", order: 3, label: "部門長承認", assigneeRole: "部門長", assigneeName: "佐藤 一郎", status: "in_progress", decidedAt: null },
+    { id: "s4", order: 4, label: "弁護士確認", assigneeRole: "顧問弁護士", assigneeName: "外部弁護士", status: "pending", decidedAt: null },
+  ],
+  "WF-0002": [
+    { id: "s1", order: 1, label: "法務担当レビュー", assigneeRole: "法務担当", assigneeName: "鈴木 花子", status: "approved", decidedAt: "2026/05/11" },
+    { id: "s2", order: 2, label: "法務リード承認", assigneeRole: "法務リード", assigneeName: "田中 太郎", status: "in_progress", decidedAt: null },
+  ],
+  "WF-0006": [
+    { id: "s1", order: 1, label: "法務担当レビュー", assigneeRole: "法務担当", assigneeName: "鈴木 花子", status: "approved", decidedAt: "2026/05/10" },
+    { id: "s2", order: 2, label: "法務リード承認", assigneeRole: "法務リード", assigneeName: "田中 太郎", status: "approved", decidedAt: "2026/05/11" },
+    { id: "s3", order: 3, label: "弁護士確認", assigneeRole: "顧問弁護士", assigneeName: "外部弁護士", status: "in_progress", decidedAt: null },
+  ],
+};

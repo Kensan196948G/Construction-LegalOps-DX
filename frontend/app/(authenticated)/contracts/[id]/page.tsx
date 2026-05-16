@@ -11,6 +11,7 @@ import { ContractClausesViewer } from "@/components/contracts/contract-clauses-v
 import { ContractAttachmentsList } from "@/components/contracts/contract-attachments-list";
 import { ContractActivityLog } from "@/components/contracts/contract-activity-log";
 import { RiskBadge } from "@/components/risks/risk-badge";
+import { MOCK_CONTRACTS } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
   title: "契約詳細",
@@ -31,9 +32,21 @@ interface ContractDetail {
 }
 
 async function getContract(id: string): Promise<ContractDetail | null> {
-  // Stub. Loop 4-5 で `@/lib/api/contracts.get(id)` に差し替え。
-  if (!id) return null;
-  return null;
+  const found = MOCK_CONTRACTS.find(c => c.id === id) ?? MOCK_CONTRACTS[0];
+  if (!found) return null;
+  return {
+    id: found.id,
+    title: found.title,
+    counterparty: found.counterparty,
+    contractType: found.contractType,
+    amount: found.amount,
+    currency: "JPY",
+    startDate: "2026/04/01",
+    endDate: "2026/09/30",
+    status: found.status,
+    riskLevel: found.riskLevel,
+    summary: `${found.contractType}に関する契約書。相手方 ${found.counterparty} との合意事項を記載。AI レビューにより複数の論点が検出されています。最終的な法的判断は法務担当者・顧問弁護士が行います。`,
+  };
 }
 
 interface ContractDetailPageProps {

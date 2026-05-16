@@ -38,7 +38,7 @@ export function RisksTable({ items, total }: Props) {
                 <TableCell>
                   <div>
                     <Link href={`/contracts/${r.contractId}`} className="text-xs text-muted-foreground hover:underline">{r.contractTitle}</Link>
-                    <p className="mt-0.5 text-sm line-clamp-2">{r.description}</p>
+                    <p className="mt-0.5 text-sm truncate max-w-xs">{r.description}</p>
                   </div>
                 </TableCell>
                 <TableCell className="text-xs">{r.category}</TableCell>

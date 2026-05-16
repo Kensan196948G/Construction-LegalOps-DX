@@ -13,6 +13,7 @@ import { ReviewRisksPanel } from "@/components/reviews/review-risks-panel";
 import { ReviewSuggestionsPanel } from "@/components/reviews/review-suggestions-panel";
 import { ReviewAuditTrail } from "@/components/reviews/review-audit-trail";
 import { LawyerConfirmationCheckbox } from "@/components/reviews/lawyer-confirmation-checkbox";
+import { MOCK_REVIEWS } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
   title: "レビュー詳細",
@@ -35,8 +36,23 @@ interface ReviewDetail {
 }
 
 async function getReview(id: string): Promise<ReviewDetail | null> {
-  if (!id) return null;
-  return null;
+  const found = MOCK_REVIEWS.find(r => r.id === id) ?? MOCK_REVIEWS[0];
+  if (!found) return null;
+  return {
+    id: found.id,
+    contractId: found.contractId,
+    contractTitle: found.contractTitle,
+    aiModel: found.aiModel,
+    aiPromptVersion: "2.1",
+    riskLevel: found.riskLevel,
+    status: found.status,
+    reviewerConfirmed: found.reviewerConfirmed,
+    reviewerConfirmedBy: found.reviewerConfirmed ? "田中 太郎" : null,
+    reviewerConfirmedAt: found.reviewerConfirmed && found.completedAt ? found.completedAt : null,
+    startedAt: "2026/05/13",
+    completedAt: found.completedAt,
+    summary: `AI レビューの結果、${found.issuesCount} 件の論点が検出されました。リスクレベルは「${found.riskLevel}」と評価されています。\n\n主な論点として、支払条件・解除条項・損害賠償条項に関する事項が含まれます。各論点の詳細は「論点」タブをご確認ください。\n\n※ この要約は AI による参考情報です。法的判断は必ず法務担当者・顧問弁護士が行ってください。`,
+  };
 }
 
 interface ReviewDetailPageProps {
