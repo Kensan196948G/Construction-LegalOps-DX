@@ -42,15 +42,29 @@ interface RiskListResult {
   byCategory: Array<{ category: string; count: number }>;
 }
 
-async function getRisks(_params: SearchParams): Promise<RiskListResult> {
-  return {
-    items: [],
-    total: 0,
-    page: 1,
-    perPage: 20,
-    byLevel: [],
-    byCategory: [],
-  };
+import { MOCK_RISKS } from "@/lib/mock-data";
+
+async function getRisks(params: SearchParams): Promise<RiskListResult> {
+  let items = MOCK_RISKS.map(r => ({
+    id: r.id, contractId: r.contractId, contractTitle: r.contractTitle,
+    category: r.category, level: r.level, score: r.score,
+    description: r.description, status: r.status, owner: r.owner, detectedAt: r.detectedAt,
+  }));
+  if (params.level) items = items.filter(r => r.level === params.level);
+  if (params.category) items = items.filter(r => r.category === params.category);
+  if (params.status) items = items.filter(r => r.status === params.status);
+  const byLevel = (["low","medium","high","critical"] as const).map(level => ({
+    level, count: MOCK_RISKS.filter(r => r.level === level).length,
+  }));
+  const cats = Array.from(new Set(MOCK_RISKS.map(r => r.category)));
+  const byCategory = cats.map(category => ({
+    category, count: MOCK_RISKS.filter(r => r.category === category).length,
+  }));
+  const page = Number(params.page ?? 1);
+  const perPage = 20;
+  const total = items.length;
+  items = items.slice((page - 1) * perPage, page * perPage);
+  return { items, total, page, perPage, byLevel, byCategory };
 }
 
 export default async function RisksPage({ searchParams }: RisksPageProps) {

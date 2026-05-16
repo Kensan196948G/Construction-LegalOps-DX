@@ -74,8 +74,8 @@ export default async function ReviewDetailPage({ params }: ReviewDetailPageProps
         </div>
       </header>
 
-      <AiDisclaimerInline tone="strong">
-        本ページの AI 評価・修正候補は<strong>法的判断ではありません</strong>。
+      <AiDisclaimerInline>
+        本ページの AI 評価・修正候補は法的判断ではありません。
         最終判断は法務担当者・顧問弁護士が行います。AI 出力に依拠した不利益に
         ついて、システム提供者は責任を負いません。
       </AiDisclaimerInline>

@@ -40,11 +40,26 @@ interface ContractListResult {
   perPage: number;
 }
 
-/**
- * Stub. Loop 4-5 で `@/lib/api/contracts.list(searchParams)` に差し替え。
- */
-async function getContracts(_params: SearchParams): Promise<ContractListResult> {
-  return { items: [], total: 0, page: 1, perPage: 20 };
+import { MOCK_CONTRACTS } from "@/lib/mock-data";
+
+async function getContracts(params: SearchParams): Promise<ContractListResult> {
+  let items = MOCK_CONTRACTS.map(c => ({
+    id: c.id, title: c.title, counterparty: c.counterparty,
+    contractType: c.contractType, amount: c.amount,
+    status: c.status, riskLevel: c.riskLevel, updatedAt: c.updatedAt,
+  }));
+  if (params.q) {
+    const q = params.q.toLowerCase();
+    items = items.filter(c => c.title.toLowerCase().includes(q) || c.counterparty.toLowerCase().includes(q));
+  }
+  if (params.status) items = items.filter(c => c.status === params.status);
+  if (params.riskLevel) items = items.filter(c => c.riskLevel === params.riskLevel);
+  if (params.contractType) items = items.filter(c => c.contractType === params.contractType);
+  const page = Number(params.page ?? 1);
+  const perPage = Number(params.perPage ?? 20);
+  const total = items.length;
+  items = items.slice((page - 1) * perPage, page * perPage);
+  return { items, total, page, perPage };
 }
 
 export default async function ContractsPage({ searchParams }: ContractsPageProps) {

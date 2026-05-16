@@ -37,8 +37,23 @@ interface WorkflowListResult {
   perPage: number;
 }
 
-async function getWorkflows(_params: SearchParams): Promise<WorkflowListResult> {
-  return { items: [], total: 0, page: 1, perPage: 20 };
+import { MOCK_WORKFLOWS } from "@/lib/mock-data";
+
+async function getWorkflows(params: SearchParams): Promise<WorkflowListResult> {
+  let items = MOCK_WORKFLOWS.map(w => ({
+    id: w.id, contractId: w.contractId, contractTitle: w.contractTitle,
+    route: w.route, currentStep: w.currentStep, waitingFor: w.waitingFor,
+    status: w.status, requiresOutsideCounsel: w.requiresOutsideCounsel,
+    dueDate: w.dueDate, updatedAt: w.updatedAt,
+  }));
+  if (params.status) items = items.filter(w => w.status === params.status);
+  if (params.route) items = items.filter(w => w.route === params.route);
+  if (params.assignedToMe === "true") items = items.filter(w => w.waitingFor === "田中 太郎");
+  const page = Number(params.page ?? 1);
+  const perPage = 20;
+  const total = items.length;
+  items = items.slice((page - 1) * perPage, page * perPage);
+  return { items, total, page, perPage };
 }
 
 export default async function WorkflowsPage({ searchParams }: WorkflowsPageProps) {

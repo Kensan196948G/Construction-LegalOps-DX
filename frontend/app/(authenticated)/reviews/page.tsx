@@ -37,8 +37,23 @@ interface ReviewListResult {
   perPage: number;
 }
 
-async function getReviews(_params: SearchParams): Promise<ReviewListResult> {
-  return { items: [], total: 0, page: 1, perPage: 20 };
+import { MOCK_REVIEWS } from "@/lib/mock-data";
+
+async function getReviews(params: SearchParams): Promise<ReviewListResult> {
+  let items = MOCK_REVIEWS.map(r => ({
+    id: r.id, contractId: r.contractId, contractTitle: r.contractTitle,
+    aiModel: r.aiModel, riskLevel: r.riskLevel, issuesCount: r.issuesCount,
+    status: r.status, reviewerConfirmed: r.reviewerConfirmed, completedAt: r.completedAt,
+  }));
+  if (params.status) items = items.filter(r => r.status === params.status);
+  if (params.riskLevel) items = items.filter(r => r.riskLevel === params.riskLevel);
+  if (params.reviewerConfirmed === "true") items = items.filter(r => r.reviewerConfirmed);
+  if (params.reviewerConfirmed === "false") items = items.filter(r => !r.reviewerConfirmed);
+  const page = Number(params.page ?? 1);
+  const perPage = 20;
+  const total = items.length;
+  items = items.slice((page - 1) * perPage, page * perPage);
+  return { items, total, page, perPage };
 }
 
 export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {

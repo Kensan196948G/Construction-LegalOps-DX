@@ -167,3 +167,193 @@ export const DISPUTES: Dispute[] = [
   { id: "DSP-2026-0007", type: "工期遅延", title: "品質検査不合格による手戻り — 渋谷地下道", counterparty: "北関東電設(株)", status: "resolved", amount: 1200000, registeredAt: "2026/02/20", assignee: "渡辺 誠", priority: "低", description: "品質検査不合格による手戻り費用の分担について解決済み。" },
   { id: "DSP-2026-0008", type: "未払い・支払遅延", title: "支払遅延に対する督促 — 大手町ビル", counterparty: "(株)高橋建材", status: "open", amount: 3500000, registeredAt: "2026/04/30", assignee: "田中 太郎", priority: "低", description: "支払遅延に対する督促。支払計画書の提出を依頼中。" },
 ];
+
+// ============================================================
+// Server Page Mock Data — contracts / reviews / workflows / risks / knowledge / templates / audit
+// ============================================================
+
+export type ContractStatus = "draft" | "in_review" | "approved" | "pending_approval" | "expired" | "archived";
+export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
+  draft: "下書き", in_review: "レビュー中", approved: "承認済み",
+  pending_approval: "承認待ち", expired: "期限切れ", archived: "アーカイブ",
+};
+
+export interface MockContract {
+  id: string; title: string; counterparty: string; contractType: string;
+  amount: number | null; status: ContractStatus; riskLevel: RiskLevel; updatedAt: string;
+}
+
+export const MOCK_CONTRACTS: MockContract[] = [
+  { id: "CTR-2026-0001", title: "工事請負契約（大成建設工業(株)）", counterparty: "大成建設工業(株)", contractType: "工事請負契約", amount: 120000000, status: "approved", riskLevel: "high", updatedAt: "2026/05/14" },
+  { id: "CTR-2026-0002", title: "業務委託契約（鈴木土木(株)）", counterparty: "鈴木土木(株)", contractType: "業務委託契約", amount: 35000000, status: "in_review", riskLevel: "medium", updatedAt: "2026/05/13" },
+  { id: "CTR-2026-0003", title: "資材購入契約（東日本資材(株)）", counterparty: "東日本資材(株)", contractType: "資材購入契約", amount: 8900000, status: "pending_approval", riskLevel: "low", updatedAt: "2026/05/12" },
+  { id: "CTR-2026-0004", title: "下請契約（(株)佐藤組）", counterparty: "(株)佐藤組", contractType: "下請契約", amount: 25000000, status: "in_review", riskLevel: "critical", updatedAt: "2026/05/11" },
+  { id: "CTR-2026-0005", title: "設計監理契約（(株)山田設計事務所）", counterparty: "(株)山田設計事務所", contractType: "設計監理契約", amount: 15000000, status: "approved", riskLevel: "low", updatedAt: "2026/05/10" },
+  { id: "CTR-2026-0006", title: "賃貸借契約（関東リース(株)）", counterparty: "関東リース(株)", contractType: "賃貸借契約", amount: 3500000, status: "draft", riskLevel: "low", updatedAt: "2026/05/09" },
+  { id: "CTR-2026-0007", title: "秘密保持契約（東京法律事務所）", counterparty: "東京法律事務所", contractType: "秘密保持契約", amount: 1200000, status: "approved", riskLevel: "low", updatedAt: "2026/05/08" },
+  { id: "CTR-2026-0008", title: "工事請負契約（横浜建設(株)）", counterparty: "横浜建設(株)", contractType: "工事請負契約", amount: 48000000, status: "in_review", riskLevel: "medium", updatedAt: "2026/05/07" },
+  { id: "CTR-2026-0009", title: "業務委託契約（中央コンサルタント(株)）", counterparty: "中央コンサルタント(株)", contractType: "業務委託契約", amount: 12000000, status: "pending_approval", riskLevel: "medium", updatedAt: "2026/05/06" },
+  { id: "CTR-2026-0010", title: "資材購入契約（太平洋セメント(株)）", counterparty: "太平洋セメント(株)", contractType: "資材購入契約", amount: 7500000, status: "approved", riskLevel: "low", updatedAt: "2026/05/05" },
+  { id: "CTR-2026-0011", title: "下請契約（(株)中村組）", counterparty: "(株)中村組", contractType: "下請契約", amount: 18000000, status: "expired", riskLevel: "high", updatedAt: "2026/04/30" },
+  { id: "CTR-2026-0012", title: "工事請負契約（(株)田中工務店）", counterparty: "(株)田中工務店", contractType: "工事請負契約", amount: 250000000, status: "approved", riskLevel: "medium", updatedAt: "2026/04/28" },
+  { id: "CTR-2026-0013", title: "設計監理契約（(株)伊藤測量）", counterparty: "(株)伊藤測量", contractType: "設計監理契約", amount: 9800000, status: "archived", riskLevel: "low", updatedAt: "2026/04/20" },
+  { id: "CTR-2026-0014", title: "業務委託契約（北関東電設(株)）", counterparty: "北関東電設(株)", contractType: "業務委託契約", amount: 22000000, status: "in_review", riskLevel: "high", updatedAt: "2026/05/15" },
+  { id: "CTR-2026-0015", title: "資材購入契約（(株)高橋建材）", counterparty: "(株)高橋建材", contractType: "資材購入契約", amount: 5500000, status: "draft", riskLevel: "low", updatedAt: "2026/05/16" },
+];
+
+export type ReviewStatus = "completed" | "in_progress" | "pending_confirmation";
+export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
+  completed: "完了", in_progress: "レビュー中", pending_confirmation: "確認待ち",
+};
+
+export interface MockReview {
+  id: string; contractId: string; contractTitle: string; aiModel: string;
+  riskLevel: RiskLevel; issuesCount: number; status: ReviewStatus;
+  reviewerConfirmed: boolean; completedAt: string | null;
+}
+
+export const MOCK_REVIEWS: MockReview[] = [
+  { id: "REV-0001", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 4, status: "completed", reviewerConfirmed: true, completedAt: "2026/05/14" },
+  { id: "REV-0002", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（鈴木土木(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 2, status: "in_progress", reviewerConfirmed: false, completedAt: null },
+  { id: "REV-0003", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", aiModel: "claude-opus-4-7", riskLevel: "critical", issuesCount: 6, status: "completed", reviewerConfirmed: false, completedAt: "2026/05/11" },
+  { id: "REV-0004", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（横浜建設(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 3, status: "pending_confirmation", reviewerConfirmed: false, completedAt: "2026/05/07" },
+  { id: "REV-0005", contractId: "CTR-2026-0009", contractTitle: "業務委託契約（中央コンサルタント(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 2, status: "completed", reviewerConfirmed: true, completedAt: "2026/05/06" },
+  { id: "REV-0006", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)中村組）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 5, status: "completed", reviewerConfirmed: true, completedAt: "2026/04/29" },
+  { id: "REV-0007", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 1, status: "completed", reviewerConfirmed: true, completedAt: "2026/04/27" },
+  { id: "REV-0008", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 4, status: "in_progress", reviewerConfirmed: false, completedAt: null },
+];
+
+export type WorkflowStatus = "in_progress" | "approved" | "rejected" | "returned" | "withdrawn";
+export type WorkflowRoute = "A1" | "A2" | "B1" | "B2" | "C1" | "C2" | "D1";
+export const WORKFLOW_STATUS_LABELS: Record<WorkflowStatus, string> = {
+  in_progress: "審査中", approved: "承認済み", rejected: "否決", returned: "差戻し", withdrawn: "取下げ",
+};
+
+export interface MockWorkflow {
+  id: string; contractId: string; contractTitle: string; route: WorkflowRoute;
+  currentStep: string; waitingFor: string; status: WorkflowStatus;
+  requiresOutsideCounsel: boolean; dueDate: string | null; updatedAt: string;
+}
+
+export const MOCK_WORKFLOWS: MockWorkflow[] = [
+  { id: "WF-0001", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", route: "A2", currentStep: "部門長承認", waitingFor: "佐藤 一郎", status: "in_progress", requiresOutsideCounsel: true, dueDate: "2026/05/20", updatedAt: "2026/05/14" },
+  { id: "WF-0002", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（東日本資材(株)）", route: "B1", currentStep: "法務リード承認", waitingFor: "田中 太郎", status: "in_progress", requiresOutsideCounsel: false, dueDate: "2026/05/18", updatedAt: "2026/05/12" },
+  { id: "WF-0003", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)山田設計事務所）", route: "B2", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: false, dueDate: null, updatedAt: "2026/05/10" },
+  { id: "WF-0004", contractId: "CTR-2026-0009", contractTitle: "業務委託契約（中央コンサルタント(株)）", route: "C1", currentStep: "法務担当レビュー", waitingFor: "鈴木 花子", status: "in_progress", requiresOutsideCounsel: false, dueDate: "2026/05/22", updatedAt: "2026/05/06" },
+  { id: "WF-0005", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", route: "A1", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: true, dueDate: null, updatedAt: "2026/04/28" },
+  { id: "WF-0006", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", route: "D1", currentStep: "弁護士確認", waitingFor: "外部弁護士", status: "in_progress", requiresOutsideCounsel: true, dueDate: "2026/05/25", updatedAt: "2026/05/11" },
+  { id: "WF-0007", contractId: "CTR-2026-0007", contractTitle: "秘密保持契約（東京法律事務所）", route: "C2", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: false, dueDate: null, updatedAt: "2026/05/08" },
+  { id: "WF-0008", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", route: "B1", currentStep: "法務リード承認", waitingFor: "田中 太郎", status: "returned", requiresOutsideCounsel: false, dueDate: "2026/05/19", updatedAt: "2026/05/15" },
+];
+
+export type RiskItemStatus = "open" | "mitigated" | "accepted" | "closed";
+export const RISK_ITEM_STATUS_LABELS: Record<RiskItemStatus, string> = {
+  open: "未対応", mitigated: "軽減済み", accepted: "受容", closed: "解消",
+};
+
+export interface MockRisk {
+  id: string; contractId: string; contractTitle: string; category: string;
+  level: RiskLevel; score: number; description: string;
+  status: RiskItemStatus; owner: string | null; detectedAt: string;
+}
+
+export const MOCK_RISKS: MockRisk[] = [
+  { id: "RSK-0001", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", category: "下請法", level: "critical", score: 88, description: "支払期日が納品後75日に設定されており、下請法第2条の4（60日ルール）に抵触する可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/11" },
+  { id: "RSK-0002", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "建設業法", level: "high", score: 72, description: "第7条の解除条項が発注者に一方的に有利であり、建設業法第19条の3に抵触する恐れがあります。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/14" },
+  { id: "RSK-0003", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "損害賠償", level: "high", score: 65, description: "損害賠償の上限条項が設定されておらず、過大なリスク負担となる可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/14" },
+  { id: "RSK-0004", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（鈴木土木(株)）", category: "工期", level: "medium", score: 45, description: "工期延長条件が不明確で、天候不順・不可抗力時の対応が未定義です。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/13" },
+  { id: "RSK-0005", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)中村組）", category: "建設業法", level: "high", score: 70, description: "主任技術者の配置届が未提出であり、建設業法第26条違反の可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/04/30" },
+  { id: "RSK-0006", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（横浜建設(株)）", category: "秘密保持", level: "medium", score: 38, description: "秘密情報の定義が過度に広範であり、実務上の適用が困難です。", status: "accepted", owner: "渡辺 誠", detectedAt: "2026/05/07" },
+  { id: "RSK-0007", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)山田設計事務所）", category: "検査・引渡し", level: "medium", score: 42, description: "検査期間が7日間と設定されており、工事規模に対して不十分な可能性があります。", status: "mitigated", owner: "田中 太郎", detectedAt: "2026/05/10" },
+  { id: "RSK-0008", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", category: "下請法", level: "low", score: 22, description: "支払条件の記載が一部不明確ですが、口頭での合意があることを確認しました。", status: "closed", owner: "鈴木 花子", detectedAt: "2026/04/28" },
+  { id: "RSK-0009", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", category: "建設業法", level: "high", score: 68, description: "施工体制台帳の二次下請記載が不完全で、公共工事入札適正化法第15条に抵触する可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/05/15" },
+  { id: "RSK-0010", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（東日本資材(株)）", category: "独占禁止法", level: "low", score: 18, description: "特定メーカー指定条項の該当性を確認中。現時点では軽微と判断。", status: "accepted", owner: "田中 太郎", detectedAt: "2026/05/12" },
+];
+
+export type KnowledgeSource = "internal_doc" | "precedent" | "faq" | "playbook";
+export const KNOWLEDGE_SOURCE_LABELS: Record<KnowledgeSource, string> = {
+  internal_doc: "社内文書", precedent: "判例", faq: "FAQ", playbook: "プレイブック",
+};
+
+export interface MockKnowledgeItem {
+  id: string; title: string; excerpt: string; source: KnowledgeSource;
+  category: string; tags: string[]; updatedAt: string; score: number;
+}
+
+export const MOCK_KNOWLEDGE: MockKnowledgeItem[] = [
+  { id: "K-001", title: "建設業法 第19条の解説と実務上の留意点", excerpt: "建設業法第19条は契約書面の交付義務を定めています。工事請負契約の締結に際しては、工事内容・請負代金額・工期等を記載した書面を交付することが義務付けられています。電子書面での交付も認められています。", source: "internal_doc", category: "建設業法", tags: ["建設業法", "契約書", "書面交付"], updatedAt: "2026/05/10", score: 98 },
+  { id: "K-002", title: "下請法における支払期日の遵守について（60日ルール）", excerpt: "下請法第2条の4により、下請代金の支払期日は物品等の受領日から60日以内に定めることが義務付けられています。違反した場合は公正取引委員会による勧告・措置命令の対象となります。", source: "internal_doc", category: "下請法", tags: ["下請法", "支払期日", "60日ルール"], updatedAt: "2026/04/22", score: 95 },
+  { id: "K-003", title: "電子帳簿保存法 — 契約書の電子保存要件（2024年改正対応）", excerpt: "電子取引における電子データの保存義務が強化されました。検索要件（取引年月日・取引金額・取引先での検索）を満たすシステムによる保存が必要です。", source: "internal_doc", category: "電子帳簿保存法", tags: ["電子帳簿保存法", "電子保存", "検索要件"], updatedAt: "2026/05/05", score: 92 },
+  { id: "K-004", title: "工事請負契約のリスクチェックリスト（社内標準版）", excerpt: "工事請負契約締結前に確認すべき重要事項を整理したチェックリストです。建設業法・下請法・労働安全衛生法の各要件、保険、担保等を網羅しています。", source: "playbook", category: "社内規程", tags: ["チェックリスト", "工事請負", "リスク管理"], updatedAt: "2026/03/15", score: 90 },
+  { id: "K-005", title: "反社会的勢力排除条項の標準文言と運用指針", excerpt: "契約書への反社排除条項の挿入は、コンプライアンス上必須です。本文書では標準文言、取引先確認手続き、発見時の対応フローを解説します。", source: "playbook", category: "コンプライアンス", tags: ["反社排除", "コンプライアンス", "標準条項"], updatedAt: "2026/04/01", score: 88 },
+  { id: "K-006", title: "【判例】一括下請負の禁止と例外 — 最高裁令和3年判決", excerpt: "建設業法第22条の一括下請負禁止規定について、実質的に施工に関与していない場合の判断基準を示した重要判例。下請業者への指示・監督の実態が重要な判断要素とされた。", source: "precedent", category: "建設業法", tags: ["判例", "一括下請負", "建設業法"], updatedAt: "2026/02/10", score: 85 },
+  { id: "K-007", title: "FAQ: AI レビュー結果の法的効力と弁護士確認の必要性", excerpt: "Q: AIが「問題なし」と判断した契約書は弁護士確認なしで締結できますか？ A: いいえ。AI一次レビューは参考情報であり、最終的な法的判断は資格を持つ法務担当者・弁護士が行う必要があります。", source: "faq", category: "AI利用指針", tags: ["AI", "免責", "弁護士確認"], updatedAt: "2026/05/01", score: 82 },
+  { id: "K-008", title: "主任技術者・監理技術者の配置要件まとめ", excerpt: "建設業法第26条に基づく技術者配置要件を整理。専任が必要な工事の金額要件（4,000万円以上）、資格要件、兼任可否の判断基準を解説します。", source: "internal_doc", category: "建設業法", tags: ["技術者", "主任技術者", "監理技術者"], updatedAt: "2026/03/20", score: 80 },
+];
+
+export type TemplateStatus = "draft" | "published" | "archived";
+export const TEMPLATE_STATUS_LABELS: Record<TemplateStatus, string> = {
+  draft: "下書き", published: "公開中", archived: "アーカイブ",
+};
+
+export interface MockTemplate {
+  id: string; title: string; contractType: string; version: string;
+  status: TemplateStatus; updatedBy: string; updatedAt: string;
+}
+
+export const MOCK_TEMPLATES: MockTemplate[] = [
+  { id: "TPL-001", title: "工事請負契約書（公共工事用）", contractType: "工事請負契約", version: "v3.2", status: "published", updatedBy: "田中 太郎", updatedAt: "2026/04/15" },
+  { id: "TPL-002", title: "下請工事基本契約書（標準版）", contractType: "下請契約", version: "v2.5", status: "published", updatedBy: "鈴木 花子", updatedAt: "2026/04/20" },
+  { id: "TPL-003", title: "業務委託契約書（設計・監理業務）", contractType: "業務委託契約", version: "v1.8", status: "published", updatedBy: "渡辺 誠", updatedAt: "2026/03/10" },
+  { id: "TPL-004", title: "資材購入基本契約書", contractType: "資材購入契約", version: "v2.0", status: "published", updatedBy: "田中 太郎", updatedAt: "2026/05/01" },
+  { id: "TPL-005", title: "秘密保持契約書（NDA）— 相互開示型", contractType: "秘密保持契約", version: "v1.3", status: "published", updatedBy: "鈴木 花子", updatedAt: "2026/04/28" },
+  { id: "TPL-006", title: "建設工事保険付保依頼書", contractType: "工事請負契約", version: "v1.1", status: "published", updatedBy: "佐藤 一郎", updatedAt: "2026/02/18" },
+  { id: "TPL-007", title: "工事請負契約書（民間工事用・改訂案）", contractType: "工事請負契約", version: "v4.0-draft", status: "draft", updatedBy: "田中 太郎", updatedAt: "2026/05/16" },
+  { id: "TPL-008", title: "設計監理契約書（旧版）", contractType: "設計監理契約", version: "v1.0", status: "archived", updatedBy: "渡辺 誠", updatedAt: "2025/12/01" },
+];
+
+export interface MockAuditLog {
+  id: string; occurredAt: string;
+  actor: { id: string; name: string; role: string };
+  action: string; resourceType: string; resourceId: string;
+  ipAddress: string | null; userAgent: string | null;
+  prevHash: string; hash: string; chainValid: boolean;
+}
+
+function fakeHash(seed: number): string {
+  return Array.from({ length: 64 }, (_, i) => ((seed * 31 + i * 7) % 16).toString(16)).join("");
+}
+
+export const MOCK_AUDIT_LOGS: MockAuditLog[] = [
+  { id: "AL-10050", occurredAt: "2026-05-16T14:32:01", actor: { id: "u1", name: "田中 太郎", role: "legal_lead" }, action: "contract.create", resourceType: "contract", resourceId: "CTR-2026-0015", ipAddress: "192.168.0.10", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(1), hash: fakeHash(2), chainValid: true },
+  { id: "AL-10049", occurredAt: "2026-05-16T13:21:44", actor: { id: "u2", name: "鈴木 花子", role: "legal_member" }, action: "review.complete", resourceType: "review", resourceId: "REV-0002", ipAddress: "192.168.0.11", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(2), hash: fakeHash(3), chainValid: true },
+  { id: "AL-10048", occurredAt: "2026-05-16T11:55:12", actor: { id: "u1", name: "田中 太郎", role: "legal_lead" }, action: "workflow.approve", resourceType: "workflow", resourceId: "WF-0003", ipAddress: "192.168.0.10", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(3), hash: fakeHash(4), chainValid: true },
+  { id: "AL-10047", occurredAt: "2026-05-15T16:40:33", actor: { id: "u3", name: "佐藤 一郎", role: "manager" }, action: "contract.update", resourceType: "contract", resourceId: "CTR-2026-0008", ipAddress: "192.168.0.20", userAgent: "Mozilla/5.0 Safari/17", prevHash: fakeHash(4), hash: fakeHash(5), chainValid: true },
+  { id: "AL-10046", occurredAt: "2026-05-15T14:22:05", actor: { id: "u2", name: "鈴木 花子", role: "legal_member" }, action: "review.start", resourceType: "review", resourceId: "REV-0008", ipAddress: "192.168.0.11", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(5), hash: fakeHash(6), chainValid: true },
+  { id: "AL-10045", occurredAt: "2026-05-15T10:05:58", actor: { id: "u5", name: "高橋 健二", role: "admin" }, action: "user.login", resourceType: "user", resourceId: "u5", ipAddress: "192.168.0.30", userAgent: "Mozilla/5.0 Edge/124", prevHash: fakeHash(6), hash: fakeHash(7), chainValid: true },
+  { id: "AL-10044", occurredAt: "2026-05-14T17:30:00", actor: { id: "u1", name: "田中 太郎", role: "legal_lead" }, action: "workflow.approve", resourceType: "workflow", resourceId: "WF-0005", ipAddress: "192.168.0.10", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(7), hash: fakeHash(8), chainValid: true },
+  { id: "AL-10043", occurredAt: "2026-05-14T15:18:22", actor: { id: "u2", name: "鈴木 花子", role: "legal_member" }, action: "review.complete", resourceType: "review", resourceId: "REV-0001", ipAddress: "192.168.0.11", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(8), hash: fakeHash(9), chainValid: true },
+  { id: "AL-10042", occurredAt: "2026-05-14T09:44:17", actor: { id: "u4", name: "山田 美咲", role: "site_member" }, action: "contract.upload", resourceType: "contract", resourceId: "CTR-2026-0001", ipAddress: "192.168.0.21", userAgent: "Mozilla/5.0 Firefox/125", prevHash: fakeHash(9), hash: fakeHash(10), chainValid: true },
+  { id: "AL-10041", occurredAt: "2026-05-13T14:01:49", actor: { id: "u6", name: "伊藤 直美", role: "auditor" }, action: "user.login", resourceType: "user", resourceId: "u6", ipAddress: "192.168.0.40", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(10), hash: fakeHash(11), chainValid: true },
+  { id: "AL-10040", occurredAt: "2026-05-13T11:30:05", actor: { id: "u3", name: "佐藤 一郎", role: "manager" }, action: "contract.create", resourceType: "contract", resourceId: "CTR-2026-0014", ipAddress: "192.168.0.20", userAgent: "Mozilla/5.0 Safari/17", prevHash: fakeHash(11), hash: fakeHash(12), chainValid: true },
+  { id: "AL-10039", occurredAt: "2026-05-12T16:55:33", actor: { id: "u1", name: "田中 太郎", role: "legal_lead" }, action: "settings.update", resourceType: "system", resourceId: "SYS", ipAddress: "192.168.0.10", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(12), hash: fakeHash(13), chainValid: true },
+  { id: "AL-10038", occurredAt: "2026-05-12T10:20:44", actor: { id: "u7", name: "渡辺 誠", role: "legal_member" }, action: "workflow.approve", resourceType: "workflow", resourceId: "WF-0007", ipAddress: "192.168.0.12", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(13), hash: fakeHash(14), chainValid: true },
+  { id: "AL-10037", occurredAt: "2026-05-11T15:45:00", actor: { id: "u2", name: "鈴木 花子", role: "legal_member" }, action: "review.start", resourceType: "review", resourceId: "REV-0004", ipAddress: "192.168.0.11", userAgent: "Mozilla/5.0 Chrome/124", prevHash: fakeHash(14), hash: fakeHash(15), chainValid: true },
+  { id: "AL-10036", occurredAt: "2026-05-10T09:10:12", actor: { id: "u5", name: "高橋 健二", role: "admin" }, action: "user.login", resourceType: "user", resourceId: "u5", ipAddress: "192.168.0.30", userAgent: "Mozilla/5.0 Edge/124", prevHash: fakeHash(15), hash: fakeHash(16), chainValid: true },
+];
+
+// Dashboard KPIs derived from mock data
+export const MOCK_DASHBOARD_KPIS = {
+  total_contracts: MOCK_CONTRACTS.length,
+  in_review: MOCK_CONTRACTS.filter(c => c.status === "in_review").length,
+  pending_approval: MOCK_CONTRACTS.filter(c => c.status === "pending_approval").length,
+  high_risk_open: MOCK_RISKS.filter(r => (r.level === "high" || r.level === "critical") && r.status === "open").length,
+  reviews_this_month: MOCK_REVIEWS.filter(r => r.status === "completed").length,
+};
+
+export const MOCK_RISK_DISTRIBUTION = [
+  { level: "low" as RiskLevel, count: MOCK_RISKS.filter(r => r.level === "low").length },
+  { level: "medium" as RiskLevel, count: MOCK_RISKS.filter(r => r.level === "medium").length },
+  { level: "high" as RiskLevel, count: MOCK_RISKS.filter(r => r.level === "high").length },
+  { level: "critical" as RiskLevel, count: MOCK_RISKS.filter(r => r.level === "critical").length },
+];

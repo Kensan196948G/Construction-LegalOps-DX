@@ -38,8 +38,24 @@ interface KnowledgeSearchResult {
   perPage: number;
 }
 
-async function searchKnowledge(_params: SearchParams): Promise<KnowledgeSearchResult> {
-  return { items: [], total: 0, page: 1, perPage: 20 };
+import { MOCK_KNOWLEDGE } from "@/lib/mock-data";
+
+async function searchKnowledge(params: SearchParams): Promise<KnowledgeSearchResult> {
+  let items = MOCK_KNOWLEDGE.map(k => ({
+    id: k.id, title: k.title, excerpt: k.excerpt, source: k.source,
+    category: k.category, tags: k.tags, updatedAt: k.updatedAt, score: k.score,
+  }));
+  if (params.q) {
+    const q = params.q.toLowerCase();
+    items = items.filter(k => k.title.toLowerCase().includes(q) || k.excerpt.toLowerCase().includes(q) || k.tags.some(t => t.toLowerCase().includes(q)));
+  }
+  if (params.category) items = items.filter(k => k.category === params.category);
+  if (params.source) items = items.filter(k => k.source === params.source);
+  const page = Number(params.page ?? 1);
+  const perPage = 20;
+  const total = items.length;
+  items = items.slice((page - 1) * perPage, page * perPage);
+  return { items, total, page, perPage };
 }
 
 export default async function KnowledgePage({ searchParams }: KnowledgePageProps) {

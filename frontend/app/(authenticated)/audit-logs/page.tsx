@@ -47,13 +47,25 @@ interface AuditLogListResult {
   };
 }
 
-async function getAuditLogs(_params: SearchParams): Promise<AuditLogListResult> {
+import { MOCK_AUDIT_LOGS } from "@/lib/mock-data";
+
+async function getAuditLogs(params: SearchParams): Promise<AuditLogListResult> {
+  let items = MOCK_AUDIT_LOGS.map(l => ({
+    id: l.id, occurredAt: l.occurredAt, actor: l.actor,
+    action: l.action, resourceType: l.resourceType, resourceId: l.resourceId,
+    ipAddress: l.ipAddress, userAgent: l.userAgent,
+    prevHash: l.prevHash, hash: l.hash, chainValid: l.chainValid,
+  }));
+  if (params.actor) items = items.filter(l => l.actor.name.includes(params.actor!));
+  if (params.action) items = items.filter(l => l.action === params.action);
+  if (params.resourceType) items = items.filter(l => l.resourceType === params.resourceType);
+  const page = Number(params.page ?? 1);
+  const perPage = 50;
+  const total = items.length;
+  items = items.slice((page - 1) * perPage, page * perPage);
   return {
-    items: [],
-    total: 0,
-    page: 1,
-    perPage: 50,
-    chainIntegrity: { verified: true, verifiedAt: null, tamperedCount: 0 },
+    items, total, page, perPage,
+    chainIntegrity: { verified: true, verifiedAt: "2026-05-16T14:32:01", tamperedCount: 0 },
   };
 }
 

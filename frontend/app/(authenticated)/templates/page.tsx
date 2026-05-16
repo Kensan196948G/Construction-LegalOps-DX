@@ -38,8 +38,24 @@ interface TemplateListResult {
   perPage: number;
 }
 
-async function getTemplates(_params: SearchParams): Promise<TemplateListResult> {
-  return { items: [], total: 0, page: 1, perPage: 24 };
+import { MOCK_TEMPLATES } from "@/lib/mock-data";
+
+async function getTemplates(params: SearchParams): Promise<TemplateListResult> {
+  let items = MOCK_TEMPLATES.map(t => ({
+    id: t.id, title: t.title, contractType: t.contractType,
+    version: t.version, status: t.status, updatedBy: t.updatedBy, updatedAt: t.updatedAt,
+  }));
+  if (params.q) {
+    const q = params.q.toLowerCase();
+    items = items.filter(t => t.title.toLowerCase().includes(q));
+  }
+  if (params.contractType) items = items.filter(t => t.contractType === params.contractType);
+  if (params.status) items = items.filter(t => t.status === params.status);
+  const page = Number(params.page ?? 1);
+  const perPage = 24;
+  const total = items.length;
+  items = items.slice((page - 1) * perPage, page * perPage);
+  return { items, total, page, perPage };
 }
 
 export default async function TemplatesPage({ searchParams }: TemplatesPageProps) {

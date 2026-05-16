@@ -11,10 +11,10 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { PendingApprovalsList } from "@/components/dashboard/pending-approvals-list";
 import { RecentReviewsList } from "@/components/dashboard/recent-reviews-list";
 import { RiskDistributionChart } from "@/components/dashboard/risk-distribution-chart";
-import { dashboardApi, reviewsApi, risksApi, workflowsApi } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/client";
 import type { DashboardKpis } from "@/lib/api/schemas";
-import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import {
+  MOCK_DASHBOARD_KPIS, MOCK_RISK_DISTRIBUTION, MOCK_REVIEWS, MOCK_WORKFLOWS,
+} from "@/lib/mock-data";
 
 export const metadata: Metadata = {
   title: "ダッシュボード",
@@ -45,112 +45,34 @@ interface DashboardSummary {
   degraded: boolean;
 }
 
-const EMPTY_KPIS: DashboardKpis = {
-  total_contracts: 0,
-  in_review: 0,
-  pending_approval: 0,
-  high_risk_open: 0,
-  reviews_this_month: 0,
-};
 
-/**
- * Dashboard 用集計を Backend `/api/v1/*` から取得する。
- *
- * - KPI / リスク・ヒートマップ / 直近レビュー / 自分宛承認待ち を並列フェッチ
- * - 個別失敗は degraded フラグで通知し、画面は崩さない
- * - 認証エラー (401) は client.ts の interceptor が signOut → /login にリダイレクト
- */
 async function getDashboardSummary(): Promise<DashboardSummary> {
-  const unbind = await bindServerSession();
-  try {
-    const [kpisRes, heatmapRes, reviewsRes, workflowStepsAvailable] = await Promise.allSettled([
-      dashboardApi.kpis(),
-      risksApi.heatmap(),
-      reviewsApi.list({ page: 1, page_size: 5, sort: "-updated_at" }),
-      // 「自分宛」専用の専用 API 設計はまだ無いため、承認待ちワークフロー一覧で代用。
-      // Backend 側で `assignee=self` を解釈する想定。
-      workflowsApi.list({ page: 1, page_size: 5 }),
-    ]);
+  const recentReviews = MOCK_REVIEWS.slice(0, 5).map(r => ({
+    id: r.id,
+    title: r.contractTitle,
+    status: r.status,
+    riskLevel: r.riskLevel,
+    updatedAt: r.completedAt ?? "2026/05/16",
+  }));
 
-    const kpis = kpisRes.status === "fulfilled" ? kpisRes.value : EMPTY_KPIS;
+  const pendingApprovals = MOCK_WORKFLOWS
+    .filter(w => w.status === "in_progress")
+    .slice(0, 5)
+    .map(w => ({
+      id: w.id,
+      contractTitle: w.contractTitle,
+      route: w.route,
+      waitingFor: w.waitingFor,
+      dueDate: w.dueDate ?? "—",
+    }));
 
-    // Heatmap (probability × impact) を level=max(prob,impact) で粗く集約
-    const distMap: Record<"low" | "medium" | "high" | "critical", number> = {
-      low: 0,
-      medium: 0,
-      high: 0,
-      critical: 0,
-    };
-    if (heatmapRes.status === "fulfilled") {
-      const order: Array<"low" | "medium" | "high" | "critical"> = [
-        "low",
-        "medium",
-        "high",
-        "critical",
-      ];
-      for (const cell of heatmapRes.value.matrix) {
-        const probIdx = order.indexOf(cell.probability);
-        const impIdx = order.indexOf(cell.impact);
-        const lv = order[Math.max(probIdx, impIdx)] ?? "low";
-        distMap[lv] += cell.count;
-      }
-    }
-
-    const recentReviews =
-      reviewsRes.status === "fulfilled"
-        ? reviewsRes.value.items.map((r) => ({
-            id: String(r.id),
-            title: r.summary ?? `レビュー #${r.id}`,
-            status: r.status,
-            riskLevel:
-              (r.overall_risk as "low" | "medium" | "high" | "critical" | undefined) ?? "low",
-            updatedAt: r.finished_at ?? r.started_at ?? r.created_at ?? "",
-          }))
-        : [];
-
-    // 注: workflowsApi.list は WorkflowDefinition 一覧であり、自分宛 step ではない。
-    // Workflow Team が `/workflow-steps?assignee=me` を提供したらこの代用を差し替える。
-    const pendingApprovals: DashboardSummary["pendingApprovals"] = [];
-
-    const degraded =
-      kpisRes.status === "rejected" ||
-      heatmapRes.status === "rejected" ||
-      reviewsRes.status === "rejected" ||
-      workflowStepsAvailable.status === "rejected";
-
-    return {
-      kpis,
-      riskDistribution: [
-        { level: "low", count: distMap.low },
-        { level: "medium", count: distMap.medium },
-        { level: "high", count: distMap.high },
-        { level: "critical", count: distMap.critical },
-      ],
-      recentReviews,
-      pendingApprovals,
-      degraded,
-    };
-  } catch (err) {
-    // 想定外の例外: ApiError 含めて degraded で受け流す
-    if (!(err instanceof ApiError)) {
-      // eslint-disable-next-line no-console
-      console.error("[dashboard] unexpected error:", err);
-    }
-    return {
-      kpis: EMPTY_KPIS,
-      riskDistribution: [
-        { level: "low", count: 0 },
-        { level: "medium", count: 0 },
-        { level: "high", count: 0 },
-        { level: "critical", count: 0 },
-      ],
-      recentReviews: [],
-      pendingApprovals: [],
-      degraded: true,
-    };
-  } finally {
-    unbind();
-  }
+  return {
+    kpis: MOCK_DASHBOARD_KPIS as DashboardKpis,
+    riskDistribution: MOCK_RISK_DISTRIBUTION,
+    recentReviews,
+    pendingApprovals,
+    degraded: false,
+  };
 }
 
 export default async function DashboardPage() {
