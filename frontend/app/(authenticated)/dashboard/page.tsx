@@ -14,7 +14,7 @@ import { RiskDistributionChart } from "@/components/dashboard/risk-distribution-
 import { dashboardApi, reviewsApi, risksApi, workflowsApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import type { DashboardKpis } from "@/lib/api/schemas";
-import { bindServerSession } from "@/lib/auth/session-bridge";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
 
 export const metadata: Metadata = {
   title: "ダッシュボード",
