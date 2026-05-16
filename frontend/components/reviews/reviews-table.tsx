@@ -35,8 +35,8 @@ export function ReviewsTable({ items, total }: Props) {
               <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50">
                 <TableCell className="font-mono text-xs">{r.id}</TableCell>
                 <TableCell><Link href={`/reviews/${r.id}`} className="font-medium hover:underline line-clamp-1">{r.contractTitle}</Link></TableCell>
-                <TableCell><Badge variant={STATUS_V[r.status] ?? "outline"}>{STATUS_LABEL[r.status] ?? r.status}</Badge></TableCell>
-                <TableCell><Badge variant={RISK_V[r.riskLevel]}>{RISK_LABEL[r.riskLevel]}</Badge></TableCell>
+                <TableCell className="whitespace-nowrap"><Badge variant={STATUS_V[r.status] ?? "outline"}>{STATUS_LABEL[r.status] ?? r.status}</Badge></TableCell>
+                <TableCell className="whitespace-nowrap"><Badge variant={RISK_V[r.riskLevel]}>{RISK_LABEL[r.riskLevel]}</Badge></TableCell>
                 <TableCell className="text-center text-sm font-semibold">{r.issuesCount}</TableCell>
                 <TableCell className="text-center">{r.reviewerConfirmed && <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-500" />}</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">{r.completedAt ?? "—"}</TableCell>

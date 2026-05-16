@@ -171,26 +171,21 @@ export default function DisputesPage() {
                   filtered.map((d) => (
                     <TableRow key={d.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-mono text-xs">{d.id}</TableCell>
-                      <TableCell className="text-sm">{d.type}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="text-sm font-medium">{d.title}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{d.description}</p>
-                        </div>
+                      <TableCell className="text-sm whitespace-nowrap">{d.type}</TableCell>
+                      <TableCell className="max-w-[200px]">
+                        <p className="text-sm font-medium truncate">{d.title}</p>
                       </TableCell>
-                      <TableCell className="text-sm">{d.counterparty}</TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[d.status]}>
-                          {DISPUTE_STATUS_LABELS[d.status]}
-                        </Badge>
+                      <TableCell className="text-sm whitespace-nowrap">{d.counterparty}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant={STATUS_VARIANT[d.status]}>{DISPUTE_STATUS_LABELS[d.status]}</Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge variant={PRIORITY_VARIANT[d.priority]}>{d.priority}</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
+                      <TableCell className="text-right font-mono text-sm whitespace-nowrap">
                         {d.amount !== null ? fmtYen(d.amount) : <span className="text-muted-foreground">—</span>}
                       </TableCell>
-                      <TableCell className="text-sm">{d.assignee}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{d.assignee}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{d.registeredAt}</TableCell>
                     </TableRow>
                   ))

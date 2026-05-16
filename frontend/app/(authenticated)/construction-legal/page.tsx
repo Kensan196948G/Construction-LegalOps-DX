@@ -174,15 +174,12 @@ export default function ConstructionLegalPage() {
                       <TableCell>
                         <span className="text-xs font-medium">{c.law}</span>
                       </TableCell>
-                      <TableCell>
-                        <p className="text-sm">{c.item}</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">{c.detail}</p>
+                      <TableCell className="max-w-[200px]">
+                        <p className="text-sm truncate">{c.item}</p>
                       </TableCell>
-                      <TableCell className="text-sm">{c.target}</TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[c.status]}>
-                          {CL_STATUS_LABELS[c.status]}
-                        </Badge>
+                      <TableCell className="text-sm whitespace-nowrap">{c.target}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant={STATUS_VARIANT[c.status]}>{CL_STATUS_LABELS[c.status]}</Badge>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{c.checkedAt}</TableCell>
                       <TableCell className="text-sm">{c.checker}</TableCell>

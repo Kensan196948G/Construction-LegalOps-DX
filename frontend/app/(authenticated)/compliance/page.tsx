@@ -20,16 +20,18 @@ interface CompliancePageProps {
   searchParams?: Promise<SearchParams>;
 }
 
-async function getComplianceState(_params: SearchParams) {
+import { MOCK_COMPLIANCE_FRAMEWORKS, MOCK_COMPLIANCE_ITEMS } from "@/lib/mock-data";
+
+async function getComplianceState(params: SearchParams) {
+  let findings = MOCK_COMPLIANCE_ITEMS.map(c => ({
+    id: c.id, law: c.law, item: c.item, status: c.status, lastCheck: c.lastCheck, detail: c.detail,
+  }));
+  if (params.framework) findings = findings.filter(f => f.law === params.framework);
+  if (params.status) findings = findings.filter(f => f.status === params.status);
   return {
-    frameworks: [
-      { id: "construction_business_act", label: "建設業法", passed: 0, failed: 0, na: 0 },
-      { id: "subcontract_act", label: "下請代金支払遅延等防止法", passed: 0, failed: 0, na: 0 },
-      { id: "antimonopoly_act", label: "独占禁止法", passed: 0, failed: 0, na: 0 },
-      { id: "personal_info", label: "個人情報保護法", passed: 0, failed: 0, na: 0 },
-    ],
-    findings: [],
-    total: 0,
+    frameworks: MOCK_COMPLIANCE_FRAMEWORKS,
+    findings,
+    total: findings.length,
     page: 1,
     perPage: 20,
   };

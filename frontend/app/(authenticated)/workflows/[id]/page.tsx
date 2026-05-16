@@ -9,6 +9,7 @@ import { WorkflowStepper } from "@/components/workflows/workflow-stepper";
 import { WorkflowActions } from "@/components/workflows/workflow-actions";
 import { WorkflowHistory } from "@/components/workflows/workflow-history";
 import { RouteBadge } from "@/components/workflows/route-badge";
+import { MOCK_WORKFLOWS, MOCK_WORKFLOW_STEPS } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
   title: "ワークフロー詳細",
@@ -39,8 +40,21 @@ interface WorkflowDetail {
 }
 
 async function getWorkflow(id: string): Promise<WorkflowDetail | null> {
-  if (!id) return null;
-  return null;
+  const found = MOCK_WORKFLOWS.find(w => w.id === id) ?? MOCK_WORKFLOWS[0];
+  if (!found) return null;
+  const steps = MOCK_WORKFLOW_STEPS[found.id] ?? MOCK_WORKFLOW_STEPS["WF-0001"] ?? [];
+  const currentStep = steps.find(s => s.status === "in_progress") ?? null;
+  return {
+    id: found.id,
+    contractId: found.contractId,
+    contractTitle: found.contractTitle,
+    route: found.route as RouteId,
+    requiresOutsideCounsel: found.requiresOutsideCounsel,
+    status: found.status as WorkflowDetail["status"],
+    currentStepId: currentStep?.id ?? null,
+    steps,
+    canActAsCurrent: found.status === "in_progress",
+  };
 }
 
 interface WorkflowDetailPageProps {

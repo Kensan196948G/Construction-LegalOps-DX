@@ -39,9 +39,9 @@ export function WorkflowsTable({ items, total }: Props) {
                   </div>
                 </TableCell>
                 <TableCell className="text-center"><Badge variant="outline" className="font-mono">{w.route}</Badge></TableCell>
-                <TableCell className="text-sm">{w.currentStep}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{w.waitingFor}</TableCell>
-                <TableCell><Badge variant={STATUS_V[w.status]}>{STATUS_LABEL[w.status]}</Badge></TableCell>
+                <TableCell className="text-sm whitespace-nowrap">{w.currentStep}</TableCell>
+                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{w.waitingFor}</TableCell>
+                <TableCell className="whitespace-nowrap"><Badge variant={STATUS_V[w.status]}>{STATUS_LABEL[w.status]}</Badge></TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">{w.dueDate ?? "—"}</TableCell>
               </TableRow>
             ))}

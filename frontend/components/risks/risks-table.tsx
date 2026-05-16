@@ -38,14 +38,14 @@ export function RisksTable({ items, total }: Props) {
                 <TableCell>
                   <div>
                     <Link href={`/contracts/${r.contractId}`} className="text-xs text-muted-foreground hover:underline">{r.contractTitle}</Link>
-                    <p className="mt-0.5 text-sm line-clamp-2">{r.description}</p>
+                    <p className="mt-0.5 text-sm truncate max-w-xs">{r.description}</p>
                   </div>
                 </TableCell>
-                <TableCell className="text-xs">{r.category}</TableCell>
-                <TableCell><Badge variant={RISK_V[r.level]}>{RISK_LABEL[r.level]}</Badge></TableCell>
+                <TableCell className="text-xs whitespace-nowrap">{r.category}</TableCell>
+                <TableCell className="whitespace-nowrap"><Badge variant={RISK_V[r.level]}>{RISK_LABEL[r.level]}</Badge></TableCell>
                 <TableCell className="text-center font-bold text-sm">{r.score}</TableCell>
-                <TableCell><Badge variant={STATUS_V[r.status]}>{STATUS_LABEL[r.status]}</Badge></TableCell>
-                <TableCell className="text-sm">{r.owner ?? "—"}</TableCell>
+                <TableCell className="whitespace-nowrap"><Badge variant={STATUS_V[r.status]}>{STATUS_LABEL[r.status]}</Badge></TableCell>
+                <TableCell className="text-sm whitespace-nowrap">{r.owner ?? "—"}</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">{r.detectedAt}</TableCell>
               </TableRow>
             ))}

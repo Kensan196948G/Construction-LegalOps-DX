@@ -41,8 +41,8 @@ export function ContractsTable({ items, total, page, perPage }: Props) {
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground truncate max-w-[140px]">{c.counterparty}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{c.contractType}</TableCell>
-                <TableCell><Badge variant={STATUS_VARIANT[c.status] ?? "outline"}>{STATUS_LABEL[c.status] ?? c.status}</Badge></TableCell>
-                <TableCell><Badge variant={RISK_VARIANT[c.riskLevel]}>{RISK_LABEL[c.riskLevel]}</Badge></TableCell>
+                <TableCell className="whitespace-nowrap"><Badge variant={STATUS_VARIANT[c.status] ?? "outline"}>{STATUS_LABEL[c.status] ?? c.status}</Badge></TableCell>
+                <TableCell className="whitespace-nowrap"><Badge variant={RISK_VARIANT[c.riskLevel]}>{RISK_LABEL[c.riskLevel]}</Badge></TableCell>
                 <TableCell className="text-right font-mono text-sm">{fmtYen(c.amount)}</TableCell>
                 <TableCell className="font-mono text-xs text-muted-foreground">{c.updatedAt}</TableCell>
               </TableRow>
