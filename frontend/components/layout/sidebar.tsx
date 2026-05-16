@@ -17,6 +17,12 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
+  HardHat,
+  CalendarClock,
+  Building2,
+  Swords,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,20 +33,27 @@ export interface SidebarNavItem {
   label: string;
   href: string;
   icon: LucideIcon;
+  group?: string;
 }
 
 export const sidebarNavItems: SidebarNavItem[] = [
-  { label: "ダッシュボード", href: "/dashboard", icon: LayoutDashboard },
-  { label: "契約書レビュー", href: "/reviews", icon: FileSearch },
-  { label: "契約台帳", href: "/contracts", icon: FolderKanban },
-  { label: "法務相談", href: "/consultations", icon: MessageSquareText },
-  { label: "承認ワークフロー", href: "/workflows", icon: Workflow },
-  { label: "リスク管理", href: "/risks", icon: ShieldAlert },
-  { label: "コンプライアンスチェック", href: "/compliance", icon: ClipboardCheck },
-  { label: "ひな形管理", href: "/templates", icon: FileText },
-  { label: "ナレッジベース", href: "/knowledge", icon: BookOpen },
-  { label: "監査ログ", href: "/audit", icon: ScrollText },
-  { label: "管理設定", href: "/settings", icon: Settings },
+  { label: "ダッシュボード", href: "/dashboard", icon: LayoutDashboard, group: "main" },
+  { label: "契約書レビュー", href: "/reviews", icon: FileSearch, group: "contracts" },
+  { label: "契約台帳", href: "/contracts", icon: FolderKanban, group: "contracts" },
+  { label: "契約申請・稟議", href: "/applications", icon: ClipboardList, group: "contracts" },
+  { label: "承認ワークフロー", href: "/workflows", icon: Workflow, group: "contracts" },
+  { label: "法務相談", href: "/consultations", icon: MessageSquareText, group: "legal" },
+  { label: "リスク管理", href: "/risks", icon: ShieldAlert, group: "legal" },
+  { label: "建設業法務チェック", href: "/construction-legal", icon: HardHat, group: "legal" },
+  { label: "契約期限・更新管理", href: "/deadlines", icon: CalendarClock, group: "legal" },
+  { label: "取引先・協力会社管理", href: "/partners", icon: Building2, group: "legal" },
+  { label: "紛争・クレーム管理", href: "/disputes", icon: Swords, group: "legal" },
+  { label: "コンプライアンスチェック", href: "/compliance", icon: ClipboardCheck, group: "quality" },
+  { label: "ひな形管理", href: "/templates", icon: FileText, group: "quality" },
+  { label: "ナレッジベース", href: "/knowledge", icon: BookOpen, group: "quality" },
+  { label: "レポート・分析", href: "/reports", icon: BarChart3, group: "quality" },
+  { label: "監査ログ", href: "/audit-logs", icon: ScrollText, group: "admin" },
+  { label: "管理設定", href: "/settings", icon: Settings, group: "admin" },
 ];
 
 export interface SidebarProps extends React.HTMLAttributes<HTMLElement> {
