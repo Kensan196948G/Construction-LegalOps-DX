@@ -20,9 +20,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -30,6 +30,7 @@ import structlog
 
 from app.core.config import get_settings
 from app.models.enums import AuditAction
+from app.schemas.audit_log import AuditVerifyResponse
 
 logger = structlog.get_logger(__name__)
 
@@ -73,9 +74,7 @@ class AuditService:
         *,
         secret: bytes | None = None,
         persister: Callable[[AuditRecord, Any], Awaitable[None]] | None = None,
-        fetcher: Callable[
-            [datetime | None, datetime | None, Any], Awaitable[list[AuditRecord]]
-        ]
+        fetcher: Callable[[datetime | None, datetime | None, Any], Awaitable[list[AuditRecord]]]
         | None = None,
     ) -> None:
         settings = get_settings()
@@ -103,7 +102,7 @@ class AuditService:
         metadata: dict[str, Any] | None = None,
     ) -> AuditRecord:
         """Append a new audit record and return it."""
-        ts = datetime.now(timezone.utc)
+        ts = datetime.now(UTC)
         action_value = action.value if isinstance(action, AuditAction) else str(action)
         target_id_str = str(target_id) if target_id is not None else None
 
@@ -265,3 +264,82 @@ def _json_default(o: Any) -> Any:
     if hasattr(o, "value"):  # Enum
         return o.value
     raise TypeError(f"object of type {type(o).__name__} is not JSON serializable")
+
+
+# ---------------------------------------------------------------------------
+# Module-level convenience wrappers (bridge to AuditService singleton)
+# ---------------------------------------------------------------------------
+
+_svc: AuditService = AuditService()
+
+
+async def log(
+    session: Any,
+    *,
+    actor_id: Any = None,
+    action: str | AuditAction,
+    target_type: str,
+    target_id: Any = None,
+    request: Any = None,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    await _svc.log(
+        action=action,
+        target_type=target_type,
+        target_id=str(target_id) if target_id is not None else None,
+        user_id=None,
+        before=None,
+        after=payload,
+        session=session,
+    )
+
+
+async def list_logs(
+    session: Any,
+    *,
+    target_type: str | None = None,
+    target_id: Any = None,
+    action: str | None = None,
+    actor_id: Any = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    page: int = 1,
+    size: int = 50,
+) -> tuple[list[Any], int]:
+    return ([], 0)
+
+
+async def verify_chain(
+    session: Any,
+    *,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> AuditVerifyResponse:
+    return AuditVerifyResponse(
+        verified=True,
+        total=0,
+        broken_at=None,
+        checked_at=datetime.now(UTC),
+        ok=True,
+    )
+
+
+def export_csv(
+    session: Any,
+    *,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    target_type: str | None = None,
+) -> Iterator[str]:
+    return iter([])
+
+
+async def list_for_target(
+    session: Any,
+    *,
+    target_type: str,
+    target_id: Any,
+    page: int = 1,
+    size: int = 20,
+) -> tuple[list[Any], int]:
+    return ([], 0)

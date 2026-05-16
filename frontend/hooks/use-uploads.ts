@@ -26,14 +26,14 @@ export function useUploadFile(
   return useMutation<Attachment, ApiError, Parameters<typeof uploadsApi.upload>[0]>({
     mutationFn: (params) => uploadsApi.upload(params),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       if (vars.contract_id !== undefined) {
         qc.invalidateQueries({
           queryKey: queryKeys.contracts.detail(vars.contract_id),
         });
       }
       qc.invalidateQueries({ queryKey: queryKeys.uploads.all });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -45,10 +45,10 @@ export function useDeleteUpload(
   return useMutation<void, ApiError, number | string>({
     mutationFn: (id) => uploadsApi.delete(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.uploads.all });
       qc.invalidateQueries({ queryKey: queryKeys.contracts.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }

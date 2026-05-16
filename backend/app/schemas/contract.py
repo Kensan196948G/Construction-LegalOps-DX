@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Any, List, Optional
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -31,10 +31,10 @@ class ContractBase(BaseModel):
     title: Annotated[str, Field(min_length=1, max_length=256)]
     counterparty: Annotated[str, Field(min_length=1, max_length=256)]
     contract_type: Annotated[str, Field(min_length=1, max_length=64)]
-    amount: Optional[Annotated[Decimal, Field(ge=0, max_digits=18, decimal_places=2)]] = None
+    amount: Annotated[Decimal, Field(ge=0, max_digits=18, decimal_places=2)] | None = None
     currency: Annotated[str, Field(min_length=3, max_length=3)] = "JPY"
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: date | None = None
+    end_date: date | None = None
     department_id: int
     confidentiality: Confidentiality = Confidentiality.NORMAL
     extra_metadata: dict[str, Any] = Field(default_factory=dict, alias="metadata")
@@ -42,7 +42,7 @@ class ContractBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     @model_validator(mode="after")
-    def _check_date_order(self) -> "ContractBase":
+    def _check_date_order(self) -> ContractBase:
         if (
             self.start_date is not None
             and self.end_date is not None
@@ -59,23 +59,23 @@ class ContractCreate(ContractBase):
 class ContractUpdate(BaseModel):
     """Patch payload for ``PATCH /contracts/{id}``."""
 
-    title: Optional[str] = Field(default=None, max_length=256)
-    counterparty: Optional[str] = Field(default=None, max_length=256)
-    contract_type: Optional[str] = Field(default=None, max_length=64)
-    amount: Optional[Decimal] = Field(default=None, ge=0, max_digits=18, decimal_places=2)
-    currency: Optional[str] = Field(default=None, min_length=3, max_length=3)
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    department_id: Optional[int] = None
-    confidentiality: Optional[Confidentiality] = None
-    status: Optional[ContractStatus] = None
-    extra_metadata: Optional[dict[str, Any]] = Field(default=None, alias="metadata")
+    title: str | None = Field(default=None, max_length=256)
+    counterparty: str | None = Field(default=None, max_length=256)
+    contract_type: str | None = Field(default=None, max_length=64)
+    amount: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=2)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    start_date: date | None = None
+    end_date: date | None = None
+    department_id: int | None = None
+    confidentiality: Confidentiality | None = None
+    status: ContractStatus | None = None
+    extra_metadata: dict[str, Any] | None = Field(default=None, alias="metadata")
     version: int = Field(..., description="Optimistic-lock token (current row version)")
 
     model_config = ConfigDict(populate_by_name=True)
 
     @model_validator(mode="after")
-    def _check_date_order(self) -> "ContractUpdate":
+    def _check_date_order(self) -> ContractUpdate:
         if (
             self.start_date is not None
             and self.end_date is not None
@@ -93,23 +93,23 @@ class ContractRead(ORMModel, TimestampsMixin):
     title: str
     counterparty: str
     contract_type: str
-    amount: Optional[Decimal] = None
+    amount: Decimal | None = None
     currency: str
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
+    start_date: date | None = None
+    end_date: date | None = None
     status: ContractStatus
     confidentiality: Confidentiality
     version: int
-    department: Optional[DepartmentBrief] = None
-    drafter: Optional[UserBrief] = None
+    department: DepartmentBrief | None = None
+    drafter: UserBrief | None = None
 
 
 class ContractDetail(ContractRead):
     """Detailed read schema for ``GET /contracts/{id}``."""
 
-    sharepoint_item_id: Optional[str] = None
+    sharepoint_item_id: str | None = None
     extra_metadata: dict[str, Any] = Field(default_factory=dict, alias="metadata")
-    drafter_id: Optional[int] = None
+    drafter_id: int | None = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -117,7 +117,7 @@ class ContractDetail(ContractRead):
 class ContractList(BaseModel):
     """Bare list payload (without envelope) for handlers that compose them."""
 
-    items: List[ContractRead]
+    items: list[ContractRead]
     total: int
     page: int
     page_size: int
@@ -146,11 +146,11 @@ class ContractVersionOut(ORMModel):
     id: int
     contract_id: int
     version: int
-    title: Optional[str] = None
-    status: Optional[ContractStatus] = None
-    sharepoint_item_id: Optional[str] = None
+    title: str | None = None
+    status: ContractStatus | None = None
+    sharepoint_item_id: str | None = None
     created_at: datetime
-    created_by: Optional[int] = None
+    created_by: int | None = None
 
 
 __all__ = [

@@ -50,9 +50,9 @@ export function useMarkNotificationRead(
   return useMutation<void, ApiError, number | string>({
     mutationFn: (id) => notificationsApi.markAsRead(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.notifications.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }

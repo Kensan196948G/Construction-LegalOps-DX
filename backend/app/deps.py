@@ -7,6 +7,7 @@ Loop 4. The principal is built directly from the decoded JWT claims.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Final
 
@@ -134,7 +135,7 @@ async def get_current_user(
 # ---------------------------------------------------------------------------
 
 
-def require_role(*roles: Role):  # noqa: ANN201 — returns FastAPI dependency
+def require_role(*roles: Role) -> Callable[..., Awaitable[CurrentUser]]:
     """Build a FastAPI dependency that allows only the given roles.
 
     Usage::
@@ -157,7 +158,9 @@ def require_role(*roles: Role):  # noqa: ANN201 — returns FastAPI dependency
     return _checker
 
 
-def require_department_access(contract_id_param: str = "contract_id"):  # noqa: ANN201
+def require_department_access(
+    contract_id_param: str = "contract_id",
+) -> Callable[..., Awaitable[CurrentUser]]:
     """Build a dependency that enforces department-scoped access.
 
     The actual contract→department mapping requires a DB lookup
@@ -194,7 +197,6 @@ def require_department_access(contract_id_param: str = "contract_id"):  # noqa: 
 # Re-exports for convenience.
 __all__ = [
     "ALL_ROLES",
-    "CurrentUser",
     "ROLE_ADMIN",
     "ROLE_APPROVER",
     "ROLE_AUDITOR",
@@ -202,6 +204,7 @@ __all__ = [
     "ROLE_GUEST",
     "ROLE_REVIEWER",
     "ROLE_VIEWER",
+    "CurrentUser",
     "get_current_user",
     "require_department_access",
     "require_role",

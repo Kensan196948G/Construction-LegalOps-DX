@@ -22,7 +22,6 @@ we = pytest.importorskip(
 
 from app.models.enums import RiskLevel, WorkflowStepStatus  # type: ignore  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # select_route — pure routing matrix
 # ---------------------------------------------------------------------------

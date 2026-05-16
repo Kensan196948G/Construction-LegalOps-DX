@@ -14,7 +14,7 @@ import {
   QueryClientProvider,
   type DehydratedState,
 } from "@tanstack/react-query";
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactElement, type ReactNode } from "react";
 
 import { ApiError } from "@/lib/api/client";
 import { useInitApiClient } from "@/lib/api/init-client";
@@ -80,7 +80,7 @@ export interface QueryProviderProps {
   state?: DehydratedState;
 }
 
-export function QueryProvider({ children, state }: QueryProviderProps): JSX.Element {
+export function QueryProvider({ children, state }: QueryProviderProps): ReactElement {
   // useState の初期化子で 1 度だけ生成する (SSR-safe)
   const [client] = useState(() => getQueryClient());
 
@@ -93,6 +93,7 @@ export function QueryProvider({ children, state }: QueryProviderProps): JSX.Elem
       <HydrationBoundary state={state}>{children}</HydrationBoundary>
       {ReactQueryDevtools ? (
         <Suspense fallback={null}>
+          {/* @ts-expect-error ReactQueryDevtools props inferred from lazy fallback */}
           <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
         </Suspense>
       ) : null}

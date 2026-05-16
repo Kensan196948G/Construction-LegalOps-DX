@@ -23,8 +23,8 @@ import os
 import re
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Final
+from datetime import UTC, datetime
+from typing import Any, Final, cast
 
 import structlog
 from tenacity import (
@@ -129,10 +129,8 @@ class _CircuitBreaker:
     def allow(self) -> bool:
         if self._opened_at is None:
             return True
-        if time.monotonic() - self._opened_at >= self.recovery_seconds:
-            # half-open: allow a probe call
-            return True
-        return False
+        # half-open: allow a probe call after recovery window
+        return time.monotonic() - self._opened_at >= self.recovery_seconds
 
     def record_success(self) -> None:
         self._failures = 0
@@ -169,7 +167,7 @@ class AIReviewService:
         model_id: str | None = None,
     ) -> None:
         settings = get_settings()
-        self._mode = (mode or os.getenv("AI_REVIEW_MODE", "stub")).lower()
+        self._mode = (mode or os.getenv("AI_REVIEW_MODE", "stub") or "stub").lower()
         self._client = anthropic_client
         self._detector = detector or SensitiveDetector()
         self._model_id = model_id or settings.claude_model
@@ -319,14 +317,13 @@ class AIReviewService:
             )
 
         # 公共工事 / 入札
-        if re.search(r"公共工事|入札|発注者", t):
-            if not re.search(r"談合", t):
-                add(
-                    "no_collusion_representation",
-                    "談合関連表明保証なし",
-                    RiskLevel.MEDIUM,
-                    "公共工事と思われますが、談合関連の表明保証が見当たりません。",
-                )
+        if re.search(r"公共工事|入札|発注者", t) and not re.search(r"談合", t):
+            add(
+                "no_collusion_representation",
+                "談合関連表明保証なし",
+                RiskLevel.MEDIUM,
+                "公共工事と思われますが、談合関連の表明保証が見当たりません。",
+            )
 
         # 業務範囲曖昧
         ambiguous = len(re.findall(r"協議のうえ.{0,5}別途", t))
@@ -417,7 +414,7 @@ class AIReviewService:
                 match = re.search(r"\{.*\}", text, flags=re.DOTALL)
                 if not match:
                     raise AIReviewServiceError("Claude response did not contain JSON")
-                return json.loads(match.group(0))
+                return cast(dict[str, Any], json.loads(match.group(0)))
 
         raise AIReviewServiceError("unreachable: AsyncRetrying exited without result")
 
@@ -466,6 +463,6 @@ class AIReviewService:
             detections_redacted=redactions,
             elapsed_ms=elapsed_ms,
             mode=self._mode,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             disclaimer=DISCLAIMER,
         )

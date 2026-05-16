@@ -58,9 +58,9 @@ export function useCreateKnowledgeArticle(
   >({
     mutationFn: (data) => knowledgeApi.create(data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.knowledge.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -80,10 +80,10 @@ export function useUpdateKnowledgeArticle(
   >({
     mutationFn: ({ id, data }) => knowledgeApi.update(id, data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.knowledge.detail(vars.id) });
       qc.invalidateQueries({ queryKey: queryKeys.knowledge.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -95,9 +95,9 @@ export function useDeleteKnowledgeArticle(
   return useMutation<void, ApiError, number | string>({
     mutationFn: (id) => knowledgeApi.delete(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.knowledge.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }

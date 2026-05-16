@@ -12,7 +12,7 @@ import json
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -68,9 +68,8 @@ def role_can(user_role: str | None, allowed: tuple[str, ...] | set[str]) -> bool
 def ensure_role(user_role: str | None, allowed: tuple[str, ...] | set[str]) -> None:
     """Fail-closed companion to :func:`role_can` that raises on denial."""
     if not role_can(user_role, allowed):
-        raise AuthorizationError(
-            f"role '{user_role or '<anonymous>'}' is not authorized"
-        )
+        raise AuthorizationError(f"role '{user_role or '<anonymous>'}' is not authorized")
+
 
 # ---------------------------------------------------------------------------
 # Password hashing (bcrypt via passlib)
@@ -87,7 +86,7 @@ def hash_password(plain_password: str) -> str:
     """Hash a password using bcrypt with a sensible work factor."""
     if not plain_password:
         raise ValueError("password must not be empty")
-    return _pwd_context.hash(plain_password)
+    return str(_pwd_context.hash(plain_password))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -95,7 +94,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     if not plain_password or not hashed_password:
         return False
     try:
-        return _pwd_context.verify(plain_password, hashed_password)
+        return bool(_pwd_context.verify(plain_password, hashed_password))
     except (ValueError, TypeError):
         return False
 
@@ -138,10 +137,12 @@ def create_access_token(
                 continue
             payload[key] = value
 
-    return jwt.encode(
-        payload,
-        settings.jwt_secret.get_secret_value(),
-        algorithm=settings.jwt_algorithm,
+    return str(
+        jwt.encode(
+            payload,
+            settings.jwt_secret.get_secret_value(),
+            algorithm=settings.jwt_algorithm,
+        )
     )
 
 
@@ -150,12 +151,15 @@ def decode_token(token: str) -> dict[str, Any]:
     if not token:
         raise ValueError("token must not be empty")
     try:
-        return jwt.decode(
-            token,
-            settings.jwt_secret.get_secret_value(),
-            algorithms=[settings.jwt_algorithm],
-            audience=settings.jwt_audience,
-            issuer=settings.jwt_issuer,
+        return cast(
+            dict[str, Any],
+            jwt.decode(
+                token,
+                settings.jwt_secret.get_secret_value(),
+                algorithms=[settings.jwt_algorithm],
+                audience=settings.jwt_audience,
+                issuer=settings.jwt_issuer,
+            ),
         )
     except JWTError as exc:
         raise ValueError(f"invalid token: {exc}") from exc
@@ -352,7 +356,6 @@ def mask_value(value: Any, *, _depth: int = 0) -> Any:
 
 __all__ = [
     "ALL_ROLES",
-    "AuthorizationError",
     "DROP_FIELDS",
     "MASK_FIELDS",
     "ROLE_ADMIN",
@@ -362,6 +365,7 @@ __all__ = [
     "ROLE_GUEST",
     "ROLE_REVIEWER",
     "ROLE_VIEWER",
+    "AuthorizationError",
     "compute_hash_chain",
     "create_access_token",
     "decode_token",

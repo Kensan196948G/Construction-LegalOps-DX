@@ -16,14 +16,15 @@ import asyncio
 from logging.config import fileConfig
 from typing import Any
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine, async_engine_from_config
 
-# Ensure every model is imported so its Table is registered on Base.metadata.
-from app.db.base import Base  # noqa: F401
 import app.models  # noqa: F401
+from alembic import context
+
+# Ensure every model is imported so its Table is registered on Base.metadata.
+from app.db.base import Base
 
 config = context.config
 

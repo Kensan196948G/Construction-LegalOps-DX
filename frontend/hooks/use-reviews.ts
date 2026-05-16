@@ -56,12 +56,12 @@ export function useStartReview(
     mutationFn: ({ contractId, data }) =>
       reviewsApi.startForContract(contractId, data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.reviews.lists() });
       qc.invalidateQueries({
         queryKey: queryKeys.contracts.detail(vars.contractId),
       });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -73,11 +73,11 @@ export function useAcceptReview(
   return useMutation<LegalReview, ApiError, number | string>({
     mutationFn: (id) => reviewsApi.accept(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.reviews.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.reviews.lists() });
       qc.invalidateQueries({ queryKey: queryKeys.contracts.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }
@@ -97,10 +97,10 @@ export function useRejectReview(
   >({
     mutationFn: ({ id, reason }) => reviewsApi.reject(id, reason),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.reviews.detail(vars.id) });
       qc.invalidateQueries({ queryKey: queryKeys.reviews.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }

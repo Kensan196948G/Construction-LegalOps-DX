@@ -8,13 +8,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import cast
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user
 from app.db.session import get_db
+from app.deps import get_current_user
 from app.models.user import User
 from app.schemas.dashboard import DashboardSummary, DashboardTrends
 from app.services import dashboard_service
@@ -33,13 +33,13 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
     ),
 )
 async def get_summary(
-    department_id: Optional[int] = Query(default=None, description="部署で絞り込み"),
+    department_id: int | None = Query(default=None, description="部署で絞り込み"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DashboardSummary:
-    return await dashboard_service.get_summary(
+    return cast(DashboardSummary, await dashboard_service.get_summary(
         session, viewer=current_user, department_id=department_id
-    )
+    ))
 
 
 @router.get(
@@ -51,14 +51,14 @@ async def get_summary(
 async def get_trends(
     interval: str = Query(default="week", description="week / month"),
     weeks: int = Query(default=12, ge=1, le=52, description="集計期間 (interval の単位数)"),
-    department_id: Optional[int] = Query(default=None),
+    department_id: int | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DashboardTrends:
-    return await dashboard_service.get_trends(
+    return cast(DashboardTrends, await dashboard_service.get_trends(
         session,
         viewer=current_user,
         interval=interval,
         windows=weeks,
         department_id=department_id,
-    )
+    ))

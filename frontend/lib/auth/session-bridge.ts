@@ -1,19 +1,14 @@
 /**
- * Session ↔ API client bridge
+ * Client-side session bridge (Client Components only)
  * =====================================================================
  *
- * next-auth v5 のセッション (`session.user.accessToken`) を
- * `@/lib/api/client` の `setAuthTokenProvider` / `setOnUnauthorized` に
- * 橋渡しするためのユーティリティ。
+ * Client Component 用セッション↔API client ブリッジ。
+ * Server Component / Route Handler では `@/lib/auth/session-bridge.server` を使うこと。
  *
- * - Server Component / Route Handler: `auth()` を直接 await する
- *   `bindServerSession()` を 1 リクエストにつき 1 回呼ぶ。
- * - Client Component: `useBindClientSession()` を `QueryProvider` 内で 1 回
- *   呼べば、以降 `useSession()` の変化を追跡してトークンを差し替える。
- *
- * このファイルは `auth.ts` / `auth.config.ts` を import するため、
- * **Edge ランタイム非互換**。`middleware.ts` からは絶対に import しないこと。
+ * `useBindClientSession()` を `QueryProvider` 内で 1 回呼べば、
+ * 以降 `useSession()` の変化を追跡してトークンを差し替える。
  */
+"use client";
 
 import { useEffect } from "react";
 import { signOut as nextAuthSignOut, useSession } from "next-auth/react";
@@ -40,49 +35,6 @@ function useSessionSafe(): { accessToken?: string } | null {
   } catch {
     return null;
   }
-}
-
-// ---------------------------------------------------------------------------
-// Server side
-// ---------------------------------------------------------------------------
-
-/**
- * Server Component / Server Action / Route Handler から呼ぶ初期化。
- *
- * `auth()` を **lazy 動的 import** することで、本ファイルがクライアント
- * バンドルに引きずられても next-auth Node 専用 API が読み込まれないようにする。
- *
- * 同一プロセス上で複数並行リクエストが走ると provider が共有される問題を
- * 避けるため、provider はリクエストスコープのクロージャを返す方式とする
- * (= 直近 `bindServerSession()` 呼出時点の token をキャプチャ)。
- *
- * @returns 後始末関数。`finally` で必ず呼んで provider をクリアする。
- */
-export async function bindServerSession(): Promise<() => void> {
-  let token: string | null | undefined;
-  try {
-    const mod: unknown = await import("@/auth").catch(() => null);
-    if (mod && typeof mod === "object" && "auth" in mod) {
-      const authFn = (mod as { auth?: () => Promise<unknown> }).auth;
-      if (typeof authFn === "function") {
-        const session = (await authFn()) as
-          | { user?: { accessToken?: string } }
-          | null
-          | undefined;
-        token = session?.user?.accessToken;
-      }
-    }
-  } catch {
-    token = null;
-  }
-
-  const provider: AuthTokenProvider = async () => token ?? null;
-  setAuthTokenProvider(provider);
-
-  return () => {
-    // 直前に install した provider を厳密一致で外す
-    setAuthTokenProvider(null);
-  };
 }
 
 // ---------------------------------------------------------------------------

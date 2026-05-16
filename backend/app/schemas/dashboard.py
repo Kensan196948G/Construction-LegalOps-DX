@@ -8,7 +8,6 @@ legal/admin → all rows).
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,9 +22,9 @@ class DashboardSummary(BaseModel):
     recent_completed: int = Field(default=0, ge=0, description="直近完了件数")
     my_tasks: int = Field(default=0, ge=0, description="自分宛タスク件数")
     avg_risk_score: float = Field(default=0.0, ge=0.0, le=100.0)
-    contracts_by_status: Dict[str, int] = Field(default_factory=dict)
+    contracts_by_status: dict[str, int] = Field(default_factory=dict)
     pending_reviews: int = Field(default=0, ge=0)
-    generated_at: Optional[datetime] = None
+    generated_at: datetime | None = None
 
 
 class DashboardTrendPoint(BaseModel):
@@ -39,7 +38,7 @@ class DashboardTrends(BaseModel):
     """Response of ``GET /dashboard/trends``."""
 
     granularity: str = Field(default="month", pattern="^(week|month)$")
-    series: Dict[str, List[DashboardTrendPoint]] = Field(default_factory=dict)
+    series: dict[str, list[DashboardTrendPoint]] = Field(default_factory=dict)
 
 
 __all__ = ["DashboardSummary", "DashboardTrendPoint", "DashboardTrends"]

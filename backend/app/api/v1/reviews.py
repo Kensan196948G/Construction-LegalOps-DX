@@ -9,13 +9,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.review import (
@@ -42,7 +40,7 @@ async def start_review(
     contract_id: int,
     payload: ReviewStartRequest,
     request: Request,
-    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("site", "legal", "admin")),
@@ -79,9 +77,9 @@ async def start_review(
     description="契約 ID・ステータス・モデルで絞り込み可能。",
 )
 async def list_reviews(
-    contract_id: Optional[int] = Query(default=None),
-    status_: Optional[str] = Query(default=None, alias="status"),
-    ai_model: Optional[str] = Query(default=None),
+    contract_id: int | None = Query(default=None),
+    status_: str | None = Query(default=None, alias="status"),
+    ai_model: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),

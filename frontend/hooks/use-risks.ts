@@ -66,10 +66,10 @@ export function useUpdateRisk(
   return useMutation<RiskItem, ApiError, { id: number | string; data: RiskUpdate }>({
     mutationFn: ({ id, data }) => risksApi.update(id, data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.risks.all });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }

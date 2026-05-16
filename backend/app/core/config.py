@@ -48,9 +48,7 @@ class Settings(BaseSettings):
 
     # ----- Database -----
     db_url: SecretStr = Field(
-        default=SecretStr(
-            "postgresql+asyncpg://legalops:legalops_dev@postgres:5432/legalops"
-        ),
+        default=SecretStr("postgresql+asyncpg://legalops:legalops_dev@postgres:5432/legalops"),
         alias="DB_URL",
     )
     db_pool_size: int = Field(default=10, alias="DB_POOL_SIZE")
@@ -79,6 +77,7 @@ class Settings(BaseSettings):
         default="construction-legalops-dx-api",
         alias="JWT_AUDIENCE",
     )
+    session_cookie_max_age: int = Field(default=3600, alias="SESSION_COOKIE_MAX_AGE")
 
     # ----- Entra ID -----
     entra_tenant_id: str = Field(

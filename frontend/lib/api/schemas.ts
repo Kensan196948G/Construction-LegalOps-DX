@@ -50,12 +50,14 @@ export function paginatedSchema<T extends z.ZodTypeAny>(item: T) {
       data: z.array(item),
       meta: paginationMetaSchema,
     })
-    .transform((raw) => ({
-      page: raw.meta.page,
-      size: raw.meta.page_size,
-      total: raw.meta.total,
-      items: raw.data,
-    }));
+    .transform(
+      (raw): { page: number; size: number; total: number; items: z.infer<T>[] } => ({
+        page: raw.meta.page,
+        size: raw.meta.page_size,
+        total: raw.meta.total,
+        items: raw.data as z.infer<T>[],
+      }),
+    );
 }
 
 /** 単一オブジェクトレスポンスのエンベロープ。 */
@@ -68,7 +70,7 @@ export function apiResponse<T extends z.ZodTypeAny>(inner: T) {
         .partial()
         .optional(),
     })
-    .transform((r) => r.data);
+    .transform((r): z.infer<T> => r.data as z.infer<T>);
 }
 
 // ===========================================================================

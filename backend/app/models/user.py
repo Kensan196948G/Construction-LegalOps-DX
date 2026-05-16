@@ -7,7 +7,7 @@ to Microsoft Entra ID; ``entra_oid`` stores the ``oid`` claim from the JWT.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import (
@@ -19,7 +19,8 @@ from sqlalchemy import (
     Index,
     String,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -44,7 +45,7 @@ class User(IntPKMixin, TimestampMixin, Base):
     )
     email: Mapped[str] = mapped_column(String(256), nullable=False, unique=True)
     display_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    department_id: Mapped[Optional[int]] = mapped_column(
+    department_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("departments.id", ondelete="RESTRICT"),
         nullable=True,
@@ -53,14 +54,14 @@ class User(IntPKMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(
+    last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     attributes: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
 
-    department: Mapped[Optional["Department"]] = relationship(
+    department: Mapped[Department | None] = relationship(
         "Department", back_populates="users"
     )
 

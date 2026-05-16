@@ -63,8 +63,8 @@ class SoftDeleteMixin:
 
 
 __all__ = [
-    "Base",
     "NAMING_CONVENTION",
+    "Base",
     "SoftDeleteMixin",
     "TimestampMixin",
     "UUIDPrimaryKeyMixin",

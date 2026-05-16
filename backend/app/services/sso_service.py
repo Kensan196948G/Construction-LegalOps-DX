@@ -38,8 +38,8 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Any, Final
+from datetime import UTC, datetime, timedelta
+from typing import Any, Final, cast
 from urllib.parse import urlencode
 
 import structlog
@@ -103,7 +103,7 @@ class SSOService:
 
     def __init__(self, *, mode: str | None = None) -> None:
         self._settings = get_settings()
-        self._mode = (mode or os.getenv("SSO_MODE", "stub")).lower()
+        self._mode = (mode or os.getenv("SSO_MODE", "stub") or "stub").lower()
         self._secret = self._settings.jwt_secret.get_secret_value().encode("utf-8")
         self._issuer = self._settings.jwt_issuer
         self._audience = self._settings.jwt_audience
@@ -183,7 +183,7 @@ class SSOService:
         # replay scenarios reproducibly.
         sub_seed = hashlib.sha256(code.encode("utf-8")).hexdigest()[:16]
         upn = f"dev-{sub_seed}@example.co.jp"
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         claims = {
             "sub": sub_seed,
             "upn": upn,
@@ -223,12 +223,12 @@ class SSOService:
             payload = _hs256_decode(token, self._secret)
         except SSOError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise SSOError(f"invalid token: {exc}") from exc
 
-        now = datetime.now(timezone.utc)
-        exp = datetime.fromtimestamp(int(payload.get("exp", 0)), tz=timezone.utc)
-        iat = datetime.fromtimestamp(int(payload.get("iat", 0)), tz=timezone.utc)
+        now = datetime.now(UTC)
+        exp = datetime.fromtimestamp(int(payload.get("exp", 0)), tz=UTC)
+        iat = datetime.fromtimestamp(int(payload.get("iat", 0)), tz=UTC)
         if exp < now:
             raise SSOError("token has expired")
         if payload.get("iss") != self._issuer:
@@ -275,7 +275,7 @@ class SSOService:
         # Stub path — keep the same UPN by hashing the token.
         sub_seed = hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()[:16]
         upn = f"dev-{sub_seed}@example.co.jp"
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         claims = {
             "sub": sub_seed,
             "upn": upn,
@@ -381,7 +381,7 @@ class SSOService:
             },
         )
         try:
-            with urllib.request.urlopen(  # noqa: S310
+            with urllib.request.urlopen(  # noqa: S310  # nosec B310
                 req, timeout=_HTTP_TIMEOUT
             ) as resp:
                 raw = resp.read()
@@ -397,7 +397,7 @@ class SSOService:
             raise SSOError(f"token endpoint unreachable: {exc.reason}") from exc
 
         try:
-            return json.loads(raw.decode("utf-8"))
+            return cast(dict[str, Any], json.loads(raw.decode("utf-8")))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise SSOError("token endpoint returned invalid JSON") from exc
 
@@ -440,7 +440,7 @@ def _hs256_decode(token: str, secret: bytes) -> dict[str, Any]:
     expected = hmac.new(secret, signing_input, hashlib.sha256).digest()
     if not hmac.compare_digest(expected, _b64url_decode(sig_b64)):
         raise SSOError("signature mismatch")
-    return json.loads(_b64url_decode(payload_b64))
+    return cast(dict[str, Any], json.loads(_b64url_decode(payload_b64)))
 
 
 # ---------------------------------------------------------------------------
@@ -456,7 +456,7 @@ def _http_get_json(url: str) -> Any:
         headers={"Accept": "application/json"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:  # noqa: S310  # nosec B310
             raw = resp.read()
     except urllib.error.HTTPError as exc:
         raise SSOError(f"GET {url} returned HTTP {exc.code}") from exc
@@ -486,7 +486,7 @@ def _parse_token_response(
     try:
         access_token = str(payload["access_token"])
         id_token = str(payload["id_token"])
-    except KeyError as exc:  # noqa: BLE001
+    except KeyError as exc:
         raise SSOError(f"token endpoint response missing field: {exc}") from exc
 
     refresh = payload.get("refresh_token") or fallback_refresh

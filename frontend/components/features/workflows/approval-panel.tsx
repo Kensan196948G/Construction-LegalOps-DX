@@ -23,9 +23,10 @@ export interface ApprovalSubmitPayload {
   comment: string;
 }
 
-export interface ApprovalPanelProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface ApprovalPanelProps {
   title?: string;
   description?: string;
+  className?: string;
   /** コメント必須にする場合 */
   requireCommentOnReject?: boolean;
   disabled?: boolean;

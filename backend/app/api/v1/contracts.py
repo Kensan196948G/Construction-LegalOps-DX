@@ -11,13 +11,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.audit_log import AuditLogOut
 from app.schemas.clause import ClauseOut
@@ -37,20 +37,23 @@ router = APIRouter(prefix="/contracts", tags=["contracts"])
     "",
     response_model=Page[ContractOut],
     summary="契約一覧",
-    description="検索・絞り込み (status/contract_type/department_id/risk_level/q)・ページング対応。RLS 適用。",
+    description=(
+        "検索・絞り込み (status/contract_type/department_id/risk_level/q)"
+        "・ページング対応。RLS 適用。"
+    ),
 )
 async def list_contracts(
-    q: Optional[str] = Query(default=None, description="タイトル/相手方/契約番号の部分一致"),
-    status_: Optional[str] = Query(default=None, alias="status"),
-    contract_type: Optional[str] = Query(default=None),
-    department_id: Optional[int] = Query(default=None),
-    risk_level: Optional[str] = Query(default=None, description="low/medium/high/critical"),
-    confidentiality: Optional[str] = Query(default=None),
-    date_from: Optional[str] = Query(default=None, alias="from"),
-    date_to: Optional[str] = Query(default=None, alias="to"),
+    q: str | None = Query(default=None, description="タイトル/相手方/契約番号の部分一致"),
+    status_: str | None = Query(default=None, alias="status"),
+    contract_type: str | None = Query(default=None),
+    department_id: int | None = Query(default=None),
+    risk_level: str | None = Query(default=None, description="low/medium/high/critical"),
+    confidentiality: str | None = Query(default=None),
+    date_from: str | None = Query(default=None, alias="from"),
+    date_to: str | None = Query(default=None, alias="to"),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
-    sort: Optional[str] = Query(default="-updated_at"),
+    sort: str | None = Query(default="-updated_at"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Page[ContractOut]:
@@ -81,7 +84,7 @@ async def list_contracts(
 async def create_contract(
     payload: ContractCreate,
     request: Request,
-    idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("site", "legal", "admin")),
@@ -114,7 +117,9 @@ async def get_contract(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ContractOut:
-    contract = await contract_service.get_contract(session, contract_id=contract_id, viewer=current_user)
+    contract = await contract_service.get_contract(
+        session, contract_id=contract_id, viewer=current_user
+    )
     if contract is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
     return ContractOut.model_validate(contract)
@@ -255,11 +260,11 @@ async def list_clauses(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[ClauseOut]:
-    return await contract_service.list_clauses(
+    return cast(list[ClauseOut], await contract_service.list_clauses(
         session,
         contract_id=contract_id,
         viewer=current_user,
-    )
+    ))
 
 
 @router.get(

@@ -78,10 +78,10 @@ export function useCreateContract(
   return useMutation<Contract, ApiError, ContractCreate>({
     mutationFn: (data) => contractsApi.create(data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.contracts.lists() });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -97,10 +97,10 @@ export function useUpdateContract(
   return useMutation<Contract, ApiError, { id: number | string; data: ContractUpdate }>({
     mutationFn: ({ id, data }) => contractsApi.update(id, data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.contracts.lists() });
       qc.invalidateQueries({ queryKey: queryKeys.contracts.detail(vars.id) });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -112,10 +112,10 @@ export function useDeleteContract(
   return useMutation<void, ApiError, number | string>({
     mutationFn: (id) => contractsApi.delete(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.contracts.all });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }
@@ -127,11 +127,11 @@ export function useSubmitContract(
   return useMutation<Contract, ApiError, number | string>({
     mutationFn: (id) => contractsApi.submit(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.contracts.detail(id) });
       qc.invalidateQueries({ queryKey: queryKeys.contracts.lists() });
       qc.invalidateQueries({ queryKey: queryKeys.workflows.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }

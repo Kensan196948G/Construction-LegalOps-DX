@@ -33,10 +33,7 @@ async def test_stub_returns_structured_result():
     # Assert
     assert result is not None
     # to_dict() is documented on AIReviewResult
-    if hasattr(result, "to_dict"):
-        data = result.to_dict()
-    else:
-        data = result.__dict__
+    data = result.to_dict() if hasattr(result, "to_dict") else result.__dict__
     assert isinstance(data, dict)
 
 

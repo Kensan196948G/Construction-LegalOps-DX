@@ -13,7 +13,7 @@ the swap is a no-op at the call site.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from fastapi import HTTPException, status
 
@@ -23,7 +23,7 @@ def make_stub(service_name: str) -> Any:
 
     class _Stub:
         __name__ = service_name
-        ALLOWED_MIME_TYPES = {
+        ALLOWED_MIME_TYPES: ClassVar[set[str]] = {
             "application/pdf",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/msword",

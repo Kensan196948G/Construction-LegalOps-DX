@@ -5,9 +5,7 @@ Mirrors ``docs/api_design.md`` section 5.4 (条項取得).
 
 from __future__ import annotations
 
-from typing import Optional
-
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from .common import ORMModel
 
@@ -18,10 +16,10 @@ class ClauseOut(ORMModel):
     id: int
     contract_id: int
     seq: int = Field(..., ge=1, description="段落番号 / 条項番号")
-    title: Optional[str] = None
+    title: str | None = None
     text: str
-    category: Optional[str] = None
-    risk_level: Optional[str] = None
+    category: str | None = None
+    risk_level: str | None = None
 
 
 __all__ = ["ClauseOut"]

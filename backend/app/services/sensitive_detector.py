@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Final
 
 
-class DetectionCategory(str, Enum):
+class DetectionCategory(StrEnum):
     """Category of a sensitive-token detection."""
 
     MY_NUMBER = "my_number"

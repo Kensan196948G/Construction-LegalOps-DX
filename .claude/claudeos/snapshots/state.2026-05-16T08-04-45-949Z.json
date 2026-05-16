@@ -1,0 +1,91 @@
+{
+  "project": {
+    "name": "Construction-LegalOps-DX",
+    "registration_date": "2026-05-16",
+    "registered_at": "2026-05-16",
+    "start_date": "2026-05-16",
+    "release_deadline": "2026-11-16",
+    "duration_months": 6,
+    "phase_mode": "release_preparation",
+    "status": "loops_complete",
+    "last_loop_completed": 5,
+    "loops_total": 5,
+    "current_version": "0.1.0"
+  },
+  "goal": "Construction-LegalOps-DX 自律開発",
+  "phase": "Improve",
+  "kpi": {
+    "success_rate_target": 0.9,
+    "ci_success_rate": 0.0,
+    "test_pass_rate": 0.0,
+    "security_critical": 0,
+    "blocker_count": 0
+  },
+  "execution": {
+    "max_duration_minutes": 240,
+    "repair_count": 0,
+    "max_repair": 3,
+    "same_error_limit": 2,
+    "phase": "Improve",
+    "last_session_summary": "Loop 5 (Integration & Finalization) 完了。CHANGELOG.md / README.md / state.json 更新、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成。"
+  },
+  "automation": { "auto_issue_generation": true, "self_evolution": true },
+  "stable": { "consecutive_success": 0, "target_n": 3, "stable_achieved": false },
+  "completed_issues": [],
+  "blocked_issues": [],
+  "learning": { "failure_patterns": [], "success_patterns": [] },
+  "quality_gates": {
+    "lint": { "warning_threshold": 10, "error_threshold": 0 },
+    "coverage": { "line_min": 70, "changed_files_min": 80 }
+  },
+  "loop1": {
+    "name": "Foundation",
+    "completed_at": "2026-05-16",
+    "summary": "リポジトリ初期スキャフォールド、README/LICENSE/CONTRIBUTING/CHANGELOG、CI、docker-compose 枠、設計ドキュメント整備。"
+  },
+  "loop2": {
+    "name": "Backend MVP",
+    "completed_at": "2026-05-16",
+    "summary": "FastAPI 本体、SQLAlchemy モデル、Alembic、Entra ID + JWT 認証、契約書 CRUD、Claude API ラッパー、監査ログサービス、pytest 初期セット。"
+  },
+  "loop3": {
+    "name": "Frontend MVP",
+    "completed_at": "2026-05-16",
+    "summary": "Next.js 14 + Tailwind + shadcn/ui、ログイン/ダッシュボード/契約書/レビュー/ワークフロー/監査ログ画面、AI 出力ディスクレーマー常時表示、Jest テスト。"
+  },
+  "loop4": {
+    "name": "Security & Infra",
+    "completed_at": "2026-05-16",
+    "summary": "nginx + TLS + HSTS、CSP Report-Only、PostgreSQL 16 本番パラメータ、audit_logs トリガー、Redis 7、/healthz・/readyz、Trivy/Bandit/npm audit CI 統合。"
+  },
+  "loop5": {
+    "name": "Integration & Finalization",
+    "completed_at": "2026-05-16",
+    "summary": "E2E 結合テストハーネス、CHANGELOG.md v0.1.0 確定、README.md に Quick Start / Compliance / Project Timeline 追加、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成、state.json をリリース準備フェーズへ更新。",
+    "blockers_resolved": [
+      "CHANGELOG.md の Unreleased セクション空白問題を解消し v0.1.0 を確定",
+      "README.md に Quick Start 不在問題を解消",
+      "本番リリース手順の文書化欠如を docs/RELEASE_CHECKLIST.md で解消",
+      "次セッション引き継ぎ情報の欠如を docs/HANDOVER.md で解消"
+    ],
+    "outstanding_tasks": [
+      "JWT 署名鍵を HS256 → RS256 に切替 (P0)",
+      "CSP Report-Only → enforce 移行 (P0)",
+      "本番 secrets の Vault 投入 (P0)",
+      "/readyz の本番チューニング (deep check 実装) (P1)",
+      "結合テストの PostgreSQL profile 統一 (P1)",
+      "alembic PITR リストアテストの実施 (P1)",
+      "audit_logs テーブルの月次パーティショニング検討 (P1)",
+      "E2E テストの Playwright 化 (P2)",
+      "AI レビュー結果の根拠条文ハイライト UI (P2)"
+    ]
+  },
+  "next_milestones": {
+    "production_release": "2026-11-16",
+    "auto_degradation_thresholds": {
+      "30_days_left": "2026-10-17",
+      "14_days_left": "2026-11-02",
+      "7_days_left": "2026-11-09"
+    }
+  }
+}

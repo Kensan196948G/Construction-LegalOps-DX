@@ -51,9 +51,9 @@ export function useCreateWorkflow(
   return useMutation<Workflow, ApiError, Parameters<typeof workflowsApi.create>[0]>({
     mutationFn: (data) => workflowsApi.create(data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.workflows.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -73,10 +73,10 @@ export function useUpdateWorkflow(
   >({
     mutationFn: ({ id, data }) => workflowsApi.update(id, data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.workflows.detail(vars.id) });
       qc.invalidateQueries({ queryKey: queryKeys.workflows.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -88,9 +88,9 @@ export function useDeleteWorkflow(
   return useMutation<void, ApiError, number | string>({
     mutationFn: (id) => workflowsApi.delete(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.workflows.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }
@@ -118,9 +118,9 @@ export function useApproveStep(
   >({
     mutationFn: ({ stepId, comment }) => workflowsApi.approveStep(stepId, comment),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       invalidateWorkflowsAndContracts(qc);
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -140,9 +140,9 @@ export function useRejectStep(
   >({
     mutationFn: ({ stepId, comment }) => workflowsApi.rejectStep(stepId, comment),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       invalidateWorkflowsAndContracts(qc);
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -163,9 +163,9 @@ export function useSendBackStep(
     mutationFn: ({ stepId, toSeq, comment }) =>
       workflowsApi.sendBackStep(stepId, toSeq, comment),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       invalidateWorkflowsAndContracts(qc);
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -186,9 +186,9 @@ export function useDelegateStep(
     mutationFn: ({ stepId, toUserId, comment }) =>
       workflowsApi.delegateStep(stepId, toUserId, comment),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       invalidateWorkflowsAndContracts(qc);
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }

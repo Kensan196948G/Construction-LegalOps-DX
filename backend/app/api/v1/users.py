@@ -9,13 +9,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.user import (
@@ -36,10 +36,10 @@ router = APIRouter(prefix="/users", tags=["users"])
     description="ロール・部署・有効状態でフィルタしページングしたユーザー一覧を返す。",
 )
 async def list_users(
-    q: Optional[str] = Query(default=None, description="氏名/メール部分一致"),
-    role: Optional[str] = Query(default=None, description="ロールでフィルタ"),
-    department_id: Optional[int] = Query(default=None),
-    is_active: Optional[bool] = Query(default=None),
+    q: str | None = Query(default=None, description="氏名/メール部分一致"),
+    role: str | None = Query(default=None, description="ロールでフィルタ"),
+    department_id: int | None = Query(default=None),
+    is_active: bool | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
@@ -149,4 +149,5 @@ async def sync_users(
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> UserSyncJob:
-    return await user_service.start_graph_sync(session, triggered_by=current_user.id)
+    result = await user_service.start_graph_sync(session, triggered_by=current_user.id)
+    return cast(UserSyncJob, result)
