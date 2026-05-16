@@ -67,6 +67,12 @@ class Settings(BaseSettings):
         default=SecretStr("change-me-to-a-secure-random-string"),
         alias="JWT_SECRET",
     )
+    # RS256 asymmetric keys (PEM format). When both are set, RS256 is used
+    # and jwt_secret / jwt_algorithm are ignored. Leave unset to fall back
+    # to the legacy HS256 path (dev / test only).
+    jwt_private_key: SecretStr | None = Field(default=None, alias="JWT_PRIVATE_KEY")
+    jwt_public_key: str | None = Field(default=None, alias="JWT_PUBLIC_KEY")
+
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     jwt_expire_minutes: int = Field(default=60, alias="JWT_EXPIRE_MINUTES")
     jwt_issuer: str = Field(
@@ -78,6 +84,12 @@ class Settings(BaseSettings):
         alias="JWT_AUDIENCE",
     )
     session_cookie_max_age: int = Field(default=3600, alias="SESSION_COOKIE_MAX_AGE")
+
+    # ----- CSP enforcement -----
+    # True → enforce CSP; False → Content-Security-Policy-Report-Only.
+    # Defaults to is_production so existing deploy configs are unaffected.
+    # Operators can set CSP_ENFORCE=true on staging to gate before prod.
+    csp_enforce: bool | None = Field(default=None, alias="CSP_ENFORCE")
 
     # ----- Entra ID -----
     entra_tenant_id: str = Field(
@@ -165,6 +177,18 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"
+
+    @property
+    def is_csp_enforce(self) -> bool:
+        """Whether to emit Content-Security-Policy (enforce) vs Report-Only."""
+        if self.csp_enforce is not None:
+            return self.csp_enforce
+        return self.is_production
+
+    @property
+    def use_rs256(self) -> bool:
+        """True when RS256 asymmetric keys are configured."""
+        return bool(self.jwt_private_key and self.jwt_public_key)
 
 
 @lru_cache(maxsize=1)

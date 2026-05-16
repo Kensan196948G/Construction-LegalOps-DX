@@ -97,9 +97,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp, *, force_https: bool | None = None) -> None:
         super().__init__(app)
-        self._force_https = (
-            settings.is_production if force_https is None else force_https
-        )
+        self._force_https = settings.is_production if force_https is None else force_https
 
     async def dispatch(  # type: ignore[override]
         self,
@@ -108,28 +106,24 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         response = await call_next(request)
 
-        # In production we enforce CSP; in non-prod we emit Report-Only so
-        # the frontend team can iterate without 500s.
+        # Enforce CSP when is_csp_enforce is True (production by default, or
+        # when CSP_ENFORCE=true is set explicitly e.g. on staging).
         csp_header = (
             "Content-Security-Policy"
-            if settings.is_production
+            if settings.is_csp_enforce
             else "Content-Security-Policy-Report-Only"
         )
         response.headers.setdefault(csp_header, _CSP_HEADER_VALUE)
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault(
-            "Referrer-Policy", "strict-origin-when-cross-origin"
-        )
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", _PERMISSIONS_POLICY)
         response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
         response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
         response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
         # Cache hint for authenticated API responses — never store on shared
         # caches. Individual endpoints may override.
-        response.headers.setdefault(
-            "Cache-Control", "no-store, no-cache, must-revalidate, private"
-        )
+        response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, private")
 
         # HSTS only over HTTPS to avoid pinning unreachable hosts during
         # local docker-compose loops.
