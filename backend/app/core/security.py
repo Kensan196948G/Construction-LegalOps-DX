@@ -156,7 +156,7 @@ def create_access_token(
                 continue
             payload[key] = value
 
-    return jwt.encode(payload, _jwt_sign_key(), algorithm=_jwt_algorithm())
+    return str(jwt.encode(payload, _jwt_sign_key(), algorithm=_jwt_algorithm()))
 
 
 def decode_token(token: str) -> dict[str, Any]:
