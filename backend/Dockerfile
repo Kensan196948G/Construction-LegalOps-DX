@@ -34,6 +34,10 @@ WORKDIR /build
 # Copy only dependency manifests first for better layer caching.
 COPY pyproject.toml ./
 
+# pyproject.toml references ../README.md (WORKDIR=/build → ../README.md = /README.md).
+# Create a stub so hatchling metadata generation succeeds in Docker context.
+RUN echo "# Construction-LegalOps-DX" > /README.md
+
 # Install into the virtualenv. Hatchling needs the package to exist for the
 # editable install, so we generate a minimal layout and install runtime deps.
 COPY app ./app
