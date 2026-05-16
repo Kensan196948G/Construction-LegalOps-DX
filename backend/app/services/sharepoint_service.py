@@ -27,7 +27,7 @@ from tenacity import (
 logger = structlog.get_logger(__name__)
 
 _DEFAULT_STUB_ROOT: Final[Path] = Path(
-    os.getenv("SHAREPOINT_STUB_ROOT", "/tmp/legalops-sharepoint-stub")
+    os.getenv("SHAREPOINT_STUB_ROOT", "/tmp/legalops-sharepoint-stub")  # nosec B108
 )
 
 

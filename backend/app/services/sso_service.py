@@ -381,7 +381,7 @@ class SSOService:
             },
         )
         try:
-            with urllib.request.urlopen(  # noqa: S310
+            with urllib.request.urlopen(  # noqa: S310  # nosec B310
                 req, timeout=_HTTP_TIMEOUT
             ) as resp:
                 raw = resp.read()
@@ -456,7 +456,7 @@ def _http_get_json(url: str) -> Any:
         headers={"Accept": "application/json"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:  # noqa: S310  # nosec B310
             raw = resp.read()
     except urllib.error.HTTPError as exc:
         raise SSOError(f"GET {url} returned HTTP {exc.code}") from exc
