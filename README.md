@@ -1,7 +1,7 @@
 # Construction-LegalOps-DX
 
 [![Build](https://img.shields.io/github/actions/workflow/status/Construction-LegalOps-DX/Construction-LegalOps-DX/ci.yml?branch=main&label=build&logo=github)](./.github/workflows/ci.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Coverage](https://img.shields.io/badge/coverage-pending-lightgrey.svg)](./.github/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -103,7 +103,7 @@ Construction-LegalOps-DX/
 ├── .gitignore
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
-├── LICENSE                   # Apache License 2.0
+├── LICENSE                   # MIT License
 └── README.md
 ```
 
@@ -309,7 +309,7 @@ cd frontend && npm run lint && npm run typecheck && npm test
 
 ## ライセンス
 
-本プロジェクトは [Apache License 2.0](./LICENSE) のもとで公開されています。
+本プロジェクトは [MIT License](./LICENSE) のもとで公開されています。
 
 Copyright (c) 2026 Construction-LegalOps-DX Contributors
 

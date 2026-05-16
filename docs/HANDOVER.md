@@ -14,7 +14,7 @@
 ### Loop 1: Foundation (プロジェクト基盤構築)
 
 - リポジトリ初期スキャフォールド (backend / frontend / infra / docs / .github)。
-- ドキュメント整備: `README.md`, `LICENSE` (Apache 2.0), `CONTRIBUTING.md`, `CHANGELOG.md`。
+- ドキュメント整備: `README.md`, `LICENSE` (MIT), `CONTRIBUTING.md`, `CHANGELOG.md`。
 - `.env.example`, `.gitignore`, `.editorconfig` で開発環境の共通化。
 - GitHub Actions CI (`.github/workflows/ci.yml`) で lint / test / security / docker build を定義。
 - 法務 DX 設計ドキュメント (`docs/requirements.md`, `system_architecture.md`, `api_design.md`, `database_design.md`, `ai_disclaimer_policy.md`, `legal_playbook.md`, `audit_log_policy.md`, `security_policy.md`, `construction_law_checklist.md`, `contract_review_policy.md`, `approval_workflow_policy.md`, `risk_scoring_policy.md`, `frontend_design.md`) を整備。
