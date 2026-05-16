@@ -144,6 +144,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Create stub .env for compose validation
+        run: touch .env
+
       - name: Validate docker-compose (base)
         run: docker compose -f infra/docker/docker-compose.yml config >/dev/null
 
