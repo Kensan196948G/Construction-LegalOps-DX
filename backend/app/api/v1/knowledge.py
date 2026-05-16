@@ -9,13 +9,13 @@ Loop 5 で OpenSearch / pgvector の本格実装に切り替える想定。
 
 from __future__ import annotations
 
-from typing import Optional, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.knowledge import (
@@ -40,8 +40,8 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 )
 async def search_knowledge(
     q: str = Query(..., min_length=1, description="検索クエリ"),
-    tag: Optional[str] = Query(default=None),
-    contract_type: Optional[str] = Query(default=None),
+    tag: str | None = Query(default=None),
+    contract_type: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
@@ -64,7 +64,8 @@ async def search_knowledge(
     response_model=list[SimilarContractOut],
     summary="類似契約検索 (stub)",
     description=(
-        "対象契約に類似する過去契約を embedding 類似度で取得する stub。Loop 5 にて pgvector で実装。"
+        "対象契約に類似する過去契約を embedding 類似度で取得する stub。"
+        "Loop 5 にて pgvector で実装。"
     ),
 )
 async def find_similar_contracts(

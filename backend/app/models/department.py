@@ -7,7 +7,7 @@ RLS isolation for ``contracts``.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -27,7 +27,7 @@ class Department(IntPKMixin, TimestampMixin, Base):
 
     code: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
-    parent_id: Mapped[Optional[int]] = mapped_column(
+    parent_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("departments.id", ondelete="RESTRICT"),
         nullable=True,
@@ -39,16 +39,16 @@ class Department(IntPKMixin, TimestampMixin, Base):
         Boolean, nullable=False, default=True, server_default="true"
     )
 
-    parent: Mapped[Optional["Department"]] = relationship(
+    parent: Mapped[Department | None] = relationship(
         "Department",
         remote_side="Department.id",
         back_populates="children",
     )
-    children: Mapped[List["Department"]] = relationship(
+    children: Mapped[list[Department]] = relationship(
         "Department",
         back_populates="parent",
     )
-    users: Mapped[List["User"]] = relationship("User", back_populates="department")
+    users: Mapped[list[User]] = relationship("User", back_populates="department")
 
     __table_args__ = (
         Index(

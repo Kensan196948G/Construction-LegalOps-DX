@@ -6,7 +6,7 @@ Reflects ``docs/database_design.md`` section 4.12.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     BigInteger,
@@ -44,7 +44,7 @@ class Notification(IntPKMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="RESTRICT", use_alter=True),
         nullable=False,
     )
-    contract_id: Mapped[Optional[int]] = mapped_column(
+    contract_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("contracts.id", ondelete="RESTRICT"),
         nullable=True,
@@ -52,25 +52,25 @@ class Notification(IntPKMixin, TimestampMixin, Base):
     channel: Mapped[str] = mapped_column(String(16), nullable=False)
     category: Mapped[str] = mapped_column(String(32), nullable=False)
     subject: Mapped[str] = mapped_column(String(256), nullable=False)
-    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
     payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="queued", server_default="queued"
     )
-    scheduled_at: Mapped[Optional[datetime]] = mapped_column(
+    scheduled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    sent_at: Mapped[Optional[datetime]] = mapped_column(
+    sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    read_at: Mapped[Optional[datetime]] = mapped_column(
+    read_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
-    recipient: Mapped["User"] = relationship("User", foreign_keys=[recipient_id])
-    contract: Mapped[Optional["Contract"]] = relationship("Contract")
+    recipient: Mapped[User] = relationship("User", foreign_keys=[recipient_id])
+    contract: Mapped[Contract | None] = relationship("Contract")
 
     __table_args__ = (
         CheckConstraint(

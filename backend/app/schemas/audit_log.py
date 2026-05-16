@@ -6,10 +6,10 @@ Mirrors ``docs/api_design.md`` section 12.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from .common import ORMModel
 
@@ -18,7 +18,7 @@ class AuditActor(BaseModel):
     """Slim user reference embedded in audit-log responses."""
 
     id: int
-    display_name: Optional[str] = None
+    display_name: str | None = None
 
 
 class AuditLogRead(ORMModel):
@@ -26,17 +26,17 @@ class AuditLogRead(ORMModel):
 
     id: int
     occurred_at: datetime
-    actor: Optional[AuditActor] = None
-    actor_id: Optional[int] = None
-    actor_role: Optional[str] = None
+    actor: AuditActor | None = None
+    actor_id: int | None = None
+    actor_role: str | None = None
     action: str
     target_type: str
-    target_id: Optional[int] = None
-    request_id: Optional[UUID] = None
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
+    target_id: int | None = None
+    request_id: UUID | None = None
+    ip_address: str | None = None
+    user_agent: str | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
-    previous_hash: Optional[str] = None
+    previous_hash: str | None = None
     hash_chain: str
 
 
@@ -45,7 +45,7 @@ class AuditLogVerifyResult(BaseModel):
 
     verified: bool
     total: int
-    broken_at: Optional[int] = Field(
+    broken_at: int | None = Field(
         default=None,
         description="ID of the first row whose hash does not match (None if intact).",
     )

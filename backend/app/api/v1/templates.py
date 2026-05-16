@@ -10,13 +10,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.template import (
@@ -37,8 +35,8 @@ router = APIRouter(tags=["templates"])
     summary="ひな形一覧",
 )
 async def list_templates(
-    contract_type: Optional[str] = Query(default=None),
-    q: Optional[str] = Query(default=None),
+    contract_type: str | None = Query(default=None),
+    q: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
@@ -98,10 +96,10 @@ async def create_template(
     description="カテゴリ・推奨度 (must/should/avoid)・タグ・全文検索で条項を取得。",
 )
 async def list_clauses_library(
-    category: Optional[str] = Query(default=None),
-    recommendation: Optional[str] = Query(default=None, description="must/should/avoid"),
-    tag: Optional[str] = Query(default=None),
-    q: Optional[str] = Query(default=None),
+    category: str | None = Query(default=None),
+    recommendation: str | None = Query(default=None, description="must/should/avoid"),
+    tag: str | None = Query(default=None),
+    q: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),

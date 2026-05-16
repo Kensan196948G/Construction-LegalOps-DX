@@ -11,7 +11,6 @@ Entra ID OIDC SSO を中心とした認証フロー。
 from __future__ import annotations
 
 import secrets
-from typing import Optional
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -19,8 +18,8 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.deps import get_current_user
 from app.db.session import get_db
+from app.deps import get_current_user
 from app.models.user import User
 from app.schemas.auth import (
     LoginResponse,
@@ -43,7 +42,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     ),
 )
 async def sso_login(
-    redirect_to: Optional[str] = Query(default="/", description="ログイン後の遷移先"),
+    redirect_to: str | None = Query(default="/", description="ログイン後の遷移先"),
 ) -> LoginResponse:
     """Entra ID 認可エンドポイントへの URL を組み立てる stub。"""
     state = secrets.token_urlsafe(24)

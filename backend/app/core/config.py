@@ -8,13 +8,13 @@ never re-parse the environment on each call.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal, TypeAlias
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-Environment: TypeAlias = Literal["development", "staging", "production", "test"]
-LogLevel: TypeAlias = Literal["debug", "info", "warning", "error", "critical"]
+type Environment = Literal["development", "staging", "production", "test"]
+type LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
 
 class Settings(BaseSettings):

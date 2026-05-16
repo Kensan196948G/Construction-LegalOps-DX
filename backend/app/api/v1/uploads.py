@@ -17,8 +17,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.upload import (
     UploadCompleteRequest,
@@ -91,7 +91,9 @@ async def complete_upload(
             session, actor=current_user, payload=payload
         )
     except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload session not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="upload session not found"
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 

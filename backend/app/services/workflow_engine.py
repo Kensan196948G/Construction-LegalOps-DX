@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any, Final
 from uuid import UUID, uuid4
 
@@ -28,7 +28,7 @@ class WorkflowError(RuntimeError):
     """Raised on illegal workflow transitions or unknown IDs."""
 
 
-class WorkflowAction(str, Enum):
+class WorkflowAction(StrEnum):
     """User action issued against the *current* step."""
 
     APPROVE = "approve"
@@ -64,8 +64,8 @@ class Workflow:
     is_completed: bool = False
     outside_counsel_flag: bool = False
     outside_counsel_reason: str | None = None
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ class WorkflowEngine:
                 f"current step is already in terminal status {step.status.value}"
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         step.actor_user_id = user_id
         step.decided_at = now
         step.comment = comment
@@ -308,7 +308,7 @@ class WorkflowEngine:
             for i, s in enumerate(workflow.steps):
                 s.sequence = i
 
-        workflow.updated_at = datetime.now(timezone.utc)
+        workflow.updated_at = datetime.now(UTC)
         await self._persist(workflow)
         logger.info(
             "workflow.escalated",

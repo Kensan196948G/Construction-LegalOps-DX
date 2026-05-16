@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Protocol, runtime_checkable
 
 import structlog
@@ -24,7 +24,7 @@ from app.models.enums import ContractType
 logger = structlog.get_logger(__name__)
 
 
-class ComplianceSeverity(str, Enum):
+class ComplianceSeverity(StrEnum):
     """Severity of a compliance finding."""
 
     INFO = "info"

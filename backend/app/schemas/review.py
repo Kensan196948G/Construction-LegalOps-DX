@@ -9,7 +9,6 @@ public API uses the friendlier ``Review*`` naming required by
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -58,14 +57,14 @@ class ReviewStartResponse(BaseModel):
 class ReviewUpdate(BaseModel):
     """``PATCH /reviews/{id}`` — legal annotator overrides."""
 
-    final_decision: Optional[str] = Field(
+    final_decision: str | None = Field(
         default=None, pattern="^(accept|reject|return)$"
     )
-    legal_comment: Optional[str] = Field(default=None, max_length=4000)
-    overall_risk: Optional[str] = Field(
+    legal_comment: str | None = Field(default=None, max_length=4000)
+    overall_risk: str | None = Field(
         default=None, pattern="^(low|medium|high|critical)$"
     )
-    reviewer_id: Optional[int] = None
+    reviewer_id: int | None = None
 
 
 class ReviewAcceptRequest(ReviewActionRequest):

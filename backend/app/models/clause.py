@@ -6,7 +6,7 @@ Reflects ``docs/database_design.md`` sections 4.5 and 4.6.
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     BigInteger,
@@ -59,10 +59,10 @@ class ClauseLibrary(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, server_default="1"
     )
-    effective_from: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    effective_to: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
 
-    clauses: Mapped[List["Clause"]] = relationship(
+    clauses: Mapped[list[Clause]] = relationship(
         "Clause", back_populates="library_clause"
     )
 
@@ -98,20 +98,20 @@ class Clause(IntPKMixin, TimestampMixin, Base):
         nullable=False,
     )
     seq: Mapped[int] = mapped_column(Integer, nullable=False)
-    title: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(256), nullable=True)
     body: Mapped[str] = mapped_column(Text, nullable=False)
-    library_clause_id: Mapped[Optional[int]] = mapped_column(
+    library_clause_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("clause_library.id", ondelete="RESTRICT"),
         nullable=True,
     )
-    risk_level: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    risk_level: Mapped[str | None] = mapped_column(String(16), nullable=True)
     ai_findings: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
 
-    contract: Mapped["Contract"] = relationship("Contract", back_populates="clauses")
-    library_clause: Mapped[Optional["ClauseLibrary"]] = relationship(
+    contract: Mapped[Contract] = relationship("Contract", back_populates="clauses")
+    library_clause: Mapped[ClauseLibrary | None] = relationship(
         "ClauseLibrary", back_populates="clauses"
     )
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final
 from uuid import uuid4
@@ -139,7 +139,7 @@ class SharePointService:
             path=rel,
             size_bytes=len(file_bytes),
             sha256=hashlib.sha256(file_bytes).hexdigest(),
-            uploaded_at=datetime.now(timezone.utc),
+            uploaded_at=datetime.now(UTC),
             url=f"{self._site_url}/Shared%20Documents/{rel}?docid={doc_id}",
         )
 

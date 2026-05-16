@@ -10,13 +10,13 @@
 
 from __future__ import annotations
 
-from typing import Optional, cast
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.workflow import (
@@ -38,7 +38,7 @@ router = APIRouter(tags=["workflows"])
     summary="ワークフロー定義一覧",
 )
 async def list_workflow_definitions(
-    contract_type: Optional[str] = Query(default=None),
+    contract_type: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),

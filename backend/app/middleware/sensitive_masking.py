@@ -106,7 +106,7 @@ class SensitiveMaskingMiddleware(BaseHTTPMiddleware):
                     # flag the response so observability can flag it.
                     response.headers["X-Pii-Masked"] = "skipped-too-large"
                     return _replay_response(response, body_chunks)
-        except Exception:  # noqa: BLE001 — fail-closed
+        except Exception:
             request_id = getattr(request.state, "request_id", None)
             logger.error(
                 "sensitive_masking.body_iter_failed",
@@ -131,7 +131,7 @@ class SensitiveMaskingMiddleware(BaseHTTPMiddleware):
         try:
             masked = mask_value(decoded)
             new_body = json.dumps(masked, ensure_ascii=False).encode("utf-8")
-        except Exception:  # noqa: BLE001 — fail-closed
+        except Exception:
             request_id = getattr(request.state, "request_id", None)
             logger.error(
                 "sensitive_masking.mask_failed",

@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -122,7 +122,7 @@ class LegalReviewFactory(_BaseFactory):
     risk_score = 0
     risk_level = "low"
     summary = factory.LazyFunction(lambda: fake.paragraph(nb_sentences=2))
-    started_at = factory.LazyFunction(lambda: datetime.now(tz=timezone.utc))
+    started_at = factory.LazyFunction(lambda: datetime.now(tz=UTC))
     completed_at = None
 
 
@@ -151,7 +151,7 @@ class AuditLogFactory(_BaseFactory):
     action = "contract.create"
     target_type = "contracts"
     target_id = factory.Sequence(lambda n: n + 1)
-    occurred_at = factory.LazyFunction(lambda: datetime.now(tz=timezone.utc))
+    occurred_at = factory.LazyFunction(lambda: datetime.now(tz=UTC))
     payload = factory.LazyFunction(
         lambda: {"sample": True, "comment": fake.sentence()}
     )
@@ -170,6 +170,6 @@ __all__ = [
     "LegalReviewFactory",
     "UserFactory",
     "WorkflowFactory",
-    "skip_if_placeholder",
     "fake",
+    "skip_if_placeholder",
 ]

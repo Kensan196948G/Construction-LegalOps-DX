@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Final, TypeAlias
+from typing import Final
 
 from fastapi import Depends, Header, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -18,7 +18,7 @@ from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_token
 
 # Roles defined by docs/api_design.md §1 (3).
-Role: TypeAlias = str
+type Role = str
 
 ROLE_VIEWER: Final[Role] = "viewer"
 ROLE_DRAFTER: Final[Role] = "drafter"
@@ -158,7 +158,9 @@ def require_role(*roles: Role) -> Callable[..., Awaitable[CurrentUser]]:
     return _checker
 
 
-def require_department_access(contract_id_param: str = "contract_id") -> Callable[..., Awaitable[CurrentUser]]:
+def require_department_access(
+    contract_id_param: str = "contract_id",
+) -> Callable[..., Awaitable[CurrentUser]]:
     """Build a dependency that enforces department-scoped access.
 
     The actual contract→department mapping requires a DB lookup
@@ -195,7 +197,6 @@ def require_department_access(contract_id_param: str = "contract_id") -> Callabl
 # Re-exports for convenience.
 __all__ = [
     "ALL_ROLES",
-    "CurrentUser",
     "ROLE_ADMIN",
     "ROLE_APPROVER",
     "ROLE_AUDITOR",
@@ -203,6 +204,7 @@ __all__ = [
     "ROLE_GUEST",
     "ROLE_REVIEWER",
     "ROLE_VIEWER",
+    "CurrentUser",
     "get_current_user",
     "require_department_access",
     "require_role",

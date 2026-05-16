@@ -6,7 +6,7 @@ Reflects ``docs/database_design.md`` section 4.7.
 from __future__ import annotations
 
 from datetime import date
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
@@ -47,12 +47,12 @@ class RiskItem(IntPKMixin, TimestampMixin, Base):
         ForeignKey("contracts.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    clause_id: Mapped[Optional[int]] = mapped_column(
+    clause_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("clauses.id", ondelete="RESTRICT"),
         nullable=True,
     )
-    legal_review_id: Mapped[Optional[int]] = mapped_column(
+    legal_review_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("legal_reviews.id", ondelete="RESTRICT"),
         nullable=True,
@@ -66,28 +66,28 @@ class RiskItem(IntPKMixin, TimestampMixin, Base):
         String(16), nullable=False, default="medium", server_default="medium"
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    mitigation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    mitigation: Mapped[str | None] = mapped_column(Text, nullable=True)
     # ``recommendation`` aliased term in the team contract; kept as Text and
     # populated by the service layer when AI suggests an action.
-    recommendation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="open", server_default="open"
     )
-    owner_id: Mapped[Optional[int]] = mapped_column(
+    owner_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="RESTRICT", use_alter=True),
         nullable=True,
     )
-    due_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
-    contract: Mapped["Contract"] = relationship(
+    contract: Mapped[Contract] = relationship(
         "Contract", back_populates="risk_items"
     )
-    clause: Mapped[Optional["Clause"]] = relationship("Clause")
-    legal_review: Mapped[Optional["LegalReview"]] = relationship(
+    clause: Mapped[Clause | None] = relationship("Clause")
+    legal_review: Mapped[LegalReview | None] = relationship(
         "LegalReview", back_populates="risk_items"
     )
-    owner: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id])
+    owner: Mapped[User | None] = relationship("User", foreign_keys=[owner_id])
 
     __table_args__ = (
         CheckConstraint(

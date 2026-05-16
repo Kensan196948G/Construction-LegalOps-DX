@@ -28,9 +28,10 @@
     "same_error_limit": 2,
     "phase": "Improve",
     "last_session_summary": "Loop 5 (Integration & Finalization) 完了。CHANGELOG.md / README.md / state.json 更新、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成。",
-    "current_session_start_at": "2026-05-16T08:06:23.984Z",
-    "last_trigger": "manual",
-    "last_stop_at": "2026-05-16T08:07:33.923Z"
+    "current_session_start_at": "2026-05-16T10:00:01.976Z",
+    "last_trigger": "cron",
+    "last_stop_at": "2026-05-16T08:07:33.923Z",
+    "last_cron_session_id": "20260516-190001-Construction-LegalOps-DX"
   },
   "automation": {
     "auto_issue_generation": true,

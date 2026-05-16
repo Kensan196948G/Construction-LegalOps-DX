@@ -7,7 +7,7 @@ Provides pagination, sort, filter, RFC 7807 problem details, and a
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any, Generic, List, Optional, TypeVar
+from typing import Annotated, Any, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,7 +25,7 @@ class TimestampsMixin(BaseModel):
 
     created_at: datetime
     updated_at: datetime
-    deleted_at: Optional[datetime] = None
+    deleted_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,23 +55,23 @@ class Sort(BaseModel):
 class FilterBase(BaseModel):
     """Base class for endpoint-specific filter parameters."""
 
-    q: Optional[str] = None
+    q: str | None = None
 
 
 class Meta(BaseModel):
     """Response ``meta`` block per ``docs/api_design.md`` section 2.2."""
 
-    request_id: Optional[str] = None
-    page: Optional[int] = None
-    page_size: Optional[int] = None
-    total: Optional[int] = None
+    request_id: str | None = None
+    page: int | None = None
+    page_size: int | None = None
+    total: int | None = None
 
 
-class Envelope(BaseModel, Generic[T]):
+class Envelope[T](BaseModel):
     """Generic ``{ data, meta }`` envelope used by all API responses."""
 
     data: T
-    meta: Optional[Meta] = None
+    meta: Meta | None = None
 
 
 class ProblemDetailError(BaseModel):
@@ -87,20 +87,20 @@ class ProblemDetails(BaseModel):
     type: str = "about:blank"
     title: str
     status: int
-    detail: Optional[str] = None
-    instance: Optional[str] = None
-    errors: Optional[List[ProblemDetailError]] = None
-    request_id: Optional[str] = None
+    detail: str | None = None
+    instance: str | None = None
+    errors: list[ProblemDetailError] | None = None
+    request_id: str | None = None
 
 
 class IdResponse(BaseModel):
     """Convenience response when only an ``id`` is returned (e.g. async jobs)."""
 
     id: int
-    extra: Optional[dict[str, Any]] = None
+    extra: dict[str, Any] | None = None
 
 
-class Page(BaseModel, Generic[T]):
+class Page[T](BaseModel):
     """Generic paginated list payload used across the v1 API.
 
     Routers populate ``items`` with their concrete read schema and report
@@ -108,7 +108,7 @@ class Page(BaseModel, Generic[T]):
     boilerplate of redeclaring ``items / total / page / size`` everywhere.
     """
 
-    items: List[T] = Field(default_factory=list)
+    items: list[T] = Field(default_factory=list)
     total: Annotated[int, Field(ge=0)] = 0
     page: Annotated[int, Field(ge=1)] = 1
     size: Annotated[int, Field(ge=1, le=500)] = 20

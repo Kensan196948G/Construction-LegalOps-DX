@@ -9,6 +9,8 @@ Validates that:
 
 from __future__ import annotations
 
+import itertools
+
 import pytest
 
 pytestmark = pytest.mark.skip(reason="Audit logs API implemented in Loop 3")
@@ -60,7 +62,7 @@ async def test_hash_chain_is_continuous(client, auth_headers_admin):
     items = sorted(items, key=lambda x: x["id"])
 
     # Assert: each row's prev_hash equals previous row's hash_chain
-    for prev, cur in zip(items, items[1:]):
+    for prev, cur in itertools.pairwise(items):
         assert cur["prev_hash"] == prev["hash_chain"]
 
 

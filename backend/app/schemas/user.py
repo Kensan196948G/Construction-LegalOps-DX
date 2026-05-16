@@ -6,7 +6,7 @@ Mirrors the response bodies from ``docs/api_design.md`` sections 3.4 and 4.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -21,7 +21,7 @@ class DepartmentBrief(ORMModel):
 
     id: int
     name: str
-    code: Optional[str] = None
+    code: str | None = None
 
 
 class UserBase(BaseModel):
@@ -30,7 +30,7 @@ class UserBase(BaseModel):
     email: EmailStr
     display_name: Annotated[str, Field(min_length=1, max_length=128)]
     role: UserRole
-    department_id: Optional[int] = None
+    department_id: int | None = None
     is_active: bool = True
 
 
@@ -44,12 +44,12 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """Patch payload — every field optional, ``version`` for optimistic lock."""
 
-    display_name: Optional[str] = Field(default=None, max_length=128)
-    role: Optional[UserRole] = None
-    department_id: Optional[int] = None
-    is_active: Optional[bool] = None
-    attributes: Optional[dict[str, Any]] = None
-    version: Optional[int] = None
+    display_name: str | None = Field(default=None, max_length=128)
+    role: UserRole | None = None
+    department_id: int | None = None
+    is_active: bool | None = None
+    attributes: dict[str, Any] | None = None
+    version: int | None = None
 
 
 class UserRead(UserBase, TimestampsMixin):
@@ -59,9 +59,9 @@ class UserRead(UserBase, TimestampsMixin):
 
     id: int
     entra_oid: UUID
-    last_login_at: Optional[datetime] = None
+    last_login_at: datetime | None = None
     attributes: dict[str, Any] = Field(default_factory=dict)
-    department: Optional[DepartmentBrief] = None
+    department: DepartmentBrief | None = None
 
 
 class UserMe(ORMModel):
@@ -72,7 +72,7 @@ class UserMe(ORMModel):
     email: EmailStr
     display_name: str
     role: UserRole
-    department: Optional[DepartmentBrief] = None
+    department: DepartmentBrief | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -91,9 +91,9 @@ class UserSyncJob(BaseModel):
     status: Annotated[
         str, Field(pattern="^(queued|running|completed|failed)$")
     ] = "queued"
-    triggered_by: Optional[int] = None
+    triggered_by: int | None = None
     queued_at: datetime
-    note: Optional[str] = None
+    note: str | None = None
 
 
 __all__ = [
