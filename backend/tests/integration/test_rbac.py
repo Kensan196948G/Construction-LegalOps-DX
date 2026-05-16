@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="RBAC dependencies implemented in Loop 3")
+# pytestmark = pytest.mark.skip(reason="RBAC dependencies implemented in Loop 3")
 
 
 # (role_fixture_name, method, path, expected_status_when_allowed_or_forbidden)

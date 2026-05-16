@@ -10,9 +10,9 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Final
+from typing import Any, Final
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import (
@@ -22,6 +22,8 @@ from prometheus_client import (
     Histogram,
     generate_latest,
 )
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -31,7 +33,7 @@ from app.core.logging import (
     get_logger,
     set_request_context,
 )
-from app.db.session import dispose_engine
+from app.db.session import dispose_engine, get_db
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sensitive_masking import SensitiveMaskingMiddleware
 
@@ -174,6 +176,22 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["meta"], include_in_schema=False)
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/healthz", tags=["meta"], include_in_schema=False)
+    async def healthz() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/readyz", tags=["meta"], include_in_schema=False)
+    async def readyz_root(session: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+        """Root-level readiness probe (used by Docker healthcheck)."""
+        try:
+            await session.execute(text("SELECT 1"))
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"status": "not_ready"},
+            )
+        return {"status": "ready", "db": "ok"}
 
     @app.get(
         f"{settings.api_v1_prefix}/health",

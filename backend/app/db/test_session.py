@@ -171,6 +171,7 @@ async def create_all_for_tests(engine: AsyncEngine) -> None:
     ``create_all`` succeeds on SQLite without modifying the production
     model definitions.
     """
+    import app.models  # noqa: F401 — register all ORM models on Base.metadata
     from app.db.base import Base  # type: ignore
 
     _rewrite_pg_server_defaults()
