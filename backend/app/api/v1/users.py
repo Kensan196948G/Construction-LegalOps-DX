@@ -137,6 +137,23 @@ async def update_user(
     return UserOut.model_validate(user)
 
 
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="ユーザー削除 (admin only / stub)",
+    description="論理削除。admin ロールのみ実行可能。実装は Sprint 1 で完成予定。",
+)
+async def delete_user(
+    user_id: int,
+    _current: User = Depends(get_current_user),
+    _admin: None = Depends(require_role("admin")),
+) -> None:
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="user deletion not yet implemented",
+    )
+
+
 @router.post(
     "/sync",
     response_model=UserSyncJob,
