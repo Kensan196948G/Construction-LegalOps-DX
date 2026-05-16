@@ -27,7 +27,7 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 6 (CI Fix) + Loop 7 (P0 Security): CI 全ジョブ green (PR #3 merged)。JWT RS256 + CSP enforce 実装完了 (PR #4 merged)。pytest 57 passed。次P0: integration test skip解除・12 service stub実装。",
+    "last_session_summary": "Loop 6(CI Fix)+Loop 7(RS256)+Loop 8(Integration Tests): CI green (PR#3,#4,#5 merged)。pytest 57→67 passed。RBAC/health integration tests解除。contract/user service最小実装。/readyz root-level追加。次: 残10 integration test解除・audit_logs実装。",
     "current_session_start_at": "2026-05-16T10:00:01.976Z",
     "last_trigger": "cron",
     "last_stop_at": "2026-05-16T10:45:00.000Z",
@@ -38,9 +38,9 @@
     "self_evolution": true
   },
   "stable": {
-    "consecutive_success": 2,
+    "consecutive_success": 3,
     "target_n": 3,
-    "stable_achieved": false
+    "stable_achieved": true
   },
   "loop6": {
     "name": "CI Fix & Security Upgrades",
@@ -50,7 +50,12 @@
   "loop7": {
     "name": "P0 Security — JWT RS256 + CSP Enforce",
     "completed_at": "2026-05-16",
-    "summary": "JWT RS256 非対称鍵対応実装(JWT_PRIVATE_KEY/JWT_PUBLIC_KEY環境変数)、CSP enforce切替(CSP_ENFORCE環境変数)、SecurityHeadersMiddlewareリファクタ、RS256ユニットテスト7件追加(pytest 57 passed)。PR #4 merged to main。次P0: integration test skip解除・12 service stub実装。"
+    "summary": "JWT RS256 非対称鍵対応実装(JWT_PRIVATE_KEY/JWT_PUBLIC_KEY環境変数)、CSP enforce切替(CSP_ENFORCE環境変数)、SecurityHeadersMiddlewareリファクタ、RS256ユニットテスト7件追加(pytest 57 passed)。PR #4 merged to main。"
+  },
+  "loop8": {
+    "name": "Integration Tests Unlock + Service Stubs",
+    "completed_at": "2026-05-16",
+    "summary": "health/RBAC integration test skip解除(10件)。contract_service.list_contracts + user_service.list_users 最小実装。test_session.py で app.models import 追加（SQLite schema 作成修正）。users.py に DELETE /users/{id} RBAC stub 追加。/healthz・/readyz root-level endpoint 追加。pytest 57→67 passed。PR #5 merged。STABLE 達成（consecutive=3/3）。"
   },
   "completed_issues": [],
   "blocked_issues": [],
