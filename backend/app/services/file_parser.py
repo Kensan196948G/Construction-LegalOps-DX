@@ -98,7 +98,7 @@ class FileParser:
         for i, page in enumerate(reader.pages):
             try:
                 pages_text.append(page.extract_text() or "")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 warnings.append(f"page {i}: extract failed ({exc!s})")
                 pages_text.append("")
 

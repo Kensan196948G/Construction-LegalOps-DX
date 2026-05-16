@@ -7,13 +7,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user
 from app.db.session import get_db
+from app.deps import get_current_user
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.notification import NotificationOut, NotificationReadResult
@@ -28,8 +26,8 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
     summary="通知一覧 (本人のみ)",
 )
 async def list_notifications(
-    status_: Optional[str] = Query(default=None, alias="status", description="unread/read"),
-    channel: Optional[str] = Query(default=None, description="inapp/email/teams"),
+    status_: str | None = Query(default=None, alias="status", description="unread/read"),
+    channel: str | None = Query(default=None, description="inapp/email/teams"),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
@@ -61,10 +59,12 @@ async def mark_read(
         notification = await notification_service.mark_read(
             session, notification_id=notification_id, user_id=current_user.id
         )
-    except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="notification not found")
-    except PermissionError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="notification not found"
+        ) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden") from exc
 
     await audit_service.log(
         session,

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     CHAR,
@@ -34,7 +34,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 from ._mixins import AuditedByMixin, IntPKMixin, TimestampMixin
-from .enums import ContractStatus, Confidentiality
+from .enums import Confidentiality, ContractStatus
 
 if TYPE_CHECKING:
     from .attachment import Attachment
@@ -62,12 +62,12 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     title: Mapped[str] = mapped_column(String(256), nullable=False)
     counterparty: Mapped[str] = mapped_column(String(256), nullable=False)
     contract_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 2), nullable=True)
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     currency: Mapped[str] = mapped_column(
         CHAR(3), nullable=False, default="JPY", server_default="JPY"
     )
-    start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
-    end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     department_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey("departments.id", ondelete="RESTRICT"),
@@ -87,7 +87,7 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, server_default="1"
     )
-    sharepoint_item_id: Mapped[Optional[str]] = mapped_column(
+    sharepoint_item_id: Mapped[str | None] = mapped_column(
         String(256), nullable=True
     )
     extra_metadata: Mapped[dict[str, Any]] = mapped_column(
@@ -99,22 +99,22 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     )
 
     # --- Relationships -----------------------------------------------------
-    clauses: Mapped[List["Clause"]] = relationship(
+    clauses: Mapped[list[Clause]] = relationship(
         "Clause", back_populates="contract", cascade="all, delete-orphan"
     )
-    legal_reviews: Mapped[List["LegalReview"]] = relationship(
+    legal_reviews: Mapped[list[LegalReview]] = relationship(
         "LegalReview", back_populates="contract", cascade="all, delete-orphan"
     )
-    risk_items: Mapped[List["RiskItem"]] = relationship(
+    risk_items: Mapped[list[RiskItem]] = relationship(
         "RiskItem", back_populates="contract", cascade="all, delete-orphan"
     )
-    attachments: Mapped[List["Attachment"]] = relationship(
+    attachments: Mapped[list[Attachment]] = relationship(
         "Attachment", back_populates="contract", cascade="all, delete-orphan"
     )
-    comments: Mapped[List["Comment"]] = relationship(
+    comments: Mapped[list[Comment]] = relationship(
         "Comment", back_populates="contract", cascade="all, delete-orphan"
     )
-    workflow_steps: Mapped[List["WorkflowStep"]] = relationship(
+    workflow_steps: Mapped[list[WorkflowStep]] = relationship(
         "WorkflowStep", back_populates="contract", cascade="all, delete-orphan"
     )
 

@@ -352,7 +352,6 @@ def mask_value(value: Any, *, _depth: int = 0) -> Any:
 
 __all__ = [
     "ALL_ROLES",
-    "AuthorizationError",
     "DROP_FIELDS",
     "MASK_FIELDS",
     "ROLE_ADMIN",
@@ -362,6 +361,7 @@ __all__ = [
     "ROLE_GUEST",
     "ROLE_REVIEWER",
     "ROLE_VIEWER",
+    "AuthorizationError",
     "compute_hash_chain",
     "create_access_token",
     "decode_token",

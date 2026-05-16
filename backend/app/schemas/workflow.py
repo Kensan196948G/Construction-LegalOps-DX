@@ -8,9 +8,9 @@ template steps strongly typed.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any, List, Optional
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from app.models.enums import UserRole, WorkflowStepStatus, WorkflowStepType
 
@@ -23,21 +23,21 @@ class WorkflowStepDefinition(BaseModel):
     seq: Annotated[int, Field(ge=1)]
     name: Annotated[str, Field(max_length=128)]
     step_type: WorkflowStepType
-    assignee_role: Optional[UserRole] = None
-    sla_hours: Optional[int] = Field(default=None, ge=0)
+    assignee_role: UserRole | None = None
+    sla_hours: int | None = Field(default=None, ge=0)
 
 
 class WorkflowDefinition(BaseModel):
     """Root object stored in ``workflows.definition``."""
 
-    steps: List[WorkflowStepDefinition]
+    steps: list[WorkflowStepDefinition]
 
 
 class WorkflowCreate(BaseModel):
     code: Annotated[str, Field(max_length=64)]
     name: Annotated[str, Field(max_length=128)]
-    description: Optional[str] = None
-    contract_type: Optional[str] = Field(default=None, max_length=64)
+    description: str | None = None
+    contract_type: str | None = Field(default=None, max_length=64)
     is_active: bool = True
     definition: WorkflowDefinition
 
@@ -46,8 +46,8 @@ class WorkflowRead(ORMModel, TimestampsMixin):
     id: int
     code: str
     name: str
-    description: Optional[str] = None
-    contract_type: Optional[str] = None
+    description: str | None = None
+    contract_type: str | None = None
     is_active: bool
     definition: dict[str, Any] = Field(default_factory=dict)
     version: int
@@ -60,12 +60,12 @@ class WorkflowStepRead(ORMModel, TimestampsMixin):
     seq: int
     name: str
     step_type: WorkflowStepType
-    assignee_id: Optional[int] = None
-    assignee_role: Optional[str] = None
+    assignee_id: int | None = None
+    assignee_role: str | None = None
     status: WorkflowStepStatus
-    due_at: Optional[datetime] = None
-    decided_at: Optional[datetime] = None
-    decision_note: Optional[str] = None
+    due_at: datetime | None = None
+    decided_at: datetime | None = None
+    decision_note: str | None = None
 
 
 class WorkflowAction(BaseModel):
@@ -76,9 +76,9 @@ class WorkflowAction(BaseModel):
     """
 
     action: Annotated[str, Field(pattern="^(approve|reject|send_back|delegate)$")]
-    comment: Optional[str] = Field(default=None, max_length=2000)
-    to_seq: Optional[int] = Field(default=None, ge=1)
-    to_user_id: Optional[int] = None
+    comment: str | None = Field(default=None, max_length=2000)
+    to_seq: int | None = Field(default=None, ge=1)
+    to_user_id: int | None = None
 
 
 class WorkflowActionResult(BaseModel):
@@ -104,7 +104,7 @@ class WorkflowStartRequest(BaseModel):
     """Body of ``POST /contracts/{id}/workflows``."""
 
     workflow_id: int
-    note: Optional[str] = Field(default=None, max_length=2000)
+    note: str | None = Field(default=None, max_length=2000)
 
 
 class WorkflowInstanceOut(ORMModel):
@@ -116,9 +116,9 @@ class WorkflowInstanceOut(ORMModel):
     status: Annotated[
         str, Field(pattern="^(pending|in_progress|approved|rejected|cancelled)$")
     ]
-    current_seq: Optional[int] = None
+    current_seq: int | None = None
     started_at: datetime
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
 
 
 class WorkflowStepOut(WorkflowStepRead):

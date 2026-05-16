@@ -22,7 +22,7 @@ import hmac
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -103,7 +103,7 @@ class AuditService:
         metadata: dict[str, Any] | None = None,
     ) -> AuditRecord:
         """Append a new audit record and return it."""
-        ts = datetime.now(timezone.utc)
+        ts = datetime.now(UTC)
         action_value = action.value if isinstance(action, AuditAction) else str(action)
         target_id_str = str(target_id) if target_id is not None else None
 

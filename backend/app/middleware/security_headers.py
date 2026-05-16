@@ -94,7 +94,7 @@ _CSP_HEADER_VALUE: Final[str] = _build_csp()
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Append browser-hardening response headers."""
 
-    def __init__(self, app, *, force_https: bool | None = None) -> None:  # noqa: ANN001
+    def __init__(self, app, *, force_https: bool | None = None) -> None:
         super().__init__(app)
         self._force_https = (
             settings.is_production if force_https is None else force_https

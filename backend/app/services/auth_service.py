@@ -11,5 +11,5 @@ from app.services._stub import make_stub
 _stub = make_stub("auth_service")
 
 
-def __getattr__(item: str):  # noqa: ANN202
+def __getattr__(item: str):
     return getattr(_stub, item)

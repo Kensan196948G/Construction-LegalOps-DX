@@ -7,7 +7,7 @@ files do not transit the API server.
 
 from __future__ import annotations
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +23,7 @@ _MAX_BYTES = 100 * 1024 * 1024  # 100 MB
 class UploadInitRequest(BaseModel):
     """Body of ``POST /uploads/init`` — request a pre-signed upload URL."""
 
-    contract_id: Optional[int] = None
+    contract_id: int | None = None
     filename: Annotated[str, Field(min_length=1, max_length=256)]
     mime_type: Annotated[str, Field(max_length=128)]
     size_bytes: Annotated[int, Field(ge=0, le=_MAX_BYTES)]
@@ -47,7 +47,7 @@ class UploadCompleteRequest(BaseModel):
     """Body of ``POST /uploads/complete``."""
 
     upload_token: Annotated[str, Field(min_length=1)]
-    contract_id: Optional[int] = None
+    contract_id: int | None = None
     sharepoint_item_id: Annotated[str, Field(min_length=1, max_length=256)]
     checksum_sha256: Annotated[str, Field(min_length=64, max_length=64)]
     is_primary: bool = False
@@ -73,4 +73,4 @@ class AttachmentRead(BaseModel):
 class UploadOut(AttachmentRead):
     """Public ``Out`` alias used by ``GET /uploads/{id}``."""
 
-    download_url: Optional[str] = None
+    download_url: str | None = None

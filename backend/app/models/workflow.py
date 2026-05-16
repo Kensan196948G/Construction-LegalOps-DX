@@ -12,7 +12,7 @@ Note:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     BigInteger,
@@ -50,8 +50,8 @@ class Workflow(IntPKMixin, TimestampMixin, Base):
 
     code: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    contract_type: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contract_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
@@ -62,7 +62,7 @@ class Workflow(IntPKMixin, TimestampMixin, Base):
         Integer, nullable=False, default=1, server_default="1"
     )
 
-    steps: Mapped[List["WorkflowStep"]] = relationship(
+    steps: Mapped[list[WorkflowStep]] = relationship(
         "WorkflowStep", back_populates="workflow"
     )
 
@@ -93,28 +93,28 @@ class WorkflowStep(IntPKMixin, TimestampMixin, Base):
     seq: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     step_type: Mapped[str] = mapped_column(String(32), nullable=False)
-    assignee_id: Mapped[Optional[int]] = mapped_column(
+    assignee_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="RESTRICT", use_alter=True),
         nullable=True,
     )
-    assignee_role: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    assignee_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="pending", server_default="pending"
     )
-    due_at: Mapped[Optional[datetime]] = mapped_column(
+    due_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    decided_at: Mapped[Optional[datetime]] = mapped_column(
+    decided_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    decision_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    workflow: Mapped["Workflow"] = relationship("Workflow", back_populates="steps")
-    contract: Mapped["Contract"] = relationship(
+    workflow: Mapped[Workflow] = relationship("Workflow", back_populates="steps")
+    contract: Mapped[Contract] = relationship(
         "Contract", back_populates="workflow_steps"
     )
-    assignee: Mapped[Optional["User"]] = relationship(
+    assignee: Mapped[User | None] = relationship(
         "User", foreign_keys=[assignee_id]
     )
 

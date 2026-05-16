@@ -7,13 +7,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.risk import (
@@ -33,11 +31,11 @@ router = APIRouter(prefix="/risks", tags=["risks"])
     description="severity / status / contract_id / owner_id / department_id で絞り込み。RLS 適用。",
 )
 async def list_risks(
-    severity: Optional[str] = Query(default=None, description="low/medium/high/critical"),
-    status_: Optional[str] = Query(default=None, alias="status"),
-    contract_id: Optional[int] = Query(default=None),
-    owner_id: Optional[int] = Query(default=None),
-    department_id: Optional[int] = Query(default=None),
+    severity: str | None = Query(default=None, description="low/medium/high/critical"),
+    status_: str | None = Query(default=None, alias="status"),
+    contract_id: int | None = Query(default=None),
+    owner_id: int | None = Query(default=None),
+    department_id: int | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
@@ -67,9 +65,9 @@ async def list_risks(
     ),
 )
 async def aggregate_risks(
-    department_id: Optional[int] = Query(default=None),
-    date_from: Optional[str] = Query(default=None, alias="from"),
-    date_to: Optional[str] = Query(default=None, alias="to"),
+    department_id: int | None = Query(default=None),
+    date_from: str | None = Query(default=None, alias="from"),
+    date_to: str | None = Query(default=None, alias="to"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> RiskAggregate:
@@ -101,9 +99,9 @@ async def update_risk(
             session, risk_id=risk_id, data=payload, editor=current_user
         )
     except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="risk not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="risk not found") from None  # noqa: E501
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     await audit_service.log(
         session,

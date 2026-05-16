@@ -41,17 +41,60 @@ ClaudeOS/governance/19-security-policy.md
 ClaudeOS/governance/20-audit-policy.md
 ```
 
-## 🎯 Goal 選択
+## 🎯 Goal 設定（必須・スキップ禁止）
 
-`state.json` の `goal_type` を読み、対応ファイルを Read すること。
+以下の手順を**必ず順番に実行**すること。読むだけで終わることを禁止する。
+
+### ステップ 1: goal_type を確認する
+
+```bash
+cat state.json | grep goal_type
+```
+
+### ステップ 2: 対応ファイルを Read する
 
 ```text
-mvp-release        → ClaudeOS/goals/mvp-release.md
-production-release → ClaudeOS/goals/production-release.md
-hotfix             → ClaudeOS/goals/hotfix.md
-security-emergency → ClaudeOS/goals/security-emergency.md
-refactoring        → ClaudeOS/goals/refactoring.md
+mvp-release        → claudeos/goals/mvp-release.md
+production-release → claudeos/goals/production-release.md
+hotfix             → claudeos/goals/hotfix.md
+security-emergency → claudeos/goals/security-emergency.md
+refactoring        → claudeos/goals/refactoring.md
 ```
+
+### ステップ 3: /goal コマンドを即時実行する（スキップ禁止）
+
+Read したファイルの `/goal "..."` の内容を、**そのまま Skill ツールで実行すること**。
+ステップ 3 を完了するまで開発ループを開始してはならない。
+
+> goal_type が未設定・不明の場合は、`gh issue list` と `gh run list` を確認し、
+> CTO 判断で最適な goal_type を選択してから実行すること。
+
+## 🛡️ Trust Level 確認（必須・スキップ禁止）
+
+以下を **必ず順番に実行**すること。
+
+### ステップ 1: trust-score.json を Read する
+
+```text
+.claude/claudeos/data/trust-score.json
+```
+
+### ステップ 2: trust.level に応じた許可操作範囲を確認する
+
+```text
+Level 1 (score 0.00-0.84): ファイル編集・テスト実行・Issue起票・Draft PR
+Level 2 (score 0.85-0.94): + PR作成・auto_merge（CI全通過時）
+Level 3 (score 0.95-1.00): + Staging デプロイ
+※ 本番デプロイは全 Level で人間サインオフ必須
+```
+
+### ステップ 3: エージェントメッセージを確認する
+
+```bash
+gh issue list --label "agent-msg,status:open" --limit 10
+```
+
+`priority:urgent` のメッセージは現在の作業を中断して最優先で処理すること。
 
 ## ⚡ 起動後必須実行
 
@@ -66,4 +109,3 @@ claude agents
 - Verify Mandatory
 - Stop Infinite Repair
 - CTO Final Decision
-

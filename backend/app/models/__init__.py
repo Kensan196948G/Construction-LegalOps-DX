@@ -38,7 +38,7 @@ from .risk_item import RiskItem
 from .user import User
 from .workflow import Workflow, WorkflowStep, WorkflowTemplate
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     # Models
     "Attachment",
     "AuditLog",

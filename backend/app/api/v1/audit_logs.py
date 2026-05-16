@@ -10,14 +10,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.audit_log import (
     AuditLogOut,
@@ -36,12 +35,12 @@ router = APIRouter(prefix="/audit-logs", tags=["audit-logs"])
     description="auditor / admin のみ。target_type/action/actor_id/期間で絞り込み。",
 )
 async def list_audit_logs(
-    target_type: Optional[str] = Query(default=None),
-    target_id: Optional[int] = Query(default=None),
-    action: Optional[str] = Query(default=None),
-    actor_id: Optional[int] = Query(default=None),
-    date_from: Optional[datetime] = Query(default=None, alias="from"),
-    date_to: Optional[datetime] = Query(default=None, alias="to"),
+    target_type: str | None = Query(default=None),
+    target_id: int | None = Query(default=None),
+    action: str | None = Query(default=None),
+    actor_id: int | None = Query(default=None),
+    date_from: datetime | None = Query(default=None, alias="from"),
+    date_to: datetime | None = Query(default=None, alias="to"),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=500),
     session: AsyncSession = Depends(get_db),
@@ -70,8 +69,8 @@ async def list_audit_logs(
 )
 async def verify_audit_chain(
     request: Request,
-    date_from: Optional[datetime] = Query(default=None, alias="from"),
-    date_to: Optional[datetime] = Query(default=None, alias="to"),
+    date_from: datetime | None = Query(default=None, alias="from"),
+    date_to: datetime | None = Query(default=None, alias="to"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("admin", "auditor")),
@@ -98,9 +97,9 @@ async def verify_audit_chain(
     response_class=StreamingResponse,
 )
 async def export_audit_logs(
-    date_from: Optional[datetime] = Query(default=None, alias="from"),
-    date_to: Optional[datetime] = Query(default=None, alias="to"),
-    target_type: Optional[str] = Query(default=None),
+    date_from: datetime | None = Query(default=None, alias="from"),
+    date_to: datetime | None = Query(default=None, alias="to"),
+    target_type: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("auditor", "admin")),

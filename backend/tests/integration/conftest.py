@@ -26,7 +26,6 @@ from typing import Any
 import pytest
 import pytest_asyncio
 
-
 # ---------------------------------------------------------------------------
 # Engine / schema bootstrap
 # ---------------------------------------------------------------------------
@@ -62,7 +61,7 @@ async def db_session(test_engine: Any) -> AsyncGenerator[Any, None]:
     """
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-    Session = async_sessionmaker(
+    Session = async_sessionmaker(  # noqa: N806
         bind=test_engine, expire_on_commit=False, class_=AsyncSession
     )
     session = Session()
@@ -99,7 +98,7 @@ async def client(test_engine: Any) -> AsyncGenerator[Any, None]:
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"get_db not importable: {exc}")
 
-    Session = async_sessionmaker(
+    Session = async_sessionmaker(  # noqa: N806
         bind=test_engine, expire_on_commit=False, class_=AsyncSession
     )
 

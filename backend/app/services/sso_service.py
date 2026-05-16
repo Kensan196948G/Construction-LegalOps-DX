@@ -38,7 +38,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Final
 from urllib.parse import urlencode
 
@@ -53,7 +53,7 @@ _AUTHORIZE_PATH: Final[str] = (
     "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
 )
 _TOKEN_PATH: Final[str] = (
-    "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
+    "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"  # noqa: S105
 )
 _JWKS_PATH: Final[str] = (
     "https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys"
@@ -78,7 +78,7 @@ class Token:
     access_token: str
     id_token: str
     refresh_token: str | None
-    token_type: str = "Bearer"
+    token_type: str = "Bearer"  # noqa: S105
     expires_in: int = 3600
     scope: str | None = None
 
@@ -183,7 +183,7 @@ class SSOService:
         # replay scenarios reproducibly.
         sub_seed = hashlib.sha256(code.encode("utf-8")).hexdigest()[:16]
         upn = f"dev-{sub_seed}@example.co.jp"
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         claims = {
             "sub": sub_seed,
             "upn": upn,
@@ -223,12 +223,12 @@ class SSOService:
             payload = _hs256_decode(token, self._secret)
         except SSOError:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise SSOError(f"invalid token: {exc}") from exc
 
-        now = datetime.now(timezone.utc)
-        exp = datetime.fromtimestamp(int(payload.get("exp", 0)), tz=timezone.utc)
-        iat = datetime.fromtimestamp(int(payload.get("iat", 0)), tz=timezone.utc)
+        now = datetime.now(UTC)
+        exp = datetime.fromtimestamp(int(payload.get("exp", 0)), tz=UTC)
+        iat = datetime.fromtimestamp(int(payload.get("iat", 0)), tz=UTC)
         if exp < now:
             raise SSOError("token has expired")
         if payload.get("iss") != self._issuer:
@@ -275,7 +275,7 @@ class SSOService:
         # Stub path — keep the same UPN by hashing the token.
         sub_seed = hashlib.sha256(refresh_token.encode("utf-8")).hexdigest()[:16]
         upn = f"dev-{sub_seed}@example.co.jp"
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         claims = {
             "sub": sub_seed,
             "upn": upn,
@@ -486,7 +486,7 @@ def _parse_token_response(
     try:
         access_token = str(payload["access_token"])
         id_token = str(payload["id_token"])
-    except KeyError as exc:  # noqa: BLE001
+    except KeyError as exc:
         raise SSOError(f"token endpoint response missing field: {exc}") from exc
 
     refresh = payload.get("refresh_token") or fallback_refresh

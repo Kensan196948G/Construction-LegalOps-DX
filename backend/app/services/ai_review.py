@@ -23,7 +23,7 @@ import os
 import re
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Final
 
 import structlog
@@ -129,10 +129,8 @@ class _CircuitBreaker:
     def allow(self) -> bool:
         if self._opened_at is None:
             return True
-        if time.monotonic() - self._opened_at >= self.recovery_seconds:
-            # half-open: allow a probe call
-            return True
-        return False
+        # half-open: allow a probe call
+        return time.monotonic() - self._opened_at >= self.recovery_seconds
 
     def record_success(self) -> None:
         self._failures = 0
@@ -319,8 +317,7 @@ class AIReviewService:
             )
 
         # 公共工事 / 入札
-        if re.search(r"公共工事|入札|発注者", t):
-            if not re.search(r"談合", t):
+        if re.search(r"公共工事|入札|発注者", t) and not re.search(r"談合", t):
                 add(
                     "no_collusion_representation",
                     "談合関連表明保証なし",
@@ -466,6 +463,6 @@ class AIReviewService:
             detections_redacted=redactions,
             elapsed_ms=elapsed_ms,
             mode=self._mode,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             disclaimer=DISCLAIMER,
         )

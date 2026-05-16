@@ -23,7 +23,7 @@ def make_stub(service_name: str) -> Any:
 
     class _Stub:
         __name__ = service_name
-        ALLOWED_MIME_TYPES = {
+        ALLOWED_MIME_TYPES = {  # noqa: RUF012
             "application/pdf",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/msword",

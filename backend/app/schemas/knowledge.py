@@ -8,7 +8,7 @@ contract so the frontend can wire against stable shapes.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
@@ -20,9 +20,9 @@ class KnowledgeArticleCreate(BaseModel):
 
     title: Annotated[str, Field(min_length=1, max_length=256)]
     body: Annotated[str, Field(min_length=1)]
-    tags: List[str] = Field(default_factory=list)
-    contract_type: Optional[str] = None
-    citations: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    contract_type: str | None = None
+    citations: list[str] = Field(default_factory=list)
 
 
 class KnowledgeArticleOut(ORMModel):
@@ -31,9 +31,9 @@ class KnowledgeArticleOut(ORMModel):
     id: int
     title: str
     body: str
-    tags: List[str] = Field(default_factory=list)
-    contract_type: Optional[str] = None
-    citations: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    contract_type: str | None = None
+    citations: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -45,7 +45,7 @@ class KnowledgeSearchResult(BaseModel):
     title: str
     snippet: str
     score: float = Field(default=0.0, ge=0.0, le=1.0)
-    tags: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
 
 
 class SimilarContractOut(BaseModel):
@@ -55,7 +55,7 @@ class SimilarContractOut(BaseModel):
     contract_no: str
     title: str
     similarity: float = Field(default=0.0, ge=0.0, le=1.0)
-    counterparty: Optional[str] = None
+    counterparty: str | None = None
 
 
 __all__ = [

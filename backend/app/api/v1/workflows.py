@@ -10,13 +10,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.workflow import (
@@ -38,7 +36,7 @@ router = APIRouter(tags=["workflows"])
     summary="ワークフロー定義一覧",
 )
 async def list_workflow_definitions(
-    contract_type: Optional[str] = Query(default=None),
+    contract_type: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
@@ -98,9 +96,9 @@ async def start_workflow(
             actor=current_user,
         )
     except LookupError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     await audit_service.log(
         session,
@@ -176,11 +174,11 @@ async def execute_workflow_action(
             payload=payload,
         )
     except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="workflow not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="workflow not found") from None  # noqa: E501
     except PermissionError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden") from None
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     await audit_service.log(
         session,

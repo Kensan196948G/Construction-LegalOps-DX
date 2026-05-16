@@ -16,8 +16,8 @@
   "phase": "Improve",
   "kpi": {
     "success_rate_target": 0.9,
-    "ci_success_rate": 0.0,
-    "test_pass_rate": 0.0,
+    "ci_success_rate": 0,
+    "test_pass_rate": 0,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -27,16 +27,34 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Improve",
-    "last_session_summary": "Loop 5 (Integration & Finalization) 完了。CHANGELOG.md / README.md / state.json 更新、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成。"
+    "last_session_summary": "Loop 5 (Integration & Finalization) 完了。CHANGELOG.md / README.md / state.json 更新、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成。",
+    "current_session_start_at": "2026-05-16T07:28:43.926Z",
+    "last_trigger": "manual"
   },
-  "automation": { "auto_issue_generation": true, "self_evolution": true },
-  "stable": { "consecutive_success": 0, "target_n": 3, "stable_achieved": false },
+  "automation": {
+    "auto_issue_generation": true,
+    "self_evolution": true
+  },
+  "stable": {
+    "consecutive_success": 0,
+    "target_n": 3,
+    "stable_achieved": false
+  },
   "completed_issues": [],
   "blocked_issues": [],
-  "learning": { "failure_patterns": [], "success_patterns": [] },
+  "learning": {
+    "failure_patterns": [],
+    "success_patterns": []
+  },
   "quality_gates": {
-    "lint": { "warning_threshold": 10, "error_threshold": 0 },
-    "coverage": { "line_min": 70, "changed_files_min": 80 }
+    "lint": {
+      "warning_threshold": 10,
+      "error_threshold": 0
+    },
+    "coverage": {
+      "line_min": 70,
+      "changed_files_min": 80
+    }
   },
   "loop1": {
     "name": "Foundation",

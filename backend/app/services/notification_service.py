@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -29,7 +29,7 @@ class NotificationError(RuntimeError):
     """Raised when a notification cannot be queued or sent."""
 
 
-class TeamsCardKind(str, Enum):
+class TeamsCardKind(StrEnum):
     APPROVAL_REQUEST = "approval_request"
     SLA_WARNING = "sla_warning"
     SLA_BREACH = "sla_breach"
@@ -81,7 +81,7 @@ class NotificationService:
             to=tuple(to),
             subject=subject,
             body=body,
-            sent_at=datetime.now(timezone.utc),
+            sent_at=datetime.now(UTC),
             metadata={"cc": list(cc or []), **(metadata or {})},
         )
         self._sent.append(record)
@@ -112,7 +112,7 @@ class NotificationService:
             to=(channel_or_user,),
             subject=title,
             body=body,
-            sent_at=datetime.now(timezone.utc),
+            sent_at=datetime.now(UTC),
             metadata={
                 "kind": kind.value,
                 "deep_link": deep_link,
@@ -144,7 +144,7 @@ class NotificationService:
             to=(upn,),
             subject=subject,
             body=body,
-            sent_at=datetime.now(timezone.utc),
+            sent_at=datetime.now(UTC),
             metadata=metadata or {},
         )
         self._sent.append(record)

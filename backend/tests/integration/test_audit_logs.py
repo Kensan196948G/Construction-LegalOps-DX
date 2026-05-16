@@ -60,7 +60,7 @@ async def test_hash_chain_is_continuous(client, auth_headers_admin):
     items = sorted(items, key=lambda x: x["id"])
 
     # Assert: each row's prev_hash equals previous row's hash_chain
-    for prev, cur in zip(items, items[1:]):
+    for prev, cur in zip(items, items[1:]):  # noqa: B905, RUF007
         assert cur["prev_hash"] == prev["hash_chain"]
 
 

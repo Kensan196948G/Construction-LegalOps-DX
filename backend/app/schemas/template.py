@@ -6,7 +6,7 @@ Mirrors ``docs/api_design.md`` section 16.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +19,7 @@ class TemplateCreate(BaseModel):
     code: Annotated[str, Field(min_length=1, max_length=64)]
     name: Annotated[str, Field(min_length=1, max_length=256)]
     contract_type: Annotated[str, Field(min_length=1, max_length=64)]
-    description: Optional[str] = None
+    description: str | None = None
     body: Annotated[str, Field(min_length=1)]
     is_active: bool = True
 
@@ -31,7 +31,7 @@ class TemplateOut(ORMModel):
     code: str
     name: str
     contract_type: str
-    description: Optional[str] = None
+    description: str | None = None
     body: str
     is_active: bool = True
     version: int = 1
@@ -49,19 +49,19 @@ class ClauseLibraryCreate(BaseModel):
         str, Field(pattern="^(recommended|caution|prohibited|neutral)$")
     ] = "neutral"
     text: Annotated[str, Field(min_length=1)]
-    tags: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
 
 
 class ClauseLibraryUpdate(BaseModel):
     """Patch payload for ``PATCH /clauses-library/{id}``."""
 
-    title: Optional[str] = Field(default=None, max_length=256)
-    category: Optional[str] = Field(default=None, max_length=64)
-    recommendation: Optional[str] = Field(
+    title: str | None = Field(default=None, max_length=256)
+    category: str | None = Field(default=None, max_length=64)
+    recommendation: str | None = Field(
         default=None, pattern="^(recommended|caution|prohibited|neutral)$"
     )
-    text: Optional[str] = None
-    tags: Optional[List[str]] = None
+    text: str | None = None
+    tags: list[str] | None = None
 
 
 class ClauseLibraryOut(ORMModel):
@@ -73,7 +73,7 @@ class ClauseLibraryOut(ORMModel):
     category: str
     recommendation: str
     text: str
-    tags: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

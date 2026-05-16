@@ -10,7 +10,7 @@ because the data lives within the JSONB blob per the design doc.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     BigInteger,
@@ -55,33 +55,33 @@ class LegalReview(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="pending", server_default="pending"
     )
-    ai_model: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
-    ai_input_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    ai_output_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    overall_risk: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    ai_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    ai_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ai_output_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    overall_risk: Mapped[str | None] = mapped_column(String(16), nullable=True)
     # Risk score 0-100; not in the raw DDL but required by the team contract.
-    risk_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    risk_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     result: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    finished_at: Mapped[Optional[datetime]] = mapped_column(
+    finished_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    reviewer_id: Mapped[Optional[int]] = mapped_column(
+    reviewer_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="RESTRICT", use_alter=True),
         nullable=True,
     )
 
-    contract: Mapped["Contract"] = relationship(
+    contract: Mapped[Contract] = relationship(
         "Contract", back_populates="legal_reviews"
     )
-    reviewer: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewer_id])
-    risk_items: Mapped[list["RiskItem"]] = relationship(
+    reviewer: Mapped[User | None] = relationship("User", foreign_keys=[reviewer_id])
+    risk_items: Mapped[list[RiskItem]] = relationship(
         "RiskItem", back_populates="legal_review"
     )
 

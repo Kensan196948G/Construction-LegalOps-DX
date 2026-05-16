@@ -52,7 +52,7 @@ async def test_workflow_approve_path_completes(client, auth_headers_legal, auth_
         assert r_step.status_code == 200
 
     # Assert: workflow completed
-    r_final = await client.get(f"/api/v1/contracts/{cid}/workflow-steps", headers=auth_headers_legal)
+    r_final = await client.get(f"/api/v1/contracts/{cid}/workflow-steps", headers=auth_headers_legal)  # noqa: E501
     assert r_final.status_code == 200
     assert all(s["status"] == "approved" for s in r_final.json())
 

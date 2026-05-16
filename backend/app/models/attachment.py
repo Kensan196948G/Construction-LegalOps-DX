@@ -66,10 +66,10 @@ class Attachment(IntPKMixin, TimestampMixin, Base):
         nullable=False,
     )
 
-    contract: Mapped["Contract"] = relationship(
+    contract: Mapped[Contract] = relationship(
         "Contract", back_populates="attachments"
     )
-    uploader: Mapped["User"] = relationship("User", foreign_keys=[uploaded_by])
+    uploader: Mapped[User] = relationship("User", foreign_keys=[uploaded_by])
 
     __table_args__ = (
         CheckConstraint("size_bytes >= 0", name="ck_attachments_size_nonneg"),

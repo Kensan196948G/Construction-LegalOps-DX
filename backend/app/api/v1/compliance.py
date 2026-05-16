@@ -7,17 +7,15 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.compliance import (
-    ComplianceCheckResult,
     ComplianceChecklist,
+    ComplianceCheckResult,
     ComplianceRunResponse,
 )
 from app.services import audit_service, compliance_service
@@ -32,8 +30,8 @@ router = APIRouter(prefix="/compliance", tags=["compliance"])
     description="契約類型・取引区分に応じた適用可能なチェックリスト定義を返す。",
 )
 async def list_checklists(
-    contract_type: Optional[str] = Query(default=None),
-    category: Optional[str] = Query(default=None, description="construction_law / subcontract_act / others"),
+    contract_type: str | None = Query(default=None),
+    category: str | None = Query(default=None, description="construction_law / subcontract_act / others"),  # noqa: E501
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[ComplianceChecklist]:
@@ -73,7 +71,7 @@ async def get_compliance_result(
 async def run_compliance_check(
     contract_id: int,
     request: Request,
-    checklist_codes: Optional[list[str]] = Query(default=None, description="未指定時は全件"),
+    checklist_codes: list[str] | None = Query(default=None, description="未指定時は全件"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
@@ -85,8 +83,10 @@ async def run_compliance_check(
             checklist_codes=checklist_codes,
             actor=current_user,
         )
-    except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="contract not found"
+        ) from exc
 
     await audit_service.log(
         session,

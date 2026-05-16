@@ -6,7 +6,7 @@ Mirrors ``docs/api_design.md`` section 8.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Dict, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field
 
@@ -21,11 +21,11 @@ class RiskOut(ORMModel):
     severity: Annotated[str, Field(pattern="^(low|medium|high|critical)$")]
     status: Annotated[str, Field(max_length=32)]
     title: str
-    description: Optional[str] = None
-    mitigation: Optional[str] = None
-    owner_id: Optional[int] = None
-    department_id: Optional[int] = None
-    due_date: Optional[datetime] = None
+    description: str | None = None
+    mitigation: str | None = None
+    owner_id: int | None = None
+    department_id: int | None = None
+    due_date: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -33,13 +33,13 @@ class RiskOut(ORMModel):
 class RiskUpdate(BaseModel):
     """Patch payload for ``PATCH /risks/{id}``."""
 
-    status: Optional[str] = Field(default=None, max_length=32)
-    mitigation: Optional[str] = Field(default=None, max_length=4000)
-    severity: Optional[str] = Field(
+    status: str | None = Field(default=None, max_length=32)
+    mitigation: str | None = Field(default=None, max_length=4000)
+    severity: str | None = Field(
         default=None, pattern="^(low|medium|high|critical)$"
     )
-    owner_id: Optional[int] = None
-    due_date: Optional[datetime] = None
+    owner_id: int | None = None
+    due_date: datetime | None = None
 
 
 class RiskAggregate(BaseModel):
@@ -49,8 +49,8 @@ class RiskAggregate(BaseModel):
     so downstream UIs cannot strip it inadvertently.
     """
 
-    by_severity: Dict[str, int] = Field(default_factory=dict)
-    by_status: Dict[str, int] = Field(default_factory=dict)
+    by_severity: dict[str, int] = Field(default_factory=dict)
+    by_status: dict[str, int] = Field(default_factory=dict)
     open_count: int = Field(default=0, ge=0)
     closed_count: int = Field(default=0, ge=0)
     disclaimer: str = (

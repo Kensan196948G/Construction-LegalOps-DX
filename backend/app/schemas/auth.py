@@ -8,22 +8,20 @@ exposed to the SPA.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 from pydantic import BaseModel, EmailStr, Field
-
-from .user import UserMe
 
 
 class TokenResponse(BaseModel):
     """OAuth-style token envelope returned to backend-internal callers."""
 
     access_token: str
-    token_type: Annotated[str, Field(pattern="^[Bb]earer$")] = "Bearer"
+    token_type: Annotated[str, Field(pattern="^[Bb]earer$")] = "Bearer"  # noqa: S105
     expires_in: int
-    refresh_token: Optional[str] = None
-    id_token: Optional[str] = None
-    scope: Optional[str] = None
+    refresh_token: str | None = None
+    id_token: str | None = None
+    scope: str | None = None
 
 
 class SSOCallback(BaseModel):
@@ -31,7 +29,7 @@ class SSOCallback(BaseModel):
 
     code: Annotated[str, Field(min_length=1)]
     state: Annotated[str, Field(min_length=1)]
-    session_state: Optional[str] = None
+    session_state: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -57,12 +55,12 @@ class MeResponse(BaseModel):
     """
 
     id: Any
-    email: Optional[EmailStr] = None
+    email: EmailStr | None = None
     role: str
-    department_id: Optional[str] = None
+    department_id: str | None = None
 
     @classmethod
-    def from_user(cls, user: Any) -> "MeResponse":
+    def from_user(cls, user: Any) -> MeResponse:
         """Build the response from a :class:`app.deps.CurrentUser` principal.
 
         Falls back gracefully when the caller passes a SQLAlchemy ``User``
@@ -89,13 +87,13 @@ class LoginResponse(BaseModel):
 
     authorize_url: str
     state: str
-    redirect_to: Optional[str] = None
+    redirect_to: str | None = None
 
 
 class RefreshResponse(BaseModel):
     """Response for ``POST /auth/refresh`` — fresh access token."""
 
     access_token: str
-    token_type: Annotated[str, Field(pattern="^[Bb]earer$")] = "Bearer"
+    token_type: Annotated[str, Field(pattern="^[Bb]earer$")] = "Bearer"  # noqa: S105
     expires_in: int
     issued_at: datetime = Field(default_factory=lambda: datetime.now(tz=UTC))

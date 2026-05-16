@@ -6,7 +6,7 @@ Reflects ``docs/database_design.md`` section 4.10.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
@@ -50,12 +50,12 @@ class Comment(IntPKMixin, TimestampMixin, Base):
         ForeignKey("contracts.id", ondelete="RESTRICT"),
         nullable=False,
     )
-    clause_id: Mapped[Optional[int]] = mapped_column(
+    clause_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("clauses.id", ondelete="RESTRICT"),
         nullable=True,
     )
-    parent_id: Mapped[Optional[int]] = mapped_column(
+    parent_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("comments.id", ondelete="RESTRICT"),
         nullable=True,
@@ -75,14 +75,14 @@ class Comment(IntPKMixin, TimestampMixin, Base):
     resolved: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
-    resolved_at: Mapped[Optional[datetime]] = mapped_column(
+    resolved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
-    contract: Mapped["Contract"] = relationship("Contract", back_populates="comments")
-    clause: Mapped[Optional["Clause"]] = relationship("Clause")
-    author: Mapped["User"] = relationship("User", foreign_keys=[author_id])
-    parent: Mapped[Optional["Comment"]] = relationship(
+    contract: Mapped[Contract] = relationship("Contract", back_populates="comments")
+    clause: Mapped[Clause | None] = relationship("Clause")
+    author: Mapped[User] = relationship("User", foreign_keys=[author_id])
+    parent: Mapped[Comment | None] = relationship(
         "Comment", remote_side="Comment.id"
     )
 

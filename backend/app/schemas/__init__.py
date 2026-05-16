@@ -60,7 +60,7 @@ from .workflow import (
     WorkflowStepRead,
 )
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     # common
     "Envelope",
     "FilterBase",

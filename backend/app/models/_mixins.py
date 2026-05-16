@@ -19,7 +19,6 @@ per the team contract.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, func
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column
@@ -39,7 +38,7 @@ class TimestampMixin:
         server_default=func.now(),
         onupdate=func.now(),
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
@@ -66,7 +65,7 @@ class AuditedByMixin:
 
     @declared_attr
     @classmethod
-    def created_by(cls) -> Mapped[Optional[int]]:
+    def created_by(cls) -> Mapped[int | None]:
         return mapped_column(
             BigInteger,
             ForeignKey("users.id", ondelete="RESTRICT", use_alter=True),
@@ -75,7 +74,7 @@ class AuditedByMixin:
 
     @declared_attr
     @classmethod
-    def updated_by(cls) -> Mapped[Optional[int]]:
+    def updated_by(cls) -> Mapped[int | None]:
         return mapped_column(
             BigInteger,
             ForeignKey("users.id", ondelete="RESTRICT", use_alter=True),

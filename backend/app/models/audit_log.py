@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import (
@@ -31,7 +31,8 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import INET, JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import INET, JSONB
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -65,25 +66,25 @@ class AuditLog(IntPKMixin, Base):
         nullable=False,
         server_default=func.now(),
     )
-    actor_id: Mapped[Optional[int]] = mapped_column(
+    actor_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="SET NULL", use_alter=True),
         nullable=True,
     )
-    actor_role: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    actor_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     target_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    target_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    request_id: Mapped[Optional[UUID]] = mapped_column(
+    target_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    request_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True), nullable=True
     )
-    ip_address: Mapped[Optional[str]] = mapped_column(INET, nullable=True)
-    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(INET, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     # ``payload`` stores the canonical ``{"before": ..., "after": ...}`` dict.
     payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
-    previous_hash: Mapped[Optional[str]] = mapped_column(CHAR(64), nullable=True)
+    previous_hash: Mapped[str | None] = mapped_column(CHAR(64), nullable=True)
     hash_chain: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -91,7 +92,7 @@ class AuditLog(IntPKMixin, Base):
         server_default=func.now(),
     )
 
-    actor: Mapped[Optional["User"]] = relationship("User", foreign_keys=[actor_id])
+    actor: Mapped[User | None] = relationship("User", foreign_keys=[actor_id])
 
     __table_args__ = (
         Index("ix_audit_logs_target", "target_type", "target_id"),
@@ -102,7 +103,7 @@ class AuditLog(IntPKMixin, Base):
 
     # ---- Helpers ----------------------------------------------------------
     @staticmethod
-    def compute_hash(previous_hash: Optional[str], canonical_payload: str) -> str:
+    def compute_hash(previous_hash: str | None, canonical_payload: str) -> str:
         """Compute the SHA-256 link for a new audit-log row.
 
         :param previous_hash: hash_chain of the immediately preceding row;

@@ -15,8 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user, require_role
 from app.db.session import get_db
+from app.deps import get_current_user, require_role
 from app.models.user import User
 from app.schemas.upload import (
     UploadCompleteRequest,
@@ -89,9 +89,9 @@ async def complete_upload(
             session, actor=current_user, payload=payload
         )
     except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload session not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload session not found") from None  # noqa: E501
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     await audit_service.log(
         session,
@@ -138,9 +138,9 @@ async def download_upload(
             session, upload_id=upload_id, viewer=current_user
         )
     except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload not found") from None  # noqa: E501
     except PermissionError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden") from None
 
     await audit_service.log(
         session,
@@ -169,9 +169,9 @@ async def delete_upload(
             session, upload_id=upload_id, actor=current_user
         )
     except LookupError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload not found") from None  # noqa: E501
     except PermissionError:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden") from None
     await audit_service.log(
         session,
         actor_id=current_user.id,

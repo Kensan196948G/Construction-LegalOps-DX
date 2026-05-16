@@ -8,10 +8,10 @@ in ``docs/database_design.md``.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     """Application role granted to a user.
 
     The role is stored as a VARCHAR(32) column in ``users.role`` and is the
@@ -28,7 +28,7 @@ class UserRole(str, Enum):
     GUEST = "guest"
 
 
-class ContractType(str, Enum):
+class ContractType(StrEnum):
     """Common Japanese construction-industry contract types.
 
     The DB column is open VARCHAR(64) since organisations may add bespoke
@@ -44,7 +44,7 @@ class ContractType(str, Enum):
     OTHER = "その他"
 
 
-class ContractStatus(str, Enum):
+class ContractStatus(StrEnum):
     """Lifecycle state of a ``contracts`` row."""
 
     DRAFT = "draft"
@@ -55,7 +55,7 @@ class ContractStatus(str, Enum):
     REJECTED = "rejected"
 
 
-class Confidentiality(str, Enum):
+class Confidentiality(StrEnum):
     """Confidentiality classification for contracts and attachments."""
 
     PUBLIC = "public"
@@ -64,7 +64,7 @@ class Confidentiality(str, Enum):
     RESTRICTED = "restricted"
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """Discrete risk levels for clauses and overall reviews."""
 
     LOW = "low"
@@ -73,13 +73,13 @@ class RiskLevel(str, Enum):
     CRITICAL = "critical"
 
 
-class ReviewType(str, Enum):
+class ReviewType(StrEnum):
     AI = "ai"
     HUMAN = "human"
     HYBRID = "hybrid"
 
 
-class ReviewStatus(str, Enum):
+class ReviewStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -88,26 +88,26 @@ class ReviewStatus(str, Enum):
     ACCEPTED = "accepted"
 
 
-class ClauseRecommendation(str, Enum):
+class ClauseRecommendation(StrEnum):
     REQUIRED = "required"
     RECOMMENDED = "recommended"
     OPTIONAL = "optional"
     PROHIBITED = "prohibited"
 
 
-class RiskProbability(str, Enum):
+class RiskProbability(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
-class RiskImpact(str, Enum):
+class RiskImpact(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
-class RiskItemStatus(str, Enum):
+class RiskItemStatus(StrEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     ACCEPTED = "accepted"
@@ -117,7 +117,7 @@ class RiskItemStatus(str, Enum):
     CLOSED = "closed"
 
 
-class WorkflowStepType(str, Enum):
+class WorkflowStepType(StrEnum):
     DRAFT = "draft"
     LEGAL_REVIEW = "legal_review"
     MANAGER_APPROVAL = "manager_approval"
@@ -126,7 +126,7 @@ class WorkflowStepType(str, Enum):
     CUSTOM = "custom"
 
 
-class WorkflowStepStatus(str, Enum):
+class WorkflowStepStatus(StrEnum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     APPROVED = "approved"
@@ -135,33 +135,33 @@ class WorkflowStepStatus(str, Enum):
     SENT_BACK = "sent_back"
 
 
-class CommentVisibility(str, Enum):
+class CommentVisibility(StrEnum):
     INTERNAL = "internal"
     REVIEWER_ONLY = "reviewer_only"
     PUBLIC = "public"
 
 
-class AttachmentStorage(str, Enum):
+class AttachmentStorage(StrEnum):
     SHAREPOINT = "sharepoint"
     DIRECTCLOUD = "directcloud"
     LOCAL = "local"
 
 
-class NotificationChannel(str, Enum):
+class NotificationChannel(StrEnum):
     MAIL = "mail"
     TEAMS = "teams"
     IN_APP = "in_app"
     DESKNETS = "desknets"
 
 
-class NotificationStatus(str, Enum):
+class NotificationStatus(StrEnum):
     QUEUED = "queued"
     SENT = "sent"
     FAILED = "failed"
     READ = "read"
 
 
-class AuditAction(str, Enum):
+class AuditAction(StrEnum):
     """Audit log action codes.
 
     Stored as VARCHAR(64) in ``audit_logs.action``. The list is intentionally

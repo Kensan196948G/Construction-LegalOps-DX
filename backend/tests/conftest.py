@@ -27,7 +27,6 @@ from typing import Any
 import pytest
 import pytest_asyncio
 
-
 # ---------------------------------------------------------------------------
 # Event loop
 # ---------------------------------------------------------------------------
@@ -104,7 +103,7 @@ async def db_session(db_engine: Any) -> AsyncGenerator[Any, None]:
 
     connection = await db_engine.connect()
     trans = await connection.begin()
-    Session = async_sessionmaker(bind=connection, expire_on_commit=False, class_=AsyncSession)
+    Session = async_sessionmaker(bind=connection, expire_on_commit=False, class_=AsyncSession)  # noqa: N806
     session = Session()
     try:
         yield session
@@ -141,7 +140,7 @@ def factory_session() -> Generator[Any, None, None]:
     except Exception:
         pass
 
-    Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+    Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)  # noqa: N806
     session = Session()
     try:
         yield session

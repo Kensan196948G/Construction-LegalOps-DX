@@ -96,6 +96,6 @@ def test_hash_chain_sequence_is_continuous():
         prev = h
     # Assert: replay and verify each link
     prev = "0" * 64
-    for entry, h in zip(entries, hashes):
+    for entry, h in zip(entries, hashes):  # noqa: B905
         assert security.verify_hash_chain(prev, entry, h)
         prev = h
