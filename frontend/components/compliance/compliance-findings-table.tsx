@@ -62,9 +62,8 @@ export function ComplianceFindingsTable({ items, total, defaultFilters }: Props)
                 <TableRow key={f.id} className="hover:bg-muted/50">
                   <TableCell><StatusIcon s={f.status} /></TableCell>
                   <TableCell className="text-xs font-medium">{f.law}</TableCell>
-                  <TableCell>
-                    <p className="text-sm font-medium truncate max-w-xs">{f.item}</p>
-                    <p className="text-xs text-muted-foreground truncate max-w-xs">{f.detail}</p>
+                  <TableCell className="max-w-xs">
+                    <p className="text-sm font-medium truncate">{f.item}</p>
                   </TableCell>
                   <TableCell><Badge variant={STATUS_V[f.status]}>{STATUS_LABEL[f.status]}</Badge></TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{f.lastCheck}</TableCell>

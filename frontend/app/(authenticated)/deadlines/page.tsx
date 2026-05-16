@@ -126,18 +126,16 @@ export default function DeadlinesPage() {
                       key={c.id}
                       className={c.daysLeft <= 7 ? "bg-red-50/50 dark:bg-red-950/20" : c.daysLeft <= 30 ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}
                     >
-                      <TableCell>
-                        <div>
-                          <p className="text-sm font-medium">{c.title}</p>
-                          <p className="text-xs text-muted-foreground">{c.type}</p>
-                        </div>
+                      <TableCell className="max-w-[200px]">
+                        <p className="text-sm font-medium truncate">{c.title}</p>
+                        <p className="text-xs text-muted-foreground">{c.type}</p>
                       </TableCell>
-                      <TableCell className="text-sm">{c.counterparty}</TableCell>
-                      <TableCell className="font-mono text-sm">{c.expiresAt}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{c.counterparty}</TableCell>
+                      <TableCell className="font-mono text-sm whitespace-nowrap">{c.expiresAt}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <DaysLeftBadge days={c.daysLeft} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         {c.autoRenew ? (
                           <Badge variant="default" className="gap-1">
                             <RefreshCw className="h-3 w-3" /> あり
@@ -146,8 +144,8 @@ export default function DeadlinesPage() {
                           <span className="text-xs text-muted-foreground">なし</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">{c.guaranteePeriod}</TableCell>
-                      <TableCell className="text-sm">{c.owner}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{c.guaranteePeriod}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{c.owner}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/contracts/${c.id}`}>詳細</Link>

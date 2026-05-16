@@ -142,21 +142,17 @@ export default function ApplicationsPage() {
                     <TableRow key={a.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="font-mono text-xs">{a.id}</TableCell>
                       <TableCell className="text-sm">{a.type}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="text-sm font-medium">{a.title}</p>
-                          <p className="text-xs text-muted-foreground">{a.projectName} / {a.dept}</p>
-                        </div>
+                      <TableCell className="max-w-[220px]">
+                        <p className="text-sm font-medium truncate">{a.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{a.projectName}</p>
                       </TableCell>
-                      <TableCell className="text-sm">{a.applicant}</TableCell>
-                      <TableCell className="text-right font-mono text-sm">{fmtYen(a.amount)}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{a.applicant}</TableCell>
+                      <TableCell className="text-right font-mono text-sm whitespace-nowrap">{fmtYen(a.amount)}</TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge variant={URGENCY_VARIANT[a.urgency]}>{a.urgency}</Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[a.status]}>
-                          {APP_STATUS_LABELS[a.status]}
-                        </Badge>
+                      <TableCell className="whitespace-nowrap">
+                        <Badge variant={STATUS_VARIANT[a.status]}>{APP_STATUS_LABELS[a.status]}</Badge>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {a.submittedAt}
