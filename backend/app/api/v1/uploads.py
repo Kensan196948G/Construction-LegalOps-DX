@@ -11,6 +11,8 @@ Loop 5 で Microsoft Graph API による署名 URL 発行・チャンク UL を�
 
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,7 +69,7 @@ async def init_upload(
         payload={"filename": payload.filename, "size": payload.size_bytes},
         request=request,
     )
-    return response
+    return cast(UploadInitResponse, response)
 
 
 @router.post(

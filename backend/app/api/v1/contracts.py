@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, cast
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -255,11 +255,11 @@ async def list_clauses(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[ClauseOut]:
-    return await contract_service.list_clauses(
+    return cast(list[ClauseOut], await contract_service.list_clauses(
         session,
         contract_id=contract_id,
         viewer=current_user,
-    )
+    ))
 
 
 @router.get(

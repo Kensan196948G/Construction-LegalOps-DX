@@ -29,7 +29,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
 );
 Avatar.displayName = "Avatar";
 
-interface AvatarImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {}
+type AvatarImageProps = React.ImgHTMLAttributes<HTMLImageElement>;
 
 const AvatarImage = React.forwardRef<HTMLImageElement, AvatarImageProps>(
   ({ className, alt = "", ...props }, ref) => (

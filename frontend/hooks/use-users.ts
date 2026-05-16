@@ -70,10 +70,10 @@ export function useUpdateUser(
   >({
     mutationFn: ({ id, data }) => usersApi.update(id, data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.users.detail(vars.id) });
       qc.invalidateQueries({ queryKey: queryKeys.users.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -85,9 +85,9 @@ export function useSyncUsers(
   return useMutation<{ job_id: string }, ApiError, void>({
     mutationFn: () => usersApi.sync(),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.users.all });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }

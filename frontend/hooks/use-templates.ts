@@ -55,9 +55,9 @@ export function useCreateTemplate(
   return useMutation<Template, ApiError, Parameters<typeof templatesApi.create>[0]>({
     mutationFn: (data) => templatesApi.create(data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.templates.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -77,10 +77,10 @@ export function useUpdateTemplate(
   >({
     mutationFn: ({ id, data }) => templatesApi.update(id, data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.templates.detail(vars.id) });
       qc.invalidateQueries({ queryKey: queryKeys.templates.lists() });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }
@@ -92,9 +92,9 @@ export function useDeleteTemplate(
   return useMutation<void, ApiError, number | string>({
     mutationFn: (id) => templatesApi.delete(id),
     ...options,
-    onSuccess: (data, id, ctx) => {
+    onSuccess: (data, id, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.templates.all });
-      options?.onSuccess?.(data, id, ctx);
+      options?.onSuccess?.(data, id, ctx, fwCtx);
     },
   });
 }
@@ -137,9 +137,9 @@ export function useCreateClauseLibraryEntry(
   >({
     mutationFn: (data) => templatesApi.clauseLibraryCreate(data),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.templates.all });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }

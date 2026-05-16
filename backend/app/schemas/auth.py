@@ -71,6 +71,7 @@ class MeResponse(BaseModel):
         # CurrentUser exposes a ``department_ids`` tuple; fall back to the
         # ORM ``department_id`` attribute for legacy paths.
         dept_attr = getattr(user, "department_ids", None)
+        dept: str | None
         if dept_attr:
             dept = str(dept_attr[0])
         else:

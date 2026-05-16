@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,13 +73,13 @@ async def aggregate_risks(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> RiskAggregate:
-    return await risk_service.aggregate(
+    return cast(RiskAggregate, await risk_service.aggregate(
         session,
         viewer=current_user,
         department_id=department_id,
         date_from=date_from,
         date_to=date_to,
-    )
+    ))
 
 
 @router.patch(

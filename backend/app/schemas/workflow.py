@@ -104,6 +104,7 @@ class WorkflowStartRequest(BaseModel):
     """Body of ``POST /contracts/{id}/workflows``."""
 
     workflow_id: int
+    definition_code: Optional[str] = None
     note: Optional[str] = Field(default=None, max_length=2000)
 
 
@@ -113,9 +114,7 @@ class WorkflowInstanceOut(ORMModel):
     id: int
     workflow_id: int
     contract_id: int
-    status: Annotated[
-        str, Field(pattern="^(pending|in_progress|approved|rejected|cancelled)$")
-    ]
+    status: Annotated[str, Field(pattern="^(pending|in_progress|approved|rejected|cancelled)$")]
     current_seq: Optional[int] = None
     started_at: datetime
     completed_at: Optional[datetime] = None

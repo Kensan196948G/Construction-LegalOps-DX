@@ -35,6 +35,7 @@ import structlog
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp
 
 from app.core.security import mask_value
 
@@ -74,7 +75,7 @@ def _failsafe_response(request_id: str | None) -> Response:
 class SensitiveMaskingMiddleware(BaseHTTPMiddleware):
     """ASGI middleware that masks PII in outgoing JSON responses."""
 
-    def __init__(self, app, *, max_body_bytes: int = _MAX_BODY_BYTES) -> None:  # noqa: ANN001
+    def __init__(self, app: ASGIApp, *, max_body_bytes: int = _MAX_BODY_BYTES) -> None:
         super().__init__(app)
         self._max_body_bytes = max_body_bytes
 

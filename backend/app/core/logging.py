@@ -11,7 +11,7 @@ import logging
 import sys
 from collections.abc import MutableMapping
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from structlog.types import EventDict, Processor
@@ -157,7 +157,8 @@ def configure_logging() -> None:
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     """Return a structlog bound logger with optional name."""
-    return structlog.get_logger(name) if name else structlog.get_logger()
+    raw = structlog.get_logger(name) if name else structlog.get_logger()
+    return cast(structlog.stdlib.BoundLogger, raw)
 
 
 __all__ = [

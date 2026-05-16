@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -142,9 +142,9 @@ async def list_workflow_steps(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[WorkflowStepOut]:
-    return await workflow_service.list_steps(
+    return cast(list[WorkflowStepOut], await workflow_service.list_steps(
         session, instance_id=instance_id, viewer=current_user
-    )
+    ))
 
 
 @router.post(

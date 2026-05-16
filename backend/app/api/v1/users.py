@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -149,4 +149,4 @@ async def sync_users(
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> UserSyncJob:
-    return await user_service.start_graph_sync(session, triggered_by=current_user.id)
+    return cast(UserSyncJob, await user_service.start_graph_sync(session, triggered_by=current_user.id))

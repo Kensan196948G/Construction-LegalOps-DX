@@ -35,9 +35,9 @@ export function useVerifyAuditLogs(
   return useMutation<AuditVerifyResult, ApiError, void>({
     mutationFn: () => auditLogsApi.verify(),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.auditLogs.all });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }

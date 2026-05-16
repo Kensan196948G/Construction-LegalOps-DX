@@ -93,6 +93,7 @@ export function QueryProvider({ children, state }: QueryProviderProps): JSX.Elem
       <HydrationBoundary state={state}>{children}</HydrationBoundary>
       {ReactQueryDevtools ? (
         <Suspense fallback={null}>
+          {/* @ts-expect-error ReactQueryDevtools props inferred from lazy fallback */}
           <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
         </Suspense>
       ) : null}

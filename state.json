@@ -16,8 +16,8 @@
   "phase": "Improve",
   "kpi": {
     "success_rate_target": 0.9,
-    "ci_success_rate": 0.0,
-    "test_pass_rate": 0.0,
+    "ci_success_rate": 0,
+    "test_pass_rate": 0,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -27,16 +27,35 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Improve",
-    "last_session_summary": "Loop 5 (Integration & Finalization) 完了。CHANGELOG.md / README.md / state.json 更新、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成。"
+    "last_session_summary": "Loop 5 (Integration & Finalization) 完了。CHANGELOG.md / README.md / state.json 更新、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成。",
+    "current_session_start_at": "2026-05-16T08:06:23.984Z",
+    "last_trigger": "manual",
+    "last_stop_at": "2026-05-16T08:07:33.923Z"
   },
-  "automation": { "auto_issue_generation": true, "self_evolution": true },
-  "stable": { "consecutive_success": 0, "target_n": 3, "stable_achieved": false },
+  "automation": {
+    "auto_issue_generation": true,
+    "self_evolution": true
+  },
+  "stable": {
+    "consecutive_success": 0,
+    "target_n": 3,
+    "stable_achieved": false
+  },
   "completed_issues": [],
   "blocked_issues": [],
-  "learning": { "failure_patterns": [], "success_patterns": [] },
+  "learning": {
+    "failure_patterns": [],
+    "success_patterns": []
+  },
   "quality_gates": {
-    "lint": { "warning_threshold": 10, "error_threshold": 0 },
-    "coverage": { "line_min": 70, "changed_files_min": 80 }
+    "lint": {
+      "warning_threshold": 10,
+      "error_threshold": 0
+    },
+    "coverage": {
+      "line_min": 70,
+      "changed_files_min": 80
+    }
   },
   "loop1": {
     "name": "Foundation",
@@ -87,5 +106,55 @@
       "14_days_left": "2026-11-02",
       "7_days_left": "2026-11-09"
     }
-  }
+  },
+  "compact": {
+    "last_pre_compact_at": "2026-05-16T08:04:45.950Z"
+  },
+  "dreaming": {
+    "patterns": [],
+    "curated_memories": [],
+    "recurring_mistakes": [],
+    "last_dreaming_run": null,
+    "dreaming_enabled": false
+  },
+  "warnings": [
+    {
+      "at": "2026-05-16T08:07:33.959Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 148 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/audit_logs.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/dashboard.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/reviews.py",
+        "backend/app/api/v1/risks.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/api/v1/workflows.py",
+        "backend/app/core/security.py",
+        "backend/app/db/test_session.py",
+        "backend/app/middleware/__init__.py",
+        "backend/app/middleware/security_headers.py",
+        "backend/app/middleware/sensitive_masking.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/auth.py",
+        "backend/app/schemas/clause.py",
+        "backend/app/schemas/common.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/contract.py",
+        "backend/app/schemas/dashboard.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/notification.py",
+        "backend/app/schemas/review.py"
+      ],
+      "truncated": true
+    }
+  ]
 }

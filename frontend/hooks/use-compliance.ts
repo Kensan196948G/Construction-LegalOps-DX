@@ -63,12 +63,12 @@ export function useStartComplianceRun(
     mutationFn: ({ contractId, checklist_id }) =>
       complianceApi.runForContract(contractId, { checklist_id }),
     ...options,
-    onSuccess: (data, vars, ctx) => {
+    onSuccess: (data, vars, ctx, fwCtx) => {
       qc.invalidateQueries({ queryKey: queryKeys.compliance.all });
       qc.invalidateQueries({
         queryKey: queryKeys.contracts.detail(vars.contractId),
       });
-      options?.onSuccess?.(data, vars, ctx);
+      options?.onSuccess?.(data, vars, ctx, fwCtx);
     },
   });
 }

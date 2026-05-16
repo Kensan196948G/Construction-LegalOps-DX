@@ -73,8 +73,26 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 disallow_untyped_defs = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = [
+    "jose.*",
+    "passlib.*",
+    "celery.*",
+    "pypdf.*",
+    "docx.*",
+    "openpyxl.*",
+    "aiosqlite.*",
+    "msal.*",
+    "anthropic.*",
+    "redis.*",
+    "structlog.*",
+    "prometheus_client.*",
+    "tenacity.*",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

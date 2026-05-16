@@ -58,7 +58,7 @@ class ClauseExtractor:
 
     def __init__(self, *, ai_service: Any | None = None, mode: str | None = None) -> None:
         self._ai = ai_service
-        self._mode = (mode or os.getenv("CLAUSE_EXTRACTOR_MODE", "regex")).lower()
+        self._mode = (mode or os.getenv("CLAUSE_EXTRACTOR_MODE", "regex") or "regex").lower()
 
     async def extract(self, text: str) -> list[Clause]:
         """Return clauses extracted from ``text``."""

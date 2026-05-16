@@ -63,7 +63,7 @@ class SharePointService:
         stub_root: Path | None = None,
         site_url: str | None = None,
     ) -> None:
-        self._mode = (mode or os.getenv("SHAREPOINT_MODE", "stub")).lower()
+        self._mode = (mode or os.getenv("SHAREPOINT_MODE", "stub") or "stub").lower()
         self._stub_root = stub_root or _DEFAULT_STUB_ROOT
         self._site_url = site_url or os.getenv(
             "SHAREPOINT_SITE_URL", "https://contoso.sharepoint.com/sites/legalops"

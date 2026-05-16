@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,9 +37,9 @@ async def list_checklists(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[ComplianceChecklist]:
-    return await compliance_service.list_checklists(
+    return cast(list[ComplianceChecklist], await compliance_service.list_checklists(
         session, contract_type=contract_type, category=category
-    )
+    ))
 
 
 @router.get(
@@ -61,7 +61,7 @@ async def get_compliance_result(
     )
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
-    return result
+    return cast(ComplianceCheckResult, result)
 
 
 @router.post(
@@ -97,4 +97,4 @@ async def run_compliance_check(
         payload={"checklist_codes": checklist_codes},
         request=request,
     )
-    return run
+    return cast(ComplianceRunResponse, run)

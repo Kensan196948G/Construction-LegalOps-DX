@@ -50,9 +50,7 @@ class AIReviewResult(BaseModel):
     risk_level: RiskLevel
     issues: List[ReviewIssue] = Field(default_factory=list)
     suggested_actions: List[SuggestedAction] = Field(default_factory=list)
-    disclaimer: str = (
-        "本結果は AI 生成の参考情報であり、最終判断は人間が行ってください。"
-    )
+    disclaimer: str = "本結果は AI 生成の参考情報であり、最終判断は人間が行ってください。"
 
 
 class ReviewCreate(BaseModel):
@@ -95,6 +93,7 @@ class ReviewActionRequest(BaseModel):
     """Body of ``POST /reviews/{id}/accept|reject``."""
 
     reason: Optional[str] = Field(default=None, max_length=2000)
+    comment: Optional[str] = None
 
 
 class ReviewActionResponse(BaseModel):

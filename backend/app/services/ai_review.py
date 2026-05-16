@@ -24,7 +24,7 @@ import re
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Final
+from typing import Any, Final, cast
 
 import structlog
 from tenacity import (
@@ -169,7 +169,7 @@ class AIReviewService:
         model_id: str | None = None,
     ) -> None:
         settings = get_settings()
-        self._mode = (mode or os.getenv("AI_REVIEW_MODE", "stub")).lower()
+        self._mode = (mode or os.getenv("AI_REVIEW_MODE", "stub") or "stub").lower()
         self._client = anthropic_client
         self._detector = detector or SensitiveDetector()
         self._model_id = model_id or settings.claude_model
@@ -417,7 +417,7 @@ class AIReviewService:
                 match = re.search(r"\{.*\}", text, flags=re.DOTALL)
                 if not match:
                     raise AIReviewServiceError("Claude response did not contain JSON")
-                return json.loads(match.group(0))
+                return cast(dict[str, Any], json.loads(match.group(0)))
 
         raise AIReviewServiceError("unreachable: AsyncRetrying exited without result")
 

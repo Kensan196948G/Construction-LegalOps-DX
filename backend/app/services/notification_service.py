@@ -54,7 +54,7 @@ class NotificationService:
     """Multi-channel notification dispatcher with a stub backend."""
 
     def __init__(self, *, mode: str | None = None) -> None:
-        self._mode = (mode or os.getenv("NOTIFY_MODE", "stub")).lower()
+        self._mode = (mode or os.getenv("NOTIFY_MODE", "stub") or "stub").lower()
         self._sent: list[NotificationRecord] = []
 
     # ------------------------------------------------------------------
@@ -161,3 +161,41 @@ class NotificationService:
 
     def clear(self) -> None:
         self._sent.clear()
+
+
+# ---------------------------------------------------------------------------
+# Module-level convenience wrappers (DB CRUD stubs — real impl in Loop 3+)
+# ---------------------------------------------------------------------------
+
+from app.schemas.notification import NotificationOut  # noqa: E402
+
+_nsvc: NotificationService = NotificationService()
+
+
+async def list_for_user(
+    session: Any,
+    *,
+    user_id: Any,
+    status: str | None = None,
+    channel: str | None = None,
+    page: int = 1,
+    size: int = 20,
+) -> tuple[list[Any], int]:
+    return ([], 0)
+
+
+async def mark_read(
+    session: Any,
+    *,
+    notification_id: Any,
+    user_id: Any,
+) -> NotificationOut:
+    raise LookupError(f"notification {notification_id} not found")
+
+
+async def mark_all_read(
+    session: Any,
+    *,
+    user_id: Any,
+) -> int:
+    return 0

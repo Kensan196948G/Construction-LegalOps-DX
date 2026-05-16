@@ -39,7 +39,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Final
+from typing import Any, Final, cast
 from urllib.parse import urlencode
 
 import structlog
@@ -103,7 +103,7 @@ class SSOService:
 
     def __init__(self, *, mode: str | None = None) -> None:
         self._settings = get_settings()
-        self._mode = (mode or os.getenv("SSO_MODE", "stub")).lower()
+        self._mode = (mode or os.getenv("SSO_MODE", "stub") or "stub").lower()
         self._secret = self._settings.jwt_secret.get_secret_value().encode("utf-8")
         self._issuer = self._settings.jwt_issuer
         self._audience = self._settings.jwt_audience
@@ -397,7 +397,7 @@ class SSOService:
             raise SSOError(f"token endpoint unreachable: {exc.reason}") from exc
 
         try:
-            return json.loads(raw.decode("utf-8"))
+            return cast(dict[str, Any], json.loads(raw.decode("utf-8")))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise SSOError("token endpoint returned invalid JSON") from exc
 
@@ -440,7 +440,7 @@ def _hs256_decode(token: str, secret: bytes) -> dict[str, Any]:
     expected = hmac.new(secret, signing_input, hashlib.sha256).digest()
     if not hmac.compare_digest(expected, _b64url_decode(sig_b64)):
         raise SSOError("signature mismatch")
-    return json.loads(_b64url_decode(payload_b64))
+    return cast(dict[str, Any], json.loads(_b64url_decode(payload_b64)))
 
 
 # ---------------------------------------------------------------------------
