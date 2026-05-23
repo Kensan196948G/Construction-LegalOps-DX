@@ -10,6 +10,8 @@ import os
 from datetime import UTC, datetime
 from typing import Any
 
+from fastapi import HTTPException
+from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import ReviewStatus
@@ -77,8 +79,6 @@ async def start_review(
         session.add(review)
         await session.flush()
         return _to_dict(review)
-
-    from fastapi import HTTPException, status as http_status
 
     raise HTTPException(
         status_code=http_status.HTTP_501_NOT_IMPLEMENTED,

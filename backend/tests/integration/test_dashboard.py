@@ -11,8 +11,6 @@ aggregates:
 
 from __future__ import annotations
 
-import pytest
-
 
 async def test_dashboard_summary_returns_metrics(client, auth_headers_admin):
     """Arrange: client + admin. Act: GET summary. Assert: keys present."""

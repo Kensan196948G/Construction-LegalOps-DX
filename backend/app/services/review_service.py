@@ -37,7 +37,11 @@ def _to_dict(review: LegalReview) -> dict[str, Any]:
         "summary": review.summary,
         "started_at": review.started_at,
         "finished_at": review.finished_at,
-        "reviewer_id": review.reviewer_id if isinstance(review.reviewer_id, (int, type(None))) else None,
+        "reviewer_id": (
+            review.reviewer_id
+            if isinstance(review.reviewer_id, (int, type(None)))
+            else None
+        ),
         "ai_input_tokens": review.ai_input_tokens,
         "ai_output_tokens": review.ai_output_tokens,
         "result": result,
