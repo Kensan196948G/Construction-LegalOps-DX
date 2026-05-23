@@ -5,6 +5,8 @@ import { RisksTable } from "@/components/risks/risks-table";
 import { RisksFilters } from "@/components/risks/risks-filters";
 import { RisksOverview } from "@/components/risks/risks-overview";
 import { AiDisclaimerInline } from "@/components/legal/ai-disclaimer-inline";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { risksApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "リスク管理",
@@ -28,57 +30,145 @@ interface HeatmapCell {
   count: number;
 }
 
+type RiskLevel = "low" | "medium" | "high" | "critical";
+type RiskStatus = "open" | "mitigated" | "accepted" | "closed";
+
 interface RiskListResult {
   items: Array<{
     id: string;
     contractId: string;
     contractTitle: string;
     category: string;
-    level: "low" | "medium" | "high" | "critical";
+    level: RiskLevel;
     score: number;
     description: string;
-    status: "open" | "mitigated" | "accepted" | "closed";
+    status: RiskStatus;
     owner: string | null;
     detectedAt: string;
   }>;
   total: number;
   page: number;
   perPage: number;
-  byLevel: Array<{ level: "low" | "medium" | "high" | "critical"; count: number }>;
+  byLevel: Array<{ level: RiskLevel; count: number }>;
   byCategory: Array<{ category: string; count: number }>;
   heatmapData: HeatmapCell[];
 }
 
-import { MOCK_RISKS } from "@/lib/mock-data";
+const LEVEL_NUM: Record<RiskLevel, 1 | 2 | 3 | 4> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  critical: 4,
+};
+
+const RISK_LEVELS: RiskLevel[] = ["low", "medium", "high", "critical"];
+
+function toNumericLevel(level: string | null | undefined): 1 | 2 | 3 | 4 {
+  return LEVEL_NUM[level as RiskLevel] ?? 1;
+}
+
+function deriveScore(
+  probability: string | null | undefined,
+  impact: string | null | undefined,
+  severity: string,
+): number {
+  const p = toNumericLevel(probability ?? severity);
+  const i = toNumericLevel(impact ?? severity);
+  return Math.round((p * i * 100) / 16);
+}
+
+function toComponentStatus(apiStatus: string): RiskStatus {
+  if (apiStatus === "in_progress") return "open";
+  const valid: RiskStatus[] = ["open", "mitigated", "accepted", "closed"];
+  return valid.includes(apiStatus as RiskStatus) ? (apiStatus as RiskStatus) : "open";
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 async function getRisks(params: SearchParams): Promise<RiskListResult> {
-  let items = MOCK_RISKS.map(r => ({
-    id: r.id, contractId: r.contractId, contractTitle: r.contractTitle,
-    category: r.category, level: r.level, score: r.score,
-    description: r.description, status: r.status, owner: r.owner, detectedAt: r.detectedAt,
-  }));
-  if (params.level) items = items.filter(r => r.level === params.level);
-  if (params.category) items = items.filter(r => r.category === params.category);
-  if (params.status) items = items.filter(r => r.status === params.status);
-  const byLevel = (["low","medium","high","critical"] as const).map(level => ({
-    level, count: MOCK_RISKS.filter(r => r.level === level).length,
-  }));
-  const cats = Array.from(new Set(MOCK_RISKS.map(r => r.category)));
-  const byCategory = cats.map(category => ({
-    category, count: MOCK_RISKS.filter(r => r.category === category).length,
-  }));
-  const heatmapData: HeatmapCell[] = [];
-  for (const p of [1, 2, 3, 4] as const) {
-    for (const i of [1, 2, 3, 4] as const) {
-      const count = MOCK_RISKS.filter(r => r.probability === p && r.impact === i).length;
-      if (count > 0) heatmapData.push({ probability: p, impact: i, count });
-    }
-  }
   const page = Number(params.page ?? 1);
   const perPage = 20;
-  const total = items.length;
-  items = items.slice((page - 1) * perPage, page * perPage);
-  return { items, total, page, perPage, byLevel, byCategory, heatmapData };
+
+  const cleanup = await bindServerSession();
+  try {
+    const [listResult, heatmapResult] = await Promise.allSettled([
+      risksApi.list({
+        severity: params.level && params.level !== "all" ? params.level : undefined,
+        status: params.status && params.status !== "all" ? params.status : undefined,
+        page,
+        page_size: perPage,
+      }),
+      risksApi.heatmap(),
+    ]);
+
+    const allItems =
+      listResult.status === "fulfilled"
+        ? listResult.value.items.map((r) => ({
+            id: String(r.id),
+            contractId: String(r.contract_id ?? ""),
+            contractTitle: r.contract_id ? `契約 #${r.contract_id}` : "—",
+            category: r.category ?? "その他",
+            level: r.severity as RiskLevel,
+            score: deriveScore(r.probability, r.impact, r.severity),
+            description: r.description ?? r.title,
+            status: toComponentStatus(r.status),
+            owner: r.owner?.display_name ?? null,
+            detectedAt: formatDate(r.created_at),
+          }))
+        : [];
+
+    const total = listResult.status === "fulfilled" ? listResult.value.total : 0;
+
+    // category filter is client-side only (API doesn't support it)
+    const filtered =
+      params.category && params.category !== "all"
+        ? allItems.filter((r) => r.category === params.category)
+        : allItems;
+
+    // Aggregate summaries from the current page items
+    const levelCounts: Record<RiskLevel, number> = { low: 0, medium: 0, high: 0, critical: 0 };
+    const catCounts: Record<string, number> = {};
+    for (const r of allItems) {
+      levelCounts[r.level] = (levelCounts[r.level] ?? 0) + 1;
+      catCounts[r.category] = (catCounts[r.category] ?? 0) + 1;
+    }
+    const byLevel = RISK_LEVELS.map((level) => ({ level, count: levelCounts[level] }));
+    const byCategory = Object.entries(catCounts).map(([category, count]) => ({ category, count }));
+
+    const heatmapData: HeatmapCell[] =
+      heatmapResult.status === "fulfilled"
+        ? heatmapResult.value.matrix.map((cell) => ({
+            probability: toNumericLevel(cell.probability),
+            impact: toNumericLevel(cell.impact),
+            count: cell.count,
+          }))
+        : [];
+
+    return { items: filtered, total, page, perPage, byLevel, byCategory, heatmapData };
+  } catch {
+    return {
+      items: [],
+      total: 0,
+      page,
+      perPage,
+      byLevel: RISK_LEVELS.map((level) => ({ level, count: 0 })),
+      byCategory: [],
+      heatmapData: [],
+    };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function RisksPage({ searchParams }: RisksPageProps) {
@@ -104,7 +194,11 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
           <CardTitle>サマリー</CardTitle>
         </CardHeader>
         <CardContent>
-          <RisksOverview byLevel={result.byLevel} byCategory={result.byCategory} heatmapData={result.heatmapData} />
+          <RisksOverview
+            byLevel={result.byLevel}
+            byCategory={result.byCategory}
+            heatmapData={result.heatmapData}
+          />
         </CardContent>
       </Card>
 

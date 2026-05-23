@@ -28,8 +28,8 @@ import {
   contractSchema,
   contractCreateSchema,
   contractUpdateSchema,
-  dashboardKpisSchema,
-  dashboardTimeseriesSchema,
+  dashboardSummarySchema,
+  dashboardTrendsSchema,
   healthSchema,
   knowledgeArticleSchema,
   legalReviewSchema,
@@ -41,6 +41,7 @@ import {
   templateSchema,
   userSchema,
   versionSchema,
+  workflowInstanceSchema,
   workflowSchema,
   workflowStepSchema,
   type ContractCreate,
@@ -142,7 +143,7 @@ export const usersApi = {
 
   /** Microsoft Graph 同期 (202 Accepted) */
   sync: () =>
-    apiClient.post<{ data: { job_id: string } }>("/users/sync").then((r) => r.data.data),
+    apiClient.post<{ job_id: string }>("/users/sync").then((r) => r.data),
 };
 
 // ===========================================================================
@@ -188,22 +189,15 @@ export const contractsApi = {
     postParsed(apiResponse(contractSchema), `/contracts/${id}/submit`),
 
   clauses: (id: number | string) =>
-    getParsed(
-      z.object({ data: z.array(clauseSchema) }).transform((r) => r.data),
-      `/contracts/${id}/clauses`,
-    ),
+    getParsed(z.array(clauseSchema), `/contracts/${id}/clauses`),
 
-  auditTrail: (id: number | string) =>
-    getParsed(
-      z.object({ data: z.array(auditLogSchema) }).transform((r) => r.data),
-      `/contracts/${id}/audit-trail`,
-    ),
+  auditTrail: (id: number | string, params?: { page?: number; size?: number }) =>
+    getParsed(paginatedSchema(auditLogSchema), `/contracts/${id}/audit-trail`, {
+      params: buildParams(params),
+    }),
 
-  workflowSteps: (id: number | string) =>
-    getParsed(
-      z.object({ data: z.array(workflowStepSchema) }).transform((r) => r.data),
-      `/contracts/${id}/workflow-steps`,
-    ),
+  workflowSteps: (instanceId: number | string) =>
+    getParsed(z.array(workflowStepSchema), `/workflows/${instanceId}/steps`),
 };
 
 // ===========================================================================
@@ -254,8 +248,13 @@ export const workflowsApi = {
       params: buildParams(params),
     }),
 
+  /** ワークフロー定義を取得 (GET /workflows/{id}) */
   get: (id: number | string) =>
     getParsed(apiResponse(workflowSchema), `/workflows/${id}`),
+
+  /** ワークフロー実行インスタンスを取得。instance_id = contract_id */
+  getInstance: (instanceId: number | string) =>
+    getParsed(apiResponse(workflowInstanceSchema), `/workflows/${instanceId}`),
 
   create: (data: {
     code: string;
@@ -494,11 +493,14 @@ export const notificationsApi = {
 // ===========================================================================
 
 export const dashboardApi = {
-  kpis: () => getParsed(apiResponse(dashboardKpisSchema), "/dashboard/kpis"),
+  summary: (params?: { department_id?: number | string }) =>
+    getParsed(dashboardSummarySchema, "/dashboard/summary", {
+      params: buildParams(params),
+    }),
 
-  timeseries: (metric: string, params?: { from?: string; to?: string }) =>
-    getParsed(apiResponse(dashboardTimeseriesSchema), "/dashboard/timeseries", {
-      params: buildParams({ metric, ...params }),
+  trends: (params?: { interval?: "week" | "month"; weeks?: number; department_id?: number | string }) =>
+    getParsed(dashboardTrendsSchema, "/dashboard/trends", {
+      params: buildParams(params),
     }),
 };
 

@@ -12,27 +12,27 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { dashboardApi } from "@/lib/api/endpoints";
 import { queryKeys } from "@/lib/api/query-keys";
-import type { DashboardKpis, DashboardTimeseries } from "@/lib/api/schemas";
+import type { DashboardSummary, DashboardTrends } from "@/lib/api/schemas";
 
-export function useDashboardKpis(
-  options?: Omit<UseQueryOptions<DashboardKpis, ApiError>, "queryKey" | "queryFn">,
+export function useDashboardSummary(
+  params?: { department_id?: number | string },
+  options?: Omit<UseQueryOptions<DashboardSummary, ApiError>, "queryKey" | "queryFn">,
 ) {
-  return useQuery<DashboardKpis, ApiError>({
-    queryKey: queryKeys.dashboard.kpis(),
-    queryFn: () => dashboardApi.kpis(),
+  return useQuery<DashboardSummary, ApiError>({
+    queryKey: queryKeys.dashboard.summary(params),
+    queryFn: () => dashboardApi.summary(params),
     staleTime: 60_000,
     ...options,
   });
 }
 
-export function useDashboardTimeseries(
-  metric: string,
-  params?: { from?: string; to?: string },
-  options?: Omit<UseQueryOptions<DashboardTimeseries, ApiError>, "queryKey" | "queryFn">,
+export function useDashboardTrends(
+  params?: { interval?: "week" | "month"; weeks?: number; department_id?: number | string },
+  options?: Omit<UseQueryOptions<DashboardTrends, ApiError>, "queryKey" | "queryFn">,
 ) {
-  return useQuery<DashboardTimeseries, ApiError>({
-    queryKey: queryKeys.dashboard.timeseries(metric, params),
-    queryFn: () => dashboardApi.timeseries(metric, params),
+  return useQuery<DashboardTrends, ApiError>({
+    queryKey: queryKeys.dashboard.trends(params),
+    queryFn: () => dashboardApi.trends(params),
     staleTime: 60_000,
     ...options,
   });

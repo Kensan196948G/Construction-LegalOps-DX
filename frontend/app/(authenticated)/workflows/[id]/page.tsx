@@ -11,6 +11,7 @@ import { WorkflowHistory } from "@/components/workflows/workflow-history";
 import { RouteBadge } from "@/components/workflows/route-badge";
 import { bindServerSession } from "@/lib/auth/session-bridge.server";
 import { contractsApi } from "@/lib/api/endpoints";
+import type { WorkflowStep as ApiStep } from "@/lib/api/schemas";
 
 export const metadata: Metadata = {
   title: "ワークフロー詳細",
@@ -41,6 +42,7 @@ interface WorkflowDetail {
 }
 
 type WfStatus = WorkflowDetail["status"];
+type StepStatus = WorkflowStep["status"];
 
 function toWfStatus(contractStatus: string): WfStatus {
   switch (contractStatus) {
@@ -59,14 +61,37 @@ function toWfStatus(contractStatus: string): WfStatus {
   }
 }
 
-// The list page bridges contract IDs as workflow IDs, so the URL id is a contract ID.
-// Workflow step instances are not yet exposed by the backend API; steps are left empty
-// and will be populated once a /workflows/{instanceId}/steps endpoint is available.
+function toStepStatus(apiStatus: ApiStep["status"]): StepStatus {
+  if (apiStatus === "sent_back") return "returned";
+  // "delegated" has no direct equivalent — show as in_progress
+  if (apiStatus === "delegated") return "in_progress";
+  return apiStatus as StepStatus;
+}
+
+function mapStep(s: ApiStep): WorkflowStep {
+  return {
+    id: String(s.id),
+    order: s.seq,
+    label: s.name,
+    assigneeRole: s.assignee_role ?? "—",
+    assigneeName: s.assignee?.display_name ?? null,
+    status: toStepStatus(s.status),
+    decidedAt: s.decided_at ?? s.finished_at ?? null,
+  };
+}
+
+// The list page bridges contract IDs as workflow IDs — URL id IS the contract_id.
+// Steps are fetched from GET /workflows/{contractId}/steps.
 async function getWorkflow(id: string): Promise<WorkflowDetail | null> {
   const cleanup = await bindServerSession();
   try {
-    const c = await contractsApi.get(id);
+    const [c, apiSteps] = await Promise.all([
+      contractsApi.get(id),
+      contractsApi.workflowSteps(id).catch(() => [] as ApiStep[]),
+    ]);
     const wfStatus = toWfStatus(c.status);
+    const steps = apiSteps.map(mapStep);
+    const inProgressStep = steps.find((s) => s.status === "in_progress");
     return {
       id: String(c.id),
       contractId: String(c.id),
@@ -74,9 +99,9 @@ async function getWorkflow(id: string): Promise<WorkflowDetail | null> {
       route: (c.contract_type as RouteId) ?? "A1",
       requiresOutsideCounsel: false,
       status: wfStatus,
-      currentStepId: null,
-      steps: [],
-      canActAsCurrent: wfStatus === "in_progress",
+      currentStepId: inProgressStep?.id ?? null,
+      steps,
+      canActAsCurrent: wfStatus === "in_progress" && !!inProgressStep,
     };
   } catch {
     return null;

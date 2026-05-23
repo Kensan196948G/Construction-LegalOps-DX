@@ -5,6 +5,8 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContractsTable } from "@/components/contracts/contracts-table";
 import { ContractsFilters } from "@/components/contracts/contracts-filters";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { contractsApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "契約台帳",
@@ -40,26 +42,50 @@ interface ContractListResult {
   perPage: number;
 }
 
-import { MOCK_CONTRACTS } from "@/lib/mock-data";
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 async function getContracts(params: SearchParams): Promise<ContractListResult> {
-  let items = MOCK_CONTRACTS.map(c => ({
-    id: c.id, title: c.title, counterparty: c.counterparty,
-    contractType: c.contractType, amount: c.amount,
-    status: c.status, riskLevel: c.riskLevel, updatedAt: c.updatedAt,
-  }));
-  if (params.q) {
-    const q = params.q.toLowerCase();
-    items = items.filter(c => c.title.toLowerCase().includes(q) || c.counterparty.toLowerCase().includes(q));
-  }
-  if (params.status) items = items.filter(c => c.status === params.status);
-  if (params.riskLevel) items = items.filter(c => c.riskLevel === params.riskLevel);
-  if (params.contractType) items = items.filter(c => c.contractType === params.contractType);
   const page = Number(params.page ?? 1);
   const perPage = Number(params.perPage ?? 20);
-  const total = items.length;
-  items = items.slice((page - 1) * perPage, page * perPage);
-  return { items, total, page, perPage };
+
+  const cleanup = await bindServerSession();
+  try {
+    const result = await contractsApi.list({
+      q: params.q || undefined,
+      status: params.status && params.status !== "all" ? params.status : undefined,
+      contract_type: params.contractType && params.contractType !== "all" ? params.contractType : undefined,
+      page,
+      page_size: perPage,
+    });
+
+    const items = result.items.map((c) => ({
+      id: String(c.id),
+      title: c.title,
+      counterparty: c.counterparty ?? "—",
+      contractType: c.contract_type,
+      amount: c.amount ?? null,
+      status: c.status,
+      riskLevel: "low" as const,
+      updatedAt: formatDate(c.updated_at),
+    }));
+
+    return { items, total: result.total, page: result.page, perPage };
+  } catch {
+    return { items: [], total: 0, page, perPage };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function ContractsPage({ searchParams }: ContractsPageProps) {

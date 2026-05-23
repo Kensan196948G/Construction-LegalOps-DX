@@ -29,48 +29,30 @@ export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 // ---------------------------------------------------------------------------
 
 /**
- * Backend は `{ data, meta: { page, page_size, total } }` 形式を返す。
- * フロントは `{ page, size, total, items }` 形式に正規化する。
- */
-export const paginationMetaSchema = z.object({
-  page: z.number().int().nonnegative(),
-  page_size: z.number().int().positive(),
-  total: z.number().int().nonnegative(),
-  request_id: z.string().optional(),
-});
-export type PaginationMeta = z.infer<typeof paginationMetaSchema>;
-
-/**
- * ジェネリックなページングレスポンス。
- * - レスポンス受領後に変換して `{ page, size, total, items }` を返す。
+ * Backend returns `{ items, total, page, size }` (FastAPI Page[T]).
+ * Frontend normalizes to the same shape — no transform needed.
  */
 export function paginatedSchema<T extends z.ZodTypeAny>(item: T) {
   return z
     .object({
-      data: z.array(item),
-      meta: paginationMetaSchema,
+      items: z.array(item),
+      total: z.number().int().nonnegative(),
+      page: z.number().int().positive(),
+      size: z.number().int().positive(),
     })
     .transform(
       (raw): { page: number; size: number; total: number; items: z.infer<T>[] } => ({
-        page: raw.meta.page,
-        size: raw.meta.page_size,
-        total: raw.meta.total,
-        items: raw.data as z.infer<T>[],
+        page: raw.page,
+        size: raw.size,
+        total: raw.total,
+        items: raw.items as z.infer<T>[],
       }),
     );
 }
 
-/** 単一オブジェクトレスポンスのエンベロープ。 */
+/** Backend returns T directly (no envelope). Pass-through for type safety. */
 export function apiResponse<T extends z.ZodTypeAny>(inner: T) {
-  return z
-    .object({
-      data: inner,
-      meta: z
-        .object({ request_id: z.string().optional() })
-        .partial()
-        .optional(),
-    })
-    .transform((r): z.infer<T> => r.data as z.infer<T>);
+  return inner;
 }
 
 // ===========================================================================
@@ -425,9 +407,24 @@ export const workflowStepSchema = z.object({
   comment: z.string().optional().nullable(),
   started_at: datetimeSchema.optional().nullable(),
   finished_at: datetimeSchema.optional().nullable(),
+  decided_at: datetimeSchema.optional().nullable(),
   due_at: datetimeSchema.optional().nullable(),
 });
 export type WorkflowStep = z.infer<typeof workflowStepSchema>;
+
+/** WorkflowInstanceOut — GET /workflows/{instance_id} のレスポンス。
+ *  instance_id は contract_id と同一（workflow_service.py の設計による）。
+ */
+export const workflowInstanceSchema = z.object({
+  id: idSchema,
+  workflow_id: idSchema,
+  contract_id: idSchema,
+  status: z.string(),
+  current_seq: z.number().int().nullable().optional(),
+  started_at: datetimeSchema.optional().nullable(),
+  completed_at: datetimeSchema.optional().nullable(),
+});
+export type WorkflowInstance = z.infer<typeof workflowInstanceSchema>;
 
 // ---------------------------------------------------------------------------
 // Compliance
@@ -554,28 +551,32 @@ export const notificationSchema = z.object({
 export type Notification = z.infer<typeof notificationSchema>;
 
 // ---------------------------------------------------------------------------
-// Dashboard
+// Dashboard — matches backend DashboardSummary / DashboardTrends
 // ---------------------------------------------------------------------------
 
-export const dashboardKpisSchema = z.object({
-  total_contracts: z.number().int().nonnegative(),
-  in_review: z.number().int().nonnegative(),
+export const dashboardSummarySchema = z.object({
+  pending_review: z.number().int().nonnegative(),
   pending_approval: z.number().int().nonnegative(),
-  high_risk_open: z.number().int().nonnegative(),
-  reviews_this_month: z.number().int().nonnegative(),
-  avg_review_minutes: z.number().nonnegative().optional(),
+  overdue: z.number().int().nonnegative(),
+  high_risk: z.number().int().nonnegative(),
+  recent_completed: z.number().int().nonnegative(),
+  my_tasks: z.number().int().nonnegative(),
+  avg_risk_score: z.number().nonnegative(),
+  contracts_by_status: z.record(z.string(), z.number().int().nonnegative()),
+  pending_reviews: z.number().int().nonnegative(),
+  generated_at: z.string().datetime({ offset: true }).nullable().optional(),
 });
-export type DashboardKpis = z.infer<typeof dashboardKpisSchema>;
+export type DashboardSummary = z.infer<typeof dashboardSummarySchema>;
 
-export const dashboardTimeseriesPointSchema = z.object({
-  date: dateSchema,
-  value: z.number(),
+export const dashboardTrendPointSchema = z.object({
+  bucket: dateSchema,
+  value: z.number().int().nonnegative(),
 });
-export const dashboardTimeseriesSchema = z.object({
-  metric: z.string(),
-  points: z.array(dashboardTimeseriesPointSchema),
+export const dashboardTrendsSchema = z.object({
+  granularity: z.enum(["week", "month"]),
+  series: z.record(z.string(), z.array(dashboardTrendPointSchema)),
 });
-export type DashboardTimeseries = z.infer<typeof dashboardTimeseriesSchema>;
+export type DashboardTrends = z.infer<typeof dashboardTrendsSchema>;
 
 // ---------------------------------------------------------------------------
 // Health / Meta

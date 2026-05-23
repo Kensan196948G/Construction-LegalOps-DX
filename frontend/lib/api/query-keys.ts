@@ -113,8 +113,7 @@ export const queryKeys = {
 
   dashboard: {
     all: ["dashboard"] as const,
-    kpis: () => ["dashboard", "kpis"] as const,
-    timeseries: (metric: string, params?: unknown) =>
-      ["dashboard", "timeseries", metric, params] as const,
+    summary: (params?: unknown) => ["dashboard", "summary", params] as const,
+    trends: (params?: unknown) => ["dashboard", "trends", params] as const,
   },
 } as const;

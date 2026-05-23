@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 
 import { WorkflowsTable } from "@/components/workflows/workflows-table";
 import { WorkflowsFilters } from "@/components/workflows/workflows-filters";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { contractsApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "承認ワークフロー",
@@ -19,15 +21,17 @@ interface WorkflowsPageProps {
   searchParams?: Promise<SearchParams>;
 }
 
+type WfStatus = "in_progress" | "approved" | "rejected" | "returned" | "withdrawn";
+
 interface WorkflowListResult {
   items: Array<{
     id: string;
     contractId: string;
     contractTitle: string;
-    route: "A1" | "A2" | "B1" | "B2" | "C1" | "C2" | "D1";
+    route: string;
     currentStep: string;
     waitingFor: string;
-    status: "in_progress" | "approved" | "rejected" | "returned" | "withdrawn";
+    status: WfStatus;
     requiresOutsideCounsel: boolean;
     dueDate: string | null;
     updatedAt: string;
@@ -37,23 +41,96 @@ interface WorkflowListResult {
   perPage: number;
 }
 
-import { MOCK_WORKFLOWS } from "@/lib/mock-data";
+function toWorkflowStatus(contractStatus: string): WfStatus | null {
+  switch (contractStatus) {
+    case "in_review":
+    case "pending_approval":
+      return "in_progress";
+    case "approved":
+    case "executed":
+      return "approved";
+    case "rejected":
+      return "rejected";
+    case "returned":
+      return "returned";
+    case "terminated":
+    case "expired":
+      return "withdrawn";
+    default:
+      return null;
+  }
+}
+
+function getCurrentStep(contractStatus: string): string {
+  switch (contractStatus) {
+    case "in_review":
+      return "法務確認中";
+    case "pending_approval":
+      return "承認待ち";
+    case "approved":
+    case "executed":
+      return "完了";
+    case "rejected":
+      return "否決済み";
+    case "returned":
+      return "差戻し中";
+    default:
+      return "—";
+  }
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 async function getWorkflows(params: SearchParams): Promise<WorkflowListResult> {
-  let items = MOCK_WORKFLOWS.map(w => ({
-    id: w.id, contractId: w.contractId, contractTitle: w.contractTitle,
-    route: w.route, currentStep: w.currentStep, waitingFor: w.waitingFor,
-    status: w.status, requiresOutsideCounsel: w.requiresOutsideCounsel,
-    dueDate: w.dueDate, updatedAt: w.updatedAt,
-  }));
-  if (params.status) items = items.filter(w => w.status === params.status);
-  if (params.route) items = items.filter(w => w.route === params.route);
-  if (params.assignedToMe === "true") items = items.filter(w => w.waitingFor === "田中 太郎");
   const page = Number(params.page ?? 1);
   const perPage = 20;
-  const total = items.length;
-  items = items.slice((page - 1) * perPage, page * perPage);
-  return { items, total, page, perPage };
+
+  const cleanup = await bindServerSession();
+  try {
+    const result = await contractsApi.list({ page, page_size: perPage });
+
+    const allItems = result.items
+      .map((c) => {
+        const wfStatus = toWorkflowStatus(c.status);
+        if (!wfStatus) return null;
+        return {
+          id: String(c.id),
+          contractId: String(c.id),
+          contractTitle: c.title,
+          route: c.contract_type,
+          currentStep: getCurrentStep(c.status),
+          waitingFor: c.drafter?.display_name ?? "—",
+          status: wfStatus,
+          requiresOutsideCounsel: false,
+          dueDate: c.end_date ? formatDate(c.end_date) : null,
+          updatedAt: formatDate(c.updated_at),
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+
+    const filtered = allItems.filter((w) => {
+      if (params.status && params.status !== "all" && w.status !== params.status) return false;
+      if (params.route && params.route !== "all" && w.route !== params.route) return false;
+      return true;
+    });
+
+    return { items: filtered, total: result.total, page, perPage };
+  } catch {
+    return { items: [], total: 0, page, perPage };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function WorkflowsPage({ searchParams }: WorkflowsPageProps) {
