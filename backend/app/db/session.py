@@ -43,12 +43,12 @@ AsyncSessionLocal: Final[async_sessionmaker[AsyncSession]] = async_sessionmaker(
 async def get_db() -> AsyncIterator[AsyncSession]:
     """FastAPI dependency that yields an async DB session.
 
-    Rolls back on exception, always closes. Commit is the caller's
-    responsibility (typically in the service layer).
+    Auto-commits on clean exit; rolls back on exception; always closes.
     """
     session = AsyncSessionLocal()
     try:
         yield session
+        await session.commit()
     except Exception:
         await session.rollback()
         raise

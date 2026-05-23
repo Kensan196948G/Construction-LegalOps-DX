@@ -36,7 +36,7 @@ class AuditLogRead(ORMModel):
     ip_address: str | None = None
     user_agent: str | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
-    previous_hash: str | None = None
+    prev_hash: str | None = None
     hash_chain: str
 
 

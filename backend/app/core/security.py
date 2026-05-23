@@ -12,7 +12,7 @@ import json
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any, Final, cast
+from typing import Any, Final
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -164,16 +164,14 @@ def decode_token(token: str) -> dict[str, Any]:
     if not token:
         raise ValueError("token must not be empty")
     try:
-        return cast(
-            dict[str, Any],
-            jwt.decode(
-                token,
-                _jwt_verify_key(),
-                algorithms=[_jwt_algorithm()],
-                audience=settings.jwt_audience,
-                issuer=settings.jwt_issuer,
-            ),
+        payload: dict[str, Any] = jwt.decode(
+            token,
+            _jwt_verify_key(),
+            algorithms=[_jwt_algorithm()],
+            audience=settings.jwt_audience,
+            issuer=settings.jwt_issuer,
         )
+        return payload
     except JWTError as exc:
         raise ValueError(f"invalid token: {exc}") from exc
 

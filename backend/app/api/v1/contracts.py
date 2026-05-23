@@ -17,8 +17,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, s
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.audit_log import AuditLogOut
 from app.schemas.clause import ClauseOut
 from app.schemas.common import Page
@@ -55,7 +54,7 @@ async def list_contracts(
     size: int = Query(default=20, ge=1, le=200),
     sort: str | None = Query(default="-updated_at"),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[ContractOut]:
     items, total = await contract_service.list_contracts(
         session,
@@ -86,8 +85,8 @@ async def create_contract(
     request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
+    current_user: CurrentUser = Depends(get_current_user),
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> ContractOut:
     contract = await contract_service.create_contract(
         session,
@@ -114,11 +113,14 @@ async def create_contract(
 )
 async def get_contract(
     contract_id: int,
+    include_deleted: bool = Query(
+        default=False, description="論理削除済み契約を含める (admin/auditor)"
+    ),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ContractOut:
     contract = await contract_service.get_contract(
-        session, contract_id=contract_id, viewer=current_user
+        session, contract_id=contract_id, viewer=current_user, include_deleted=include_deleted
     )
     if contract is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
@@ -136,7 +138,7 @@ async def update_contract(
     payload: ContractUpdate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ContractOut:
     try:
         contract = await contract_service.update_contract(
@@ -173,7 +175,7 @@ async def delete_contract(
     contract_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> None:
     try:
@@ -204,8 +206,8 @@ async def submit_contract(
     contract_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
+    current_user: CurrentUser = Depends(get_current_user),
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> ContractOut:
     try:
         contract = await contract_service.submit_for_review(
@@ -238,7 +240,7 @@ async def list_versions(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[ContractVersionOut]:
     items, total = await contract_service.list_versions(
         session,
@@ -258,7 +260,7 @@ async def list_versions(
 async def list_clauses(
     contract_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> list[ClauseOut]:
     return cast(list[ClauseOut], await contract_service.list_clauses(
         session,
@@ -277,7 +279,7 @@ async def contract_audit_trail(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=500),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin", "auditor")),
 ) -> Page[AuditLogOut]:
     items, total = await audit_service.list_for_target(
