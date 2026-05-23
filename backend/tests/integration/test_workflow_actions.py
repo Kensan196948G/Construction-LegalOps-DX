@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.xfail(strict=False, reason="Workflow service is a stub; actions endpoint uses different URL pattern")
+pytestmark = pytest.mark.xfail(
+    strict=False,
+    reason="Workflow service is a stub; actions endpoint uses different URL pattern",
+)
 
 
 async def _create_contract(client, headers) -> int:

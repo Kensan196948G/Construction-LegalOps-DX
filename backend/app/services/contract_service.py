@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -46,7 +46,11 @@ async def create_contract(
         end_date=data.end_date,
         department_id=data.department_id,
         drafter_id=drafter_id,
-        confidentiality=data.confidentiality.value if hasattr(data.confidentiality, "value") else str(data.confidentiality),
+        confidentiality=(
+            data.confidentiality.value
+            if hasattr(data.confidentiality, "value")
+            else str(data.confidentiality)
+        ),
         extra_metadata=data.extra_metadata,
         status="draft",
         version=1,
@@ -104,7 +108,7 @@ async def soft_delete_contract(
     contract = await get_contract(session, contract_id=contract_id, viewer=actor)
     if contract is None:
         raise LookupError(f"Contract {contract_id} not found")
-    contract.deleted_at = datetime.now(tz=timezone.utc)
+    contract.deleted_at = datetime.now(tz=UTC)
     await session.flush()
 
 

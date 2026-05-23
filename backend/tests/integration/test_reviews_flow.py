@@ -13,7 +13,9 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.xfail(strict=False, reason="Review service and comments endpoint are stubs")
+pytestmark = pytest.mark.xfail(
+    strict=False, reason="Review service and comments endpoint are stubs"
+)
 
 
 async def test_full_review_flow(client, auth_headers_legal, monkeypatch):

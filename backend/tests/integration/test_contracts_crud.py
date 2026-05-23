@@ -6,8 +6,6 @@ remains queryable through audit / admin paths).
 
 from __future__ import annotations
 
-import pytest
-
 
 async def test_contract_lifecycle_post_get_patch_delete(
     client, auth_headers_legal, auth_headers_admin

@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 async def test_sso_login_returns_authorize_url(client):
     """Arrange: client. Act: GET /api/v1/auth/sso/login. Assert: 200 + URL field."""
