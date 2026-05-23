@@ -27,7 +27,7 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 12(Design Impl): 4×4リスクヒートマップ実装・dev auth bypass追加・全16ページ動作確認。PR #8 作成。",
+    "last_session_summary": "Loop 12(Design Impl): 4×4リスクヒートマップ実装・dev auth bypass追加・全16ページ動作確認。PR #8 作成。tsconfig.json テストファイル除外で CI 全ジョブ通過（Frontend/Backend/Security/Docker）。",
     "last_stop_at": "2026-05-23T10:07:07.453Z",
     "current_session_start_at": "2026-05-23T10:43:33.043Z",
     "last_trigger": "cron",
@@ -58,7 +58,7 @@
     "summary": "デザインプロトタイプ差分を解消。4×4リスクヒートマップ実装(CSS Grid + React.Fragment key)。MockRiskにprobability/impact(1-4)フィールド追加。AUTH_DEV_BYPASS=trueによるSSO bypass実装(Edge互換)。全16ページでReactエラーなし確認。PR #8作成。"
   },
   "next_actions": [
-    "PR #8 レビュー・マージ（feat/loop12-design-impl）",
+    "PR #8 マージ（CI 全通過済み）",
     "P3: \"use client\" ページ7件のブラウザタイトル修正（Server Componentラッパー化）",
     "バックエンド API と フロントエンド mock-data.ts の接続（API ready後）",
     "本番環境 secrets 投入（Vault）",
