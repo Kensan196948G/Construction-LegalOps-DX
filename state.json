@@ -7,10 +7,10 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "ci_test_auth_complete",
-    "last_loop_completed": 11,
-    "loops_total": 11,
-    "current_version": "0.1.1"
+    "status": "design_impl_in_progress",
+    "last_loop_completed": 12,
+    "loops_total": 12,
+    "current_version": "0.1.2"
   },
   "goal": "Construction-LegalOps-DX 自律開発",
   "phase": "Build",
@@ -27,7 +27,7 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 11(CI/Test/Auth): Jest 環境を整備し35テスト通過。認証ミドルウェア再有効化。",
+    "last_session_summary": "Loop 12(Design Impl): 4×4リスクヒートマップ実装・dev auth bypass追加・全16ページ動作確認。PR #8 作成。",
     "last_stop_at": "2026-05-23T10:07:07.453Z",
     "current_session_start_at": "2026-05-23T10:43:33.043Z",
     "last_trigger": "cron",
@@ -52,8 +52,14 @@
     "completed_at": "2026-05-23",
     "summary": "Jest 29 + MSW 2.x + jsdom 環境整備: CustomJSDOMEnvironment (fetch API polyfill)・rettime CJS stub・MSW no-op server stub・moduleNameMapper を整備。kpi-card/contracts-table/contract-summary/contracts-filters 35テスト全通過。認証ミドルウェア再有効化 (middleware.ts.auth-disabled-backup → middleware.ts)。"
   },
+  "loop12": {
+    "name": "Design Implementation",
+    "completed_at": "2026-05-23",
+    "summary": "デザインプロトタイプ差分を解消。4×4リスクヒートマップ実装(CSS Grid + React.Fragment key)。MockRiskにprobability/impact(1-4)フィールド追加。AUTH_DEV_BYPASS=trueによるSSO bypass実装(Edge互換)。全16ページでReactエラーなし確認。PR #8作成。"
+  },
   "next_actions": [
-    "設計ファイル (Construction-LegalOps-DX.html) の実装: ユーザー指定デザインを反映",
+    "PR #8 レビュー・マージ（feat/loop12-design-impl）",
+    "P3: \"use client\" ページ7件のブラウザタイトル修正（Server Componentラッパー化）",
     "バックエンド API と フロントエンド mock-data.ts の接続（API ready後）",
     "本番環境 secrets 投入（Vault）",
     "E2E テスト Playwright 化",
@@ -80,6 +86,10 @@
       {
         "at": "2026-05-23",
         "summary": "Loop 11(CI/Test/Auth): JSDOMEnvironment を拡張して Node.js fetch globals を jsdom window に注入するパターンが MSW 2.x 対応の最善策"
+      },
+      {
+        "at": "2026-05-23",
+        "summary": "Loop 12(Design Impl): CSS Grid gridTemplateColumns='auto 1fr 1fr 1fr 1fr' + React.Fragment key パターンでヒートマップをクリーンに実装。JSX <> フラグメントに key は渡せないため Fragment 明示形式が必須。"
       }
     ]
   },
