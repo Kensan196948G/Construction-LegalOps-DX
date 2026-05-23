@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComplianceChecklist } from "@/components/compliance/compliance-checklist";
 import { ComplianceFindingsTable } from "@/components/compliance/compliance-findings-table";
 import { AiDisclaimerInline } from "@/components/legal/ai-disclaimer-inline";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { complianceApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "コンプライアンスチェック",
@@ -20,21 +22,79 @@ interface CompliancePageProps {
   searchParams?: Promise<SearchParams>;
 }
 
-import { MOCK_COMPLIANCE_FRAMEWORKS, MOCK_COMPLIANCE_ITEMS } from "@/lib/mock-data";
+type CStatus = "compliant" | "warning" | "non_compliant";
+
+interface Framework {
+  id: string;
+  label: string;
+  passed: number;
+  failed: number;
+  na: number;
+}
+
+interface Finding {
+  id: string;
+  law: string;
+  item: string;
+  status: CStatus;
+  lastCheck: string;
+  detail: string;
+}
+
+function toFindingStatus(severity: string | null | undefined): CStatus {
+  if (severity === "high" || severity === "critical") return "non_compliant";
+  if (severity === "medium") return "warning";
+  return "warning"; // default: unchecked = needs review
+}
 
 async function getComplianceState(params: SearchParams) {
-  let findings = MOCK_COMPLIANCE_ITEMS.map(c => ({
-    id: c.id, law: c.law, item: c.item, status: c.status, lastCheck: c.lastCheck, detail: c.detail,
-  }));
-  if (params.framework) findings = findings.filter(f => f.law === params.framework);
-  if (params.status) findings = findings.filter(f => f.status === params.status);
-  return {
-    frameworks: MOCK_COMPLIANCE_FRAMEWORKS,
-    findings,
-    total: findings.length,
-    page: 1,
-    perPage: 20,
-  };
+  const cleanup = await bindServerSession();
+  try {
+    const result = await complianceApi.checklists({ page: 1, page_size: 100 });
+
+    const frameworks: Framework[] = result.items.map((cl) => {
+      const total = cl.items.length;
+      // Without run results, all items are "not yet checked" (na)
+      return {
+        id: String(cl.id),
+        label: cl.name,
+        passed: 0,
+        failed: 0,
+        na: total,
+      };
+    });
+
+    // Flatten all checklist items as findings
+    const allFindings: Finding[] = result.items.flatMap((cl) =>
+      cl.items.map((item) => ({
+        id: String(item.id),
+        law: cl.name,
+        item: item.title,
+        status: toFindingStatus(item.severity ?? null),
+        lastCheck: "—",
+        detail: item.description ?? "",
+      })),
+    );
+
+    // Client-side filters
+    const filtered = allFindings.filter((f) => {
+      if (params.framework && params.framework !== "all" && f.law !== params.framework) return false;
+      if (params.status && params.status !== "all" && f.status !== params.status) return false;
+      return true;
+    });
+
+    return {
+      frameworks,
+      findings: filtered,
+      total: allFindings.length,
+      page: 1,
+      perPage: 20,
+    };
+  } catch {
+    return { frameworks: [], findings: [], total: 0, page: 1, perPage: 20 };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function CompliancePage({ searchParams }: CompliancePageProps) {

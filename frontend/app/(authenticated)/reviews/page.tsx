@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { ReviewsTable } from "@/components/reviews/reviews-table";
 import { ReviewsFilters } from "@/components/reviews/reviews-filters";
 import { AiDisclaimerInline } from "@/components/legal/ai-disclaimer-inline";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { reviewsApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "AI 一次レビュー",
@@ -37,23 +39,64 @@ interface ReviewListResult {
   perPage: number;
 }
 
-import { MOCK_REVIEWS } from "@/lib/mock-data";
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return null as unknown as string;
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 async function getReviews(params: SearchParams): Promise<ReviewListResult> {
-  let items = MOCK_REVIEWS.map(r => ({
-    id: r.id, contractId: r.contractId, contractTitle: r.contractTitle,
-    aiModel: r.aiModel, riskLevel: r.riskLevel, issuesCount: r.issuesCount,
-    status: r.status, reviewerConfirmed: r.reviewerConfirmed, completedAt: r.completedAt,
-  }));
-  if (params.status) items = items.filter(r => r.status === params.status);
-  if (params.riskLevel) items = items.filter(r => r.riskLevel === params.riskLevel);
-  if (params.reviewerConfirmed === "true") items = items.filter(r => r.reviewerConfirmed);
-  if (params.reviewerConfirmed === "false") items = items.filter(r => !r.reviewerConfirmed);
   const page = Number(params.page ?? 1);
   const perPage = 20;
-  const total = items.length;
-  items = items.slice((page - 1) * perPage, page * perPage);
-  return { items, total, page, perPage };
+
+  const cleanup = await bindServerSession();
+  try {
+    const result = await reviewsApi.list({
+      status: params.status && params.status !== "all" ? params.status : undefined,
+      page,
+      page_size: perPage,
+    });
+
+    const items = result.items.map((r) => ({
+      id: String(r.id),
+      contractId: String(r.contract_id),
+      contractTitle: r.summary ?? `レビュー #${r.id}`,
+      aiModel: r.ai_model ?? "—",
+      riskLevel: (r.overall_risk ?? "low") as "low" | "medium" | "high" | "critical",
+      issuesCount: r.findings?.length ?? 0,
+      status: r.status,
+      // Human-confirmed = a final decision (approved or rejected) has been made
+      reviewerConfirmed: r.status === "accepted" || r.status === "rejected",
+      completedAt: r.finished_at ? formatDate(r.finished_at) : null,
+    }));
+
+    // Client-side risk level filter (no backend support)
+    const filtered =
+      params.riskLevel && params.riskLevel !== "all"
+        ? items.filter((r) => r.riskLevel === params.riskLevel)
+        : items;
+
+    // Client-side reviewerConfirmed filter
+    const finalItems =
+      params.reviewerConfirmed === "true"
+        ? filtered.filter((r) => r.reviewerConfirmed)
+        : params.reviewerConfirmed === "false"
+          ? filtered.filter((r) => !r.reviewerConfirmed)
+          : filtered;
+
+    return { items: finalItems, total: result.total, page: result.page, perPage };
+  } catch {
+    return { items: [], total: 0, page, perPage };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {

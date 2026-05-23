@@ -13,7 +13,8 @@ import { ReviewRisksPanel } from "@/components/reviews/review-risks-panel";
 import { ReviewSuggestionsPanel } from "@/components/reviews/review-suggestions-panel";
 import { ReviewAuditTrail } from "@/components/reviews/review-audit-trail";
 import { LawyerConfirmationCheckbox } from "@/components/reviews/lawyer-confirmation-checkbox";
-import { MOCK_REVIEWS } from "@/lib/mock-data";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { reviewsApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "レビュー詳細",
@@ -30,29 +31,56 @@ interface ReviewDetail {
   reviewerConfirmed: boolean;
   reviewerConfirmedBy: string | null;
   reviewerConfirmedAt: string | null;
-  startedAt: string;
+  startedAt: string | null;
   completedAt: string | null;
   summary: string;
 }
 
+type RiskLevel = "low" | "medium" | "high" | "critical";
+
+function toRiskLevel(raw: string | null | undefined): RiskLevel {
+  if (raw === "medium" || raw === "high" || raw === "critical") return raw;
+  return "low";
+}
+
+function formatDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 async function getReview(id: string): Promise<ReviewDetail | null> {
-  const found = MOCK_REVIEWS.find(r => r.id === id) ?? MOCK_REVIEWS[0];
-  if (!found) return null;
-  return {
-    id: found.id,
-    contractId: found.contractId,
-    contractTitle: found.contractTitle,
-    aiModel: found.aiModel,
-    aiPromptVersion: "2.1",
-    riskLevel: found.riskLevel,
-    status: found.status,
-    reviewerConfirmed: found.reviewerConfirmed,
-    reviewerConfirmedBy: found.reviewerConfirmed ? "田中 太郎" : null,
-    reviewerConfirmedAt: found.reviewerConfirmed && found.completedAt ? found.completedAt : null,
-    startedAt: "2026/05/13",
-    completedAt: found.completedAt,
-    summary: `AI レビューの結果、${found.issuesCount} 件の論点が検出されました。リスクレベルは「${found.riskLevel}」と評価されています。\n\n主な論点として、支払条件・解除条項・損害賠償条項に関する事項が含まれます。各論点の詳細は「論点」タブをご確認ください。\n\n※ この要約は AI による参考情報です。法的判断は必ず法務担当者・顧問弁護士が行ってください。`,
-  };
+  const cleanup = await bindServerSession();
+  try {
+    const r = await reviewsApi.get(id);
+    const confirmed = r.status === "accepted" || r.status === "rejected";
+    return {
+      id: String(r.id),
+      contractId: String(r.contract_id),
+      contractTitle: `レビュー #${r.contract_id}`,
+      aiModel: r.ai_model ?? "—",
+      aiPromptVersion: "—",
+      riskLevel: toRiskLevel(r.overall_risk),
+      status: r.status,
+      reviewerConfirmed: confirmed,
+      reviewerConfirmedBy: null,
+      reviewerConfirmedAt: null,
+      startedAt: formatDate(r.started_at),
+      completedAt: formatDate(r.finished_at),
+      summary: r.summary ?? `AI レビュー (リスク: ${r.overall_risk ?? "未評価"})。詳細は各タブでご確認ください。\n\n※ この要約は AI による参考情報です。法的判断は必ず法務担当者・顧問弁護士が行ってください。`,
+    };
+  } catch {
+    return null;
+  } finally {
+    cleanup();
+  }
 }
 
 interface ReviewDetailPageProps {
