@@ -5,6 +5,8 @@ import { KnowledgeSearchBar } from "@/components/knowledge/knowledge-search-bar"
 import { KnowledgeResults } from "@/components/knowledge/knowledge-results";
 import { KnowledgeCategoryNav } from "@/components/knowledge/knowledge-category-nav";
 import { AiDisclaimerInline } from "@/components/legal/ai-disclaimer-inline";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { knowledgeApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "ナレッジベース",
@@ -38,24 +40,77 @@ interface KnowledgeSearchResult {
   perPage: number;
 }
 
-import { MOCK_KNOWLEDGE } from "@/lib/mock-data";
+const KNOWN_SOURCES = ["internal_doc", "precedent", "faq", "playbook"] as const;
+type KnowledgeSource = (typeof KNOWN_SOURCES)[number];
+
+function deriveSource(tags: string[]): KnowledgeSource {
+  for (const tag of tags) {
+    if (KNOWN_SOURCES.includes(tag as KnowledgeSource)) return tag as KnowledgeSource;
+  }
+  return "internal_doc";
+}
+
+function deriveCategory(tags: string[]): string {
+  return tags.find((t) => !KNOWN_SOURCES.includes(t as KnowledgeSource)) ?? "一般";
+}
+
+function makeExcerpt(body: string): string {
+  const plain = body.replace(/\n+/g, " ").trim();
+  return plain.length > 200 ? plain.slice(0, 200) + "…" : plain;
+}
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 async function searchKnowledge(params: SearchParams): Promise<KnowledgeSearchResult> {
-  let items = MOCK_KNOWLEDGE.map(k => ({
-    id: k.id, title: k.title, excerpt: k.excerpt, source: k.source,
-    category: k.category, tags: k.tags, updatedAt: k.updatedAt, score: k.score,
-  }));
-  if (params.q) {
-    const q = params.q.toLowerCase();
-    items = items.filter(k => k.title.toLowerCase().includes(q) || k.excerpt.toLowerCase().includes(q) || k.tags.some(t => t.toLowerCase().includes(q)));
-  }
-  if (params.category) items = items.filter(k => k.category === params.category);
-  if (params.source) items = items.filter(k => k.source === params.source);
   const page = Number(params.page ?? 1);
   const perPage = 20;
-  const total = items.length;
-  items = items.slice((page - 1) * perPage, page * perPage);
-  return { items, total, page, perPage };
+
+  const cleanup = await bindServerSession();
+  try {
+    const result = await knowledgeApi.list({
+      q: params.q || undefined,
+      page,
+      page_size: perPage,
+    });
+
+    const allItems = result.items.map((k) => {
+      const tags = k.tags ?? [];
+      return {
+        id: String(k.id),
+        title: k.title,
+        excerpt: makeExcerpt(k.body),
+        source: deriveSource(tags),
+        category: deriveCategory(tags),
+        tags,
+        updatedAt: formatDate(k.updated_at),
+        score: 0,
+      };
+    });
+
+    // category and source filters are client-side (not in backend API)
+    const filtered = allItems.filter((k) => {
+      if (params.category && params.category !== "all" && k.category !== params.category) return false;
+      if (params.source && params.source !== "all" && k.source !== params.source) return false;
+      return true;
+    });
+
+    return { items: filtered, total: result.total, page, perPage };
+  } catch {
+    return { items: [], total: 0, page, perPage };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function KnowledgePage({ searchParams }: KnowledgePageProps) {

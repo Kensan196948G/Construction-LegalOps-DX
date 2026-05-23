@@ -6,7 +6,6 @@
 export type {
   // Pagination
   Paginated,
-  PaginationMeta,
   // Enums
   Role,
   ContractStatus,
@@ -48,8 +47,8 @@ export type {
   AuditLog,
   AuditVerifyResult,
   Notification,
-  DashboardKpis,
-  DashboardTimeseries,
+  DashboardSummary,
+  DashboardTrends,
 } from "@/lib/api/schemas";
 
 export type { ProblemDetails } from "@/lib/api/client";

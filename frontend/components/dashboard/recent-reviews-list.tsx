@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/components/lib/utils";
 
 interface Review { id: string; title: string; status: string; riskLevel: "low" | "medium" | "high" | "critical"; updatedAt: string; }
 interface Props { reviews: Review[]; }

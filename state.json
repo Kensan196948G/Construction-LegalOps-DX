@@ -29,7 +29,7 @@
     "phase": "Build",
     "last_session_summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21 passed / 0 failed。PR #9 作成。",
     "last_stop_at": "2026-05-23T13:45:45.198Z",
-    "current_session_start_at": "2026-05-23T13:40:24.621Z",
+    "current_session_start_at": "2026-05-23T14:48:43.776Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260523-190001-Construction-LegalOps-DX"
   },
@@ -205,6 +205,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-05-23T13:38:46.347Z"
+    "last_pre_compact_at": "2026-05-23T14:47:29.836Z"
   }
 }

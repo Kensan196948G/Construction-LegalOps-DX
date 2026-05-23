@@ -11,72 +11,138 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { PendingApprovalsList } from "@/components/dashboard/pending-approvals-list";
 import { RecentReviewsList } from "@/components/dashboard/recent-reviews-list";
 import { RiskDistributionChart } from "@/components/dashboard/risk-distribution-chart";
-import type { DashboardKpis } from "@/lib/api/schemas";
-import {
-  MOCK_DASHBOARD_KPIS, MOCK_RISK_DISTRIBUTION, MOCK_REVIEWS, MOCK_WORKFLOWS,
-} from "@/lib/mock-data";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { dashboardApi, reviewsApi, risksApi, contractsApi } from "@/lib/api/endpoints";
+import type { DashboardSummary } from "@/lib/api/schemas";
 
 export const metadata: Metadata = {
   title: "ダッシュボード",
   description: "契約・レビュー・承認状況の概況",
 };
 
-// Server Component で毎リクエスト取得する (KPI は集計値、cache 不要)。
 export const dynamic = "force-dynamic";
 
-interface DashboardSummary {
-  kpis: DashboardKpis;
-  riskDistribution: Array<{ level: "low" | "medium" | "high" | "critical"; count: number }>;
-  recentReviews: Array<{
-    id: string;
-    title: string;
-    status: string;
-    riskLevel: "low" | "medium" | "high" | "critical";
-    updatedAt: string;
-  }>;
-  pendingApprovals: Array<{
-    id: string;
-    contractTitle: string;
-    route: string;
-    waitingFor: string;
-    dueDate: string;
-  }>;
-  /** Backend が落ちている等、取得失敗時のフラグ */
+type RiskLevel = "low" | "medium" | "high" | "critical";
+
+interface ReviewItem {
+  id: string;
+  title: string;
+  status: string;
+  riskLevel: RiskLevel;
+  updatedAt: string;
+}
+
+interface ApprovalItem {
+  id: string;
+  contractTitle: string;
+  route: string;
+  waitingFor: string;
+  dueDate: string;
+}
+
+interface PageData {
+  summary: DashboardSummary | null;
+  riskDistribution: Array<{ level: RiskLevel; count: number }>;
+  recentReviews: ReviewItem[];
+  pendingApprovals: ApprovalItem[];
   degraded: boolean;
 }
 
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
-async function getDashboardSummary(): Promise<DashboardSummary> {
-  const recentReviews = MOCK_REVIEWS.slice(0, 5).map(r => ({
-    id: r.id,
-    title: r.contractTitle,
-    status: r.status,
-    riskLevel: r.riskLevel,
-    updatedAt: r.completedAt ?? "2026/05/16",
-  }));
+const RISK_LEVELS: RiskLevel[] = ["low", "medium", "high", "critical"];
 
-  const pendingApprovals = MOCK_WORKFLOWS
-    .filter(w => w.status === "in_progress")
-    .slice(0, 5)
-    .map(w => ({
-      id: w.id,
-      contractTitle: w.contractTitle,
-      route: w.route,
-      waitingFor: w.waitingFor,
-      dueDate: w.dueDate ?? "—",
+async function getDashboardData(): Promise<PageData> {
+  const cleanup = await bindServerSession();
+  try {
+    const [summaryResult, reviewsResult, heatmapResult, contractsResult] =
+      await Promise.allSettled([
+        dashboardApi.summary(),
+        reviewsApi.list({ page: 1, page_size: 5 }),
+        risksApi.heatmap(),
+        contractsApi.list({ status: "pending_approval", page: 1, page_size: 5 }),
+      ]);
+
+    const degraded =
+      summaryResult.status === "rejected" ||
+      reviewsResult.status === "rejected";
+
+    // KPI summary
+    const summary =
+      summaryResult.status === "fulfilled" ? summaryResult.value : null;
+
+    // Recent reviews list
+    const recentReviews: ReviewItem[] =
+      reviewsResult.status === "fulfilled"
+        ? reviewsResult.value.items.map((r) => ({
+            id: String(r.id),
+            title: r.summary ?? `レビュー #${r.id}`,
+            status: r.status,
+            riskLevel: (r.overall_risk ?? "low") as RiskLevel,
+            updatedAt: formatDate(r.finished_at ?? r.created_at),
+          }))
+        : [];
+
+    // Risk distribution from heatmap matrix — aggregate by impact level
+    const riskCountMap: Record<RiskLevel, number> = {
+      low: 0,
+      medium: 0,
+      high: 0,
+      critical: 0,
+    };
+    if (heatmapResult.status === "fulfilled") {
+      for (const cell of heatmapResult.value.matrix) {
+        const level = cell.impact as RiskLevel;
+        if (level in riskCountMap) {
+          riskCountMap[level] += cell.count;
+        }
+      }
+    }
+    const riskDistribution = RISK_LEVELS.map((level) => ({
+      level,
+      count: riskCountMap[level],
     }));
 
-  return {
-    kpis: MOCK_DASHBOARD_KPIS as DashboardKpis,
-    riskDistribution: MOCK_RISK_DISTRIBUTION,
-    recentReviews,
-    pendingApprovals,
-    degraded: false,
-  };
+    // Pending approvals from contracts with pending_approval status
+    const pendingApprovals: ApprovalItem[] =
+      contractsResult.status === "fulfilled"
+        ? contractsResult.value.items.map((c) => ({
+            id: String(c.id),
+            contractTitle: c.title,
+            route: c.contract_type ?? "—",
+            waitingFor: c.drafter?.display_name ?? "承認待ち",
+            dueDate: formatDate(c.end_date),
+          }))
+        : [];
+
+    return { summary, riskDistribution, recentReviews, pendingApprovals, degraded };
+  } catch {
+    return {
+      summary: null,
+      riskDistribution: RISK_LEVELS.map((level) => ({ level, count: 0 })),
+      recentReviews: [],
+      pendingApprovals: [],
+      degraded: true,
+    };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function DashboardPage() {
-  const summary = await getDashboardSummary();
+  const data = await getDashboardData();
+  const { summary, riskDistribution, recentReviews, pendingApprovals, degraded } = data;
 
   return (
     <div className="space-y-6">
@@ -87,7 +153,7 @@ export default async function DashboardPage() {
             契約・レビュー・承認の状況を一覧表示します。
           </p>
         </div>
-        {summary.degraded ? (
+        {degraded ? (
           <p className="text-xs text-amber-700" role="status" aria-live="polite">
             一部の指標を取得できませんでした。最新値ではない可能性があります。
           </p>
@@ -99,27 +165,27 @@ export default async function DashboardPage() {
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
       >
         <KpiCard
-          icon={FileText}
-          label="契約件数（年度累計）"
-          value={summary.kpis.total_contracts}
-          deltaLabel="集計値"
-        />
-        <KpiCard
           icon={ClipboardList}
           label="レビュー中"
-          value={summary.kpis.in_review}
-          deltaLabel={`今月 ${summary.kpis.reviews_this_month} 件完了`}
+          value={summary?.pending_review ?? 0}
+          deltaLabel="承認待ちを除く"
         />
         <KpiCard
           icon={ShieldCheck}
           label="承認待ち"
-          value={summary.kpis.pending_approval}
+          value={summary?.pending_approval ?? 0}
           deltaLabel="自分宛含む全体"
+        />
+        <KpiCard
+          icon={FileText}
+          label="今月完了"
+          value={summary?.recent_completed ?? 0}
+          deltaLabel="直近 30 日"
         />
         <KpiCard
           icon={AlertTriangle}
           label="高リスク案件"
-          value={summary.kpis.high_risk_open}
+          value={summary?.high_risk ?? 0}
           tone="warning"
           deltaLabel="未対応のみ"
         />
@@ -131,7 +197,7 @@ export default async function DashboardPage() {
             <CardTitle>最新の AI 一次レビュー</CardTitle>
           </CardHeader>
           <CardContent>
-            <RecentReviewsList reviews={summary.recentReviews} />
+            <RecentReviewsList reviews={recentReviews} />
             <p className="mt-3 text-xs text-muted-foreground">
               AI レビュー結果は参考情報であり、確定的な法的評価ではありません。最終判断は法務担当者・顧問弁護士が行います。
             </p>
@@ -143,7 +209,7 @@ export default async function DashboardPage() {
             <CardTitle>リスク分布</CardTitle>
           </CardHeader>
           <CardContent>
-            <RiskDistributionChart data={summary.riskDistribution} />
+            <RiskDistributionChart data={riskDistribution} />
             <p className="mt-3 text-xs text-muted-foreground">
               AI のリスクスコアは参考値であり、確定的な法的評価ではありません。
             </p>
@@ -157,7 +223,7 @@ export default async function DashboardPage() {
             <CardTitle>あなたの承認待ち</CardTitle>
           </CardHeader>
           <CardContent>
-            <PendingApprovalsList items={summary.pendingApprovals} />
+            <PendingApprovalsList items={pendingApprovals} />
           </CardContent>
         </Card>
       </section>
