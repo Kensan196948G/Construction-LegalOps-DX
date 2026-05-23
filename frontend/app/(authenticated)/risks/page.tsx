@@ -22,6 +22,12 @@ interface RisksPageProps {
   searchParams?: Promise<SearchParams>;
 }
 
+interface HeatmapCell {
+  probability: 1 | 2 | 3 | 4;
+  impact: 1 | 2 | 3 | 4;
+  count: number;
+}
+
 interface RiskListResult {
   items: Array<{
     id: string;
@@ -40,6 +46,7 @@ interface RiskListResult {
   perPage: number;
   byLevel: Array<{ level: "low" | "medium" | "high" | "critical"; count: number }>;
   byCategory: Array<{ category: string; count: number }>;
+  heatmapData: HeatmapCell[];
 }
 
 import { MOCK_RISKS } from "@/lib/mock-data";
@@ -60,11 +67,18 @@ async function getRisks(params: SearchParams): Promise<RiskListResult> {
   const byCategory = cats.map(category => ({
     category, count: MOCK_RISKS.filter(r => r.category === category).length,
   }));
+  const heatmapData: HeatmapCell[] = [];
+  for (const p of [1, 2, 3, 4] as const) {
+    for (const i of [1, 2, 3, 4] as const) {
+      const count = MOCK_RISKS.filter(r => r.probability === p && r.impact === i).length;
+      if (count > 0) heatmapData.push({ probability: p, impact: i, count });
+    }
+  }
   const page = Number(params.page ?? 1);
   const perPage = 20;
   const total = items.length;
   items = items.slice((page - 1) * perPage, page * perPage);
-  return { items, total, page, perPage, byLevel, byCategory };
+  return { items, total, page, perPage, byLevel, byCategory, heatmapData };
 }
 
 export default async function RisksPage({ searchParams }: RisksPageProps) {
@@ -90,7 +104,7 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
           <CardTitle>サマリー</CardTitle>
         </CardHeader>
         <CardContent>
-          <RisksOverview byLevel={result.byLevel} byCategory={result.byCategory} />
+          <RisksOverview byLevel={result.byLevel} byCategory={result.byCategory} heatmapData={result.heatmapData} />
         </CardContent>
       </Card>
 
