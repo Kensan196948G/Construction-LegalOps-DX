@@ -21,7 +21,6 @@ from app.schemas.review import (
     ReviewOut,
     ReviewRejectRequest,
     ReviewStartRequest,
-    ReviewStartResponse,
     ReviewUpdate,
 )
 from app.services import ai_review_service, audit_service, review_service
@@ -31,7 +30,7 @@ router = APIRouter(tags=["reviews"])
 
 @router.post(
     "/contracts/{contract_id}/reviews",
-    response_model=ReviewStartResponse,
+    response_model=ReviewOut,
     status_code=status.HTTP_202_ACCEPTED,
     summary="AI レビュー起動",
     description="契約に対し AI レビュージョブを起動する。レート制限: 30 req/h/user。",
@@ -43,8 +42,8 @@ async def start_review(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
-) -> ReviewStartResponse:
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
+) -> ReviewOut:
     try:
         review = await ai_review_service.start_review(
             session,
@@ -63,11 +62,11 @@ async def start_review(
         actor_id=current_user.id,
         action="review.start",
         target_type="reviews",
-        target_id=review.id,
+        target_id=review["id"],
         payload={"contract_id": contract_id, "ai_model": payload.ai_model},
         request=request,
     )
-    return ReviewStartResponse.model_validate(review)
+    return ReviewOut.model_validate(review)
 
 
 @router.get(
@@ -126,7 +125,7 @@ async def update_review(
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("legal", "admin")),
+    _: None = Depends(require_role("reviewer", "admin")),
 ) -> ReviewOut:
     try:
         review = await review_service.update_review(
@@ -145,7 +144,7 @@ async def update_review(
         actor_id=current_user.id,
         action="review.update",
         target_type="reviews",
-        target_id=review.id,
+        target_id=review["id"],
         payload={"after": payload.model_dump(exclude_unset=True)},
         request=request,
     )
@@ -164,7 +163,7 @@ async def accept_review(
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("legal", "admin")),
+    _: None = Depends(require_role("reviewer", "admin")),
 ) -> ReviewOut:
     try:
         review = await review_service.accept(
@@ -179,7 +178,7 @@ async def accept_review(
         actor_id=current_user.id,
         action="review.accept",
         target_type="reviews",
-        target_id=review.id,
+        target_id=review["id"],
         request=request,
     )
     return ReviewOut.model_validate(review)
@@ -196,7 +195,7 @@ async def reject_review(
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("legal", "admin")),
+    _: None = Depends(require_role("reviewer", "admin")),
 ) -> ReviewOut:
     try:
         review = await review_service.reject(
@@ -211,7 +210,7 @@ async def reject_review(
         actor_id=current_user.id,
         action="review.reject",
         target_type="reviews",
-        target_id=review.id,
+        target_id=review["id"],
         payload={"reason": payload.reason},
         request=request,
     )

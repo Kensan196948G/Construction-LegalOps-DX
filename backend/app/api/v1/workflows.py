@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -63,7 +64,13 @@ async def create_workflow_definition(
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> WorkflowDefinitionOut:
-    definition = await workflow_service.create_definition(session, data=payload)
+    try:
+        definition = await workflow_service.create_definition(session, data=payload)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="workflow definition with this code already exists",
+        )
     await audit_service.log(
         session,
         actor_id=current_user.id,
@@ -88,7 +95,7 @@ async def start_workflow(
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> WorkflowInstanceOut:
     try:
         instance = await workflow_service.start_workflow(
@@ -142,9 +149,10 @@ async def list_workflow_steps(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[WorkflowStepOut]:
-    return cast(list[WorkflowStepOut], await workflow_service.list_steps(
-        session, instance_id=instance_id, viewer=current_user
-    ))
+    return cast(
+        list[WorkflowStepOut],
+        await workflow_service.list_steps(session, instance_id=instance_id, viewer=current_user),
+    )
 
 
 @router.post(
@@ -163,10 +171,10 @@ async def execute_workflow_action(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> WorkflowInstanceOut:
-    if payload.action not in ("approve", "reject", "return", "delegate"):
+    if payload.action not in ("approve", "reject", "send_back", "delegate"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="action must be one of approve/reject/return/delegate",
+            detail="action must be one of approve/reject/send_back/delegate",
         )
     try:
         instance = await workflow_service.execute_action(

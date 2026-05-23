@@ -8,8 +8,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,9 +35,9 @@ async def get_summary(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DashboardSummary:
-    return cast(DashboardSummary, await dashboard_service.get_summary(
+    return await dashboard_service.get_summary(
         session, viewer=current_user, department_id=department_id
-    ))
+    )
 
 
 @router.get(
@@ -55,10 +53,10 @@ async def get_trends(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DashboardTrends:
-    return cast(DashboardTrends, await dashboard_service.get_trends(
+    return await dashboard_service.get_trends(
         session,
         viewer=current_user,
         interval=interval,
         windows=weeks,
         department_id=department_id,
-    ))
+    )

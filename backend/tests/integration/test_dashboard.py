@@ -11,10 +11,6 @@ aggregates:
 
 from __future__ import annotations
 
-import pytest
-
-pytestmark = pytest.mark.xfail(strict=False, reason="Dashboard service is a stub returning 501")
-
 
 async def test_dashboard_summary_returns_metrics(client, auth_headers_admin):
     """Arrange: client + admin. Act: GET summary. Assert: keys present."""
@@ -36,7 +32,8 @@ async def test_dashboard_counts_match_db(client, auth_headers_admin, auth_header
             json={
                 "title": f"集計 {i}",
                 "contract_type": "ukeoi",
-                "counterparty_name": "Z",
+                "counterparty": "Z建設",
+                "department_id": 1,
             },
             headers=auth_headers_legal,
         )
