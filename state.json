@@ -8,9 +8,9 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "design_impl_in_progress",
-    "last_loop_completed": 12,
-    "loops_total": 12,
-    "current_version": "0.1.2"
+    "last_loop_completed": 13,
+    "loops_total": 13,
+    "current_version": "0.1.3"
   },
   "goal": "Construction-LegalOps-DX 自律開発",
   "phase": "Build",
@@ -27,7 +27,7 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 12(Design Impl): 4×4リスクヒートマップ実装・dev auth bypass追加・全16ページ動作確認。PR #8 作成。tsconfig.json テストファイル除外で CI 全ジョブ通過（Frontend/Backend/Security/Docker）。",
+    "last_session_summary": "Loop 12+: 7ページ Server/Client 分割（metadata/ブラウザタイトル対応）完了。PR #8 CI 全4ジョブ通過（26331088222）。page.tsx=ServerComponent+metadata、page-client.tsx='use client'パターン確立。",
     "last_stop_at": "2026-05-23T10:07:07.453Z",
     "current_session_start_at": "2026-05-23T10:43:33.043Z",
     "last_trigger": "cron",
@@ -53,13 +53,11 @@
     "summary": "Jest 29 + MSW 2.x + jsdom 環境整備: CustomJSDOMEnvironment (fetch API polyfill)・rettime CJS stub・MSW no-op server stub・moduleNameMapper を整備。kpi-card/contracts-table/contract-summary/contracts-filters 35テスト全通過。認証ミドルウェア再有効化 (middleware.ts.auth-disabled-backup → middleware.ts)。"
   },
   "loop12": {
-    "name": "Design Implementation",
+    "name": "Design Implementation + Server/Client Split",
     "completed_at": "2026-05-23",
-    "summary": "デザインプロトタイプ差分を解消。4×4リスクヒートマップ実装(CSS Grid + React.Fragment key)。MockRiskにprobability/impact(1-4)フィールド追加。AUTH_DEV_BYPASS=trueによるSSO bypass実装(Edge互換)。全16ページでReactエラーなし確認。PR #8作成。"
+    "summary": "デザインプロトタイプ差分を解消。4×4リスクヒートマップ実装(CSS Grid + React.Fragment key)。MockRiskにprobability/impact(1-4)フィールド追加。AUTH_DEV_BYPASS=trueによるSSO bypass実装(Edge互換)。7ページServer/Client分割でブラウザタイトル対応。CI全4ジョブ通過。PR #8マージ完了(commit:1498dff)。"
   },
   "next_actions": [
-    "PR #8 マージ（CI 全通過済み）",
-    "P3: \"use client\" ページ7件のブラウザタイトル修正（Server Componentラッパー化）",
     "バックエンド API と フロントエンド mock-data.ts の接続（API ready後）",
     "本番環境 secrets 投入（Vault）",
     "E2E テスト Playwright 化",
