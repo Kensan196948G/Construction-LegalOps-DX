@@ -11,12 +11,8 @@ from __future__ import annotations
 
 import itertools
 
-import pytest
 
-
-async def test_audit_log_created_on_contract_create(
-    client, auth_headers_legal, auth_headers_admin
-):
+async def test_audit_log_created_on_contract_create(client, auth_headers_legal, auth_headers_admin):
     """Arrange: client. Act: create contract. Assert: an audit row exists."""
     # Arrange
     r = await client.post(
