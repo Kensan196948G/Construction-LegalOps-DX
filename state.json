@@ -28,8 +28,8 @@
     "same_error_limit": 2,
     "phase": "Build",
     "last_session_summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21 passed / 0 failed。PR #9 作成。",
-    "last_stop_at": "2026-05-23T11:30:00.000Z",
-    "current_session_start_at": "2026-05-23T10:43:33.043Z",
+    "last_stop_at": "2026-05-23T11:49:54.905Z",
+    "current_session_start_at": "2026-05-23T12:36:40.710Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260523-190001-Construction-LegalOps-DX"
   },
@@ -81,6 +81,10 @@
     ],
     "success_patterns": [
       {
+        "at": "2026-05-23T11:49:54.919Z",
+        "summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21"
+      },
+      {
         "at": "2026-05-16T13:02:19.937Z",
         "summary": "Loop 10(UI Detail Pages): 詳細ページ・設定パネル・アップロードフォーム・テーブル1行化を実装。PR #6 merged to main。"
       },
@@ -113,8 +117,47 @@
     "last_dreaming_run": null,
     "dreaming_enabled": false
   },
-  "warnings": [],
+  "warnings": [
+    {
+      "at": "2026-05-23T11:49:54.918Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 66 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/api/v1/contracts.py",
+        "backend/app/db/test_session.py",
+        "backend/app/schemas/contract.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/tests/integration/conftest.py",
+        "backend/tests/integration/test_audit_logs.py",
+        "backend/tests/integration/test_auth.py",
+        "backend/tests/integration/test_contracts_crud.py",
+        "backend/tests/integration/test_dashboard.py",
+        "backend/tests/integration/test_reviews_flow.py",
+        "backend/tests/integration/test_workflow_actions.py",
+        "frontend/__mocks__/msw/server.ts",
+        "frontend/__mocks__/rettime.js",
+        "frontend/app/(authenticated)/applications/page-client.tsx",
+        "frontend/app/(authenticated)/applications/page.tsx",
+        "frontend/app/(authenticated)/compliance/page.tsx",
+        "frontend/app/(authenticated)/construction-legal/page-client.tsx",
+        "frontend/app/(authenticated)/construction-legal/page.tsx",
+        "frontend/app/(authenticated)/consultations/page-client.tsx",
+        "frontend/app/(authenticated)/consultations/page.tsx",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/deadlines/page-client.tsx",
+        "frontend/app/(authenticated)/deadlines/page.tsx",
+        "frontend/app/(authenticated)/disputes/page-client.tsx",
+        "frontend/app/(authenticated)/disputes/page.tsx",
+        "frontend/app/(authenticated)/partners/page-client.tsx",
+        "frontend/app/(authenticated)/partners/page.tsx",
+        "frontend/app/(authenticated)/reviews/[id]/page.tsx",
+        "frontend/app/(authenticated)/risks/page.tsx"
+      ],
+      "truncated": true
+    }
+  ],
   "compact": {
-    "last_pre_compact_at": "2026-05-23T10:42:10.662Z"
+    "last_pre_compact_at": "2026-05-23T12:35:04.119Z"
   }
 }
