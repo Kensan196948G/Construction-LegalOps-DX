@@ -7,7 +7,6 @@
  * Node 18+ has native Fetch globals but jsdom resets them. Re-expose them here.
  */
 
-// @ts-expect-error — accessing Node.js built-in globals through any
 const nodeGlobals = global as Record<string, unknown>;
 
 if (typeof globalThis.Request === "undefined") {
