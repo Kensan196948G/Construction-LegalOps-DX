@@ -258,6 +258,7 @@ class AuditService:
 
 def _json_default(o: Any) -> Any:
     import decimal
+
     if isinstance(o, datetime):
         return o.isoformat()
     if isinstance(o, UUID):
@@ -297,6 +298,26 @@ async def log(
     )
 
 
+def _record_to_dict(idx: int, rec: AuditRecord) -> dict[str, Any]:
+    """Convert an in-memory AuditRecord to a dict matching AuditLogOut."""
+    return {
+        "id": idx,
+        "occurred_at": rec.timestamp.isoformat(),
+        "actor_id": None,
+        "actor": None,
+        "actor_role": None,
+        "action": rec.action,
+        "target_type": rec.target_type,
+        "target_id": int(rec.target_id) if rec.target_id and rec.target_id.isdigit() else None,
+        "request_id": None,
+        "ip_address": None,
+        "user_agent": None,
+        "payload": rec.after or {},
+        "prev_hash": rec.prev_hash,
+        "hash_chain": rec.event_hash,
+    }
+
+
 async def list_logs(
     session: Any,
     *,
@@ -309,7 +330,21 @@ async def list_logs(
     page: int = 1,
     size: int = 50,
 ) -> tuple[list[Any], int]:
-    return ([], 0)
+    records = _svc._records
+    filtered = [
+        r
+        for r in records
+        if (target_type is None or r.target_type == target_type)
+        and (target_id is None or r.target_id == str(target_id))
+        and (action is None or r.action == action)
+        and (date_from is None or r.timestamp >= date_from)
+        and (date_to is None or r.timestamp <= date_to)
+    ]
+    total = len(filtered)
+    start = (page - 1) * size
+    page_records = filtered[start : start + size]
+    items = [_record_to_dict(i + start + 1, r) for i, r in enumerate(page_records)]
+    return items, total
 
 
 async def verify_chain(
@@ -318,12 +353,13 @@ async def verify_chain(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> AuditVerifyResponse:
+    result = await _svc.verify_chain(from_date=date_from, to_date=date_to, session=session)
     return AuditVerifyResponse(
-        verified=True,
-        total=0,
-        broken_at=None,
+        verified=result.ok,
+        total=result.total,
+        broken_at=result.first_broken_index,
         checked_at=datetime.now(UTC),
-        ok=True,
+        ok=result.ok,
     )
 
 
@@ -334,7 +370,20 @@ def export_csv(
     date_to: datetime | None = None,
     target_type: str | None = None,
 ) -> Iterator[str]:
-    return iter([])
+    records = [
+        r
+        for r in _svc._records
+        if (target_type is None or r.target_type == target_type)
+        and (date_from is None or r.timestamp >= date_from)
+        and (date_to is None or r.timestamp <= date_to)
+    ]
+    yield "id,occurred_at,action,target_type,target_id,prev_hash,hash_chain\n"
+    for idx, rec in enumerate(records, start=1):
+        yield (
+            f"{idx},{rec.timestamp.isoformat()},{rec.action},"
+            f"{rec.target_type},{rec.target_id or ''},"
+            f"{rec.prev_hash},{rec.event_hash}\n"
+        )
 
 
 async def list_for_target(
@@ -345,4 +394,10 @@ async def list_for_target(
     page: int = 1,
     size: int = 20,
 ) -> tuple[list[Any], int]:
-    return ([], 0)
+    return await list_logs(
+        session,
+        target_type=target_type,
+        target_id=target_id,
+        page=page,
+        size=size,
+    )

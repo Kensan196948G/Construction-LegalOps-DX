@@ -12,7 +12,7 @@ import json
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Any, Final, cast
+from typing import Any, Final
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext

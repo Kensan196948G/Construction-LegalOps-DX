@@ -14,10 +14,6 @@ import itertools
 import pytest
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="audit_service.list_logs is a stub returning [] — no rows persisted yet",
-)
 async def test_audit_log_created_on_contract_create(
     client, auth_headers_legal, auth_headers_admin
 ):
