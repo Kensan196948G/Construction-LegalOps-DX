@@ -7,10 +7,10 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "design_impl_in_progress",
-    "last_loop_completed": 14,
-    "loops_total": 14,
-    "current_version": "0.1.3"
+    "status": "frontend_api_connected",
+    "last_loop_completed": 16,
+    "loops_total": 16,
+    "current_version": "0.1.4"
   },
   "goal": "Construction-LegalOps-DX 自律開発",
   "phase": "Build",
@@ -28,8 +28,8 @@
     "same_error_limit": 2,
     "phase": "Build",
     "last_session_summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21 passed / 0 failed。PR #9 作成。",
-    "last_stop_at": "2026-05-23T11:49:54.905Z",
-    "current_session_start_at": "2026-05-23T12:36:40.710Z",
+    "last_stop_at": "2026-05-23T13:45:45.198Z",
+    "current_session_start_at": "2026-05-23T13:40:24.621Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260523-190001-Construction-LegalOps-DX"
   },
@@ -62,11 +62,16 @@
     "completed_at": "2026-05-23",
     "summary": "全3件の失敗 integration test を修正。(1) GET /contracts/{id} に include_deleted Query param 追加 (test_soft_delete_visible_to_auditor)。(2) get_db/override_get_db に commit/rollback lifecycle 追加 (test_contract_lifecycle_post_get_patch_delete)。(3) audit test の .get('items') or fallback を .get('items',[]) に修正 (test_hash_chain_is_continuous)。+ BigInteger→INTEGER SQLite shim・Decimal JSON serializer・AliasChoices MetaData collision fix も整備。21 passed / 7 xfailed / 1 xpassed / 0 failed。PR #9 作成。"
   },
+  "loop16": {
+    "name": "Frontend API Connect (all pages)",
+    "completed_at": "2026-05-23",
+    "summary": "全(authenticated)ページのMOCK_* → リアルAPI置き換え完了。audit-logs/compliance/templates/contracts[id]/reviews[id]/workflows[id]を含む全12ページ。reviewStatusEnum 'approved'→'accepted' バグ修正。actor.role 非存在フィールド '—'固定。workflows/[id]はcontractsApi.get(id)ブリッジ(steps空)。npm run build 22ページ TypeScriptエラーなし。PR #12 merged(v0.1.4)。"
+  },
   "next_actions": [
-    "PR #9 マージ（integration test 全通過済み）",
-    "audit_service.list_logs スタブ → 実実装 (_svc._records を返すように)",
+    "workflows/[id] steps: バックエンドに workflow instance API 実装後に置き換え",
+    "ESLint Warning 2件修正 (recent-reviews-list.tsx cn / knowledge-results.tsx Link)",
+    "audit_service.list_logs スタブ → 実実装",
     "dashboard_service / review_service / workflow_service スタブ → 実実装",
-    "フロントエンド mock-data.ts → バックエンド API 接続",
     "本番環境 secrets 投入（Vault）",
     "E2E テスト Playwright 化"
   ],
@@ -80,6 +85,10 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-05-23T13:45:45.217Z",
+        "summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21"
+      },
       {
         "at": "2026-05-23T11:49:54.919Z",
         "summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21"
@@ -155,9 +164,47 @@
         "frontend/app/(authenticated)/risks/page.tsx"
       ],
       "truncated": true
+    },
+    {
+      "at": "2026-05-23T13:45:45.215Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 78 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/dashboard.py",
+        "backend/app/api/v1/reviews.py",
+        "backend/app/api/v1/workflows.py",
+        "backend/app/core/security.py",
+        "backend/app/db/test_session.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/contract.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/dashboard_service.py",
+        "backend/app/services/review_service.py",
+        "backend/app/services/workflow_service.py",
+        "backend/tests/integration/conftest.py",
+        "backend/tests/integration/test_audit_logs.py",
+        "backend/tests/integration/test_auth.py",
+        "backend/tests/integration/test_contracts_crud.py",
+        "backend/tests/integration/test_dashboard.py",
+        "backend/tests/integration/test_reviews_flow.py",
+        "backend/tests/integration/test_workflow_actions.py",
+        "frontend/__mocks__/msw/server.ts",
+        "frontend/__mocks__/rettime.js",
+        "frontend/app/(authenticated)/applications/page-client.tsx",
+        "frontend/app/(authenticated)/applications/page.tsx",
+        "frontend/app/(authenticated)/audit-logs/page.tsx",
+        "frontend/app/(authenticated)/compliance/page.tsx",
+        "frontend/app/(authenticated)/construction-legal/page-client.tsx",
+        "frontend/app/(authenticated)/construction-legal/page.tsx",
+        "frontend/app/(authenticated)/consultations/page-client.tsx"
+      ],
+      "truncated": true
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-05-23T12:35:04.119Z"
+    "last_pre_compact_at": "2026-05-23T13:38:46.347Z"
   }
 }
