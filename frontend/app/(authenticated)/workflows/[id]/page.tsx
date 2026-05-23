@@ -9,7 +9,8 @@ import { WorkflowStepper } from "@/components/workflows/workflow-stepper";
 import { WorkflowActions } from "@/components/workflows/workflow-actions";
 import { WorkflowHistory } from "@/components/workflows/workflow-history";
 import { RouteBadge } from "@/components/workflows/route-badge";
-import { MOCK_WORKFLOWS, MOCK_WORKFLOW_STEPS } from "@/lib/mock-data";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { contractsApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "ワークフロー詳細",
@@ -39,22 +40,49 @@ interface WorkflowDetail {
   canActAsCurrent: boolean;
 }
 
+type WfStatus = WorkflowDetail["status"];
+
+function toWfStatus(contractStatus: string): WfStatus {
+  switch (contractStatus) {
+    case "in_review":
+    case "pending_approval":
+      return "in_progress";
+    case "approved":
+    case "executed":
+      return "approved";
+    case "rejected":
+      return "rejected";
+    case "returned":
+      return "returned";
+    default:
+      return "withdrawn";
+  }
+}
+
+// The list page bridges contract IDs as workflow IDs, so the URL id is a contract ID.
+// Workflow step instances are not yet exposed by the backend API; steps are left empty
+// and will be populated once a /workflows/{instanceId}/steps endpoint is available.
 async function getWorkflow(id: string): Promise<WorkflowDetail | null> {
-  const found = MOCK_WORKFLOWS.find(w => w.id === id) ?? MOCK_WORKFLOWS[0];
-  if (!found) return null;
-  const steps = MOCK_WORKFLOW_STEPS[found.id] ?? MOCK_WORKFLOW_STEPS["WF-0001"] ?? [];
-  const currentStep = steps.find(s => s.status === "in_progress") ?? null;
-  return {
-    id: found.id,
-    contractId: found.contractId,
-    contractTitle: found.contractTitle,
-    route: found.route as RouteId,
-    requiresOutsideCounsel: found.requiresOutsideCounsel,
-    status: found.status as WorkflowDetail["status"],
-    currentStepId: currentStep?.id ?? null,
-    steps,
-    canActAsCurrent: found.status === "in_progress",
-  };
+  const cleanup = await bindServerSession();
+  try {
+    const c = await contractsApi.get(id);
+    const wfStatus = toWfStatus(c.status);
+    return {
+      id: String(c.id),
+      contractId: String(c.id),
+      contractTitle: c.title,
+      route: (c.contract_type as RouteId) ?? "A1",
+      requiresOutsideCounsel: false,
+      status: wfStatus,
+      currentStepId: null,
+      steps: [],
+      canActAsCurrent: wfStatus === "in_progress",
+    };
+  } catch {
+    return null;
+  } finally {
+    cleanup();
+  }
 }
 
 interface WorkflowDetailPageProps {

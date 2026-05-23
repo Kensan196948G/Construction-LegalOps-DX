@@ -11,7 +11,8 @@ import { ContractClausesViewer } from "@/components/contracts/contract-clauses-v
 import { ContractAttachmentsList } from "@/components/contracts/contract-attachments-list";
 import { ContractActivityLog } from "@/components/contracts/contract-activity-log";
 import { RiskBadge } from "@/components/risks/risk-badge";
-import { MOCK_CONTRACTS } from "@/lib/mock-data";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { contractsApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "契約詳細",
@@ -31,22 +32,41 @@ interface ContractDetail {
   summary: string;
 }
 
+function formatDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 async function getContract(id: string): Promise<ContractDetail | null> {
-  const found = MOCK_CONTRACTS.find(c => c.id === id) ?? MOCK_CONTRACTS[0];
-  if (!found) return null;
-  return {
-    id: found.id,
-    title: found.title,
-    counterparty: found.counterparty,
-    contractType: found.contractType,
-    amount: found.amount,
-    currency: "JPY",
-    startDate: "2026/04/01",
-    endDate: "2026/09/30",
-    status: found.status,
-    riskLevel: found.riskLevel,
-    summary: `${found.contractType}に関する契約書。相手方 ${found.counterparty} との合意事項を記載。AI レビューにより複数の論点が検出されています。最終的な法的判断は法務担当者・顧問弁護士が行います。`,
-  };
+  const cleanup = await bindServerSession();
+  try {
+    const c = await contractsApi.get(id);
+    return {
+      id: String(c.id),
+      title: c.title,
+      counterparty: c.counterparty ?? "—",
+      contractType: c.contract_type,
+      amount: c.amount ?? null,
+      currency: c.currency ?? "JPY",
+      startDate: formatDate(c.start_date),
+      endDate: formatDate(c.end_date),
+      status: c.status,
+      riskLevel: "low",
+      summary: `${c.contract_type}に関する契約書。相手方 ${c.counterparty ?? "—"} との合意事項を記載。最終的な法的判断は法務担当者・顧問弁護士が行います。`,
+    };
+  } catch {
+    return null;
+  } finally {
+    cleanup();
+  }
 }
 
 interface ContractDetailPageProps {

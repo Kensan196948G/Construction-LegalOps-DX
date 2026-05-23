@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TemplatesGrid } from "@/components/templates/templates-grid";
 import { TemplatesFilters } from "@/components/templates/templates-filters";
 import { CreateTemplateButton } from "@/components/templates/create-template-button";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { templatesApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "ひな形管理",
@@ -38,24 +40,54 @@ interface TemplateListResult {
   perPage: number;
 }
 
-import { MOCK_TEMPLATES } from "@/lib/mock-data";
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 async function getTemplates(params: SearchParams): Promise<TemplateListResult> {
-  let items = MOCK_TEMPLATES.map(t => ({
-    id: t.id, title: t.title, contractType: t.contractType,
-    version: t.version, status: t.status, updatedBy: t.updatedBy, updatedAt: t.updatedAt,
-  }));
-  if (params.q) {
-    const q = params.q.toLowerCase();
-    items = items.filter(t => t.title.toLowerCase().includes(q));
-  }
-  if (params.contractType) items = items.filter(t => t.contractType === params.contractType);
-  if (params.status) items = items.filter(t => t.status === params.status);
   const page = Number(params.page ?? 1);
   const perPage = 24;
-  const total = items.length;
-  items = items.slice((page - 1) * perPage, page * perPage);
-  return { items, total, page, perPage };
+
+  const cleanup = await bindServerSession();
+  try {
+    const result = await templatesApi.list({
+      q: params.q || undefined,
+      page,
+      page_size: perPage,
+    });
+
+    const allItems = result.items.map((t) => ({
+      id: String(t.id),
+      title: t.name,
+      contractType: t.contract_type ?? "—",
+      version: "1.0",
+      status: (t.is_active ? "published" : "archived") as "draft" | "published" | "archived",
+      updatedBy: "—",
+      updatedAt: formatDate(t.updated_at),
+    }));
+
+    // contractType and status filters are client-side (not in backend API)
+    const filtered = allItems.filter((t) => {
+      if (params.contractType && params.contractType !== "all" && t.contractType !== params.contractType) return false;
+      if (params.status && params.status !== "all" && t.status !== params.status) return false;
+      return true;
+    });
+
+    return { items: filtered, total: result.total, page, perPage };
+  } catch {
+    return { items: [], total: 0, page, perPage };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function TemplatesPage({ searchParams }: TemplatesPageProps) {

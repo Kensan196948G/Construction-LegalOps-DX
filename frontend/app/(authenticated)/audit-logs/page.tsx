@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuditLogsTable } from "@/components/audit-logs/audit-logs-table";
 import { AuditLogsFilters } from "@/components/audit-logs/audit-logs-filters";
 import { HashIntegrityBadge } from "@/components/audit-logs/hash-integrity-badge";
+import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { auditLogsApi } from "@/lib/api/endpoints";
 
 export const metadata: Metadata = {
   title: "監査ログ",
@@ -47,26 +49,87 @@ interface AuditLogListResult {
   };
 }
 
-import { MOCK_AUDIT_LOGS } from "@/lib/mock-data";
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 async function getAuditLogs(params: SearchParams): Promise<AuditLogListResult> {
-  let items = MOCK_AUDIT_LOGS.map(l => ({
-    id: l.id, occurredAt: l.occurredAt, actor: l.actor,
-    action: l.action, resourceType: l.resourceType, resourceId: l.resourceId,
-    ipAddress: l.ipAddress, userAgent: l.userAgent,
-    prevHash: l.prevHash, hash: l.hash, chainValid: l.chainValid,
-  }));
-  if (params.actor) items = items.filter(l => l.actor.name.includes(params.actor!));
-  if (params.action) items = items.filter(l => l.action === params.action);
-  if (params.resourceType) items = items.filter(l => l.resourceType === params.resourceType);
   const page = Number(params.page ?? 1);
   const perPage = 50;
-  const total = items.length;
-  items = items.slice((page - 1) * perPage, page * perPage);
-  return {
-    items, total, page, perPage,
-    chainIntegrity: { verified: true, verifiedAt: "2026-05-16T14:32:01", tamperedCount: 0 },
-  };
+
+  const cleanup = await bindServerSession();
+  try {
+    const [listResult, verifyResult] = await Promise.allSettled([
+      auditLogsApi.list({
+        action: params.action || undefined,
+        target_type: params.resourceType || undefined,
+        from: params.from || undefined,
+        to: params.to || undefined,
+        page,
+        page_size: perPage,
+      }),
+      auditLogsApi.verify(),
+    ]);
+
+    const rawItems = listResult.status === "fulfilled" ? listResult.value.items : [];
+    const total = listResult.status === "fulfilled" ? listResult.value.total : 0;
+
+    const allItems = rawItems.map((l) => ({
+      id: String(l.id),
+      occurredAt: formatDate(l.occurred_at),
+      actor: {
+        id: String(l.actor?.id ?? ""),
+        name: l.actor?.display_name ?? "—",
+        role: "—",
+      },
+      action: l.action,
+      resourceType: l.target_type,
+      resourceId: String(l.target_id ?? "—"),
+      ipAddress: null,
+      userAgent: null,
+      prevHash: l.previous_hash ?? "",
+      hash: l.hash_chain ?? "",
+      chainValid: true,
+    }));
+
+    // actor name is a client-side filter (API only supports actor_id)
+    const filtered =
+      params.actor
+        ? allItems.filter((l) => l.actor.name.toLowerCase().includes(params.actor!.toLowerCase()))
+        : allItems;
+
+    const chainIntegrity =
+      verifyResult.status === "fulfilled"
+        ? {
+            verified: verifyResult.value.verified,
+            verifiedAt: null,
+            tamperedCount: verifyResult.value.broken_at !== null ? 1 : 0,
+          }
+        : { verified: true, verifiedAt: null, tamperedCount: 0 };
+
+    return { items: filtered, total, page, perPage, chainIntegrity };
+  } catch {
+    return {
+      items: [],
+      total: 0,
+      page,
+      perPage,
+      chainIntegrity: { verified: true, verifiedAt: null, tamperedCount: 0 },
+    };
+  } finally {
+    cleanup();
+  }
 }
 
 export default async function AuditLogsPage({ searchParams }: AuditLogsPageProps) {
