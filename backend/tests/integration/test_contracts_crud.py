@@ -8,17 +8,18 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="Contracts API implemented in Loop 3")
 
-
-async def test_contract_lifecycle_post_get_patch_delete(client, auth_headers_legal):
+async def test_contract_lifecycle_post_get_patch_delete(
+    client, auth_headers_legal, auth_headers_admin
+):
     """Arrange: legal user. Act: full CRUD. Assert: each step returns expected."""
     # Arrange
     body = {
         "title": "請負契約 - サンプル",
         "contract_type": "ukeoi",
-        "counterparty_name": "サンプル建設株式会社",
-        "contract_amount": 12_345_000,
+        "counterparty": "サンプル建設株式会社",
+        "amount": 12_345_000,
+        "department_id": 1,
     }
     # Act: create
     r_create = await client.post("/api/v1/contracts", json=body, headers=auth_headers_legal)
@@ -33,19 +34,19 @@ async def test_contract_lifecycle_post_get_patch_delete(client, auth_headers_leg
     assert r_get.status_code == 200
     assert r_get.json()["title"] == body["title"]
 
-    # Act: patch
+    # Act: patch (version required for optimistic locking)
     r_patch = await client.patch(
         f"/api/v1/contracts/{contract_id}",
-        json={"title": "請負契約 - 更新後"},
+        json={"title": "請負契約 - 更新後", "version": 1},
         headers=auth_headers_legal,
     )
     # Assert
     assert r_patch.status_code == 200
     assert r_patch.json()["title"] == "請負契約 - 更新後"
 
-    # Act: delete (soft)
+    # Act: delete (soft) — requires admin role
     r_delete = await client.delete(
-        f"/api/v1/contracts/{contract_id}", headers=auth_headers_legal
+        f"/api/v1/contracts/{contract_id}", headers=auth_headers_admin
     )
     # Assert
     assert r_delete.status_code in (200, 204)
@@ -61,11 +62,17 @@ async def test_soft_delete_visible_to_auditor(client, auth_headers_admin, auth_h
     # Arrange
     r_create = await client.post(
         "/api/v1/contracts",
-        json={"title": "監査対象", "contract_type": "itaku", "counterparty_name": "X"},
+        json={
+            "title": "監査対象",
+            "contract_type": "itaku",
+            "counterparty": "X",
+            "department_id": 1,
+        },
         headers=auth_headers_legal,
     )
+    assert r_create.status_code in (200, 201)
     cid = r_create.json()["id"]
-    await client.delete(f"/api/v1/contracts/{cid}", headers=auth_headers_legal)
+    await client.delete(f"/api/v1/contracts/{cid}", headers=auth_headers_admin)
 
     # Act
     r_admin = await client.get(

@@ -87,7 +87,7 @@ async def create_contract(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> ContractOut:
     contract = await contract_service.create_contract(
         session,
@@ -114,11 +114,12 @@ async def create_contract(
 )
 async def get_contract(
     contract_id: int,
+    include_deleted: bool = Query(default=False, description="論理削除済み契約を含める (admin/auditor)"),
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ContractOut:
     contract = await contract_service.get_contract(
-        session, contract_id=contract_id, viewer=current_user
+        session, contract_id=contract_id, viewer=current_user, include_deleted=include_deleted
     )
     if contract is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
@@ -205,7 +206,7 @@ async def submit_contract(
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> ContractOut:
     try:
         contract = await contract_service.submit_for_review(

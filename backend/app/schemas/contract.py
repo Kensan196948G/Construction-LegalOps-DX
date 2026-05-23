@@ -12,7 +12,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 from app.models.enums import Confidentiality, ContractStatus
 
@@ -108,7 +108,13 @@ class ContractDetail(ContractRead):
     """Detailed read schema for ``GET /contracts/{id}``."""
 
     sharepoint_item_id: str | None = None
-    extra_metadata: dict[str, Any] = Field(default_factory=dict, alias="metadata")
+    extra_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        # When loading from ORM objects, try 'extra_metadata' first to avoid
+        # collision with SQLAlchemy's inherited MetaData() on all Base models.
+        validation_alias=AliasChoices("extra_metadata", "metadata"),
+        serialization_alias="metadata",
+    )
     drafter_id: int | None = None
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

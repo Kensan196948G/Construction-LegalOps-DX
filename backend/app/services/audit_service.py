@@ -257,10 +257,13 @@ class AuditService:
 
 
 def _json_default(o: Any) -> Any:
+    import decimal
     if isinstance(o, datetime):
         return o.isoformat()
     if isinstance(o, UUID):
         return str(o)
+    if isinstance(o, decimal.Decimal):
+        return float(o)
     if hasattr(o, "value"):  # Enum
         return o.value
     raise TypeError(f"object of type {type(o).__name__} is not JSON serializable")

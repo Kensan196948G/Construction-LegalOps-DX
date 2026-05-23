@@ -106,6 +106,10 @@ async def client(test_engine: Any) -> AsyncGenerator[Any, None]:
         session = Session()
         try:
             yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()
 

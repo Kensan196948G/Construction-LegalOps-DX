@@ -36,6 +36,7 @@ from __future__ import annotations
 import os
 from typing import Final
 
+from sqlalchemy import BigInteger
 from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -66,6 +67,13 @@ def _compile_array_sqlite(_type_: object, _compiler: object, **_: object) -> str
     # Represent PG ARRAY as JSON text on SQLite. Tests that need true
     # array semantics should remain skipped.
     return "JSON"
+
+
+@compiles(BigInteger, "sqlite")  # type: ignore[misc, no-untyped-call]
+def _compile_bigint_sqlite(_type_: object, _compiler: object, **_: object) -> str:
+    # SQLite only auto-increments INTEGER PRIMARY KEY (ROWID alias).
+    # BigInteger emits "BIGINT" which breaks autoincrement for PK columns.
+    return "INTEGER"
 
 
 # ---------------------------------------------------------------------------

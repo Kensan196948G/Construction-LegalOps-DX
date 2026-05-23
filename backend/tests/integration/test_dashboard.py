@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.skip(reason="Dashboard API implemented in Loop 3")
+pytestmark = pytest.mark.xfail(strict=False, reason="Dashboard service is a stub returning 501")
 
 
 async def test_dashboard_summary_returns_metrics(client, auth_headers_admin):
