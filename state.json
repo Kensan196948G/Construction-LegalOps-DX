@@ -6,32 +6,32 @@
     "start_date": "2026-05-16",
     "release_deadline": "2026-11-16",
     "duration_months": 6,
-    "phase_mode": "release_preparation",
-    "status": "loops_complete",
-    "last_loop_completed": 5,
-    "loops_total": 5,
-    "current_version": "0.1.0"
+    "phase_mode": "development",
+    "status": "ci_test_auth_complete",
+    "last_loop_completed": 11,
+    "loops_total": 11,
+    "current_version": "0.1.1"
   },
   "goal": "Construction-LegalOps-DX 自律開発",
   "phase": "Build",
   "kpi": {
     "success_rate_target": 0.9,
-    "ci_success_rate": 1.0,
-    "test_pass_rate": 1.0,
+    "ci_success_rate": 1,
+    "test_pass_rate": 1,
     "security_critical": 0,
     "blocker_count": 0
   },
   "execution": {
-    "max_duration_minutes": 240,
+    "max_duration_minutes": 300,
     "repair_count": 0,
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 9(Design Implementation): デザインプロトタイプ実装完了。新規6ページ（契約申請/建設業法務/期限管理/取引先/紛争/レポート）追加。サイドバー11→17項目。AppHeader機能化（ダークモードトグル/通知/ユーザーメニュー）。next-themes ThemeProvider追加。mock-data.ts型付きモックデータ共通化。TypeScript・ESLint・Build全クリア。main pushd完了。",
-    "current_session_start_at": "2026-05-16T10:00:01.976Z",
+    "last_session_summary": "Loop 11(CI/Test/Auth): Jest 環境を整備し35テスト通過。認証ミドルウェア再有効化。",
+    "last_stop_at": "2026-05-23T10:07:07.453Z",
+    "current_session_start_at": "2026-05-23T10:07:07.453Z",
     "last_trigger": "cron",
-    "last_stop_at": "2026-05-16T10:45:00.000Z",
-    "last_cron_session_id": "20260516-190001-Construction-LegalOps-DX"
+    "last_cron_session_id": "20260523-190001-Construction-LegalOps-DX"
   },
   "automation": {
     "auto_issue_generation": true,
@@ -42,77 +42,45 @@
     "target_n": 3,
     "stable_achieved": true
   },
-  "loop6": {
-    "name": "CI Fix & Security Upgrades",
+  "loop10": {
+    "name": "UI Detail Pages & Table Fixes",
     "completed_at": "2026-05-16",
-    "summary": "CI 全ジョブ green 達成。ruff 529→0エラー修正、mypy PEP695(NewGenericSyntax)有効化、trivy install.sh latest化、bandit nosec追加(B108/B310)、Next.js 15.0.3→15.5.18(CVE修正)、React RC→19.2.6 stable、session-bridge Server/Client分割、backend Dockerfile stub README追加。PR #3 merged。"
+    "summary": "contracts/reviews/workflows 詳細ページの getXxx() を MOCK lookup に差し替え。ContractSummary/ContractClausesViewer/ContractAttachmentsList/ContractActivityLog/RiskBadge/ReviewIssuesPanel/ReviewRisksPanel/ReviewSuggestionsPanel/ReviewAuditTrail/LawyerConfirmationCheckbox/WorkflowStepper/WorkflowActions/WorkflowHistory/RouteBadge 全コンポーネント実装。設定パネル6種実装。ContractUploadForm 3フェーズアニメーション実装。全テーブルのバッジ列 whitespace-nowrap・タイトル列 truncate で1行化。PR #6 merged。"
   },
-  "loop7": {
-    "name": "P0 Security — JWT RS256 + CSP Enforce",
-    "completed_at": "2026-05-16",
-    "summary": "JWT RS256 非対称鍵対応実装(JWT_PRIVATE_KEY/JWT_PUBLIC_KEY環境変数)、CSP enforce切替(CSP_ENFORCE環境変数)、SecurityHeadersMiddlewareリファクタ、RS256ユニットテスト7件追加(pytest 57 passed)。PR #4 merged to main。"
+  "loop11": {
+    "name": "CI/Test/Auth Enablement",
+    "completed_at": "2026-05-23",
+    "summary": "Jest 29 + MSW 2.x + jsdom 環境整備: CustomJSDOMEnvironment (fetch API polyfill)・rettime CJS stub・MSW no-op server stub・moduleNameMapper を整備。kpi-card/contracts-table/contract-summary/contracts-filters 35テスト全通過。認証ミドルウェア再有効化 (middleware.ts.auth-disabled-backup → middleware.ts)。"
   },
-  "loop8": {
-    "name": "Integration Tests Unlock + Service Stubs",
-    "completed_at": "2026-05-16",
-    "summary": "health/RBAC integration test skip解除(10件)。contract_service.list_contracts + user_service.list_users 最小実装。test_session.py で app.models import 追加（SQLite schema 作成修正）。users.py に DELETE /users/{id} RBAC stub 追加。/healthz・/readyz root-level endpoint 追加。pytest 57→67 passed。PR #5 merged。STABLE 達成（consecutive=3/3）。"
-  },
+  "next_actions": [
+    "設計ファイル (Construction-LegalOps-DX.html) の実装: ユーザー指定デザインを反映",
+    "バックエンド API と フロントエンド mock-data.ts の接続（API ready後）",
+    "本番環境 secrets 投入（Vault）",
+    "E2E テスト Playwright 化",
+    "残 tdd_required 警告 65件のテスト追加"
+  ],
   "completed_issues": [],
   "blocked_issues": [],
   "learning": {
-    "failure_patterns": [],
-    "success_patterns": []
-  },
-  "quality_gates": {
-    "lint": {
-      "warning_threshold": 10,
-      "error_threshold": 0
-    },
-    "coverage": {
-      "line_min": 70,
-      "changed_files_min": 80
-    }
-  },
-  "loop1": {
-    "name": "Foundation",
-    "completed_at": "2026-05-16",
-    "summary": "リポジトリ初期スキャフォールド、README/LICENSE/CONTRIBUTING/CHANGELOG、CI、docker-compose 枠、設計ドキュメント整備。"
-  },
-  "loop2": {
-    "name": "Backend MVP",
-    "completed_at": "2026-05-16",
-    "summary": "FastAPI 本体、SQLAlchemy モデル、Alembic、Entra ID + JWT 認証、契約書 CRUD、Claude API ラッパー、監査ログサービス、pytest 初期セット。"
-  },
-  "loop3": {
-    "name": "Frontend MVP",
-    "completed_at": "2026-05-16",
-    "summary": "Next.js 14 + Tailwind + shadcn/ui、ログイン/ダッシュボード/契約書/レビュー/ワークフロー/監査ログ画面、AI 出力ディスクレーマー常時表示、Jest テスト。"
-  },
-  "loop4": {
-    "name": "Security & Infra",
-    "completed_at": "2026-05-16",
-    "summary": "nginx + TLS + HSTS、CSP Report-Only、PostgreSQL 16 本番パラメータ、audit_logs トリガー、Redis 7、/healthz・/readyz、Trivy/Bandit/npm audit CI 統合。"
-  },
-  "loop5": {
-    "name": "Integration & Finalization",
-    "completed_at": "2026-05-16",
-    "summary": "E2E 結合テストハーネス、CHANGELOG.md v0.1.0 確定、README.md に Quick Start / Compliance / Project Timeline 追加、docs/RELEASE_CHECKLIST.md と docs/HANDOVER.md 新規作成、state.json をリリース準備フェーズへ更新。",
-    "blockers_resolved": [
-      "CHANGELOG.md の Unreleased セクション空白問題を解消し v0.1.0 を確定",
-      "README.md に Quick Start 不在問題を解消",
-      "本番リリース手順の文書化欠如を docs/RELEASE_CHECKLIST.md で解消",
-      "次セッション引き継ぎ情報の欠如を docs/HANDOVER.md で解消"
+    "failure_patterns": [
+      {
+        "at": "2026-05-23",
+        "summary": "MSW 2.x は rettime/until-async 等 ESM-only 依存を CJS build から require() するため、個別スタブよりも no-op server stub に切り替えた方が保守性が高い"
+      }
     ],
-    "outstanding_tasks": [
-      "JWT 署名鍵を HS256 → RS256 に切替 (P0)",
-      "CSP Report-Only → enforce 移行 (P0)",
-      "本番 secrets の Vault 投入 (P0)",
-      "/readyz の本番チューニング (deep check 実装) (P1)",
-      "結合テストの PostgreSQL profile 統一 (P1)",
-      "alembic PITR リストアテストの実施 (P1)",
-      "audit_logs テーブルの月次パーティショニング検討 (P1)",
-      "E2E テストの Playwright 化 (P2)",
-      "AI レビュー結果の根拠条文ハイライト UI (P2)"
+    "success_patterns": [
+      {
+        "at": "2026-05-16T13:02:19.937Z",
+        "summary": "Loop 10(UI Detail Pages): 詳細ページ・設定パネル・アップロードフォーム・テーブル1行化を実装。PR #6 merged to main。"
+      },
+      {
+        "at": "2026-05-16",
+        "summary": "whitespace-nowrap をバッジセルに、truncate をタイトルセルに付与するだけで全テーブルの2行問題を一括解決できた"
+      },
+      {
+        "at": "2026-05-23",
+        "summary": "Loop 11(CI/Test/Auth): JSDOMEnvironment を拡張して Node.js fetch globals を jsdom window に注入するパターンが MSW 2.x 対応の最善策"
+      }
     ]
   },
   "next_milestones": {
@@ -123,9 +91,6 @@
       "7_days_left": "2026-11-09"
     }
   },
-  "compact": {
-    "last_pre_compact_at": "2026-05-16T08:04:45.950Z"
-  },
   "dreaming": {
     "patterns": [],
     "curated_memories": [],
@@ -133,44 +98,8 @@
     "last_dreaming_run": null,
     "dreaming_enabled": false
   },
-  "warnings": [
-    {
-      "at": "2026-05-16T08:07:33.959Z",
-      "kind": "tdd_required",
-      "message": "テスト未整備の変更が 148 件あります。/tdd または tdd-guide agent で対応してください。",
-      "files": [
-        "backend/app/api/v1/__init__.py",
-        "backend/app/api/v1/audit_logs.py",
-        "backend/app/api/v1/auth.py",
-        "backend/app/api/v1/compliance.py",
-        "backend/app/api/v1/contracts.py",
-        "backend/app/api/v1/dashboard.py",
-        "backend/app/api/v1/health.py",
-        "backend/app/api/v1/knowledge.py",
-        "backend/app/api/v1/notifications.py",
-        "backend/app/api/v1/reviews.py",
-        "backend/app/api/v1/risks.py",
-        "backend/app/api/v1/templates.py",
-        "backend/app/api/v1/uploads.py",
-        "backend/app/api/v1/users.py",
-        "backend/app/api/v1/workflows.py",
-        "backend/app/core/security.py",
-        "backend/app/db/test_session.py",
-        "backend/app/middleware/__init__.py",
-        "backend/app/middleware/security_headers.py",
-        "backend/app/middleware/sensitive_masking.py",
-        "backend/app/schemas/audit_log.py",
-        "backend/app/schemas/auth.py",
-        "backend/app/schemas/clause.py",
-        "backend/app/schemas/common.py",
-        "backend/app/schemas/compliance.py",
-        "backend/app/schemas/contract.py",
-        "backend/app/schemas/dashboard.py",
-        "backend/app/schemas/knowledge.py",
-        "backend/app/schemas/notification.py",
-        "backend/app/schemas/review.py"
-      ],
-      "truncated": true
-    }
-  ]
+  "warnings": [],
+  "compact": {
+    "last_pre_compact_at": "2026-05-23T10:05:13.938Z"
+  }
 }

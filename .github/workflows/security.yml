@@ -3,7 +3,7 @@ name: Security (weekly deep scan)
 # 毎週月曜 03:00 JST (= UTC 18:00 日曜) に実行 + 手動実行
 on:
   schedule:
-    - cron: "0 18 * * 1"  # 月曜 03:00 JST
+    - cron: "0 18 * * 1" # 月曜 03:00 JST
   workflow_dispatch:
   push:
     branches: [main]
@@ -21,6 +21,7 @@ permissions:
 
 env:
   TZ: Asia/Tokyo
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   # ----------------------------------------------------------
@@ -44,7 +45,7 @@ jobs:
           bandit -r backend/app -ll -ii -f sarif -o bandit.sarif || true
 
       - name: Upload Bandit SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: bandit.sarif
           category: bandit
@@ -59,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trivy filesystem scan (SARIF)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           scan-type: fs
           scan-ref: .
@@ -70,7 +71,7 @@ jobs:
           scanners: vuln,secret,misconfig
 
       - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs.sarif
           category: trivy-fs
@@ -172,7 +173,7 @@ jobs:
 
       - name: Trivy scan backend image (SARIF)
         if: hashFiles('backend/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: legalops/backend:scan
           format: sarif
@@ -182,7 +183,7 @@ jobs:
 
       - name: Trivy scan frontend image (SARIF)
         if: hashFiles('frontend/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.29.0
         with:
           image-ref: legalops/frontend:scan
           format: sarif
@@ -192,14 +193,14 @@ jobs:
 
       - name: Upload Trivy backend SARIF
         if: hashFiles('trivy-backend.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-backend.sarif
           category: trivy-image-backend
 
       - name: Upload Trivy frontend SARIF
         if: hashFiles('trivy-frontend.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-frontend.sarif
           category: trivy-image-frontend

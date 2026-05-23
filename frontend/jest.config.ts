@@ -17,11 +17,29 @@ const createJestConfig = nextJest({
 });
 
 const customConfig: Config = {
-  testEnvironment: "jsdom",
+  // Custom environment extends JSDOMEnvironment and copies Node.js Fetch globals
+  // into the jsdom window before MSW 2.x interceptors initialize.
+  testEnvironment: "<rootDir>/jest.environment.ts",
+  setupFiles: ["<rootDir>/jest.polyfills.ts"],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
+    // rettime is ESM-only; provide a CJS stub so MSW 2.x can initialize in Jest
+    "^rettime$": "<rootDir>/__mocks__/rettime.js",
+    // MSW 2.x + @mswjs/interceptors subpath exports: Jest (CJS) cannot resolve package exports
+    "^msw/node$": "<rootDir>/node_modules/msw/lib/node/index.js",
+    "^msw/browser$": "<rootDir>/node_modules/msw/lib/browser/index.js",
+    "^@mswjs/interceptors/ClientRequest$": "<rootDir>/node_modules/@mswjs/interceptors/lib/node/interceptors/ClientRequest/index.cjs",
+    "^@mswjs/interceptors/XMLHttpRequest$": "<rootDir>/node_modules/@mswjs/interceptors/lib/node/interceptors/XMLHttpRequest/index.cjs",
+    "^@mswjs/interceptors/fetch$": "<rootDir>/node_modules/@mswjs/interceptors/lib/node/interceptors/fetch/index.cjs",
+    "^@mswjs/interceptors/WebSocket$": "<rootDir>/node_modules/@mswjs/interceptors/lib/browser/interceptors/WebSocket/index.cjs",
   },
+  // rettime is ESM-only; add it alongside next/jest's default geist exception.
+  transformIgnorePatterns: [
+    "/node_modules/(?!.pnpm)(?!(geist|rettime)/)",
+    "/node_modules/.pnpm/(?!(geist|rettime)@)",
+    "^.+\\.module\\.(css|sass|scss)$",
+  ],
   testPathIgnorePatterns: ["/node_modules/", "/.next/", "/dist/", "/coverage/"],
   collectCoverageFrom: [
     "app/**/*.{ts,tsx}",
