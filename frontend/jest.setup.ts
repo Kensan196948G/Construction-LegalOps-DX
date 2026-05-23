@@ -6,6 +6,7 @@
  * - `next-auth` の `auth` / `signIn` / `signOut` をデフォルトでモックし、
  *   各テストで `jest.mocked(auth).mockResolvedValue(...)` 等で差し替え可能とする
  */
+
 import "@testing-library/jest-dom";
 
 import { server } from "./__mocks__/msw/server";

@@ -36,6 +36,15 @@
     ".next",
     "out",
     "dist",
-    "coverage"
+    "coverage",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "jest.config.ts",
+    "jest.setup.ts",
+    "jest.polyfills.ts",
+    "jest.environment.ts"
   ]
 }

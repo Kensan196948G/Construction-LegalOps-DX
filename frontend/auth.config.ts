@@ -136,6 +136,9 @@ export const authConfig = {
      * ルート保護 (Edge middleware から呼ばれる)。
      */
     authorized({ auth, request }) {
+      // Dev bypass: skip SSO when AUTH_DEV_BYPASS=true (never set in production)
+      if (process.env.AUTH_DEV_BYPASS === "true") return true;
+
       const { nextUrl } = request;
       const isLoggedIn = Boolean(auth?.user);
       const isOnLogin = nextUrl.pathname.startsWith("/login");

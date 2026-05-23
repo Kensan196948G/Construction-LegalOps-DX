@@ -255,19 +255,20 @@ export interface MockRisk {
   id: string; contractId: string; contractTitle: string; category: string;
   level: RiskLevel; score: number; description: string;
   status: RiskItemStatus; owner: string | null; detectedAt: string;
+  probability: 1 | 2 | 3 | 4; impact: 1 | 2 | 3 | 4;
 }
 
 export const MOCK_RISKS: MockRisk[] = [
-  { id: "RSK-0001", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", category: "下請法", level: "critical", score: 88, description: "支払期日が納品後75日に設定されており、下請法第2条の4（60日ルール）に抵触する可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/11" },
-  { id: "RSK-0002", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "建設業法", level: "high", score: 72, description: "第7条の解除条項が発注者に一方的に有利であり、建設業法第19条の3に抵触する恐れがあります。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/14" },
-  { id: "RSK-0003", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "損害賠償", level: "high", score: 65, description: "損害賠償の上限条項が設定されておらず、過大なリスク負担となる可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/14" },
-  { id: "RSK-0004", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（鈴木土木(株)）", category: "工期", level: "medium", score: 45, description: "工期延長条件が不明確で、天候不順・不可抗力時の対応が未定義です。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/13" },
-  { id: "RSK-0005", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)中村組）", category: "建設業法", level: "high", score: 70, description: "主任技術者の配置届が未提出であり、建設業法第26条違反の可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/04/30" },
-  { id: "RSK-0006", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（横浜建設(株)）", category: "秘密保持", level: "medium", score: 38, description: "秘密情報の定義が過度に広範であり、実務上の適用が困難です。", status: "accepted", owner: "渡辺 誠", detectedAt: "2026/05/07" },
-  { id: "RSK-0007", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)山田設計事務所）", category: "検査・引渡し", level: "medium", score: 42, description: "検査期間が7日間と設定されており、工事規模に対して不十分な可能性があります。", status: "mitigated", owner: "田中 太郎", detectedAt: "2026/05/10" },
-  { id: "RSK-0008", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", category: "下請法", level: "low", score: 22, description: "支払条件の記載が一部不明確ですが、口頭での合意があることを確認しました。", status: "closed", owner: "鈴木 花子", detectedAt: "2026/04/28" },
-  { id: "RSK-0009", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", category: "建設業法", level: "high", score: 68, description: "施工体制台帳の二次下請記載が不完全で、公共工事入札適正化法第15条に抵触する可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/05/15" },
-  { id: "RSK-0010", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（東日本資材(株)）", category: "独占禁止法", level: "low", score: 18, description: "特定メーカー指定条項の該当性を確認中。現時点では軽微と判断。", status: "accepted", owner: "田中 太郎", detectedAt: "2026/05/12" },
+  { id: "RSK-0001", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", category: "下請法", level: "critical", score: 88, description: "支払期日が納品後75日に設定されており、下請法第2条の4（60日ルール）に抵触する可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/11", probability: 4, impact: 4 },
+  { id: "RSK-0002", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "建設業法", level: "high", score: 72, description: "第7条の解除条項が発注者に一方的に有利であり、建設業法第19条の3に抵触する恐れがあります。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/14", probability: 3, impact: 4 },
+  { id: "RSK-0003", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "損害賠償", level: "high", score: 65, description: "損害賠償の上限条項が設定されておらず、過大なリスク負担となる可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/14", probability: 3, impact: 3 },
+  { id: "RSK-0004", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（鈴木土木(株)）", category: "工期", level: "medium", score: 45, description: "工期延長条件が不明確で、天候不順・不可抗力時の対応が未定義です。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/13", probability: 3, impact: 2 },
+  { id: "RSK-0005", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)中村組）", category: "建設業法", level: "high", score: 70, description: "主任技術者の配置届が未提出であり、建設業法第26条違反の可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/04/30", probability: 4, impact: 3 },
+  { id: "RSK-0006", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（横浜建設(株)）", category: "秘密保持", level: "medium", score: 38, description: "秘密情報の定義が過度に広範であり、実務上の適用が困難です。", status: "accepted", owner: "渡辺 誠", detectedAt: "2026/05/07", probability: 2, impact: 2 },
+  { id: "RSK-0007", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)山田設計事務所）", category: "検査・引渡し", level: "medium", score: 42, description: "検査期間が7日間と設定されており、工事規模に対して不十分な可能性があります。", status: "mitigated", owner: "田中 太郎", detectedAt: "2026/05/10", probability: 2, impact: 3 },
+  { id: "RSK-0008", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", category: "下請法", level: "low", score: 22, description: "支払条件の記載が一部不明確ですが、口頭での合意があることを確認しました。", status: "closed", owner: "鈴木 花子", detectedAt: "2026/04/28", probability: 1, impact: 2 },
+  { id: "RSK-0009", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", category: "建設業法", level: "high", score: 68, description: "施工体制台帳の二次下請記載が不完全で、公共工事入札適正化法第15条に抵触する可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/05/15", probability: 3, impact: 3 },
+  { id: "RSK-0010", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（東日本資材(株)）", category: "独占禁止法", level: "low", score: 18, description: "特定メーカー指定条項の該当性を確認中。現時点では軽微と判断。", status: "accepted", owner: "田中 太郎", detectedAt: "2026/05/12", probability: 1, impact: 1 },
 ];
 
 export type KnowledgeSource = "internal_doc" | "precedent" | "faq" | "playbook";
