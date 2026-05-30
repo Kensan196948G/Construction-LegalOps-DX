@@ -82,9 +82,7 @@ async def create_template(
             session, data=payload, creator=current_user
         )
     except NotImplementedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from exc
     await audit_service.log(
         session,
         actor_id=current_user.id,
@@ -137,10 +135,7 @@ async def create_clause(
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> ClauseLibraryOut:
-    try:
-        clause = await template_service.create_clause(session, data=payload, creator=current_user)
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from exc
+    clause = await template_service.create_clause(session, data=payload, creator=current_user)
     await audit_service.log(
         session,
         actor_id=current_user.id,
@@ -171,8 +166,6 @@ async def update_clause(
         )
     except LookupError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="clause not found")
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 

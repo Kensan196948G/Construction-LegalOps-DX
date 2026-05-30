@@ -16,10 +16,17 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.clause import ClauseLibrary
 from app.models.user import User
-from app.schemas.template import ClauseLibraryCreate, ClauseLibraryUpdate, TemplateCreate
+from app.schemas.template import (
+    ClauseLibraryCreate,
+    ClauseLibraryOut,
+    ClauseLibraryUpdate,
+    TemplateCreate,
+)
 
 # ---------------------------------------------------------------------------
 # Baseline timestamp used for all seeded records.
@@ -351,6 +358,25 @@ async def create_template(
     )
 
 
+def _clause_to_out(clause: ClauseLibrary) -> ClauseLibraryOut:
+    """Map ORM ClauseLibrary to ClauseLibraryOut.
+
+    ``ClauseLibrary.body`` is exposed as ``ClauseLibraryOut.text`` to
+    satisfy the API schema contract.
+    """
+    return ClauseLibraryOut(
+        id=clause.id,
+        code=clause.code,
+        title=clause.title,
+        category=clause.category,
+        recommendation=clause.recommendation,
+        text=clause.body,
+        tags=list(clause.tags or []),
+        created_at=clause.created_at,
+        updated_at=clause.updated_at,
+    )
+
+
 async def list_clauses(
     session: AsyncSession,
     *,
@@ -361,26 +387,37 @@ async def list_clauses(
     template_id: int | None = None,  # reserved for future use
     page: int = 1,
     size: int = 20,
-) -> tuple[list[Any], int]:
-    """Return a paginated list of clause-library entries, optionally filtered."""
-    results = list(_CLAUSES)
+) -> tuple[list[ClauseLibraryOut], int]:
+    """Return a paginated list of ClauseLibrary entries from the database."""
+    stmt = select(ClauseLibrary).where(ClauseLibrary.deleted_at.is_(None))
 
     if category:
-        results = [c for c in results if c.category == category]
-
+        stmt = stmt.where(ClauseLibrary.category == category)
     if recommendation:
-        results = [c for c in results if c.recommendation == recommendation]
-
-    if tag:
-        results = [c for c in results if tag in c.tags]
-
+        stmt = stmt.where(ClauseLibrary.recommendation == recommendation)
     if q:
-        q_lower = q.lower()
-        results = [c for c in results if q_lower in c.title.lower() or q_lower in c.text.lower()]
+        pattern = f"%{q}%"
+        stmt = stmt.where(
+            or_(
+                ClauseLibrary.title.ilike(pattern),
+                ClauseLibrary.body.ilike(pattern),
+            )
+        )
 
-    total = len(results)
-    offset = (page - 1) * size
-    return results[offset : offset + size], total
+    count_q = await session.execute(select(func.count()).select_from(stmt.subquery()))
+    total: int = count_q.scalar() or 0
+
+    data_q = await session.execute(
+        stmt.order_by(ClauseLibrary.id).offset((page - 1) * size).limit(size)
+    )
+    rows = data_q.scalars().all()
+
+    # tag filter is applied in Python (ARRAY contains varies across dialects)
+    if tag:
+        rows = [r for r in rows if tag in (r.tags or [])]
+        total = len(rows)
+
+    return [_clause_to_out(r) for r in rows], total
 
 
 async def create_clause(
@@ -388,11 +425,20 @@ async def create_clause(
     *,
     data: ClauseLibraryCreate,
     creator: User,
-) -> Any:
-    """Create a clause-library entry. Not yet implemented."""
-    raise NotImplementedError(
-        "template_service.create_clause: DB table for clause_library is planned for a future loop"
+) -> ClauseLibraryOut:
+    """Create and persist a clause-library entry."""
+    clause = ClauseLibrary(
+        code=data.code,
+        title=data.title,
+        category=data.category,
+        body=data.text,
+        recommendation=data.recommendation,
+        tags=data.tags,
     )
+    session.add(clause)
+    await session.flush()
+    await session.refresh(clause)
+    return _clause_to_out(clause)
 
 
 async def update_clause(
@@ -401,20 +447,30 @@ async def update_clause(
     clause_id: int,
     data: ClauseLibraryUpdate,
     editor: User,
-) -> Any:
-    """Update a clause-library entry. Not yet implemented.
+) -> ClauseLibraryOut:
+    """Apply a partial update to a ClauseLibrary entry.
 
     Raises
     ------
     LookupError
-        When ``clause_id`` does not exist (checked first so the router
-        can return 404 before the 501).
-    NotImplementedError
-        Always after the existence check, until persistent storage lands.
-        The API router converts this to HTTP 501.
+        When ``clause_id`` does not exist or is soft-deleted.
     """
-    if clause_id not in _CLAUSES_BY_ID:
-        raise LookupError(f"clause {clause_id} not found")
-    raise NotImplementedError(
-        "template_service.update_clause: DB table for clause_library is planned for a future loop"
+    result = await session.execute(
+        select(ClauseLibrary).where(
+            ClauseLibrary.id == clause_id,
+            ClauseLibrary.deleted_at.is_(None),
+        )
     )
+    clause = result.scalar_one_or_none()
+    if clause is None:
+        raise LookupError(f"clause {clause_id} not found")
+
+    updates = data.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        # ClauseLibraryUpdate.text maps to ClauseLibrary.body
+        db_field = "body" if field == "text" else field
+        setattr(clause, db_field, value)
+
+    await session.flush()
+    await session.refresh(clause)
+    return _clause_to_out(clause)
