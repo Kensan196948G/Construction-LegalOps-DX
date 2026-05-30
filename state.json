@@ -7,10 +7,10 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "frontend_api_connected",
-    "last_loop_completed": 16,
-    "loops_total": 16,
-    "current_version": "0.1.4"
+    "status": "backend_services_implemented",
+    "last_loop_completed": 18,
+    "loops_total": 18,
+    "current_version": "0.1.6"
   },
   "goal": "Construction-LegalOps-DX 自律開発",
   "phase": "Build",
@@ -27,11 +27,11 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21 passed / 0 failed。PR #9 作成。",
+    "last_session_summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘5件修正（N+1/GROUP BY/NotImplementedError/viewer scope/_STUB_TS）。mypy clean。PR #14作成。",
     "last_stop_at": "2026-05-23T13:45:45.198Z",
-    "current_session_start_at": "2026-05-23T14:48:43.776Z",
+    "current_session_start_at": "2026-05-30T10:00:02.654Z",
     "last_trigger": "cron",
-    "last_cron_session_id": "20260523-190001-Construction-LegalOps-DX"
+    "last_cron_session_id": "20260530-190001-Construction-LegalOps-DX"
   },
   "automation": {
     "auto_issue_generation": true,
@@ -67,13 +67,18 @@
     "completed_at": "2026-05-23",
     "summary": "全(authenticated)ページのMOCK_* → リアルAPI置き換え完了。audit-logs/compliance/templates/contracts[id]/reviews[id]/workflows[id]を含む全12ページ。reviewStatusEnum 'approved'→'accepted' バグ修正。actor.role 非存在フィールド '—'固定。workflows/[id]はcontractsApi.get(id)ブリッジ(steps空)。npm run build 22ページ TypeScriptエラーなし。PR #12 merged(v0.1.4)。"
   },
+  "loop17": {
+    "name": "Workflow Real Steps + ESLint Fixes + API Pages Cleanup",
+    "completed_at": "2026-05-23",
+    "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
+  },
   "next_actions": [
-    "workflows/[id] steps: バックエンドに workflow instance API 実装後に置き換え",
-    "ESLint Warning 2件修正 (recent-reviews-list.tsx cn / knowledge-results.tsx Link)",
-    "audit_service.list_logs スタブ → 実実装",
-    "dashboard_service / review_service / workflow_service スタブ → 実実装",
-    "本番環境 secrets 投入（Vault）",
-    "E2E テスト Playwright 化"
+    "E2E Playwright テスト実行確認（Next.js ビルド + AUTH_DEV_BYPASS=true）",
+    "review_service / workflow_service のテストカバレッジ向上（27% / 38%）",
+    "knowledge_articles DB テーブル + Alembic マイグレーション",
+    "template_service DB 永続化",
+    "RS256 JWT key rotation",
+    "本番環境 secrets 投入（Vault）"
   ],
   "completed_issues": [],
   "blocked_issues": [],
@@ -109,7 +114,18 @@
         "at": "2026-05-23",
         "summary": "Loop 12(Design Impl): CSS Grid gridTemplateColumns='auto 1fr 1fr 1fr 1fr' + React.Fragment key パターンでヒートマップをクリーンに実装。JSX <> フラグメントに key は渡せないため Fragment 明示形式が必須。"
       }
-    ]
+    ],
+    "usage_history": {
+      "agents": {
+        "general-purpose": {
+          "call_count": 2,
+          "last_used": "2026-05-30T10:13:36.781Z",
+          "last_description": "knowledge_service と template_service 実装"
+        },
+        "_total_agent_calls": 2,
+        "_last_agent_call_at": "2026-05-30T10:13:36.781Z"
+      }
+    }
   },
   "next_milestones": {
     "production_release": "2026-11-16",
@@ -205,6 +221,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-05-23T14:47:29.836Z"
+    "last_pre_compact_at": "2026-05-23T14:56:16.282Z"
   }
 }
