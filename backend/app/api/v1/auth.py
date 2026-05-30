@@ -137,7 +137,7 @@ async def refresh_token(
     new_access = create_access_token(subject=str(subject), extra_claims=extra)
     return RefreshResponse(
         access_token=new_access,
-        token_type="Bearer",  # noqa: S106 — RFC 6749 standard token type, not a secret
+        token_type="Bearer",
         expires_in=settings.jwt_expire_minutes * 60,
     )
 

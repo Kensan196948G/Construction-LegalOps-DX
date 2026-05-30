@@ -19,25 +19,30 @@
 ## 2. ID 管理と認証
 
 ### 2.1 Entra ID SSO
+
 - すべてのユーザ認証は Entra ID 経由（OIDC / OAuth 2.0）。
 - ローカルアカウント禁止（緊急用 break-glass 2 名のみ Vault 厳重管理）。
 - グループ ベース アクセス（Entra ID セキュリティグループに RBAC を紐付け）。
 
 ### 2.2 多要素認証 (MFA)
+
 - 全ユーザ MFA 必須（Microsoft Authenticator または FIDO2）。
 - 高リスク操作（承認、データエクスポート、管理操作）は再認証（Step-up）。
 
 ### 2.3 条件付きアクセス
+
 - デバイスコンプライアンス（Intune / HENNGE One Device Cert）必須。
 - 不明な場所・匿名プロキシ・トラベル不可なジオロケーションをブロック。
 - 業務時間外の管理操作には追加承認。
 
 ### 2.4 HENNGE One
+
 - メール経路の DLP・暗号化・送信時パスワード管理。
 - 外部送信時に PPAP の代替として ZIP+S/MIME またはリンク共有を利用。
 - 外部 AI API への通信もポリシー対象。
 
 ### 2.5 アカウントライフサイクル
+
 - HRMS と連携し入退社・異動を 24 時間以内に反映。
 - 退職時即時無効化（Entra ID disable）、本システム上のセッション強制終了。
 - 90 日無利用アカウントは自動無効化。
@@ -48,13 +53,13 @@
 
 ### 3.1 ロール定義
 
-| ロール | 主用途 | 主要権限 |
-|--------|--------|---------|
-| `admin` | システム全体管理、IT 部門 | ユーザ・ロール管理、システム設定、監査ログ閲覧（書込不可） |
-| `legal` | 法務課 | 全契約閲覧、編集、承認、AI 機能フル利用、雛形管理 |
-| `manager` | 支店長・本部長・事業部門長 | 配下案件の承認、配下ユーザ案件閲覧、自部署統計 |
-| `site` | 現場・営業 | 自身が起票・関与する案件のみ、起票・コメント、限定閲覧 |
-| `auditor` | 内部監査室 | 全案件のメタデータ閲覧、監査ログ閲覧・エクスポート、編集・承認不可 |
+| ロール    | 主用途                     | 主要権限                                                           |
+| --------- | -------------------------- | ------------------------------------------------------------------ |
+| `admin`   | システム全体管理、IT 部門  | ユーザ・ロール管理、システム設定、監査ログ閲覧（書込不可）         |
+| `legal`   | 法務課                     | 全契約閲覧、編集、承認、AI 機能フル利用、雛形管理                  |
+| `manager` | 支店長・本部長・事業部門長 | 配下案件の承認、配下ユーザ案件閲覧、自部署統計                     |
+| `site`    | 現場・営業                 | 自身が起票・関与する案件のみ、起票・コメント、限定閲覧             |
+| `auditor` | 内部監査室                 | 全案件のメタデータ閲覧、監査ログ閲覧・エクスポート、編集・承認不可 |
 
 ### 3.2 ロール付与原則
 
@@ -74,14 +79,17 @@
 ## 4. 部署単位閲覧制限
 
 ### 4.1 既定可視性
+
 - 案件は起票部署 + 上位本部 + 法務課 + 担当役員 + 監査人 に閲覧可。
 - 他部署案件は既定で不可視。
 
 ### 4.2 例外可視性付与
+
 - 共同事業・JV: 構成事業部本部にも自動付与。
 - 過去類似案件検索: AI が他部署案件を提示する場合はメタデータのみ表示し、本文閲覧は所属部署からの依頼経由とする。
 
 ### 4.3 機密案件
+
 - 「Restricted」ラベル案件は明示的に登録された関係者のみ閲覧（manager ロールでも自動付与なし）。
 - M&A、訴訟、人事関連の契約は原則 Restricted。
 
@@ -91,14 +99,15 @@
 
 ### 5.1 分類
 
-| ラベル | 例 | 取扱 |
-|--------|-----|------|
-| Public | 公開済プレスリリース | 制限なし |
-| Internal | 社内一般文書 | 社員のみ |
-| Confidential | 標準契約書、見積 | 関係者のみ、外部送信は承認・暗号化 |
-| Restricted | M&A、訴訟、賠償、個人情報・マイナンバー | 限定関係者のみ、外部送信原則禁止 |
+| ラベル       | 例                                      | 取扱                               |
+| ------------ | --------------------------------------- | ---------------------------------- |
+| Public       | 公開済プレスリリース                    | 制限なし                           |
+| Internal     | 社内一般文書                            | 社員のみ                           |
+| Confidential | 標準契約書、見積                        | 関係者のみ、外部送信は承認・暗号化 |
+| Restricted   | M&A、訴訟、賠償、個人情報・マイナンバー | 限定関係者のみ、外部送信原則禁止   |
 
 ### 5.2 ラベリング運用
+
 - Microsoft Purview Information Protection (MIP) ラベルと連動。
 - アップロード時にラベル付与を必須。AI による初期サジェスト + 人手確定。
 - ラベルダウングレードは法務課長承認。
@@ -108,19 +117,23 @@
 ## 6. 暗号化
 
 ### 6.1 保存時暗号化（at rest）
+
 - DB: TDE + 列レベル暗号化（個人情報・契約金額・条項本文）。
 - ファイル: SharePoint Online / DirectCloud の暗号化機能 + アプリ層追加暗号化。
 - 鍵管理: Azure Key Vault Managed HSM、年次ローテーション、緊急ローテーション手順整備。
 
 ### 6.2 通信時暗号化（in transit）
+
 - TLS 1.2 以上必須、推奨 1.3。
 - 弱い暗号スイート禁止。
 - 内部間通信も mTLS。
 
 ### 6.3 端末暗号化
+
 - ノート PC は BitLocker、スマホ・タブレットは MDM による暗号化必須。
 
 ### 6.4 バックアップ暗号化
+
 - スナップショット・バックアップ・アーカイブも暗号化。
 
 ---
@@ -128,6 +141,7 @@
 ## 7. 機密検出と DLP
 
 ### 7.1 検出対象
+
 - マイナンバー（12 桁、チェックデジット検証）。
 - 銀行口座（金融機関コード + 支店 + 口座番号）。
 - パスポート番号、運転免許番号、健康保険証番号。
@@ -137,10 +151,12 @@
 - 公共発注機関内部資料の特徴語句。
 
 ### 7.2 検出ポイント
+
 - アップロード時、保存時、外部送信時、AI 推論時、エクスポート時。
 - HENNGE One DLP と本システム DLP を二重化。
 
 ### 7.3 対応
+
 - マイナンバー検出: 原則ブロック、許可フローは法務課長 + 管理本部長承認。
 - その他 PII: ラベル自動付与 + 通知。
 - 検出履歴はすべて監査ログ。
@@ -150,6 +166,7 @@
 ## 8. アプリケーション セキュリティ
 
 ### 8.1 開発・運用
+
 - セキュア コーディング規約（OWASP ASVS L2 相当）。
 - CI に SAST / SCA / IaC スキャン。
 - リリース前に DAST 実施。
@@ -158,15 +175,18 @@
 - 本番デプロイは Blue/Green、ロールバック手順を文書化。
 
 ### 8.2 API
+
 - すべての API は OIDC アクセストークン必須。
 - レートリミット、CSRF / XSS 対策、入力検証。
 - API キーは Vault 管理、平文保存禁止。
 
 ### 8.3 ファイル取扱
+
 - アップロードファイルはマルウェアスキャン（Microsoft Defender 連携）。
 - ファイルタイプホワイトリスト（PDF, DOCX, XLSX, JPG, PNG, ZIP（パスワード付除外））。
 
 ### 8.4 ログ・モニタ
+
 - アプリケーション・インフラ・ネットワークの 3 層ログを SIEM 集約。
 - SOC 24/7 監視（外部委託または社内 IT + MSSP）。
 
@@ -201,10 +221,12 @@
 ## 12. インシデント対応
 
 ### 12.1 体制
+
 - CSIRT: IT 部門長 + 法務課長 + 管理本部長 + 必要に応じ顧問弁護士。
 - 24/7 窓口（メール + 電話 + Teams チャネル）。
 
 ### 12.2 フロー
+
 1. 検知（SIEM / DLP / 利用者通報）。
 2. トリアージ（30 分以内に初動）。
 3. 封じ込め（アカウント無効化、ネットワーク遮断）。
@@ -214,6 +236,7 @@
 7. 事後報告（取締役会報告）。
 
 ### 12.3 訓練
+
 - 年 2 回の机上演習、年 1 回の実機演習。
 - フィッシング訓練を四半期実施。
 
@@ -245,19 +268,19 @@
 
 ## 16. ロール権限詳細マトリクス
 
-| 機能 | admin | legal | manager | site | auditor |
-|------|:-----:|:-----:|:-------:|:----:|:-------:|
-| ユーザ管理 | ◯ | × | × | × | × |
-| ロール変更 | ◯ | × | × | × | × |
-| 全契約閲覧 | ◯ | ◯ | 配下のみ | 関与のみ | ◯（読） |
-| 契約編集 | × | ◯ | △（一次） | △（起票） | × |
-| 承認実行 | × | ◯ | ◯（配下） | × | × |
-| 雛形編集 | × | ◯ | × | × | × |
-| 監査ログ閲覧 | △（書込不可） | △（自部署） | × | × | ◯ |
-| 監査ログエクスポート | × | × | × | × | ◯ |
-| AI 推論実行 | ◯ | ◯ | △（限定） | △（限定） | × |
-| 外部 API 接続設定 | ◯ | × | × | × | × |
-| データエクスポート | △ | ◯ | △ | × | ◯ |
+| 機能                 |     admin     |    legal    |  manager  |   site    | auditor |
+| -------------------- | :-----------: | :---------: | :-------: | :-------: | :-----: |
+| ユーザ管理           |       ◯       |      ×      |     ×     |     ×     |    ×    |
+| ロール変更           |       ◯       |      ×      |     ×     |     ×     |    ×    |
+| 全契約閲覧           |       ◯       |      ◯      | 配下のみ  | 関与のみ  | ◯（読） |
+| 契約編集             |       ×       |      ◯      | △（一次） | △（起票） |    ×    |
+| 承認実行             |       ×       |      ◯      | ◯（配下） |     ×     |    ×    |
+| 雛形編集             |       ×       |      ◯      |     ×     |     ×     |    ×    |
+| 監査ログ閲覧         | △（書込不可） | △（自部署） |     ×     |     ×     |    ◯    |
+| 監査ログエクスポート |       ×       |      ×      |     ×     |     ×     |    ◯    |
+| AI 推論実行          |       ◯       |      ◯      | △（限定） | △（限定） |    ×    |
+| 外部 API 接続設定    |       ◯       |      ×      |     ×     |     ×     |    ×    |
+| データエクスポート   |       △       |      ◯      |     △     |     ×     |    ◯    |
 
 ---
 
@@ -272,9 +295,9 @@
 
 ## 18. 改訂履歴
 
-| 版 | 日付 | 改訂者 | 内容 |
-|----|------|--------|------|
-| 1.0 | 2026-05-16 | 法務 DX チーム | 初版 |
+| 版  | 日付       | 改訂者               | 内容                                                                                                                                                                                                                                                                                                                                                                                       |
+| --- | ---------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1.0 | 2026-05-16 | 法務 DX チーム       | 初版                                                                                                                                                                                                                                                                                                                                                                                       |
 | 1.1 | 2026-05-16 | Loop 4 Security 統合 | 19 章 RBAC マッピング表 (security_policy ↔ api_design 整合) を追加。`backend/app/middleware/security_headers.py` `sensitive_masking.py` を新規追加。HENNGE One 経由 Entra ID OIDC の実モード (`SSOService._real_exchange_code` / `exchange_refresh_token`) を実装。フロント `auth.config.ts` の `jwt` callback で backend `/api/v1/auth/me` を必須化、`lib/auth/refresh-token.ts` を追加。 |
 
 ---
@@ -286,16 +309,16 @@ api_design 側のロール (`viewer / drafter / reviewer / approver / admin / au
 
 ### 19.1 ロール名対応 (security_policy §16 ↔ enums)
 
-| security_policy §16 表記 | UserRole (enum) | 説明 |
-|--------------------------|-----------------|------|
-| admin                    | `admin`         | システム管理。RBAC・SSO・テナント設定の管理権限。 |
+| security_policy §16 表記 | UserRole (enum) | 説明                                                                            |
+| ------------------------ | --------------- | ------------------------------------------------------------------------------- |
+| admin                    | `admin`         | システム管理。RBAC・SSO・テナント設定の管理権限。                               |
 | legal                    | `reviewer`      | 法務部門のレビュアー (`legal_reviewer` 相当)。契約レビュー、雛形編集、AI 推論。 |
-| legal (承認実行を伴う)     | `approver`      | 法務マネージャ。レビュー結果の承認 / 差戻し。 |
-| manager                  | `approver`      | 事業部承認者。配下契約の承認実行。 |
-| site                     | `drafter`       | 現場ユーザー (起票担当)。契約 draft / submit。 |
-| (閲覧専用)                | `viewer`        | 自部署の契約閲覧のみ。 |
-| auditor                  | `auditor`       | 監査人。監査ログ閲覧 / エクスポート (改変不可)。 |
-| (外部ゲスト)              | `guest`         | 外部閲覧 (期間限定共有リンク等)。書き込み不可。 |
+| legal (承認実行を伴う)   | `approver`      | 法務マネージャ。レビュー結果の承認 / 差戻し。                                   |
+| manager                  | `approver`      | 事業部承認者。配下契約の承認実行。                                              |
+| site                     | `drafter`       | 現場ユーザー (起票担当)。契約 draft / submit。                                  |
+| (閲覧専用)               | `viewer`        | 自部署の契約閲覧のみ。                                                          |
+| auditor                  | `auditor`       | 監査人。監査ログ閲覧 / エクスポート (改変不可)。                                |
+| (外部ゲスト)             | `guest`         | 外部閲覧 (期間限定共有リンク等)。書き込み不可。                                 |
 
 > 旧表記 `legal` は **レビュー実行は `reviewer`、承認は `approver`** に分離する。
 > 旧表記 `manager` は事業部承認者として `approver` に集約する。
@@ -304,28 +327,29 @@ api_design 側のロール (`viewer / drafter / reviewer / approver / admin / au
 
 `o` = 許可、`-` = 拒否 (403)、`△` = 条件付き (RLS / オーナーシップ判定が追加で必要)。
 
-| エンドポイント                          | viewer | drafter | reviewer | approver | admin | auditor | guest |
-|----------------------------------------|:------:|:-------:|:--------:|:--------:|:-----:|:-------:|:-----:|
-| GET  /auth/me                          | o      | o       | o        | o        | o     | o       | o     |
-| GET  /users                            | -      | -       | -        | -        | o     | o       | -     |
-| PATCH /users/{id}                      | -      | -       | -        | -        | o     | -       | -     |
-| GET  /contracts                        | △      | o       | o        | o        | o     | o       | △     |
-| POST /contracts                        | -      | o       | o        | o        | o     | -       | -     |
-| PATCH /contracts/{id}                  | -      | △       | o        | △        | o     | -       | -     |
-| DELETE /contracts/{id}                 | -      | -       | -        | -        | o     | -       | -     |
-| POST /contracts/{id}/submit            | -      | o       | -        | -        | o     | -       | -     |
-| POST /contracts/{id}/reviews           | -      | o       | o        | -        | o     | -       | -     |
-| POST /reviews/{id}/accept              | -      | -       | o        | o        | o     | -       | -     |
-| POST /reviews/{id}/reject              | -      | -       | o        | o        | o     | -       | -     |
-| POST /workflow-steps/{id}/approve      | -      | -       | -        | o        | o     | -       | -     |
-| POST /workflow-steps/{id}/reject       | -      | -       | -        | o        | o     | -       | -     |
-| POST /workflow-steps/{id}/send-back    | -      | -       | o        | o        | o     | -       | -     |
-| GET  /audit-logs                       | -      | -       | -        | -        | △     | o       | -     |
-| POST /audit-logs/verify                | -      | -       | -        | -        | o     | o       | -     |
-| GET  /risks                            | △      | o       | o        | o        | o     | o       | -     |
-| PATCH /risks/{id}                      | -      | -       | o        | o        | o     | -       | -     |
+| エンドポイント                      | viewer | drafter | reviewer | approver | admin | auditor | guest |
+| ----------------------------------- | :----: | :-----: | :------: | :------: | :---: | :-----: | :---: |
+| GET /auth/me                        |   o    |    o    |    o     |    o     |   o   |    o    |   o   |
+| GET /users                          |   -    |    -    |    -     |    -     |   o   |    o    |   -   |
+| PATCH /users/{id}                   |   -    |    -    |    -     |    -     |   o   |    -    |   -   |
+| GET /contracts                      |   △    |    o    |    o     |    o     |   o   |    o    |   △   |
+| POST /contracts                     |   -    |    o    |    o     |    o     |   o   |    -    |   -   |
+| PATCH /contracts/{id}               |   -    |    △    |    o     |    △     |   o   |    -    |   -   |
+| DELETE /contracts/{id}              |   -    |    -    |    -     |    -     |   o   |    -    |   -   |
+| POST /contracts/{id}/submit         |   -    |    o    |    -     |    -     |   o   |    -    |   -   |
+| POST /contracts/{id}/reviews        |   -    |    o    |    o     |    -     |   o   |    -    |   -   |
+| POST /reviews/{id}/accept           |   -    |    -    |    o     |    o     |   o   |    -    |   -   |
+| POST /reviews/{id}/reject           |   -    |    -    |    o     |    o     |   o   |    -    |   -   |
+| POST /workflow-steps/{id}/approve   |   -    |    -    |    -     |    o     |   o   |    -    |   -   |
+| POST /workflow-steps/{id}/reject    |   -    |    -    |    -     |    o     |   o   |    -    |   -   |
+| POST /workflow-steps/{id}/send-back |   -    |    -    |    o     |    o     |   o   |    -    |   -   |
+| GET /audit-logs                     |   -    |    -    |    -     |    -     |   △   |    o    |   -   |
+| POST /audit-logs/verify             |   -    |    -    |    -     |    -     |   o   |    o    |   -   |
+| GET /risks                          |   △    |    o    |    o     |    o     |   o   |    o    |   -   |
+| PATCH /risks/{id}                   |   -    |    -    |    o     |    o     |   o   |    -    |   -   |
 
 凡例:
+
 - **viewer の △**: 自身が所属する `department_id` 配下の契約 / リスクのみ可視 (RLS)。
 - **drafter の △ (PATCH /contracts)**: `status == draft` かつ `created_by == self` の場合のみ可。
 - **approver の △ (PATCH /contracts)**: 承認フロー中で自身が assignee のステップに紐づく契約のみ可。
@@ -335,8 +359,8 @@ api_design 側のロール (`viewer / drafter / reviewer / approver / admin / au
 ### 19.3 RBAC 実装ポイント (Loop 4)
 
 1. **backend**: `app/core/security.py::role_can` / `ensure_role` は **fail-closed**。未知ロール・空ロールは常に拒否し `AuthorizationError` (= HTTP 403) を送出する。例外を握り潰さない。
-2. **JWT**: `aud=construction-legalops-dx-api`, `iss=construction-legalops-dx`。`access_token` 15 分、`refresh_token` 8 時間 (本番)。検証失敗は 401。
+2. **JWT**: `aud=construction-legalops-dx-api`, `iss=construction-legalops-dx`。`access_token` 15 分、`refresh_token` 8 時間 (本番)。検証失敗は 401。アルゴリズム: **RS256 (コード実装済み、本番 Vault 投入待ち)**（開発環境は HS256 フォールバック）。
 3. **frontend**: `auth.config.ts` の `jwt` callback で backend `/api/v1/auth/me` から正規ロールを解決。失敗時は `session.user.role = "viewer"` (最小権限) + `session.error = "BackendUnauthorized"` を立て、UI 層で再ログイン誘導。
 4. **PII**: `app/middleware/sensitive_masking.py` がレスポンスをマイナンバー / 電話 / メールでマスク。`my_number` 系フィールド名は **完全削除** (マスク版すら返さない)。
 5. **CSP**: `app/middleware/security_headers.py` で `default-src 'self'` を強制。SharePoint 画像許可はフロント `next.config.mjs` 側の責務とし、本ミドルウェアでは静的に許可しない。
-
+6. **ヘルスチェック**: `GET /healthz` は軽量 liveness（プロセス応答確認のみ）。`GET /readyz` は deep check 実装済み — DB (Critical: 失敗時 503)・Redis・Claude API (Optional: 失敗時 200 + degraded) を個別検証し `{"status": "ready"|"degraded", "checks": {...}, "warnings": [...]}` を返す。Kubernetes readiness probe / ALB ヘルスチェックはこのエンドポイントを使用する。
