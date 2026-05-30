@@ -59,22 +59,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Trivy filesystem scan (SARIF)
-        uses: aquasecurity/trivy-action@0.31.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: sarif
-          output: trivy-fs.sarif
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          scanners: vuln,secret,misconfig
+      - name: Install Trivy CLI
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin
 
-      - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-fs.sarif
-          category: trivy-fs
+      - name: Trivy filesystem scan (table output)
+        run: |
+          trivy fs . \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --scanners vuln,secret,misconfig \
+            --format table \
+            --exit-code 0
 
   # ----------------------------------------------------------
   # pip-audit (Python dependencies)
@@ -171,36 +168,25 @@ jobs:
         if: hashFiles('frontend/Dockerfile') != ''
         run: docker build -t legalops/frontend:scan frontend
 
-      - name: Trivy scan backend image (SARIF)
+      - name: Install Trivy CLI
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin
+
+      - name: Trivy scan backend image
         if: hashFiles('backend/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@0.31.0
-        with:
-          image-ref: legalops/backend:scan
-          format: sarif
-          output: trivy-backend.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
+        run: |
+          trivy image legalops/backend:scan \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --format table \
+            --exit-code 0
 
-      - name: Trivy scan frontend image (SARIF)
+      - name: Trivy scan frontend image
         if: hashFiles('frontend/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@0.31.0
-        with:
-          image-ref: legalops/frontend:scan
-          format: sarif
-          output: trivy-frontend.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-
-      - name: Upload Trivy backend SARIF
-        if: hashFiles('trivy-backend.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-backend.sarif
-          category: trivy-image-backend
-
-      - name: Upload Trivy frontend SARIF
-        if: hashFiles('trivy-frontend.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-frontend.sarif
-          category: trivy-image-frontend
+        run: |
+          trivy image legalops/frontend:scan \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --format table \
+            --exit-code 0
