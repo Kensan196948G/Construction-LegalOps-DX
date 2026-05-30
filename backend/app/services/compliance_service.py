@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.contract import Contract
 from app.schemas.compliance import ComplianceCheckResult, ComplianceFinding
 
+_FULL_ACCESS_ROLES = frozenset({"admin", "legal", "auditor", "reviewer", "approver"})
+
 _COMPLIANCE_DISCLAIMER = (
     "本チェック結果は機械的判定の参考情報です。最終判断は法務担当者および"
     "顧問弁護士が行ってください。"
@@ -129,11 +131,13 @@ async def get_result(
     """
     from app.services.compliance_checker import ComplianceChecker, ContractSnapshot
 
-    # Fetch the contract (including soft-deleted guard).
+    # Fetch the contract with row-level scope: privileged roles see all, others only their own.
     stmt = select(Contract).where(
         Contract.id == contract_id,
         Contract.deleted_at.is_(None),
     )
+    if getattr(viewer, "role", None) not in _FULL_ACCESS_ROLES:
+        stmt = stmt.where(Contract.drafter_id == viewer.id)
     row = await session.execute(stmt)
     contract: Contract | None = row.scalar_one_or_none()
     if contract is None:

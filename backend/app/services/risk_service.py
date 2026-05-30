@@ -132,19 +132,22 @@ async def aggregate(
         except ValueError:
             pass
 
-    # ---- by_severity -------------------------------------------------------
+    # Build a scalar subquery from `base` to use as a reusable filter scope.
+    # We reconstruct the GROUP BY queries from scratch (not via with_only_columns)
+    # to avoid SQLAlchemy carrying over unexpected JOIN clauses into GROUP BY.
+    base_subq = base.subquery()
+
     severity_q = await session.execute(
-        base.with_only_columns(RiskItem.severity, func.count(RiskItem.id))
-        .order_by(None)
-        .group_by(RiskItem.severity)
+        select(base_subq.c.severity, func.count(base_subq.c.id)).group_by(
+            base_subq.c.severity
+        )
     )
     by_severity: dict[str, int] = {row[0]: row[1] for row in severity_q}
 
-    # ---- by_status ---------------------------------------------------------
     status_q = await session.execute(
-        base.with_only_columns(RiskItem.status, func.count(RiskItem.id))
-        .order_by(None)
-        .group_by(RiskItem.status)
+        select(base_subq.c.status, func.count(base_subq.c.id)).group_by(
+            base_subq.c.status
+        )
     )
     by_status: dict[str, int] = {row[0]: row[1] for row in status_q}
 

@@ -13,8 +13,7 @@ Role-scope rules
 
 from __future__ import annotations
 
-from fastapi import HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.contract import Contract
@@ -85,14 +84,18 @@ async def search(
     if contract_type:
         base = base.where(Contract.contract_type == contract_type)
 
-    # Count total hits (before pagination).
-    count_result = await session.execute(base)
-    all_rows = count_result.scalars().all()
-    total = len(all_rows)
+    # COUNT via a dedicated subquery to avoid loading all rows into memory.
+    count_q = await session.execute(
+        select(func.count()).select_from(base.subquery())
+    )
+    total: int = count_q.scalar() or 0
 
-    # Apply pagination in Python (avoids a second DB round-trip for small sets).
+    # Paginated data fetch.
     offset = (page - 1) * size
-    page_rows = all_rows[offset : offset + size]
+    data_q = await session.execute(
+        base.order_by(Contract.id).offset(offset).limit(size)
+    )
+    page_rows = data_q.scalars().all()
 
     items: list[KnowledgeSearchResult] = [
         KnowledgeSearchResult(
@@ -189,13 +192,10 @@ async def create_article(
 
     Raises
     ------
-    HTTPException(501)
+    NotImplementedError
         Always, until the DB table and migration are in place.
+        The API router converts this to HTTP 501.
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=(
-            "knowledge_service.create_article is not implemented yet "
-            "(knowledge_articles table is planned for a future loop)."
-        ),
+    raise NotImplementedError(
+        "knowledge_service.create_article: knowledge_articles table not yet available"
     )

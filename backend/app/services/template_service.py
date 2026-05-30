@@ -5,8 +5,9 @@ for construction-industry contracts. A dedicated DB table is planned for a
 future loop; until then, data is stored as module-level Python dataclass
 instances so the API surface is fully functional without a migration.
 
-All ``create_*`` and ``update_*`` mutation methods raise ``HTTPException(501)``
+All ``create_*`` and ``update_*`` mutation methods raise ``NotImplementedError``
 because writes require persistent storage that is not yet in place.
+The API routers convert ``NotImplementedError`` to HTTP 501.
 """
 
 from __future__ import annotations
@@ -15,7 +16,6 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -24,7 +24,7 @@ from app.schemas.template import ClauseLibraryCreate, ClauseLibraryUpdate, Templ
 # ---------------------------------------------------------------------------
 # Baseline timestamp used for all seeded records.
 # ---------------------------------------------------------------------------
-_NOW = datetime(2026, 1, 1, tzinfo=UTC)
+_STUB_TS = datetime(2026, 1, 1, tzinfo=UTC)  # fixed timestamp for seeded stub records
 
 
 # ---------------------------------------------------------------------------
@@ -52,8 +52,8 @@ def _tmpl(
         body=body,
         is_active=is_active,
         version=version,
-        created_at=_NOW,
-        updated_at=_NOW,
+        created_at=_STUB_TS,
+        updated_at=_STUB_TS,
     )
 
 
@@ -74,8 +74,8 @@ def _clause(
         recommendation=recommendation,
         text=text,
         tags=tags or [],
-        created_at=_NOW,
-        updated_at=_NOW,
+        created_at=_STUB_TS,
+        updated_at=_STUB_TS,
     )
 
 
@@ -346,12 +346,8 @@ async def create_template(
     creator: User,
 ) -> Any:
     """Create a template. Not yet implemented (no persistent store)."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=(
-            "template_service.create_template is not implemented yet "
-            "(DB table for templates is planned for a future loop)."
-        ),
+    raise NotImplementedError(
+        "template_service.create_template: DB table for templates is planned for a future loop"
     )
 
 
@@ -394,12 +390,8 @@ async def create_clause(
     creator: User,
 ) -> Any:
     """Create a clause-library entry. Not yet implemented."""
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=(
-            "template_service.create_clause is not implemented yet "
-            "(DB table for clause_library is planned for a future loop)."
-        ),
+    raise NotImplementedError(
+        "template_service.create_clause: DB table for clause_library is planned for a future loop"
     )
 
 
@@ -417,15 +409,12 @@ async def update_clause(
     LookupError
         When ``clause_id`` does not exist (checked first so the router
         can return 404 before the 501).
-    HTTPException(501)
+    NotImplementedError
         Always after the existence check, until persistent storage lands.
+        The API router converts this to HTTP 501.
     """
     if clause_id not in _CLAUSES_BY_ID:
         raise LookupError(f"clause {clause_id} not found")
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=(
-            "template_service.update_clause is not implemented yet "
-            "(DB table for clause_library is planned for a future loop)."
-        ),
+    raise NotImplementedError(
+        "template_service.update_clause: DB table for clause_library is planned for a future loop"
     )
