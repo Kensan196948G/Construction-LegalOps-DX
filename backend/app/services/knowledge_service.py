@@ -19,6 +19,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.contract import Contract
+from app.models.knowledge_article import KnowledgeArticle
 from app.models.user import User
 from app.schemas.knowledge import (
     KnowledgeArticleCreate,
@@ -87,16 +88,12 @@ async def search(
         base = base.where(Contract.contract_type == contract_type)
 
     # COUNT via a dedicated subquery to avoid loading all rows into memory.
-    count_q = await session.execute(
-        select(func.count()).select_from(base.subquery())
-    )
+    count_q = await session.execute(select(func.count()).select_from(base.subquery()))
     total: int = count_q.scalar() or 0
 
     # Paginated data fetch.
     offset = (page - 1) * size
-    data_q = await session.execute(
-        base.order_by(Contract.id).offset(offset).limit(size)
-    )
+    data_q = await session.execute(base.order_by(Contract.id).offset(offset).limit(size))
     page_rows = data_q.scalars().all()
 
     items: list[KnowledgeSearchResult] = [
@@ -187,17 +184,40 @@ async def create_article(
     data: KnowledgeArticleCreate,
     creator: User,
 ) -> KnowledgeArticleOut:
-    """Create a knowledge article.
+    """Create and persist a knowledge article.
 
-    Not yet implemented — a dedicated ``knowledge_articles`` table is
-    planned for a future loop.
+    Parameters
+    ----------
+    session:
+        Async database session.
+    data:
+        Validated article payload.
+    creator:
+        The authenticated user creating the article (used as author_id).
 
-    Raises
-    ------
-    NotImplementedError
-        Always, until the DB table and migration are in place.
-        The API router converts this to HTTP 501.
+    Returns
+    -------
+    KnowledgeArticleOut
+        The newly created article with DB-assigned id and timestamps.
     """
-    raise NotImplementedError(
-        "knowledge_service.create_article: knowledge_articles table not yet available"
+    article = KnowledgeArticle(
+        title=data.title,
+        body=data.body,
+        contract_type=data.contract_type,
+        tags=data.tags,
+        citations=data.citations,
+        author_id=getattr(creator, "id", None),
+    )
+    session.add(article)
+    await session.flush()
+    await session.refresh(article)
+    return KnowledgeArticleOut(
+        id=article.id,
+        title=article.title,
+        body=article.body,
+        tags=article.tags or [],
+        contract_type=article.contract_type,
+        citations=article.citations or [],
+        created_at=article.created_at,
+        updated_at=article.updated_at,
     )

@@ -32,6 +32,7 @@ from .enums import (
     WorkflowStepStatus,
     WorkflowStepType,
 )
+from .knowledge_article import KnowledgeArticle
 from .legal_review import LegalReview
 from .notification import Notification
 from .risk_item import RiskItem
@@ -55,6 +56,7 @@ __all__ = [
     "ContractStatus",
     "ContractType",
     "Department",
+    "KnowledgeArticle",
     "LegalReview",
     "Notification",
     "NotificationChannel",

@@ -81,15 +81,21 @@ async def test_knowledge_similar_returns_list(client, auth_headers_legal):
     assert isinstance(r.json(), list)
 
 
-async def test_knowledge_create_article_501(client, auth_headers_admin):
-    """POST /knowledge → 501 until knowledge_articles table is ready."""
+async def test_knowledge_create_article(client, auth_headers_admin):
+    """POST /knowledge → 201 with the created article."""
     payload = {
-        "title": "テスト記事",
-        "body": "本文です。",
-        "tags": ["建設業法"],
+        "title": "建設業法 第19条 書面要件 解説",
+        "body": "建設業法第19条は、請負契約の書面化を義務付けています。",
+        "tags": ["建設業法", "契約書面"],
+        "contract_type": "請負",
     }
     r = await client.post("/api/v1/knowledge", json=payload, headers=auth_headers_admin)
-    assert r.status_code == 501
+    assert r.status_code == 201
+    body = r.json()
+    assert body["title"] == payload["title"]
+    assert body["tags"] == payload["tags"]
+    assert "id" in body
+    assert "created_at" in body
 
 
 # ---------------------------------------------------------------------------

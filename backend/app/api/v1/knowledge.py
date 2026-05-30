@@ -93,14 +93,7 @@ async def create_article(
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> KnowledgeArticleOut:
-    try:
-        article = await knowledge_service.create_article(
-            session, data=payload, creator=current_user
-        )
-    except NotImplementedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)
-        ) from exc
+    article = await knowledge_service.create_article(session, data=payload, creator=current_user)
     await audit_service.log(
         session,
         actor_id=current_user.id,
