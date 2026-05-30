@@ -187,3 +187,33 @@ async def test_accept_review_not_found(client, auth_headers_legal):
         headers=auth_headers_legal,
     )
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Row-level scope (drafter sees only own reviews)
+# ---------------------------------------------------------------------------
+
+
+async def test_list_reviews_drafter_scope(
+    client, auth_headers_site, monkeypatch
+):
+    """Drafter sees only reviews on contracts they drafted."""
+    cid = await _create_contract(client, auth_headers_site)
+    await _start_review(client, cid, auth_headers_site, monkeypatch)
+
+    r = await client.get("/api/v1/reviews", headers=auth_headers_site)
+    assert r.status_code == 200
+    assert "items" in r.json()
+
+
+async def test_list_reviews_ai_model_filter(
+    client, auth_headers_admin, auth_headers_legal, monkeypatch
+):
+    """GET /reviews?ai_model=stub returns only matching items."""
+    cid = await _create_contract(client, auth_headers_legal)
+    await _start_review(client, cid, auth_headers_legal, monkeypatch)
+
+    r = await client.get("/api/v1/reviews?ai_model=stub", headers=auth_headers_admin)
+    assert r.status_code == 200
+    for item in r.json().get("items", []):
+        assert item.get("ai_model") == "stub"

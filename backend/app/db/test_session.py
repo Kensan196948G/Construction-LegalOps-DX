@@ -33,10 +33,9 @@ PostgreSQL DDL is untouched.
 
 from __future__ import annotations
 
+import json as _json
 import os
 from typing import Final
-
-import json as _json
 
 from sqlalchemy import BigInteger
 from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
