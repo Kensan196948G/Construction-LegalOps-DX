@@ -13,6 +13,8 @@ Role-scope rules
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +32,7 @@ from app.services.similarity_search import CorpusEntry, SimilaritySearchService
 _PRIVILEGED_ROLES = frozenset({"admin", "legal", "auditor", "reviewer", "approver"})
 
 
-def _base_query(viewer: User):
+def _base_query(viewer: User) -> Any:
     """Return a SELECT query scoped to what ``viewer`` is allowed to see."""
     q = select(Contract).where(Contract.deleted_at.is_(None))
     if viewer.role not in _PRIVILEGED_ROLES:
