@@ -7,7 +7,7 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "release_readiness_improvements_loop18",
+    "status": "near_release_ready_vault_csp_remaining",
     "last_loop_completed": 18,
     "loops_total": 18,
     "current_version": "0.1.8"
@@ -73,11 +73,11 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
-    "本番環境 secrets 投入（Vault）— P0",
-    "CSP enforce 化（現在 Report-Only）— P0 (7日データ収集後)",
-    "PostgreSQL pg_trgm テスト確認 (backend-pg CI ジョブで確認中)",
-    "E2E Playwright 実際のブラウザ実行確認",
-    "本番デプロイ手順書最終確認 (RELEASE_CHECKLIST §7)"
+    "本番環境 Vault secrets 投入（scripts/setup_vault_secrets.sh 使用）— P0 人間作業",
+    "CSP enforce 移行（infra/nginx/security-headers.enforce.conf 適用）— P0 7日後",
+    "本番デプロイ準備（RELEASE_CHECKLIST §7 全項目チェック）",
+    "E2E Playwright ブラウザ実行確認（AUTH_DEV_BYPASS=true + npm run start）",
+    "k6/Locust 負荷テスト（目標 50 req/s p95 < 500ms）"
   ],
   "completed_issues": [],
   "blocked_issues": [],
