@@ -64,10 +64,12 @@
 
 ### P0 (絶対解消)
 
-1. **JWT 署名鍵を HS256 → RS256 に切替**
-   - 現状: `JWT_SECRET_KEY` (HS256 共有鍵) で署名。
-   - 対応: `openssl genrsa -out jwt_private.pem 4096` で鍵生成、`backend/app/core/security.py` の algorithm を `RS256` に切替、公開鍵を `/.well-known/jwks.json` で配信検討。
-   - 影響範囲: backend 認証層、frontend のトークン検証は不要 (サーバ側のみ)。
+1. **JWT 署名鍵を HS256 → RS256 に切替** ✅ **コード実装済み (Loop 18)**
+   - コード: `backend/app/core/security.py` は RS256 に完全対応済み。
+     `JWT_PRIVATE_KEY` + `JWT_PUBLIC_KEY` 環境変数を設定するだけで RS256 に切替わる。
+   - 鍵生成: `./scripts/generate_rsa_keys.sh` を実行して RSA-2048 鍵ペアを生成。
+   - **残作業**: 本番環境への鍵投入 (Vault) のみ → P0-3 の Vault 投入と統合して対応。
+   - 影響範囲: backend 認証層のみ。frontend のトークン検証不要。
 
 2. **CSP Report-Only → enforce 移行**
    - 現状: nginx で `Content-Security-Policy-Report-Only` ヘッダを送出中。
