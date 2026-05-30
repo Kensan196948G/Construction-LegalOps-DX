@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-05-30
+
+### Added (Loop 18: Backend DB Persistence + Test Coverage)
+
+- **知識記事 DB**: `KnowledgeArticle` ORM モデル + Alembic migration 002。`create_article()` を実装 (以前は 501)。
+- **pg_trgm インデックス**: Alembic migration 003 で `knowledge_articles.title/body` に GIN trigram インデックスを追加。
+- **条項ライブラリ DB 永続化**: `template_service.list_clauses/create_clause/update_clause` を `ClauseLibrary` ORM に切替。in-memory シードから完全 DB バックへ移行。
+- **RSA 鍵生成スクリプト**: `scripts/generate_rsa_keys.sh` 追加。RS256 は `security.py` で既に実装済み。
+- **GitHub Project #30**: Construction-LegalOps-DX 開発管理プロジェクト作成。Issue #19〜#21 登録。
+- **E2E Playwright 基盤**: `playwright.config.ts` + `e2e/smoke.spec.ts` / `contracts.spec.ts` / `dashboard.spec.ts`。
+- **テストカバレッジ向上**: 84 → 253 件 (+169)
+  - `workflow_service.py`: 38% → 100% (ユニット 46 件 + 統合 27 件)
+  - `review_service.py`: 38% → 100% (ユニット 43 件)
+  - 全体カバレッジ: 68% → 74%
+- **pyproject.toml**: `[[tool.mypy.overrides]]` で `tests.*` を ignore_errors 対象に追加 (mypy strict はプロダクション限定)。
+
+### Fixed
+
+- **FastAPI 0.115**: `HTTP 204` エンドポイントで `response_model=None` が必要。`-> None` の return annotation が `NoneType`（truthy）として解釈されていた問題を修正。
+- **Trivy CI**: `aquasecurity/trivy-action@0.29.0/0.31.0` が存在しない → Trivy CLI 直接インストールに変更。fail-closed スキャン + JSON アーティファクト保存に変更。
+- **SQLAlchemy ARRAY SQLite**: `@compiles(ARRAY, "sqlite")` は DDL のみ対応。`bind_processor` / `result_processor` monkey-patch を追加し Python list の JSON シリアライズを実現。
+- **mypy 2.1 互換**: `# type: ignore[method-assign]` が `assignment` エラーをカバーしなくなった。`[method-assign, assignment]` に変更。
+- **code review 指摘 (Loop 18)**: N+1 full-table fetch → COUNT subquery + LIMIT/OFFSET / GROUP BY subquery / HTTPException in service layer → NotImplementedError / compliance viewer scope / \_NOW → \_STUB_TS。
+
 ## [0.1.0] - 2026-05-16
 
 本リリースは Construction-LegalOps-DX の最小実行可能プロダクト (MVP) を構成する 5 ループ分の成果をまとめたものです。すべての AI 機能は **「AI は法的判断を確定しない。最終判断は法務担当者および顧問弁護士に帰属する」** という原則のもとに設計されています。
