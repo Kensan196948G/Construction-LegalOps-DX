@@ -7,7 +7,7 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "test_coverage_improved_review_workflow",
+    "status": "knowledge_search_enhanced_prs_open",
     "last_loop_completed": 18,
     "loops_total": 18,
     "current_version": "0.1.8"
@@ -73,10 +73,10 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
-    "PR #18 merge（全 253 tests + pyproject.toml tests.* mypy override）",
+    "PR #22 merge（knowledge hybrid search + pg_trgm migration）",
     "E2E Playwright テスト実行確認（Next.js ビルド + AUTH_DEV_BYPASS=true）",
-    "RS256 JWT key rotation (#19)",
-    "knowledge_articles フルテキスト検索 (#21)",
+    "RS256 本番鍵投入 Vault (#19) — コード実装済み",
+    "PostgreSQL pg_trgm テスト (testcontainers or PG profile)",
     "本番環境 secrets 投入（Vault）"
   ],
   "completed_issues": [],
