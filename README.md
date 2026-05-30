@@ -663,15 +663,16 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 >
 > | 指標 | 値 |
 > |------|-----|
-> | 📦 バージョン | v0.1.7 |
-> | 🧪 バックエンドテスト | 812 passed / 0 failed |
-> | 📊 カバレッジ | 91% |
-> | 🔧 mypy | 0 errors |
-> | 🗄️ 実装済みサービス | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
-> | 🗄️ 実装済み | risk/compliance/knowledge/template/clause-library/reviews/workflows + unit test 100%
-> | ⚡ E2E | Playwright 基盤整備済み（smoke / contracts / dashboard） |
+> | 📦 バージョン | v0.1.8 |
+> | 🧪 バックエンドテスト | 832 passed / 0 failed |
+> | 📊 カバレッジ | 90% |
+> | 🔧 mypy | 0 errors / Bandit clean |
+> | 🗄️ 全サービス | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
+> | ⚡ E2E | Playwright 6ファイル: smoke/contracts/dashboard/reviews/risks/compliance |
+> | 🏥 /readyz | Deep check (DB critical + Redis/Claude degraded) |
+> | 🔐 RS256 | コード実装済み・scripts/generate_rsa_keys.sh / setup_vault_secrets.sh 完備 |
 >
-> 🎯 本番リリース **2026-11-16** 残課題: RS256 移行 / E2E 拡充 / workflow カバレッジ向上
+> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0)
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)
 
 ---
