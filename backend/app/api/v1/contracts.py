@@ -169,6 +169,7 @@ async def update_contract(
 @router.delete(
     "/{contract_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
     summary="契約削除 (論理削除)",
 )
 async def delete_contract(
@@ -262,11 +263,14 @@ async def list_clauses(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> list[ClauseOut]:
-    return cast(list[ClauseOut], await contract_service.list_clauses(
-        session,
-        contract_id=contract_id,
-        viewer=current_user,
-    ))
+    return cast(
+        list[ClauseOut],
+        await contract_service.list_clauses(
+            session,
+            contract_id=contract_id,
+            viewer=current_user,
+        ),
+    )
 
 
 @router.get(
