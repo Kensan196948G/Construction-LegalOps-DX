@@ -2,7 +2,7 @@
 
 [![Build](https://img.shields.io/github/actions/workflow/status/Kensan196948G/Construction-LegalOps-DX/ci.yml?branch=main&label=build&logo=github)](./.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-75%25-brightgreen.svg)](./.github/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-78%25-brightgreen.svg)](./.github/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -664,10 +664,11 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 > | 指標 | 値 |
 > |------|-----|
 > | 📦 バージョン | v0.1.7 |
-> | 🧪 バックエンドテスト | 253 passed / 0 failed |
-> | 📊 カバレッジ | 75% |
+> | 🧪 バックエンドテスト | 414 passed / 0 failed |
+> | 📊 カバレッジ | 78% |
 > | 🔧 mypy | 0 errors |
 > | 🗄️ 実装済みサービス | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
+> | 🗄️ 実装済み | risk/compliance/knowledge/template/clause-library/reviews/workflows + unit test 100%
 > | ⚡ E2E | Playwright 基盤整備済み（smoke / contracts / dashboard） |
 >
 > 🎯 本番リリース **2026-11-16** 残課題: RS256 移行 / E2E 拡充 / workflow カバレッジ向上
