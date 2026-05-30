@@ -84,7 +84,7 @@ def _sqlite_array_bind_processor(self: object, dialect: object) -> object:  # ty
             return value
 
         return _bind
-    return ARRAY.bind_processor(self, dialect)  # type: ignore[arg-type]
+    return ARRAY.bind_processor(self, dialect)  # type: ignore[arg-type, no-untyped-call]
 
 
 def _sqlite_array_result_processor(self: object, dialect: object, coltype: object) -> object:  # type: ignore[override]
@@ -101,7 +101,7 @@ def _sqlite_array_result_processor(self: object, dialect: object, coltype: objec
             return value
 
         return _result
-    return ARRAY.result_processor(self, dialect, coltype)  # type: ignore[arg-type]
+    return ARRAY.result_processor(self, dialect, coltype)  # type: ignore[arg-type, no-untyped-call]
 
 
 # Monkey-patch ARRAY so the SQLite processor fires without altering production.
