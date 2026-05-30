@@ -7,10 +7,10 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "backend_services_implemented",
+    "status": "knowledge_template_persistence_implemented",
     "last_loop_completed": 18,
     "loops_total": 18,
-    "current_version": "0.1.6"
+    "current_version": "0.1.7"
   },
   "goal": "Construction-LegalOps-DX 自律開発",
   "phase": "Build",
@@ -28,7 +28,7 @@
     "same_error_limit": 2,
     "phase": "Build",
     "last_session_summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘5件修正（N+1/GROUP BY/NotImplementedError/viewer scope/_STUB_TS）。mypy clean。PR #14作成。",
-    "last_stop_at": "2026-05-23T13:45:45.198Z",
+    "last_stop_at": "2026-05-30T10:57:28.712Z",
     "current_session_start_at": "2026-05-30T10:00:02.654Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260530-190001-Construction-LegalOps-DX"
@@ -73,10 +73,10 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
+    "PR #18 merge（ARRAY SQLite bind fix + clause-library CRUD tests）",
     "E2E Playwright テスト実行確認（Next.js ビルド + AUTH_DEV_BYPASS=true）",
-    "review_service / workflow_service のテストカバレッジ向上（27% / 38%）",
-    "knowledge_articles DB テーブル + Alembic マイグレーション",
-    "template_service DB 永続化",
+    "review_service カバレッジ向上（現在 17% → 目標 50%以上）",
+    "workflow_service カバレッジ向上（現在 17% → 目標 40%以上）",
     "RS256 JWT key rotation",
     "本番環境 secrets 投入（Vault）"
   ],
@@ -90,6 +90,18 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-05-30T10:57:28.725Z",
+        "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
+      },
+      {
+        "at": "2026-05-30T10:45:52.698Z",
+        "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
+      },
+      {
+        "at": "2026-05-30T10:35:51.212Z",
+        "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
+      },
       {
         "at": "2026-05-23T13:45:45.217Z",
         "summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21"
@@ -218,6 +230,87 @@
         "frontend/app/(authenticated)/consultations/page-client.tsx"
       ],
       "truncated": true
+    },
+    {
+      "at": "2026-05-30T10:35:51.208Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 9 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/risks.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/knowledge_service.py",
+        "backend/app/services/risk_service.py",
+        "backend/app/services/template_service.py",
+        "backend/tests/integration/test_risks_compliance.py",
+        "frontend/playwright.config.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-05-30T10:45:52.696Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 32 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/risks.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/knowledge_service.py",
+        "backend/app/services/risk_service.py",
+        "backend/app/services/template_service.py",
+        "backend/tests/integration/test_knowledge_templates.py",
+        "backend/tests/integration/test_risks_compliance.py",
+        "frontend/app/(authenticated)/audit-logs/page.tsx",
+        "frontend/app/(authenticated)/compliance/page.tsx",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/contracts/page.tsx",
+        "frontend/app/(authenticated)/dashboard/page.tsx",
+        "frontend/app/(authenticated)/knowledge/page.tsx",
+        "frontend/app/(authenticated)/reviews/[id]/page.tsx",
+        "frontend/app/(authenticated)/reviews/page.tsx",
+        "frontend/app/(authenticated)/risks/page.tsx",
+        "frontend/app/(authenticated)/templates/page.tsx",
+        "frontend/app/(authenticated)/workflows/[id]/page.tsx",
+        "frontend/app/(authenticated)/workflows/page.tsx",
+        "frontend/components/dashboard/recent-reviews-list.tsx",
+        "frontend/components/knowledge/knowledge-results.tsx",
+        "frontend/hooks/use-dashboard.ts",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-05-30T10:57:28.723Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 18 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/002_knowledge_articles.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/risks.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/knowledge_article.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/knowledge_service.py",
+        "backend/app/services/risk_service.py",
+        "backend/app/services/template_service.py",
+        "backend/tests/integration/test_knowledge_templates.py",
+        "backend/tests/integration/test_reviews_crud.py",
+        "backend/tests/integration/test_risks_compliance.py",
+        "backend/tests/integration/test_workflows_crud.py",
+        "frontend/playwright.config.ts"
+      ],
+      "truncated": false
     }
   ],
   "compact": {
