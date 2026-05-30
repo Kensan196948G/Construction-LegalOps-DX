@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.8] - 2026-05-30
 
+### Added (Loop 18 Part 2: Test Coverage 91% Milestone)
+
+- **Unit テスト大幅追加**: 84 → 812 件 (+728件)。全サービス 90%+ カバレッジ達成。
+  `dashboard/contract/compliance/risk/knowledge/template/audit/notification/file_parser/ai_review/clause_extractor/sharepoint/sso` 全サービスをカバー。
+- **knowledge_service ハイブリッド検索**: `KnowledgeArticle` + `Contract` 両ソースを統合検索。
+  記事を優先（score=1.0）、契約書補完（score=0.8）。
+- **Alembic migration 003**: `pg_trgm` GIN インデックスを `knowledge_articles.title/body` に追加。
+- **GitHub Project #30**: Construction-LegalOps-DX 開発管理プロジェクト作成、Issue #19-21 登録。
+- **RSA 鍵生成スクリプト**: `scripts/generate_rsa_keys.sh` 追加（RS256 コードは既実装済み）。
+
+### Fixed (Loop 18 Part 2)
+
+- **review_service.accept() ステータスガード**: `COMPLETED` が pre-condition として許可されていた fail-open バグを修正。正しくは `PENDING` または `RUNNING` のみ許可。
+- **review_service.list_reviews()**: `__import__("sqlalchemy")` インラインハック → `from sqlalchemy import func` に修正。
+- **mypy 2.1 互換**: `# type: ignore[method-assign, assignment]` — `method-assign` は `assignment` をカバーしなくなった変更への対応。
+
 ### Added (Loop 18: Backend DB Persistence + Test Coverage)
 
 - **知識記事 DB**: `KnowledgeArticle` ORM モデル + Alembic migration 002。`create_article()` を実装 (以前は 501)。
