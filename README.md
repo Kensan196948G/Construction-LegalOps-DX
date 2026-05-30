@@ -2,7 +2,7 @@
 
 [![Build](https://img.shields.io/github/actions/workflow/status/Kensan196948G/Construction-LegalOps-DX/ci.yml?branch=main&label=build&logo=github)](./.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-pending-lightgrey.svg)](./.github/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-71%25-brightgreen.svg)](./.github/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -59,13 +59,13 @@
 
 ## 👥 想定ユーザーと利用シーン
 
-| 👤 ロール | 🎯 主な利用シーン |
-|----------|------------------|
-| 👷 **現場担当者** | 下請契約のひな形検索、契約期限の自動通知の受信 |
-| 📋 **法務担当者** | 契約書一次レビューの AI 下書き確認、リスク分類、修正候補の検討 |
-| 🏢 **管理部門** | 監査ログ閲覧、ワークフロー承認、コンプライアンス報告書出力 |
-| ⚖️ **顧問弁護士** | エスカレーション案件の最終確認、法的判断の確定 |
-| 🛡️ **情報システム部** | RBAC / 監査ログ / Entra ID 連携の運用管理 |
+| 👤 ロール             | 🎯 主な利用シーン                                              |
+| --------------------- | -------------------------------------------------------------- |
+| 👷 **現場担当者**     | 下請契約のひな形検索、契約期限の自動通知の受信                 |
+| 📋 **法務担当者**     | 契約書一次レビューの AI 下書き確認、リスク分類、修正候補の検討 |
+| 🏢 **管理部門**       | 監査ログ閲覧、ワークフロー承認、コンプライアンス報告書出力     |
+| ⚖️ **顧問弁護士**     | エスカレーション案件の最終確認、法的判断の確定                 |
+| 🛡️ **情報システム部** | RBAC / 監査ログ / Entra ID 連携の運用管理                      |
 
 🏭 **想定組織規模**: 従業員 約 600 名、公共工事 80% / 民間工事 20% の建設・土木企業
 
@@ -103,12 +103,12 @@
 
 ## 💎 もたらすビジネス価値
 
-| 指標 | 🎯 期待効果 |
-|------|------------|
-| ⏱️ **契約レビュー時間** | 平均 60 分 → 20 分（66% 削減） |
-| 📉 **見落としリスク** | AI 一次レビューによる二重チェック体制 |
-| 🔍 **検索効率** | 紙台帳・Excel 管理 → 数秒で全文検索 |
-| 📋 **監査対応工数** | 法定書類提出を半自動化 |
+| 指標                    | 🎯 期待効果                                          |
+| ----------------------- | ---------------------------------------------------- |
+| ⏱️ **契約レビュー時間** | 平均 60 分 → 20 分（66% 削減）                       |
+| 📉 **見落としリスク**   | AI 一次レビューによる二重チェック体制                |
+| 🔍 **検索効率**         | 紙台帳・Excel 管理 → 数秒で全文検索                  |
+| 📋 **監査対応工数**     | 法定書類提出を半自動化                               |
 | 🛡️ **コンプライアンス** | 建設業法・下請法・電子帳簿保存法の準拠を自動的に支援 |
 
 💰 **投資回収**: 法務 + 管理部門 5 名 × 月 20 時間削減 ≈ 年間 1,200 時間の生産性向上
@@ -139,13 +139,13 @@
 
 ### 🚫 禁止行為（5 項目）
 
-| # | 🚫 禁止内容 |
-|---|------------|
-| 1 | AI が法的結論を **断定** すること |
-| 2 | 弁護士確認が必要な事項を **自動承認** すること |
-| 3 | 機密契約書を **無制御** に外部 AI へ送信すること |
-| 4 | **監査ログなし** でレビュー結果を変更すること |
-| 5 | 承認済み契約を **無断変更可能** な設計にすること |
+| #   | 🚫 禁止内容                                      |
+| --- | ------------------------------------------------ |
+| 1   | AI が法的結論を **断定** すること                |
+| 2   | 弁護士確認が必要な事項を **自動承認** すること   |
+| 3   | 機密契約書を **無制御** に外部 AI へ送信すること |
+| 4   | **監査ログなし** でレビュー結果を変更すること    |
+| 5   | 承認済み契約を **無断変更可能** な設計にすること |
 
 ### 📖 関連ドキュメント
 
@@ -159,20 +159,20 @@
 
 🗓️ 本プロジェクトは **登録日から 6 ヶ月の固定スコープ** で運営されます。**リリース期限は絶対厳守** です。
 
-| 項目 | 📆 日付 |
-|------|--------|
-| 🚀 プロジェクト登録日 | **2026-05-16** |
-| 🎯 本番リリース期限 | **2026-11-16** |
-| ⏳ 期間 | 6 ヶ月 (約 184 日) |
+| 項目                  | 📆 日付            |
+| --------------------- | ------------------ |
+| 🚀 プロジェクト登録日 | **2026-05-16**     |
+| 🎯 本番リリース期限   | **2026-11-16**     |
+| ⏳ 期間               | 6 ヶ月 (約 184 日) |
 
 ### 🗺️ 6 ヶ月ロードマップ
 
-| 期間 | 🎯 フォーカス | ✅ ステータス |
-|------|--------------|--------------|
-| 📍 Month 1〜2 (2026-05-16 〜 2026-07-15) | 基盤整備・主要機能実装 (Loop 1〜3) | ✅ MVP 完了 |
-| 🔧 Month 3〜4 (2026-07-16 〜 2026-09-15) | 品質向上・テスト整備 (Loop 4) | ✅ 完了 |
-| 🧪 Month 5 (2026-09-16 〜 2026-10-15) | 統合テスト・バグ修正 (Loop 5) | ✅ 完了 |
-| 🎉 Month 6 (2026-10-16 〜 2026-11-16) | リリース準備・本番移行 | 🔄 進行中 |
+| 期間                                     | 🎯 フォーカス                       | ✅ ステータス                        |
+| ---------------------------------------- | ----------------------------------- | ------------------------------------ |
+| 📍 Month 1〜2 (2026-05-16 〜 2026-07-15) | 基盤整備・主要機能実装 (Loop 1〜18) | 🔨 **Build 中** (v0.1.6 / 108 tests) |
+| 🔧 Month 3〜4 (2026-07-16 〜 2026-09-15) | 品質向上・テスト整備                | ⏳ 未着手                            |
+| 🧪 Month 5 (2026-09-16 〜 2026-10-15)    | 統合テスト・バグ修正                | ⏳ 未着手                            |
+| 🎉 Month 6 (2026-10-16 〜 2026-11-16)    | リリース準備・本番移行              | ⏳ 未着手                            |
 
 ### ⚠️ 残日数による自動縮退ルール
 
@@ -349,15 +349,15 @@ flowchart LR
 
 ### 🛂 RBAC ロール一覧
 
-| 🎭 ロール | 📝 権限範囲 |
-|----------|------------|
-| 👑 `admin` | 全権限（運用管理者のみ） |
-| ⚖️ `legal_lead` | 契約書 R/W、AI レビュー実行、ワークフロー起票・承認 |
-| 📋 `legal_member` | 契約書 R/W、AI レビュー実行（承認権限なし） |
-| 🏢 `manager` | 部門配下の契約書 R/W、承認 |
-| 👷 `site_member` | 自己起票の契約書のみ R/W |
-| 🔍 `auditor` | 全契約書・監査ログの R のみ |
-| 👁️ `viewer` | 公開済み契約書の R のみ |
+| 🎭 ロール         | 📝 権限範囲                                         |
+| ----------------- | --------------------------------------------------- |
+| 👑 `admin`        | 全権限（運用管理者のみ）                            |
+| ⚖️ `legal_lead`   | 契約書 R/W、AI レビュー実行、ワークフロー起票・承認 |
+| 📋 `legal_member` | 契約書 R/W、AI レビュー実行（承認権限なし）         |
+| 🏢 `manager`      | 部門配下の契約書 R/W、承認                          |
+| 👷 `site_member`  | 自己起票の契約書のみ R/W                            |
+| 🔍 `auditor`      | 全契約書・監査ログの R のみ                         |
+| 👁️ `viewer`       | 公開済み契約書の R のみ                             |
 
 ---
 
@@ -439,51 +439,51 @@ erDiagram
 
 ### 🚀 バックエンド
 
-| カテゴリ | 技術 | バージョン |
-|---------|------|-----------|
-| 🐍 言語 | Python | 3.12 |
-| ⚡ フレームワーク | FastAPI | 0.115.x |
-| 🗃️ ORM | SQLAlchemy | 2.x |
-| 🔧 マイグレーション | Alembic | latest |
-| 🔑 認証 | Entra ID (OIDC) + JWT | RS256 (移行中) |
-| 🤖 AI | Anthropic Claude API | `claude-opus-4-7` |
-| 🧪 テスト | pytest / pytest-asyncio | 8.x |
-| 🛠️ 品質 | ruff / mypy / bandit | latest |
+| カテゴリ            | 技術                    | バージョン        |
+| ------------------- | ----------------------- | ----------------- |
+| 🐍 言語             | Python                  | 3.12              |
+| ⚡ フレームワーク   | FastAPI                 | 0.115.x           |
+| 🗃️ ORM              | SQLAlchemy              | 2.x               |
+| 🔧 マイグレーション | Alembic                 | latest            |
+| 🔑 認証             | Entra ID (OIDC) + JWT   | RS256 (移行中)    |
+| 🤖 AI               | Anthropic Claude API    | `claude-opus-4-7` |
+| 🧪 テスト           | pytest / pytest-asyncio | 8.x               |
+| 🛠️ 品質             | ruff / mypy / bandit    | latest            |
 
 ### 🖼️ フロントエンド
 
-| カテゴリ | 技術 | バージョン |
-|---------|------|-----------|
-| ⚛️ フレームワーク | Next.js (App Router) | 15.0.3 |
-| 📘 言語 | TypeScript | 5.6.x |
-| 🎨 UI | React + Tailwind CSS + shadcn/ui | React 19 RC |
-| 🔄 状態管理 | TanStack Query | 5.x |
-| 📝 フォーム | react-hook-form + zod | latest |
-| 🧪 テスト | Jest / React Testing Library | 29.x / 16.x |
-| 🛠️ 品質 | ESLint / Prettier / tsc | 9.x / 3.x |
+| カテゴリ          | 技術                             | バージョン  |
+| ----------------- | -------------------------------- | ----------- |
+| ⚛️ フレームワーク | Next.js (App Router)             | 15.0.3      |
+| 📘 言語           | TypeScript                       | 5.6.x       |
+| 🎨 UI             | React + Tailwind CSS + shadcn/ui | React 19 RC |
+| 🔄 状態管理       | TanStack Query                   | 5.x         |
+| 📝 フォーム       | react-hook-form + zod            | latest      |
+| 🧪 テスト         | Jest / React Testing Library     | 29.x / 16.x |
+| 🛠️ 品質           | ESLint / Prettier / tsc          | 9.x / 3.x   |
 
 ### 🏗️ インフラ
 
-| カテゴリ | 技術 |
-|---------|------|
-| 🐘 DB | PostgreSQL 16 |
-| ⚡ キャッシュ | Redis 7 |
-| 🔀 リバースプロキシ | Nginx (TLS / HSTS / CSP) |
-| 🐳 コンテナ | Docker / docker compose v2 |
-| 🔄 CI/CD | GitHub Actions |
+| カテゴリ                | 技術                       |
+| ----------------------- | -------------------------- |
+| 🐘 DB                   | PostgreSQL 16              |
+| ⚡ キャッシュ           | Redis 7                    |
+| 🔀 リバースプロキシ     | Nginx (TLS / HSTS / CSP)   |
+| 🐳 コンテナ             | Docker / docker compose v2 |
+| 🔄 CI/CD                | GitHub Actions             |
 | 🔒 セキュリティスキャン | Trivy / Bandit / npm audit |
 
 ### 🔗 外部システム連携
 
-| カテゴリ | サービス | 用途 |
-|---------|---------|------|
-| 🛡️ アクセス制御 | HENNGE One | IdP プロキシ・端末認証 |
-| 🔑 SSO | Microsoft Entra ID | OIDC 認証・RBAC ソース |
-| 📧 メール | Microsoft 365 | 通知配信 |
-| 📂 ストレージ | SharePoint Online | 契約書ファイル保管 |
-| ☁️ クラウドストレージ | DirectCloud | 大容量ファイルバックアップ |
-| 📋 ワークフロー | desknet's NEO | 承認フロー |
-| 🤖 AI | Anthropic Claude API | 法務 AI アシスト |
+| カテゴリ              | サービス             | 用途                       |
+| --------------------- | -------------------- | -------------------------- |
+| 🛡️ アクセス制御       | HENNGE One           | IdP プロキシ・端末認証     |
+| 🔑 SSO                | Microsoft Entra ID   | OIDC 認証・RBAC ソース     |
+| 📧 メール             | Microsoft 365        | 通知配信                   |
+| 📂 ストレージ         | SharePoint Online    | 契約書ファイル保管         |
+| ☁️ クラウドストレージ | DirectCloud          | 大容量ファイルバックアップ |
+| 📋 ワークフロー       | desknet's NEO        | 承認フロー                 |
+| 🤖 AI                 | Anthropic Claude API | 法務 AI アシスト           |
 
 ---
 
@@ -547,14 +547,14 @@ cp .env.example .env
 
 📝 `.env` の主要キー（本番は Vault / Key Vault 経由を推奨）：
 
-| 🔑 キー | 📝 用途 | 📍 取得元 |
-|--------|--------|----------|
-| `POSTGRES_PASSWORD` | DB パスワード | `openssl rand -hex 32` |
-| `JWT_SECRET_KEY` | JWT 署名鍵 (HS256 暫定) | `openssl rand -hex 32` |
-| `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` | Entra ID SSO | Azure Portal |
-| `HENNGE_*` | HENNGE One IdP プロキシ | HENNGE 管理画面 |
-| `ANTHROPIC_API_KEY` | Claude API | Anthropic Console |
-| `SHAREPOINT_TENANT_ID` / `SHAREPOINT_CLIENT_ID` | SharePoint 連携 | M365 管理センター |
+| 🔑 キー                                                       | 📝 用途                 | 📍 取得元              |
+| ------------------------------------------------------------- | ----------------------- | ---------------------- |
+| `POSTGRES_PASSWORD`                                           | DB パスワード           | `openssl rand -hex 32` |
+| `JWT_SECRET_KEY`                                              | JWT 署名鍵 (HS256 暫定) | `openssl rand -hex 32` |
+| `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` | Entra ID SSO            | Azure Portal           |
+| `HENNGE_*`                                                    | HENNGE One IdP プロキシ | HENNGE 管理画面        |
+| `ANTHROPIC_API_KEY`                                           | Claude API              | Anthropic Console      |
+| `SHAREPOINT_TENANT_ID` / `SHAREPOINT_CLIENT_ID`               | SharePoint 連携         | M365 管理センター      |
 
 ### 2️⃣ Docker Compose で一括起動
 
@@ -565,13 +565,13 @@ docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade h
 
 ### 3️⃣ アクセス先
 
-| 🌐 URL | 📝 用途 |
-|--------|---------|
-| `http://localhost` | 🖼️ Frontend (nginx 経由) |
-| `http://localhost/api/` | 🚀 Backend API (nginx 経由) |
-| `http://localhost:3000` | 🖼️ Frontend (直接) |
-| `http://localhost:8000` | 🚀 Backend (直接) |
-| `http://localhost/healthz` | 💓 ヘルスチェック |
+| 🌐 URL                     | 📝 用途                     |
+| -------------------------- | --------------------------- |
+| `http://localhost`         | 🖼️ Frontend (nginx 経由)    |
+| `http://localhost/api/`    | 🚀 Backend API (nginx 経由) |
+| `http://localhost:3000`    | 🖼️ Frontend (直接)          |
+| `http://localhost:8000`    | 🚀 Backend (直接)           |
+| `http://localhost/healthz` | 💓 ヘルスチェック           |
 
 ### 4️⃣ 開発モード（ホットリロード）
 
@@ -659,6 +659,15 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-> 📌 本 README は **Loop 5（Integration & Finalization, 2026-05-16 更新）** 時点のものです。
-> 🎯 本番リリース **2026-11-16** までに残課題（CSP enforce 化、RS256 移行、`/readyz` 本番チューニング等）を解消する計画です。
+> 📌 本 README は **Loop 18（Backend Services + E2E, 2026-05-30 更新）** 時点のものです。
+>
+> | 指標                  | 値                                                       |
+> | --------------------- | -------------------------------------------------------- |
+> | 📦 バージョン         | v0.1.6                                                   |
+> | 🧪 バックエンドテスト | 108 passed / 0 failed                                    |
+> | 📊 カバレッジ         | 71%                                                      |
+> | 🔧 mypy               | 0 errors                                                 |
+> | ⚡ E2E                | Playwright 基盤整備済み（smoke / contracts / dashboard） |
+>
+> 🎯 本番リリース **2026-11-16** までの残課題: RS256 移行 / knowledge_articles テーブル / template_service 永続化 / E2E 拡充
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)
