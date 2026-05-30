@@ -10,7 +10,6 @@ Covers endpoints not exercised by test_workflow_actions.py:
 
 from __future__ import annotations
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
