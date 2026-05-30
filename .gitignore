@@ -102,6 +102,11 @@ lerna-debug.log*
 # ---------- Docker ----------
 docker-compose.override.yml
 
+# ---------- Playwright ----------
+frontend/test-results/
+frontend/playwright-report/
+frontend/.playwright-cache/
+
 # ---------- Misc ----------
 tmp/
 .tmp/
