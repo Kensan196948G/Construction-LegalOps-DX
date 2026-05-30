@@ -59,19 +59,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Trivy CLI
+      - name: Install Trivy CLI (pinned version)
+        env:
+          TRIVY_VERSION: "0.57.0"
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin
+          curl -sfL "https://raw.githubusercontent.com/aquasecurity/trivy/v${TRIVY_VERSION}/contrib/install.sh" \
+            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
 
-      - name: Trivy filesystem scan (table output)
+      - name: Trivy filesystem scan (JSON report)
         run: |
+          # Always produce JSON artifact even if exit-code 1; captured on next step.
           trivy fs . \
             --severity CRITICAL,HIGH,MEDIUM \
             --ignore-unfixed \
             --scanners vuln,secret,misconfig \
+            --format json \
+            --output trivy-fs.json || true
+
+      - name: Trivy filesystem scan (fail on CRITICAL/HIGH)
+        run: |
+          trivy fs . \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --scanners vuln,secret,misconfig \
             --format table \
-            --exit-code 0
+            --exit-code 1
+
+      - name: Upload Trivy fs report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-report
+          path: trivy-fs.json
+          if-no-files-found: ignore
 
   # ----------------------------------------------------------
   # pip-audit (Python dependencies)
@@ -168,25 +188,55 @@ jobs:
         if: hashFiles('frontend/Dockerfile') != ''
         run: docker build -t legalops/frontend:scan frontend
 
-      - name: Install Trivy CLI
+      - name: Install Trivy CLI (pinned version)
+        env:
+          TRIVY_VERSION: "0.57.0"
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin
+          curl -sfL "https://raw.githubusercontent.com/aquasecurity/trivy/v${TRIVY_VERSION}/contrib/install.sh" \
+            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
 
-      - name: Trivy scan backend image
+      - name: Trivy scan backend image (JSON)
+        if: hashFiles('backend/Dockerfile') != ''
+        run: |
+          trivy image legalops/backend:scan \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --format json \
+            --output trivy-backend.json || true
+
+      - name: Trivy scan backend image (fail on CRITICAL/HIGH)
         if: hashFiles('backend/Dockerfile') != ''
         run: |
           trivy image legalops/backend:scan \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --format table \
-            --exit-code 0
+            --exit-code 1
 
-      - name: Trivy scan frontend image
+      - name: Trivy scan frontend image (JSON)
+        if: hashFiles('frontend/Dockerfile') != ''
+        run: |
+          trivy image legalops/frontend:scan \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --format json \
+            --output trivy-frontend.json || true
+
+      - name: Trivy scan frontend image (fail on CRITICAL/HIGH)
         if: hashFiles('frontend/Dockerfile') != ''
         run: |
           trivy image legalops/frontend:scan \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --format table \
-            --exit-code 0
+            --exit-code 1
+
+      - name: Upload image scan reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image-reports
+          path: |
+            trivy-backend.json
+            trivy-frontend.json
+          if-no-files-found: ignore
