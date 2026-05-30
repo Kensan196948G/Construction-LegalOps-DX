@@ -34,7 +34,7 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘5件修正（N+1/GROUP BY/NotImplementedError/viewer scope/_STUB_TS）。mypy clean。PR #14作成。",
+    "last_session_summary": "Loop 18 完了: 84→832 テスト (+748)。68%→90% カバレッジ。全サービス DB 永続化・全サービスユニットテスト100%。/readyz deep check・RBAC拡張・E2E 6ファイル・PostgreSQL CI・k6負荷テスト・Vault secrets スクリプト・CSP enforce 設定・pre_deploy_check.sh。CTO判断: code_complete_deployment_ready / deploy.ready=true。P0残課題: Vault投入(人間作業)・CSP enforce(7日後)。PR #14-#22 merged。",
     "last_stop_at": "2026-05-30T13:34:53.304Z",
     "current_session_start_at": "2026-05-30T10:00:02.654Z",
     "last_trigger": "cron",
