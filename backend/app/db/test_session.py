@@ -33,6 +33,7 @@ PostgreSQL DDL is untouched.
 
 from __future__ import annotations
 
+import json as _json
 import os
 from typing import Final
 
@@ -64,9 +65,48 @@ def _compile_inet_sqlite(_type_: object, _compiler: object, **_: object) -> str:
 
 @compiles(ARRAY, "sqlite")  # type: ignore[misc, no-untyped-call]
 def _compile_array_sqlite(_type_: object, _compiler: object, **_: object) -> str:
-    # Represent PG ARRAY as JSON text on SQLite. Tests that need true
-    # array semantics should remain skipped.
+    # Represent PG ARRAY as JSON text on SQLite for DDL.
     return "JSON"
+
+
+def _sqlite_array_bind_processor(self: object, dialect: object) -> object:  # type: ignore[override]
+    """Serialize Python lists to JSON strings for SQLite ARRAY columns.
+
+    Without this, SQLite raises "type 'list' is not supported" because it
+    has no native array type.  The companion result_processor decodes them
+    back so reads are transparent.
+    """
+    if getattr(dialect, "name", "") == "sqlite":
+
+        def _bind(value: object) -> object:
+            if isinstance(value, list):
+                return _json.dumps(value, ensure_ascii=False)
+            return value
+
+        return _bind
+    return ARRAY.bind_processor(self, dialect)  # type: ignore[arg-type, no-untyped-call]
+
+
+def _sqlite_array_result_processor(self: object, dialect: object, coltype: object) -> object:  # type: ignore[override]
+    """Decode JSON strings back to Python lists on SQLite reads."""
+    if getattr(dialect, "name", "") == "sqlite":
+
+        def _result(value: object) -> object:
+            if isinstance(value, str):
+                try:
+                    decoded = _json.loads(value)
+                    return decoded if isinstance(decoded, list) else value
+                except (ValueError, TypeError):
+                    return value
+            return value
+
+        return _result
+    return ARRAY.result_processor(self, dialect, coltype)  # type: ignore[arg-type, no-untyped-call]
+
+
+# Monkey-patch ARRAY so the SQLite processor fires without altering production.
+ARRAY.bind_processor = _sqlite_array_bind_processor  # type: ignore[method-assign, assignment]
+ARRAY.result_processor = _sqlite_array_result_processor  # type: ignore[method-assign, assignment]
 
 
 @compiles(BigInteger, "sqlite")  # type: ignore[misc, no-untyped-call]
