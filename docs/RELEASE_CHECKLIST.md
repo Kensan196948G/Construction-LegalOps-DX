@@ -1,8 +1,25 @@
-# RELEASE CHECKLIST — Construction-LegalOps-DX v0.1.0
+# RELEASE CHECKLIST — Construction-LegalOps-DX
 
 本ドキュメントは **2026-11-16 本番リリース** に向けた最終確認チェックリストです。すべての項目をリリース責任者・法務担当者・インフラ担当者の三者でクロスチェックしてください。
 
-- リリース対象バージョン: `v0.1.0`
+**最終更新: 2026-05-30 (v0.1.8)** — Loop 18 完了時点の実施状況を反映
+
+## 📊 Release Readiness ダッシュボード (2026-05-30)
+
+| カテゴリ     | 状態            | 詳細                                                    |
+| ------------ | --------------- | ------------------------------------------------------- |
+| 🧪 テスト    | ✅              | 812 passed / 91% coverage / mypy 0 errors               |
+| 🔐 RS256 JWT | ✅ コード完成   | `scripts/generate_rsa_keys.sh` 準備済み。Vault 投入待ち |
+| 🏥 /readyz   | ✅ Deep check   | DB(critical) + Redis/Claude(degraded) 実装済み          |
+| 📋 全 API    | ✅              | 12 エンドポイント全 DB バック化完了                     |
+| 🐳 Docker    | ✅              | docker-compose.yml + prod overlay 動作確認済み          |
+| ⚡ E2E       | 🔄 基盤整備済み | Playwright smoke/contracts/dashboard 3件                |
+| 🔑 Vault     | ⏳              | 本番 secrets 投入が残課題                               |
+| 🛡️ CSP       | ⏳ Report-Only  | enforce 移行は 7日間データ収集後                        |
+
+---
+
+- リリース対象バージョン: `v0.1.8` → 最終リリース `v1.0.0` 予定
 - リリース期限: **2026-11-16** (登録日 2026-05-16 から 6 ヶ月後、絶対厳守)
 - 本番環境: 社内オンプレ / プライベートクラウド (詳細は社内 Confluence 参照)
 - リリース責任者: CTO 代行 (Claude Agent によるループ運用) + 法務リード + インフラリード
