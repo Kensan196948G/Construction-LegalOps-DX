@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.enums import ReviewStatus
@@ -38,9 +38,7 @@ def _to_dict(review: LegalReview) -> dict[str, Any]:
         "started_at": review.started_at,
         "finished_at": review.finished_at,
         "reviewer_id": (
-            review.reviewer_id
-            if isinstance(review.reviewer_id, (int, type(None)))
-            else None
+            review.reviewer_id if isinstance(review.reviewer_id, (int, type(None))) else None
         ),
         "ai_input_tokens": review.ai_input_tokens,
         "ai_output_tokens": review.ai_output_tokens,
@@ -82,9 +80,7 @@ async def list_reviews(
         stmt = stmt.where(LegalReview.ai_model == ai_model)
 
     count_q = await session.execute(
-        stmt.with_only_columns(
-            __import__("sqlalchemy", fromlist=["func"]).func.count(LegalReview.id)  # type: ignore[attr-defined]
-        ).order_by(None)
+        stmt.with_only_columns(func.count(LegalReview.id)).order_by(None)
     )
     total = count_q.scalar() or 0
 
@@ -125,9 +121,7 @@ async def update_review(
     editor: Any,
 ) -> dict[str, Any]:
     result = await session.execute(
-        select(LegalReview).where(
-            LegalReview.id == review_id, LegalReview.deleted_at.is_(None)
-        )
+        select(LegalReview).where(LegalReview.id == review_id, LegalReview.deleted_at.is_(None))
     )
     review = result.scalar_one_or_none()
     if review is None:
@@ -150,14 +144,12 @@ async def accept(
     comment: str | None = None,
 ) -> dict[str, Any]:
     result = await session.execute(
-        select(LegalReview).where(
-            LegalReview.id == review_id, LegalReview.deleted_at.is_(None)
-        )
+        select(LegalReview).where(LegalReview.id == review_id, LegalReview.deleted_at.is_(None))
     )
     review = result.scalar_one_or_none()
     if review is None:
         raise LookupError(f"review {review_id} not found")
-    if review.status not in (ReviewStatus.COMPLETED, ReviewStatus.RUNNING):
+    if review.status not in (ReviewStatus.PENDING, ReviewStatus.RUNNING):
         raise ValueError(f"cannot accept review in status '{review.status}'")
 
     review.status = ReviewStatus.COMPLETED.value
@@ -180,9 +172,7 @@ async def reject(
     reason: str | None = None,
 ) -> dict[str, Any]:
     result = await session.execute(
-        select(LegalReview).where(
-            LegalReview.id == review_id, LegalReview.deleted_at.is_(None)
-        )
+        select(LegalReview).where(LegalReview.id == review_id, LegalReview.deleted_at.is_(None))
     )
     review = result.scalar_one_or_none()
     if review is None:

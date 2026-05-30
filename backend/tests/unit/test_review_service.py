@@ -435,9 +435,9 @@ class TestAccept:
             await review_service.accept(session, review_id=999, actor=_make_viewer())
 
     async def test_accept_raises_value_error_for_invalid_status(self) -> None:
-        """accept raises ValueError if review is in PENDING status."""
+        """accept raises ValueError if review is already COMPLETED."""
         session = _make_session()
-        r = _make_review(id=1, status=ReviewStatus.PENDING)
+        r = _make_review(id=1, status=ReviewStatus.COMPLETED)
         exec_result = MagicMock()
         exec_result.scalar_one_or_none.return_value = r
         session.execute.return_value = exec_result
@@ -445,10 +445,10 @@ class TestAccept:
         with pytest.raises(ValueError, match="cannot accept"):
             await review_service.accept(session, review_id=1, actor=_make_viewer())
 
-    async def test_accept_completed_review_sets_status(self) -> None:
-        """accept on COMPLETED review sets status to COMPLETED and reviewer_id."""
+    async def test_accept_pending_review_sets_status(self) -> None:
+        """accept on PENDING review sets status to COMPLETED and reviewer_id."""
         session = _make_session()
-        r = _make_review(id=1, status=ReviewStatus.COMPLETED)
+        r = _make_review(id=1, status=ReviewStatus.PENDING)
         exec_result = MagicMock()
         exec_result.scalar_one_or_none.return_value = r
         session.execute.return_value = exec_result
@@ -477,7 +477,7 @@ class TestAccept:
     async def test_accept_with_comment_stores_in_result(self) -> None:
         """accept with a legal_comment stores it in review.result."""
         session = _make_session()
-        r = _make_review(id=3, status=ReviewStatus.COMPLETED, result={})
+        r = _make_review(id=3, status=ReviewStatus.PENDING, result={})
         exec_result = MagicMock()
         exec_result.scalar_one_or_none.return_value = r
         session.execute.return_value = exec_result
@@ -489,7 +489,7 @@ class TestAccept:
     async def test_accept_without_comment_does_not_set_key(self) -> None:
         """accept with no comment leaves result dict unchanged."""
         session = _make_session()
-        r = _make_review(id=4, status=ReviewStatus.COMPLETED, result={})
+        r = _make_review(id=4, status=ReviewStatus.PENDING, result={})
         exec_result = MagicMock()
         exec_result.scalar_one_or_none.return_value = r
         session.execute.return_value = exec_result
@@ -500,7 +500,7 @@ class TestAccept:
 
     async def test_accept_flushes_session(self) -> None:
         session = _make_session()
-        r = _make_review(id=5, status=ReviewStatus.COMPLETED)
+        r = _make_review(id=5, status=ReviewStatus.PENDING)
         exec_result = MagicMock()
         exec_result.scalar_one_or_none.return_value = r
         session.execute.return_value = exec_result
