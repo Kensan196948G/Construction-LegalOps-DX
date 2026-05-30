@@ -2,7 +2,7 @@
 
 [![Build](https://img.shields.io/github/actions/workflow/status/Kensan196948G/Construction-LegalOps-DX/ci.yml?branch=main&label=build&logo=github)](./.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![Coverage](https://img.shields.io/badge/coverage-71%25-brightgreen.svg)](./.github/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-72%25-brightgreen.svg)](./.github/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
@@ -169,7 +169,7 @@
 
 | 期間                                     | 🎯 フォーカス                       | ✅ ステータス                        |
 | ---------------------------------------- | ----------------------------------- | ------------------------------------ |
-| 📍 Month 1〜2 (2026-05-16 〜 2026-07-15) | 基盤整備・主要機能実装 (Loop 1〜18) | 🔨 **Build 中** (v0.1.6 / 108 tests) |
+| 📍 Month 1〜2 (2026-05-16 〜 2026-07-15) | 基盤整備・主要機能実装 (Loop 1〜18) | 🔨 **Build 中** (v0.1.7 / 137 tests) |
 | 🔧 Month 3〜4 (2026-07-16 〜 2026-09-15) | 品質向上・テスト整備                | ⏳ 未着手                            |
 | 🧪 Month 5 (2026-09-16 〜 2026-10-15)    | 統合テスト・バグ修正                | ⏳ 未着手                            |
 | 🎉 Month 6 (2026-10-16 〜 2026-11-16)    | リリース準備・本番移行              | ⏳ 未着手                            |
@@ -659,15 +659,34 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-> 📌 本 README は **Loop 18（Backend Services + E2E, 2026-05-30 更新）** 時点のものです。
+> 📌 本 README は **Loop 18（Backend DB Persistence + Tests, 2026-05-30 更新）** 時点のものです。
 >
-> | 指標                  | 値                                                       |
-> | --------------------- | -------------------------------------------------------- |
-> | 📦 バージョン         | v0.1.6                                                   |
-> | 🧪 バックエンドテスト | 108 passed / 0 failed                                    |
-> | 📊 カバレッジ         | 71%                                                      |
-> | 🔧 mypy               | 0 errors                                                 |
-> | ⚡ E2E                | Playwright 基盤整備済み（smoke / contracts / dashboard） |
+> | 指標 | 値 |
+> |------|-----|
+> | 📦 バージョン | v0.1.7 |
+> | 🧪 バックエンドテスト | 137 passed / 0 failed |
+> | 📊 カバレッジ | 72% |
+> | 🔧 mypy | 0 errors |
+> | 🗄️ 実装済みサービス | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
+> | ⚡ E2E | Playwright 基盤整備済み（smoke / contracts / dashboard） |
 >
-> 🎯 本番リリース **2026-11-16** までの残課題: RS256 移行 / knowledge_articles テーブル / template_service 永続化 / E2E 拡充
+> 🎯 本番リリース **2026-11-16** 残課題: RS256 移行 / E2E 拡充 / workflow カバレッジ向上
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)
+
+---
+
+## 🔌 Backend API カバレッジ（v0.1.7）
+
+| エンドポイント | ステータス | テスト数 |
+|---|---|---|
+| `/api/v1/contracts` | ✅ 実装+テスト | 6件 |
+| `/api/v1/reviews` | ✅ 実装+テスト | 13件 |
+| `/api/v1/workflows` | ✅ 実装+テスト | 8件 |
+| `/api/v1/risks` | ✅ 実装+テスト | 5件 |
+| `/api/v1/compliance` | ✅ 実装+テスト | 6件 |
+| `/api/v1/knowledge` | ✅ 実装+テスト | 6件 (DB バック) |
+| `/api/v1/templates` | ✅ 実装+テスト | 5件 |
+| `/api/v1/clauses-library` | ✅ 実装+テスト | 8件 (DB バック) |
+| `/api/v1/audit-logs` | ✅ 実装+テスト | 3件 |
+| `/api/v1/dashboard` | ✅ 実装+テスト | 3件 |
+| `/api/v1/health` | ✅ 実装+テスト | 3件 |
