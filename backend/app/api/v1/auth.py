@@ -133,15 +133,11 @@ async def refresh_token(
             detail="refresh token missing subject",
         )
 
-    extra = {
-        k: v
-        for k, v in claims.items()
-        if k in {"role", "department_ids", "email"}
-    }
+    extra = {k: v for k, v in claims.items() if k in {"role", "department_ids", "email"}}
     new_access = create_access_token(subject=str(subject), extra_claims=extra)
     return RefreshResponse(
         access_token=new_access,
-        token_type="Bearer",
+        token_type="Bearer",  # noqa: S106 — RFC 6749 standard token type, not a secret
         expires_in=settings.jwt_expire_minutes * 60,
     )
 
