@@ -60,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Trivy filesystem scan (SARIF)
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           scan-type: fs
           scan-ref: .
@@ -173,7 +173,7 @@ jobs:
 
       - name: Trivy scan backend image (SARIF)
         if: hashFiles('backend/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: legalops/backend:scan
           format: sarif
@@ -183,7 +183,7 @@ jobs:
 
       - name: Trivy scan frontend image (SARIF)
         if: hashFiles('frontend/Dockerfile') != ''
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: legalops/frontend:scan
           format: sarif

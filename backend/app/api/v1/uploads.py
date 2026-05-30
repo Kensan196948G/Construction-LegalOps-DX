@@ -87,9 +87,7 @@ async def complete_upload(
     _: None = Depends(require_role("site", "legal", "admin")),
 ) -> UploadOut:
     try:
-        upload = await upload_service.complete_upload(
-            session, actor=current_user, payload=payload
-        )
+        upload = await upload_service.complete_upload(session, actor=current_user, payload=payload)
     except LookupError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="upload session not found"
@@ -119,9 +117,7 @@ async def get_upload(
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> UploadOut:
-    upload = await upload_service.get_upload(
-        session, upload_id=upload_id, viewer=current_user
-    )
+    upload = await upload_service.get_upload(session, upload_id=upload_id, viewer=current_user)
     if upload is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload not found")
     return UploadOut.model_validate(upload)
@@ -160,6 +156,7 @@ async def download_upload(
 @router.delete(
     "/{upload_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
     summary="アップロード論理削除",
 )
 async def delete_upload(
@@ -169,9 +166,7 @@ async def delete_upload(
     current_user: User = Depends(get_current_user),
 ) -> None:
     try:
-        await upload_service.soft_delete(
-            session, upload_id=upload_id, actor=current_user
-        )
+        await upload_service.soft_delete(session, upload_id=upload_id, actor=current_user)
     except LookupError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload not found")
     except PermissionError:

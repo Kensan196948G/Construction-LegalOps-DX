@@ -9,8 +9,6 @@ Loop 5 で OpenSearch / pgvector の本格実装に切り替える想定。
 
 from __future__ import annotations
 
-from typing import cast
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,9 +73,9 @@ async def find_similar_contracts(
     current_user: User = Depends(get_current_user),
 ) -> list[SimilarContractOut]:
     try:
-        return cast(list[SimilarContractOut], await knowledge_service.find_similar(
+        return await knowledge_service.find_similar(
             session, contract_id=contract_id, viewer=current_user, top_k=top_k
-        ))
+        )
     except LookupError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
 
@@ -95,7 +93,14 @@ async def create_article(
     current_user: User = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> KnowledgeArticleOut:
-    article = await knowledge_service.create_article(session, data=payload, creator=current_user)
+    try:
+        article = await knowledge_service.create_article(
+            session, data=payload, creator=current_user
+        )
+    except NotImplementedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)
+        ) from exc
     await audit_service.log(
         session,
         actor_id=current_user.id,

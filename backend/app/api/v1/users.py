@@ -140,6 +140,7 @@ async def update_user(
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
     summary="ユーザー削除 (admin only / stub)",
     description="論理削除。admin ロールのみ実行可能。実装は Sprint 1 で完成予定。",
 )
