@@ -7,7 +7,7 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "test_coverage_91pct_all_services_covered",
+    "status": "release_readiness_improvements_loop18",
     "last_loop_completed": 18,
     "loops_total": 18,
     "current_version": "0.1.8"
@@ -28,7 +28,7 @@
     "same_error_limit": 2,
     "phase": "Build",
     "last_session_summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘5件修正（N+1/GROUP BY/NotImplementedError/viewer scope/_STUB_TS）。mypy clean。PR #14作成。",
-    "last_stop_at": "2026-05-30T10:57:28.712Z",
+    "last_stop_at": "2026-05-30T13:12:18.086Z",
     "current_session_start_at": "2026-05-30T10:00:02.654Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260530-190001-Construction-LegalOps-DX"
@@ -73,11 +73,11 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
-    "E2E Playwright テスト実行確認（Next.js ビルド + AUTH_DEV_BYPASS=true）",
-    "RS256 本番鍵投入 Vault (#19) — コード実装済み",
-    "PostgreSQL pg_trgm テスト (testcontainers/PG profile)",
-    "本番環境 secrets 投入（Vault）",
-    "CSP enforce 化（現在 Report-Only）"
+    "本番環境 secrets 投入（Vault）— P0",
+    "CSP enforce 化（現在 Report-Only）— P0 (7日データ収集後)",
+    "PostgreSQL pg_trgm テスト確認 (backend-pg CI ジョブで確認中)",
+    "E2E Playwright 実際のブラウザ実行確認",
+    "本番デプロイ手順書最終確認 (RELEASE_CHECKLIST §7)"
   ],
   "completed_issues": [],
   "blocked_issues": [],
@@ -89,6 +89,10 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-05-30T13:12:18.098Z",
+        "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
+      },
       {
         "at": "2026-05-30T10:57:28.725Z",
         "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
@@ -129,12 +133,12 @@
     "usage_history": {
       "agents": {
         "general-purpose": {
-          "call_count": 13,
-          "last_used": "2026-05-30T13:09:39.613Z",
-          "last_description": "sharepoint_service + sso_service ユニットテスト"
+          "call_count": 15,
+          "last_used": "2026-05-30T13:25:05.064Z",
+          "last_description": "security_policy.md + RBAC テスト強化"
         },
-        "_total_agent_calls": 13,
-        "_last_agent_call_at": "2026-05-30T13:09:39.613Z"
+        "_total_agent_calls": 15,
+        "_last_agent_call_at": "2026-05-30T13:25:05.064Z"
       }
     }
   },
@@ -308,6 +312,16 @@
         "backend/tests/integration/test_risks_compliance.py",
         "backend/tests/integration/test_workflows_crud.py",
         "frontend/playwright.config.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-05-30T13:12:18.096Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 2 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/tests/unit/test_sharepoint_service.py",
+        "backend/tests/unit/test_sso_service.py"
       ],
       "truncated": false
     }
