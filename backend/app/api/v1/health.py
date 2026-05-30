@@ -51,7 +51,7 @@ async def _check_redis() -> tuple[str, str | None]:
 
         client = aioredis.from_url(redis_url, socket_connect_timeout=_DEEP_CHECK_TIMEOUT)
         await asyncio.wait_for(client.ping(), timeout=_DEEP_CHECK_TIMEOUT)
-        await client.aclose()
+        await client.aclose()  # type: ignore[attr-defined]
         return "ok", None
     except Exception as exc:  # pragma: no cover
         return "degraded", str(exc)
