@@ -76,36 +76,70 @@ async def search(
         ``(items, total)`` where *total* is the unfiltered match count.
     """
     pattern = f"%{q}%"
+    results: list[KnowledgeSearchResult] = []
 
+    # --- Search knowledge_articles first (primary knowledge source) ----------
+    ka_base = select(KnowledgeArticle).where(
+        KnowledgeArticle.deleted_at.is_(None),
+        or_(
+            KnowledgeArticle.title.ilike(pattern),
+            KnowledgeArticle.body.ilike(pattern),
+        ),
+    )
+    if contract_type:
+        ka_base = ka_base.where(KnowledgeArticle.contract_type == contract_type)
+    if tag:
+        # tags is a JSONB/JSON array; filter in Python after fetch (dialect-safe)
+        ka_rows_q = await session.execute(ka_base.order_by(KnowledgeArticle.id))
+        ka_rows = [r for r in ka_rows_q.scalars().all() if tag in (r.tags or [])]
+    else:
+        ka_rows_q = await session.execute(ka_base.order_by(KnowledgeArticle.id))
+        ka_rows = list(ka_rows_q.scalars().all())
+
+    for a in ka_rows:
+        results.append(
+            KnowledgeSearchResult(
+                id=a.id,
+                title=a.title,
+                snippet=a.body[:100] if a.body else a.title[:100],
+                score=1.0,
+                tags=list(a.tags or []),
+            )
+        )
+
+    # --- Search contracts (secondary source, contract-law knowledge) ---------
     base = _base_query(viewer).where(
         or_(
             Contract.title.ilike(pattern),
             Contract.counterparty.ilike(pattern),
         )
     )
-
     if contract_type:
         base = base.where(Contract.contract_type == contract_type)
 
-    # COUNT via a dedicated subquery to avoid loading all rows into memory.
     count_q = await session.execute(select(func.count()).select_from(base.subquery()))
-    total: int = count_q.scalar() or 0
+    contract_total: int = count_q.scalar() or 0
 
-    # Paginated data fetch.
-    offset = (page - 1) * size
-    data_q = await session.execute(base.order_by(Contract.id).offset(offset).limit(size))
-    page_rows = data_q.scalars().all()
-
-    items: list[KnowledgeSearchResult] = [
-        KnowledgeSearchResult(
-            id=c.id,
-            title=c.title,
-            snippet=c.title[:100],
-            score=1.0,
-            tags=[],
+    # Only include contracts if there are results worth showing
+    if contract_total > 0:
+        data_q = await session.execute(
+            base.order_by(Contract.id).limit(max(0, size - len(results)))
         )
-        for c in page_rows
-    ]
+        for c in data_q.scalars().all():
+            results.append(
+                KnowledgeSearchResult(
+                    id=c.id,
+                    title=c.title,
+                    snippet=c.title[:100],
+                    score=0.8,  # lower score for contracts vs articles
+                    tags=[],
+                )
+            )
+
+    # Paginate combined results
+    total = len(results)
+    offset = (page - 1) * size
+    items = results[offset : offset + size]
 
     return items, total
 
