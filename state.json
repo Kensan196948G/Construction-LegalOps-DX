@@ -7,7 +7,7 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "knowledge_search_enhanced_prs_open",
+    "status": "test_coverage_91pct_all_services_covered",
     "last_loop_completed": 18,
     "loops_total": 18,
     "current_version": "0.1.8"
@@ -73,11 +73,11 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
-    "PR #22 merge（knowledge hybrid search + pg_trgm migration）",
     "E2E Playwright テスト実行確認（Next.js ビルド + AUTH_DEV_BYPASS=true）",
     "RS256 本番鍵投入 Vault (#19) — コード実装済み",
-    "PostgreSQL pg_trgm テスト (testcontainers or PG profile)",
-    "本番環境 secrets 投入（Vault）"
+    "PostgreSQL pg_trgm テスト (testcontainers/PG profile)",
+    "本番環境 secrets 投入（Vault）",
+    "CSP enforce 化（現在 Report-Only）"
   ],
   "completed_issues": [],
   "blocked_issues": [],
@@ -129,12 +129,12 @@
     "usage_history": {
       "agents": {
         "general-purpose": {
-          "call_count": 3,
-          "last_used": "2026-05-30T11:45:39.322Z",
-          "last_description": "review_service ユニットテスト作成"
+          "call_count": 13,
+          "last_used": "2026-05-30T13:09:39.613Z",
+          "last_description": "sharepoint_service + sso_service ユニットテスト"
         },
-        "_total_agent_calls": 3,
-        "_last_agent_call_at": "2026-05-30T11:45:39.322Z"
+        "_total_agent_calls": 13,
+        "_last_agent_call_at": "2026-05-30T13:09:39.613Z"
       }
     }
   },
