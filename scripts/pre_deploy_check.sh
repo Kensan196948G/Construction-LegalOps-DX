@@ -44,7 +44,8 @@ echo "📋 Backend Code Quality"
 
 (cd backend && python -m ruff check . 2>&1 | grep -q "All checks passed") && check "ruff lint" 0 || check "ruff lint" 1
 
-(cd backend && python -m mypy app 2>&1 | tail -1 | grep -q "Success") && check "mypy type check" 0 || check "mypy type check" 1
+# mypy must be run from backend/ where pyproject.toml resides
+(cd backend && python -m mypy app 2>&1 | grep -q "^Success:") && check "mypy type check" 0 || check "mypy type check" 1
 
 # ---------------------------------------------------------------------------
 # 2. Backend tests
@@ -83,7 +84,7 @@ echo "🔧 Environment"
 
 [ -n "${JWT_PRIVATE_KEY:-}" ] && check "JWT_PRIVATE_KEY is set" 0 || warn "JWT_PRIVATE_KEY not set (RS256 fallback to HS256)"
 [ -n "${JWT_PUBLIC_KEY:-}" ] && check "JWT_PUBLIC_KEY is set" 0 || warn "JWT_PUBLIC_KEY not set"
-[ -n "${ENTRA_TENANT_ID:-}" ] && check "ENTRA_TENANT_ID is set" 0 || check "ENTRA_TENANT_ID is set" 1
+[ -n "${ENTRA_TENANT_ID:-}" ] && check "ENTRA_TENANT_ID is set" 0 || warn "ENTRA_TENANT_ID not set (SSO disabled in dev)"
 [ -n "${ANTHROPIC_API_KEY:-}" ] && check "ANTHROPIC_API_KEY is set" 0 || warn "ANTHROPIC_API_KEY not set (AI review disabled)"
 
 # ---------------------------------------------------------------------------
