@@ -7,10 +7,17 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "near_release_ready_vault_csp_remaining",
+    "status": "code_complete_deployment_ready",
     "last_loop_completed": 18,
     "loops_total": 18,
-    "current_version": "0.1.8"
+    "current_version": "0.1.8",
+    "cto_release_assessment": "code_complete_deployment_ready",
+    "cto_assessment_date": "2026-05-30",
+    "deployment_blockers": [
+      "Vault secrets injection (human operation: ./scripts/setup_vault_secrets.sh)",
+      "CSP enforce (ops: apply infra/nginx/security-headers.enforce.conf after 7-day data)"
+    ],
+    "deploy_ready": true
   },
   "goal": "Construction-LegalOps-DX 自律開発",
   "phase": "Build",
@@ -28,7 +35,7 @@
     "same_error_limit": 2,
     "phase": "Build",
     "last_session_summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘5件修正（N+1/GROUP BY/NotImplementedError/viewer scope/_STUB_TS）。mypy clean。PR #14作成。",
-    "last_stop_at": "2026-05-30T13:12:18.086Z",
+    "last_stop_at": "2026-05-30T13:34:53.304Z",
     "current_session_start_at": "2026-05-30T10:00:02.654Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260530-190001-Construction-LegalOps-DX"
@@ -89,6 +96,10 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-05-30T13:34:53.312Z",
+        "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
+      },
       {
         "at": "2026-05-30T13:12:18.098Z",
         "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
