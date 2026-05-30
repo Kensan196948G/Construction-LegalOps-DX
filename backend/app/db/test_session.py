@@ -105,8 +105,8 @@ def _sqlite_array_result_processor(self: object, dialect: object, coltype: objec
 
 
 # Monkey-patch ARRAY so the SQLite processor fires without altering production.
-ARRAY.bind_processor = _sqlite_array_bind_processor  # type: ignore[method-assign]
-ARRAY.result_processor = _sqlite_array_result_processor  # type: ignore[method-assign]
+ARRAY.bind_processor = _sqlite_array_bind_processor  # type: ignore[method-assign, assignment]
+ARRAY.result_processor = _sqlite_array_result_processor  # type: ignore[method-assign, assignment]
 
 
 @compiles(BigInteger, "sqlite")  # type: ignore[misc, no-untyped-call]
