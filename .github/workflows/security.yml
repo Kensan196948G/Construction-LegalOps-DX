@@ -59,12 +59,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Trivy CLI (pinned version)
-        env:
-          TRIVY_VERSION: "0.57.0"
+      - name: Install Trivy CLI
+        # install.sh を main から取得しバージョン引数を省略 → スクリプトが最新安定版を自動解決。
+        # ピン留め版 (v0.57.0/contrib/install.sh) は古いタグの release tarball 整理で 404 になり壊れるため不採用。
         run: |
-          curl -sfL "https://raw.githubusercontent.com/aquasecurity/trivy/v${TRIVY_VERSION}/contrib/install.sh" \
-            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin
 
       - name: Trivy filesystem scan (JSON report)
         run: |
@@ -188,12 +188,12 @@ jobs:
         if: hashFiles('frontend/Dockerfile') != ''
         run: docker build -t legalops/frontend:scan frontend
 
-      - name: Install Trivy CLI (pinned version)
-        env:
-          TRIVY_VERSION: "0.57.0"
+      - name: Install Trivy CLI
+        # install.sh を main から取得しバージョン引数を省略 → スクリプトが最新安定版を自動解決。
+        # ピン留め版 (v0.57.0/contrib/install.sh) は古いタグの release tarball 整理で 404 になり壊れるため不採用。
         run: |
-          curl -sfL "https://raw.githubusercontent.com/aquasecurity/trivy/v${TRIVY_VERSION}/contrib/install.sh" \
-            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin
 
       - name: Trivy scan backend image (JSON)
         if: hashFiles('backend/Dockerfile') != ''
