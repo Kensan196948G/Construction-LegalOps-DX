@@ -8,9 +8,9 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 18,
-    "loops_total": 18,
-    "current_version": "0.1.8",
+    "last_loop_completed": 19,
+    "loops_total": 19,
+    "current_version": "0.1.9",
     "cto_release_assessment": "code_complete_deployment_ready",
     "cto_assessment_date": "2026-05-30",
     "deployment_blockers": [
@@ -34,10 +34,10 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 18 完了: 84→832 テスト (+748)。68%→90% カバレッジ。全サービス DB 永続化・全サービスユニットテスト100%。/readyz deep check・RBAC拡張・E2E 6ファイル・PostgreSQL CI・k6負荷テスト・Vault secrets スクリプト・CSP enforce 設定・pre_deploy_check.sh。CTO判断: code_complete_deployment_ready / deploy.ready=true。P0残課題: Vault投入(人間作業)・CSP enforce(7日後)。PR #14-#22 merged。",
-    "last_stop_at": "2026-05-30T13:34:53.304Z",
-    "current_session_start_at": "2026-05-30T10:00:02.654Z",
-    "last_trigger": "cron",
+    "last_session_summary": "Loop 19: weekly security.yml GREEN 化（PR #26 merged @36c361a, v0.1.9）。Trivy install.sh 404 回避（main版・version引数省略）+ backend Dockerfile apt upgrade(gnutls/krb5→deb12u7/deb12u5) + frontend Dockerfile apk upgrade & バンドル npm CLI 削除(node-pkg 11 HIGH 解消)。赤→緑を main 上で証明（push run 26916775548 success vs 2026-06-01 schedule run 26777438289 failure）。0 open PR / KPI: ci_success=1 security_critical=0 blockers=0。P0残: Vault投入(人間作業)・CSP enforce(7日後)。",
+    "last_stop_at": "2026-06-03T22:33:54.491Z",
+    "current_session_start_at": "2026-06-03T22:37:54.096Z",
+    "last_trigger": "manual",
     "last_cron_session_id": "20260530-190001-Construction-LegalOps-DX"
   },
   "automation": {
@@ -96,6 +96,10 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-06-03T22:33:54.491Z",
+        "summary": "Loop 19(Security green): Trivy image scan は OS layer + node-pkg(バンドル npm) の2種をスキャンする。Alpine runner は `apk upgrade --no-cache` + npm CLI 削除、Debian slim は `apt-get upgrade -y` で CVE 解消。Trivy install.sh は main 版を version 引数省略で叩くと 404 を回避できる。PR #26 merged @36c361a。赤→緑を main schedule(fail 26777438289)→push(success 26916775548) で証明。"
+      },
       {
         "at": "2026-05-30T13:34:53.312Z",
         "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
@@ -338,6 +342,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-05-23T14:56:16.282Z"
+    "last_pre_compact_at": "2026-06-03T22:35:36.438Z"
   }
 }
