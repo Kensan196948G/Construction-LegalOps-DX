@@ -57,7 +57,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000
 
 # Runtime libs only (no compilers).
+# `apt-get upgrade -y` patches base-image OS packages (gnutls/krb5 等) to the
+# latest Debian 12 security releases (deb12u7/deb12u5) so the weekly Trivy
+# container scan (security.yml) stays green. The base image ships these libs
+# pre-installed, so upgrade BEFORE installing the extra runtime deps.
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
