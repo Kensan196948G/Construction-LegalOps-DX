@@ -58,6 +58,22 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0
 
+# Harden the base image so the weekly Trivy container scan (security.yml) stays
+# green. Two distinct CVE classes originate from the pinned base image:
+#   1) Alpine OS packages (libcrypto3 / libssl3 / musl / zlib …) carry CRITICAL/
+#      HIGH CVEs. `apk upgrade --no-cache` pulls the v3.20 branch security
+#      backports (-rN releases) that fix them. The "OS no longer supported"
+#      warning only concerns FUTURE branch updates; the backports remain served.
+#   2) The base image globally bundles the npm CLI at
+#      /usr/local/lib/node_modules/npm, whose vendored deps (cross-spawn / glob /
+#      minimatch / tar) raise 11 HIGH node-pkg findings. The standalone runtime
+#      boots via `node server.js` and never invokes npm, so we delete it to drop
+#      those CVEs and shrink the attack surface (fail-closed minimal runtime).
+RUN apk upgrade --no-cache \
+ && rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx
+
 # non-root ユーザを作成 (uid/gid = 1001)
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
