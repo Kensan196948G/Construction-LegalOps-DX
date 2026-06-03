@@ -565,13 +565,15 @@ docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade h
 
 ### 3️⃣ アクセス先
 
-| 🌐 URL                     | 📝 用途                     |
-| -------------------------- | --------------------------- |
-| `http://localhost`         | 🖼️ Frontend (nginx 経由)    |
-| `http://localhost/api/`    | 🚀 Backend API (nginx 経由) |
-| `http://localhost:3000`    | 🖼️ Frontend (直接)          |
-| `http://localhost:8000`    | 🚀 Backend (直接)           |
-| `http://localhost/healthz` | 💓 ヘルスチェック           |
+> 🔢 **専用ポート割当**（マルチプロジェクト共存ホストでの衝突回避）。詳細は [`docs/PORT_ALLOCATION.md`](docs/PORT_ALLOCATION.md) を参照。
+
+| 🌐 URL                          | 📝 用途                     |
+| ------------------------------- | --------------------------- |
+| `http://localhost:8410`         | 🖼️ Frontend (nginx 経由)    |
+| `http://localhost:8410/api/`    | 🚀 Backend API (nginx 経由) |
+| `http://localhost:3010`         | 🖼️ Frontend (直接)          |
+| `http://localhost:8010`         | 🚀 Backend (直接)           |
+| `http://localhost:8410/healthz` | 💓 ヘルスチェック           |
 
 ### 4️⃣ 開発モード（ホットリロード）
 
@@ -579,7 +581,7 @@ docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade h
 # 🚀 backend
 cd backend && python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8010
 
 # 🖼️ frontend
 cd frontend && npm install && npm run dev
@@ -661,16 +663,16 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 > 📌 本 README は **Loop 18（Backend DB Persistence + Tests, 2026-05-30 更新）** 時点のものです。
 >
-> | 指標 | 値 |
-> |------|-----|
-> | 📦 バージョン | v0.1.8 |
-> | 🧪 バックエンドテスト | 832 passed / 0 failed |
-> | 📊 カバレッジ | 90% |
-> | 🔧 mypy | 0 errors / Bandit clean |
-> | 🗄️ 全サービス | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
-> | ⚡ E2E | Playwright 6ファイル: smoke/contracts/dashboard/reviews/risks/compliance |
-> | 🏥 /readyz | Deep check (DB critical + Redis/Claude degraded) |
-> | 🔐 RS256 | コード実装済み・scripts/generate_rsa_keys.sh / setup_vault_secrets.sh 完備 |
+> | 指標                  | 値                                                                                   |
+> | --------------------- | ------------------------------------------------------------------------------------ |
+> | 📦 バージョン         | v0.1.8                                                                               |
+> | 🧪 バックエンドテスト | 832 passed / 0 failed                                                                |
+> | 📊 カバレッジ         | 90%                                                                                  |
+> | 🔧 mypy               | 0 errors / Bandit clean                                                              |
+> | 🗄️ 全サービス         | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
+> | ⚡ E2E                | Playwright 6ファイル: smoke/contracts/dashboard/reviews/risks/compliance             |
+> | 🏥 /readyz            | Deep check (DB critical + Redis/Claude degraded)                                     |
+> | 🔐 RS256              | コード実装済み・scripts/generate_rsa_keys.sh / setup_vault_secrets.sh 完備           |
 >
 > 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0)
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)
@@ -679,16 +681,16 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ## 🔌 Backend API カバレッジ（v0.1.7）
 
-| エンドポイント | ステータス | テスト数 |
-|---|---|---|
-| `/api/v1/contracts` | ✅ 実装+テスト | 6件 |
-| `/api/v1/reviews` | ✅ 実装+テスト | 13件 |
-| `/api/v1/workflows` | ✅ 実装+テスト | 8件 |
-| `/api/v1/risks` | ✅ 実装+テスト | 5件 |
-| `/api/v1/compliance` | ✅ 実装+テスト | 6件 |
-| `/api/v1/knowledge` | ✅ 実装+テスト | 6件 (DB バック) |
-| `/api/v1/templates` | ✅ 実装+テスト | 5件 |
+| エンドポイント            | ステータス     | テスト数        |
+| ------------------------- | -------------- | --------------- |
+| `/api/v1/contracts`       | ✅ 実装+テスト | 6件             |
+| `/api/v1/reviews`         | ✅ 実装+テスト | 13件            |
+| `/api/v1/workflows`       | ✅ 実装+テスト | 8件             |
+| `/api/v1/risks`           | ✅ 実装+テスト | 5件             |
+| `/api/v1/compliance`      | ✅ 実装+テスト | 6件             |
+| `/api/v1/knowledge`       | ✅ 実装+テスト | 6件 (DB バック) |
+| `/api/v1/templates`       | ✅ 実装+テスト | 5件             |
 | `/api/v1/clauses-library` | ✅ 実装+テスト | 8件 (DB バック) |
-| `/api/v1/audit-logs` | ✅ 実装+テスト | 3件 |
-| `/api/v1/dashboard` | ✅ 実装+テスト | 3件 |
-| `/api/v1/health` | ✅ 実装+テスト | 3件 |
+| `/api/v1/audit-logs`      | ✅ 実装+テスト | 3件             |
+| `/api/v1/dashboard`       | ✅ 実装+テスト | 3件             |
+| `/api/v1/health`          | ✅ 実装+テスト | 3件             |
