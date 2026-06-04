@@ -8,9 +8,9 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 19,
-    "loops_total": 19,
-    "current_version": "0.1.9",
+    "last_loop_completed": 20,
+    "loops_total": 20,
+    "current_version": "0.1.10",
     "cto_release_assessment": "code_complete_deployment_ready",
     "cto_assessment_date": "2026-05-30",
     "deployment_blockers": [
@@ -34,11 +34,11 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 19: weekly security.yml GREEN 化（PR #26 merged @36c361a, v0.1.9）。Trivy install.sh 404 回避（main版・version引数省略）+ backend Dockerfile apt upgrade(gnutls/krb5→deb12u7/deb12u5) + frontend Dockerfile apk upgrade & バンドル npm CLI 削除(node-pkg 11 HIGH 解消)。赤→緑を main 上で証明（push run 26916775548 success vs 2026-06-01 schedule run 26777438289 failure）。0 open PR / KPI: ci_success=1 security_critical=0 blockers=0。P0残: Vault投入(人間作業)・CSP enforce(7日後)。",
-    "last_stop_at": "2026-06-03T22:33:54.491Z",
-    "current_session_start_at": "2026-06-03T22:37:54.096Z",
+    "last_session_summary": "Loop 20: AI プロバイダ設定 UI + Fernet 暗号化キー保管実装（PR #29 merged @36dab61, v0.1.10）。Perplexity Sonar / Claude AI プロバイダ設定 REST API (PATCH/GET /api/v1/admin/ai-settings/{provider}, POST /test-connection)。Fernet 暗号化 API キー保管・平文 DB 保存禁止。SSRF 防御（allowlist: api.perplexity.ai のみ）。フロントエンド ai-settings-panel.tsx + 設定ページ統合。Codex P2 Fix #1: _probe_perplexity に保存モデル使用（row.model if row else None）。Codex P2 Fix #2: _probe_claude は fail-closed（unavailable 返却）。19 files +2648 insertions / all 7 CI checks GREEN。",
+    "last_stop_at": "2026-06-04T05:04:43.226Z",
+    "current_session_start_at": "2026-06-04T05:10:52.546Z",
     "last_trigger": "manual",
-    "last_cron_session_id": "20260530-190001-Construction-LegalOps-DX"
+    "last_cron_session_id": "20260604-095112-Construction-LegalOps-DX"
   },
   "automation": {
     "auto_issue_generation": true,
@@ -48,6 +48,11 @@
     "consecutive_success": 3,
     "target_n": 3,
     "stable_achieved": true
+  },
+  "loop20": {
+    "name": "AI プロバイダ設定 + Codex P2 fix",
+    "completed_at": "2026-06-04",
+    "summary": "AI プロバイダ設定 UI + Fernet 暗号化キー保管実装（PR #29 merged @36dab61, v0.1.10）。Perplexity Sonar / Claude AI プロバイダ設定 REST API (PATCH/GET /api/v1/admin/ai-settings/{provider}, POST /test-connection)。Fernet 暗号化 API キー保管・平文 DB 保存禁止・key_masked でのみ返却。SSRF 防御（allowlist: api.perplexity.ai のみ、private IP 拒否）。DB CheckConstraint ck_ai_provider_settings_test_status（ok/failed/unavailable の3値）。フロントエンド ai-settings-panel.tsx（保存・接続テスト・インライン検証） + 設定ページタブ統合。Codex P2 Fix #1: test_connection perplexity branch で row.model if row else None を使用し保存済みモデルを正しく参照。Codex P2 Fix #2: _probe_claude は fail-closed で unavailable 返却（実接続なし → ok は不可）。回帰テスト2件追加（test_probe_perplexity_uses_saved_model / test_probe_perplexity_falls_back_to_default_model）。19 files +2648 insertions / 全7 CI チェック GREEN。"
   },
   "loop10": {
     "name": "UI Detail Pages & Table Fixes",
@@ -96,6 +101,22 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-06-04T06:00:00.000Z",
+        "summary": "Loop 20: AI プロバイダ設定（Perplexity/Claude）Fernet 暗号化保管 + SSRF 防御 + フロントエンド UI 実装。Codex P2 Fix #1: row.model if row else None（保存済みモデル参照）。Codex P2 Fix #2: _probe_claude fail-closed（unavailable 返却）。19 files +2648 insertions / 全7 CI GREEN。PR #29 squash merged @36dab61 (v0.1.10)。"
+      },
+      {
+        "at": "2026-06-04T05:04:43.274Z",
+        "summary": "Loop 19: weekly security.yml GREEN 化（PR #26 merged @36c361a, v0.1.9）。Trivy install.sh 404 回避（main版・version引数省略）+ backend Dockerfile apt upgrade(gnutls/krb5→deb12u7/deb12u5) + frontend Dockerfile apk u"
+      },
+      {
+        "at": "2026-06-04T01:09:03.812Z",
+        "summary": "Loop 19: weekly security.yml GREEN 化（PR #26 merged @36c361a, v0.1.9）。Trivy install.sh 404 回避（main版・version引数省略）+ backend Dockerfile apt upgrade(gnutls/krb5→deb12u7/deb12u5) + frontend Dockerfile apk u"
+      },
+      {
+        "at": "2026-06-03T22:48:10.408Z",
+        "summary": "Loop 19: weekly security.yml GREEN 化（PR #26 merged @36c361a, v0.1.9）。Trivy install.sh 404 回避（main版・version引数省略）+ backend Dockerfile apt upgrade(gnutls/krb5→deb12u7/deb12u5) + frontend Dockerfile apk u"
+      },
       {
         "at": "2026-06-03T22:33:54.491Z",
         "summary": "Loop 19(Security green): Trivy image scan は OS layer + node-pkg(バンドル npm) の2種をスキャンする。Alpine runner は `apk upgrade --no-cache` + npm CLI 削除、Debian slim は `apt-get upgrade -y` で CVE 解消。Trivy install.sh は main 版を version 引数省略で叩くと 404 を回避できる。PR #26 merged @36c361a。赤→緑を main schedule(fail 26777438289)→push(success 26916775548) で証明。"
@@ -152,8 +173,13 @@
           "last_used": "2026-05-30T13:25:05.064Z",
           "last_description": "security_policy.md + RBAC テスト強化"
         },
-        "_total_agent_calls": 15,
-        "_last_agent_call_at": "2026-05-30T13:25:05.064Z"
+        "_total_agent_calls": 18,
+        "_last_agent_call_at": "2026-06-04T01:18:54.595Z",
+        "Explore": {
+          "call_count": 3,
+          "last_used": "2026-06-04T01:18:54.595Z",
+          "last_description": "Explore backend settings/secrets API"
+        }
       }
     }
   },
@@ -339,9 +365,45 @@
         "backend/tests/unit/test_sso_service.py"
       ],
       "truncated": false
+    },
+    {
+      "at": "2026-06-04T01:09:03.811Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 3 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/core/config.py",
+        "backend/app/core/security.py",
+        "backend/tests/unit/test_jwt_rs256.py"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-06-04T05:04:43.273Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 17 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/004_ai_provider_settings.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/admin.py",
+        "backend/app/core/config.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/app_settings.py",
+        "backend/app/schemas/settings.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/settings_service.py",
+        "backend/tests/integration/test_ai_settings.py",
+        "backend/tests/unit/test_audit_service.py",
+        "backend/tests/unit/test_settings_service.py",
+        "frontend/app/(authenticated)/settings/page.tsx",
+        "frontend/components/settings/ai-settings-panel.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-03T22:35:36.438Z"
+    "last_pre_compact_at": "2026-06-04T05:08:43.176Z"
   }
 }
