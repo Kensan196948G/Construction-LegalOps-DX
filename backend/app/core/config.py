@@ -25,6 +25,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        # pydantic-settings adds "settings_" to the default protected namespaces,
+        # which would warn on our intentional ``settings_encryption_key`` field.
+        # Keep only the pydantic-core "model_" guard (the documented resolution).
+        protected_namespaces=("model_",),
     )
 
     # ----- Runtime -----
@@ -113,7 +117,11 @@ class Settings(BaseSettings):
         alias="ENTRA_SCOPES",
     )
 
-    # ----- Claude API -----
+    # ----- Claude API (Agents ② contract reading/summary, ③ drafting) -----
+    # NOTE: The production Claude API key is UNAVAILABLE until 2026-07-01.
+    # Until then the system MUST degrade gracefully: Claude-backed agents stay
+    # dormant (no crash) while the Perplexity research agent runs from day one.
+    # The default sentinel below is treated as "unconfigured" by the AI layer.
     claude_api_key: SecretStr = Field(
         default=SecretStr("sk-ant-replace-me"),
         alias="CLAUDE_API_KEY",
@@ -121,6 +129,24 @@ class Settings(BaseSettings):
     claude_model: str = Field(default="claude-opus-4-7", alias="CLAUDE_MODEL")
     claude_max_tokens: int = Field(default=4096, alias="CLAUDE_MAX_TOKENS")
     claude_timeout_seconds: int = Field(default=60, alias="CLAUDE_TIMEOUT_SECONDS")
+
+    # ----- Perplexity API (Agent ①: contract research, web-grounded) -----
+    # Sonar API runs Zero Data Retention by default. Confidential contract
+    # bodies are NEVER sent here — only abstracted issues/keywords — and the
+    # client restricts citations to a public-source allowlist (e-Gov / 国交省 /
+    # 裁判所) so that every answer carries an auditable provenance trail.
+    perplexity_api_key: SecretStr | None = Field(default=None, alias="PERPLEXITY_API_KEY")
+    perplexity_model: str = Field(default="sonar", alias="PERPLEXITY_MODEL")
+    perplexity_base_url: str = Field(
+        default="https://api.perplexity.ai", alias="PERPLEXITY_BASE_URL"
+    )
+    perplexity_timeout_seconds: int = Field(default=45, alias="PERPLEXITY_TIMEOUT_SECONDS")
+
+    # ----- Settings-at-rest encryption -----
+    # Fernet key used to encrypt provider API keys before they touch the DB.
+    # If unset, settings_service derives a deterministic key from jwt_secret so
+    # stored secrets are ALWAYS encrypted at rest (fail-closed: never plaintext).
+    settings_encryption_key: SecretStr | None = Field(default=None, alias="SETTINGS_ENCRYPTION_KEY")
 
     # ----- Audit / Hash chain -----
     hash_chain_secret: SecretStr = Field(

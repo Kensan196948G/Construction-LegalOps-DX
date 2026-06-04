@@ -291,11 +291,31 @@ async def log(
         action=action,
         target_type=target_type,
         target_id=str(target_id) if target_id is not None else None,
-        user_id=None,
+        user_id=actor_id,
         before=None,
         after=payload,
         session=session,
     )
+
+
+def _coerce_int_id(value: Any) -> int | None:
+    """Best-effort coercion of a principal/target id to the int that
+    ``AuditLogOut`` surfaces.
+
+    The auth layer (``app.deps.CurrentUser``) may carry a UUID or, under the
+    Loop-2 JWT stub, an email subject as the principal id. Only genuine
+    integer DB ids are projected onto the ``actor_id`` / ``target_id``
+    response fields; the full principal is always preserved inside the signed
+    hash-chain payload regardless of this projection (audit fidelity is kept
+    in the immutable ledger, not in this view model).
+    """
+    if isinstance(value, bool):  # bool is an int subclass — never a valid id
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
 
 
 def _record_to_dict(idx: int, rec: AuditRecord) -> dict[str, Any]:
@@ -303,12 +323,12 @@ def _record_to_dict(idx: int, rec: AuditRecord) -> dict[str, Any]:
     return {
         "id": idx,
         "occurred_at": rec.timestamp.isoformat(),
-        "actor_id": None,
+        "actor_id": _coerce_int_id(rec.user_id),
         "actor": None,
         "actor_role": None,
         "action": rec.action,
         "target_type": rec.target_type,
-        "target_id": int(rec.target_id) if rec.target_id and rec.target_id.isdigit() else None,
+        "target_id": _coerce_int_id(rec.target_id),
         "request_id": None,
         "ip_address": None,
         "user_agent": None,

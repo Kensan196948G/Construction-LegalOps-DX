@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersSettingsPanel } from "@/components/settings/users-settings-panel";
 import { RolesSettingsPanel } from "@/components/settings/roles-settings-panel";
@@ -8,10 +14,11 @@ import { WorkflowSettingsPanel } from "@/components/settings/workflow-settings-p
 import { NotificationSettingsPanel } from "@/components/settings/notification-settings-panel";
 import { IntegrationsSettingsPanel } from "@/components/settings/integrations-settings-panel";
 import { OrganizationSettingsPanel } from "@/components/settings/organization-settings-panel";
+import { AiSettingsPanel } from "@/components/settings/ai-settings-panel";
 
 export const metadata: Metadata = {
   title: "管理設定",
-  description: "ユーザ・ロール・ワークフロー・連携・通知の管理",
+  description: "ユーザ・ロール・ワークフロー・連携・通知・AI設定の管理",
 };
 
 interface SearchParams {
@@ -29,6 +36,7 @@ const VALID_TABS = [
   "workflow",
   "notifications",
   "integrations",
+  "ai",
 ] as const;
 
 type SettingsTab = (typeof VALID_TABS)[number];
@@ -60,6 +68,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <TabsTrigger value="workflow">承認ワークフロー</TabsTrigger>
           <TabsTrigger value="notifications">通知</TabsTrigger>
           <TabsTrigger value="integrations">外部連携</TabsTrigger>
+          <TabsTrigger value="ai">AI設定</TabsTrigger>
         </TabsList>
 
         <TabsContent value="organization">
@@ -124,6 +133,21 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </CardHeader>
             <CardContent>
               <IntegrationsSettingsPanel />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ai">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI設定</CardTitle>
+              <CardDescription>
+                AI レビュー支援に使う各プロバイダの API キーを管理します。キーは
+                暗号化して保存され、画面にはマスク済みの値のみ表示されます。
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AiSettingsPanel />
             </CardContent>
           </Card>
         </TabsContent>

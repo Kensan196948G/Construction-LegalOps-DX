@@ -555,3 +555,27 @@ async def test_module_log_appends_record(monkeypatch):
     assert len(fresh_svc._records) == 1
     assert fresh_svc._records[0].target_id == "42"
     assert fresh_svc._records[0].after == {"title": "hello"}
+    # [P2 audit fix] The wrapper must forward actor_id -> user_id so the
+    # audit trail records WHO performed the change (J-SOX / ISO27001 要件).
+    assert fresh_svc._records[0].user_id == 1
+
+
+@pytest.mark.asyncio
+async def test_module_log_records_to_dict_surfaces_actor(monkeypatch):
+    """_record_to_dict() must surface the captured actor as actor_id."""
+    from app.services.audit_service import _record_to_dict
+    from app.services.audit_service import log as module_log
+
+    fresh_svc = AuditService(secret=b"test-secret-32-bytes-pad-pad-pad!")
+    monkeypatch.setattr(svc_module, "_svc", fresh_svc)
+    await module_log(
+        None,
+        actor_id=7,
+        action=AuditAction.CONTRACT_UPDATE,
+        target_type="contract",
+        target_id=99,
+        payload={"k": "v"},
+    )
+    as_dict = _record_to_dict(0, fresh_svc._records[0])
+    assert as_dict["actor_id"] == 7
+    assert as_dict["target_id"] == 99

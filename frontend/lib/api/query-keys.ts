@@ -116,4 +116,9 @@ export const queryKeys = {
     summary: (params?: unknown) => ["dashboard", "summary", params] as const,
     trends: (params?: unknown) => ["dashboard", "trends", params] as const,
   },
+
+  settings: {
+    all: ["settings"] as const,
+    aiSettings: () => ["settings", "ai-settings"] as const,
+  },
 } as const;
