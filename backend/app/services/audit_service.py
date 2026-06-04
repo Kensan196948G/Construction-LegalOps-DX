@@ -291,7 +291,7 @@ async def log(
         action=action,
         target_type=target_type,
         target_id=str(target_id) if target_id is not None else None,
-        user_id=None,
+        user_id=actor_id,
         before=None,
         after=payload,
         session=session,
@@ -303,7 +303,7 @@ def _record_to_dict(idx: int, rec: AuditRecord) -> dict[str, Any]:
     return {
         "id": idx,
         "occurred_at": rec.timestamp.isoformat(),
-        "actor_id": None,
+        "actor_id": rec.user_id,
         "actor": None,
         "actor_role": None,
         "action": rec.action,

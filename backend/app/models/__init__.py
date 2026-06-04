@@ -6,6 +6,7 @@ which is required for Alembic autogenerate to discover the schema.
 
 from __future__ import annotations
 
+from .app_settings import AiProviderSetting
 from .attachment import Attachment
 from .audit_log import AuditLog
 from .clause import Clause, ClauseLibrary
@@ -41,6 +42,7 @@ from .workflow import Workflow, WorkflowStep, WorkflowTemplate
 
 __all__ = [
     # Models
+    "AiProviderSetting",
     "Attachment",
     # Enums
     "AttachmentStorage",

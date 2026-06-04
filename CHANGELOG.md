@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Loop 20: AI プロバイダ設定 UI + 暗号化キー保管)
+
+- **管理設定に「AI設定」タブを追加**: 管理者が Perplexity / Claude の API キーを
+  入力・保存・接続テストできる UI (`frontend/components/settings/ai-settings-panel.tsx`)。
+  キーは常にマスク済み (`••••abcd`) のみ表示し、平文は画面にもレスポンスにも一切返さない。
+- **API キーの暗号化保管 (fail-closed)**: `settings_service.py` が `cryptography` Fernet で
+  保存前に暗号化。鍵の解決順は ① `SETTINGS_ENCRYPTION_KEY` が有効な Fernet 鍵ならそのまま
+  → ② 任意パスフレーズなら SHA-256 派生 → ③ 未設定なら `jwt_secret` から決定的に派生。
+  どの経路でも **DB には平文を書かない**（復号不能時は保存自体を拒否）。
+- **管理 API**: `GET /api/v1/admin/ai-settings`(一覧・マスク済) /
+  `PUT /api/v1/admin/ai-settings/{provider}`(保存/クリア) /
+  `POST /api/v1/admin/ai-settings/{provider}/test`(接続テスト)。
+  すべて `require_role("admin")` で RBAC 保護。`provider` は
+  `Literal["perplexity","claude"]` 型で DB CheckConstraint の前段に HTTP 422 を返す（多層防御）。
+- **Claude の段階的縮退 (2026-07-01 まで)**: Claude キーは保存可能だが、接続テストは
+  ゲート日前まで一切ネットワーク送信せず `status="unavailable"` を返す（エラーにしない）。
+  Perplexity は初日から接続テスト可能。
+- **DB スキーマ**: `ai_provider_settings` テーブル + Alembic migration `004`。
+- **テスト**: `test_settings_service.py`(32) + `test_ai_settings.py`(14)。
+  `settings_service.py` カバレッジ 99%。
+
+### Security (Loop 20)
+
+- API キーは平文で DB 保存しない（Fernet 暗号化・fail-closed）。
+- 機密契約本文は Perplexity に送らない方針を `config.py` の設計コメントに明文化
+  （送信は抽象化した論点・キーワードのみ、引用は公的ソース allowlist に限定）。
+
 ## [0.1.8] - 2026-05-30
 
 ### Added (Loop 18 Part 2: Test Coverage 91% Milestone)

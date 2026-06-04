@@ -18,6 +18,8 @@ import {
   apiResponse,
   paginatedSchema,
   // schemas
+  aiProviderConfigSchema,
+  aiSettingsSchema,
   attachmentSchema,
   auditLogSchema,
   auditVerifyResultSchema,
@@ -25,6 +27,7 @@ import {
   clauseLibrarySchema,
   complianceChecklistSchema,
   complianceRunSchema,
+  connectionTestSchema,
   contractSchema,
   contractCreateSchema,
   contractUpdateSchema,
@@ -44,6 +47,8 @@ import {
   workflowInstanceSchema,
   workflowSchema,
   workflowStepSchema,
+  type AiProvider,
+  type AiSettingsUpdate,
   type ContractCreate,
   type ContractUpdate,
   type Paginated,
@@ -100,6 +105,16 @@ async function patchParsed<T extends z.ZodTypeAny>(
   config?: AxiosRequestConfig,
 ): Promise<z.infer<T>> {
   const res = await apiClient.patch(url, body, config);
+  return schema.parse(res.data) as z.infer<T>;
+}
+
+async function putParsed<T extends z.ZodTypeAny>(
+  schema: T,
+  url: string,
+  body?: unknown,
+  config?: AxiosRequestConfig,
+): Promise<z.infer<T>> {
+  const res = await apiClient.put(url, body, config);
   return schema.parse(res.data) as z.infer<T>;
 }
 
@@ -505,6 +520,23 @@ export const dashboardApi = {
 };
 
 // ===========================================================================
+// AI 設定（管理者専用・ハイブリッド AI レビュー基盤・Issue #28）
+// ===========================================================================
+
+export const settingsApi = {
+  /** 両プロバイダのマスク済み設定を取得（平文キーは返らない） */
+  getAiSettings: () => getParsed(aiSettingsSchema, "/admin/ai-settings"),
+
+  /** APIキー・モデル・有効化を保存（「保存・設定」）。冪等キーは interceptor が自動付与 */
+  updateAiProvider: (provider: AiProvider, body: AiSettingsUpdate) =>
+    putParsed(aiProviderConfigSchema, `/admin/ai-settings/${provider}`, body),
+
+  /** 保存済みキーで疎通確認（「設定テスト」）。機密本文は送信しない */
+  testAiProvider: (provider: AiProvider) =>
+    postParsed(connectionTestSchema, `/admin/ai-settings/${provider}/test`),
+};
+
+// ===========================================================================
 // Meta / Health
 // ===========================================================================
 
@@ -532,5 +564,6 @@ export const api = {
   uploads: uploadsApi,
   notifications: notificationsApi,
   dashboard: dashboardApi,
+  settings: settingsApi,
   meta: metaApi,
 } as const;

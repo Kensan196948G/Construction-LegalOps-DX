@@ -588,6 +588,56 @@ export const versionSchema = z.object({
   commit: z.string().optional(),
 });
 
+// ---------------------------------------------------------------------------
+// AI 設定（ハイブリッド AI レビュー基盤・Issue #28）
+//
+// backend/app/schemas/settings.py の Pydantic 契約を 1:1 でミラーする。
+// レスポンス側は平文 API キーを一切含めない（has_key / key_masked のみ）。
+// 表示用タイムスタンプは SQLite の naive datetime でも壊れないよう緩く受ける。
+// ---------------------------------------------------------------------------
+
+export const aiProviderEnum = z.enum(["perplexity", "claude"]);
+export type AiProvider = z.infer<typeof aiProviderEnum>;
+
+/** ok=疎通+認証成功 / failed=到達したがエラー / unavailable=意図的に休眠 */
+export const connectionTestStatusEnum = z.enum(["ok", "failed", "unavailable"]);
+export type ConnectionTestStatus = z.infer<typeof connectionTestStatusEnum>;
+
+export const aiProviderConfigSchema = z.object({
+  provider: aiProviderEnum,
+  has_key: z.boolean(),
+  key_masked: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  is_active: z.boolean(),
+  last_test_status: connectionTestStatusEnum.nullable().optional(),
+  last_test_message: z.string().nullable().optional(),
+  // 表示専用: タイムゾーン有無を問わず受ける（strict datetime にしない）
+  last_tested_at: z.string().nullable().optional(),
+  updated_at: z.string().nullable().optional(),
+});
+export type AiProviderConfig = z.infer<typeof aiProviderConfigSchema>;
+
+export const aiSettingsSchema = z.object({
+  providers: z.array(aiProviderConfigSchema),
+});
+export type AiSettings = z.infer<typeof aiSettingsSchema>;
+
+export const connectionTestSchema = z.object({
+  provider: aiProviderEnum,
+  status: connectionTestStatusEnum,
+  message: z.string(),
+  tested_at: z.string().nullable().optional(),
+});
+export type ConnectionTest = z.infer<typeof connectionTestSchema>;
+
+/** 「保存・設定」リクエスト本文。api_key 省略=既存維持 / 空文字=クリア / 値=暗号化保存 */
+export const aiSettingsUpdateSchema = z.object({
+  api_key: z.string().optional(),
+  model: z.string().max(64).optional(),
+  is_active: z.boolean(),
+});
+export type AiSettingsUpdate = z.infer<typeof aiSettingsUpdateSchema>;
+
 // ===========================================================================
 // 共通: Paginated 型
 // ===========================================================================
