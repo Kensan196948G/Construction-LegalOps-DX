@@ -7,6 +7,7 @@ never re-parse the environment on each call.
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from typing import Literal
 
@@ -76,6 +77,14 @@ class Settings(BaseSettings):
     # to the legacy HS256 path (dev / test only).
     jwt_private_key: SecretStr | None = Field(default=None, alias="JWT_PRIVATE_KEY")
     jwt_public_key: str | None = Field(default=None, alias="JWT_PUBLIC_KEY")
+    # Retired/rotated public keys kept active for verification so tokens signed
+    # by a previous key remain valid until they expire (zero-downtime rotation).
+    # JSON array of PEM strings, e.g.
+    #   JWT_PUBLIC_KEYS='["-----BEGIN PUBLIC KEY-----\n...", "..."]'
+    jwt_public_keys: str | None = Field(default=None, alias="JWT_PUBLIC_KEYS")
+    # Explicit key id (kid) for the active signing key. When unset, the kid is
+    # derived deterministically from the active public key's SHA-256 thumbprint.
+    jwt_key_id: str | None = Field(default=None, alias="JWT_KEY_ID")
 
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     jwt_expire_minutes: int = Field(default=60, alias="JWT_EXPIRE_MINUTES")
@@ -215,6 +224,27 @@ class Settings(BaseSettings):
     def use_rs256(self) -> bool:
         """True when RS256 asymmetric keys are configured."""
         return bool(self.jwt_private_key and self.jwt_public_key)
+
+    @property
+    def jwt_public_keys_list(self) -> list[str]:
+        """Parsed retired/rotated public keys (JSON array of PEM strings).
+
+        Returns an empty list when ``JWT_PUBLIC_KEYS`` is unset, blank, or
+        malformed. Malformed input is treated fail-closed as "no extra keys":
+        an operator misconfiguration must never silently widen the set of
+        trusted verification keys, yet it must also not crash application boot.
+        Non-string / blank entries are dropped.
+        """
+        raw = self.jwt_public_keys
+        if not raw or not raw.strip():
+            return []
+        try:
+            parsed = json.loads(raw)
+        except (ValueError, TypeError):
+            return []
+        if not isinstance(parsed, list):
+            return []
+        return [pem for pem in parsed if isinstance(pem, str) and pem.strip()]
 
 
 @lru_cache(maxsize=1)
