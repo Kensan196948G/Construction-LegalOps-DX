@@ -331,7 +331,12 @@ class SettingsService:
             if api_key is None:
                 status, message = "failed", "APIキーが未設定です。先に保存してください。"
             else:
-                status, message = await self._probe_perplexity(api_key)
+                # ``api_key`` was decrypted from ``row`` so the row is non-None
+                # here; the ``if row`` narrows it for the type checker. Probe
+                # with the row's own saved model so the test validates the
+                # actual persisted configuration, not the global default
+                # (Codex P2 #1).
+                status, message = await self._probe_perplexity(api_key, row.model if row else None)
 
         # Persist outcome (best-effort — a missing row means nothing to update,
         # but we still return the live result to the caller).
@@ -372,14 +377,22 @@ class SettingsService:
                 "unavailable",
                 f"{note}Claude API は 2026-07-01 まで利用できません（設定のみ保存可能）。",
             )
-        # Post-gate: a real validation would go here. Until the key is available
-        # we cannot exercise this path, so it is excluded from coverage.
+        # Post-gate: cheap local sanity checks only. We deliberately do NOT
+        # return "ok" on a mere format match — a real round-trip against the
+        # Claude API does not exist yet, and claiming a validated connection
+        # without one would let revoked/invalid keys persist as
+        # ``last_test_status='ok'`` (Codex P2 #2, fail-closed). Until a real
+        # provider probe is wired in we surface obvious format errors and
+        # otherwise report "unavailable".
         api_key = self._row_plaintext_key(row)  # pragma: no cover
         if api_key is None:  # pragma: no cover
             return "failed", "APIキーが未設定です。先に保存してください。"
         if not api_key.startswith("sk-ant-"):  # pragma: no cover
             return "failed", "APIキーの形式が不正です（'sk-ant-' で始まる必要があります）。"
-        return "ok", "Claude API キー形式を確認しました。"  # pragma: no cover
+        return (  # pragma: no cover
+            "unavailable",
+            "キー形式は確認しました。実接続テストは未対応のため、有効性は未検証です。",
+        )
 
     @staticmethod
     def _validate_probe_url(url: str) -> str | None:
@@ -416,7 +429,7 @@ class SettingsService:
             return f"host resolves to non-routable address: {host!r}"
         return None
 
-    async def _probe_perplexity(self, api_key: str) -> tuple[str, str]:
+    async def _probe_perplexity(self, api_key: str, model: str | None = None) -> tuple[str, str]:
         """Live Perplexity auth probe (no confidential text sent).
 
         Sends a minimal fixed chat-completion request. Interprets the HTTP
@@ -426,6 +439,10 @@ class SettingsService:
         * 429            → failed (rate limited; key likely valid)
         * other status   → failed (with code)
         * transport err  → failed (network)
+
+        ``model`` is the provider model saved on the row; when unset we fall
+        back to the global default. Probing the row's own model means the test
+        validates the configuration the operator actually saved (Codex P2 #1).
 
         Before sending, the destination URL is validated against an allowlist
         (HTTPS + trusted host, no private/loopback target) so a misconfigured or
@@ -438,7 +455,7 @@ class SettingsService:
             logger.warning("perplexity probe blocked: %s (url=%s)", guard_error, url)
             return "failed", "接続先設定が不正です（許可されたエンドポイントではありません）。"
         payload = {
-            "model": app_settings.perplexity_model,
+            "model": model or app_settings.perplexity_model,
             # Trivial ping — intentionally carries NO contract content.
             "messages": [{"role": "user", "content": "ping"}],
             "max_tokens": 1,

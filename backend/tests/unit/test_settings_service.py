@@ -151,12 +151,8 @@ def test_mask_tail(plaintext: str, expected: str) -> None:
 
 def _set_config(monkeypatch: pytest.MonkeyPatch, *, enc_key, jwt_secret) -> None:
     """Monkeypatch the two config fields _build_fernet reads."""
-    monkeypatch.setattr(
-        settings_service_module.app_settings, "settings_encryption_key", enc_key
-    )
-    monkeypatch.setattr(
-        settings_service_module.app_settings, "jwt_secret", jwt_secret
-    )
+    monkeypatch.setattr(settings_service_module.app_settings, "settings_encryption_key", enc_key)
+    monkeypatch.setattr(settings_service_module.app_settings, "jwt_secret", jwt_secret)
 
 
 def _decrypts_for(fernet: Fernet, expected: Fernet) -> bool:
@@ -206,9 +202,7 @@ def test_build_fernet_blank_key_falls_back_to_jwt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A whitespace-only key is treated as unset → jwt derivation (fail-closed)."""
-    _set_config(
-        monkeypatch, enc_key=SecretStr("   "), jwt_secret=SecretStr("jwt-material-B")
-    )
+    _set_config(monkeypatch, enc_key=SecretStr("   "), jwt_secret=SecretStr("jwt-material-B"))
     fernet = SettingsService._build_fernet()
     expected = Fernet(SettingsService._derive_fernet_key("jwt-material-B"))
     assert _decrypts_for(fernet, expected)
@@ -323,9 +317,7 @@ def test_row_plaintext_key_valid() -> None:
 
 def test_row_plaintext_key_bad_ciphertext() -> None:
     svc = _svc()
-    row = AiProviderSetting(
-        provider="perplexity", api_key_encrypted="garbage", is_active=True
-    )
+    row = AiProviderSetting(provider="perplexity", api_key_encrypted="garbage", is_active=True)
     assert svc._row_plaintext_key(row) is None
 
 
@@ -336,12 +328,14 @@ def test_row_plaintext_key_bad_ciphertext() -> None:
 _PROBE_KEY = "pplx-probe-secret-key"
 
 
-async def _run_probe(handler, *, api_key: str = _PROBE_KEY) -> tuple[str, str]:
+async def _run_probe(
+    handler, *, api_key: str = _PROBE_KEY, model: str | None = None
+) -> tuple[str, str]:
     """Run the Perplexity probe against a MockTransport handler (no network)."""
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
         svc = _svc(http_client=client)
-        return await svc._probe_perplexity(api_key)
+        return await svc._probe_perplexity(api_key, model)
 
 
 @pytest.mark.asyncio
@@ -433,6 +427,46 @@ async def test_probe_perplexity_sends_only_ping_and_bearer() -> None:
     assert "契約" not in serialized
 
 
+@pytest.mark.asyncio
+async def test_probe_perplexity_uses_saved_model() -> None:
+    """REGRESSION (Codex P2 #1): the probe must send the row's saved model.
+
+    When an operator saves a non-default model, the connection test has to
+    validate *that* configuration — not the global default. Otherwise the UI
+    could report a successful '設定テスト' for a model the saved key was never
+    checked against.
+    """
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return httpx.Response(200, json={"choices": []})
+
+    status, _message = await _run_probe(handler, model="sonar-pro")
+
+    assert status == "ok"
+    body = captured["body"]
+    assert isinstance(body, dict)
+    assert body["model"] == "sonar-pro"
+
+
+@pytest.mark.asyncio
+async def test_probe_perplexity_falls_back_to_default_model() -> None:
+    """When no per-row model is saved, the probe falls back to the global default."""
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return httpx.Response(200, json={"choices": []})
+
+    status, _message = await _run_probe(handler, model=None)
+
+    assert status == "ok"
+    body = captured["body"]
+    assert isinstance(body, dict)
+    assert body["model"] == settings_service_module.app_settings.perplexity_model
+
+
 # ===========================================================================
 # _validate_probe_url — SSRF allowlist (static / pure, no network)
 # ===========================================================================
@@ -445,10 +479,7 @@ async def test_probe_perplexity_sends_only_ping_and_bearer() -> None:
 
 def test_validate_probe_url_allows_pinned_https_host() -> None:
     """The canonical Perplexity endpoint is accepted (returns None = no reason)."""
-    assert (
-        SettingsService._validate_probe_url("https://api.perplexity.ai/chat/completions")
-        is None
-    )
+    assert SettingsService._validate_probe_url("https://api.perplexity.ai/chat/completions") is None
 
 
 def test_validate_probe_url_rejects_non_https_scheme() -> None:
