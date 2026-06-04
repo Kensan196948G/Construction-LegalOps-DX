@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 機密契約本文は Perplexity に送らない方針を `config.py` の設計コメントに明文化
   （送信は抽象化した論点・キーワードのみ、引用は公的ソース allowlist に限定）。
 
+### Added (RS256 JWT 鍵ローテーション — Issue #19)
+
+- **`kid` ヘッダ付き RS256 トークン**: 署名鍵の SHA-256 サムプリント先頭 8 バイト（16 hex）を `kid` として埋め込み。`JWT_KEY_ID` で明示指定も可能。
+- **複数鍵検証セット (zero-downtime rotation)**: `JWT_PUBLIC_KEYS`（PEM の JSON 配列）に退役鍵を保持することで、旧鍵で署名されたトークンが失効まで検証可能。
+- **Fail-closed 設計**: 不正な `JWT_PUBLIC_KEYS` は空集合へフォールバック（信頼鍵を黙って拡張しない）。未知の `kid` を持つトークンは拒否。
+- **後方互換**: `kid` を持たないローテーション前トークンはアクティブ公開鍵にフォールバック。HS256 パスも維持（dev/test）。
+- **テスト**: `tests/unit/test_jwt_rs256.py` に 14 ケース追加（HS256/RS256 roundtrip・wrong key 拒否・rotation・unknown kid 拒否・explicit kid・legacy token）。
+
 ## [0.1.8] - 2026-05-30
 
 ### Added (Loop 18 Part 2: Test Coverage 91% Milestone)
