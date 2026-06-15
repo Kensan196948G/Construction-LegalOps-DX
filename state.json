@@ -36,7 +36,7 @@
     "phase": "Build",
     "last_session_summary": "Loop 23: Issue #20（E2E Playwright テスト拡充）完遂。E2E ジョブが 6/7 緑でもテスト 0 件実行の silent failure を是正し、knowledge 詳細 spec 追加 + 11 件の E2E 失敗修正 + ゲート化まで完了。webServer 修正（output:standalone × next start 非互換 + ポート不一致 → start:standalone で node server.js を PORT=3000 起動）で全 E2E を実走化。実走で顕在化した 11 件の失敗を DOM 正確セレクタへ修正（system A: shadcn CardTitle は <div> で getByRole('heading') 不可 → getByText / system B: <Button asChild><Link> は role='link' / system C: backend 非存在で空状態 <p> → table.or(emptyState) フェイルセーフ）。commit 315da69（7 files +176/-40）→ CI run 27531080850『44 passed (32.9s)』で 11 件全修正を実証。44/44 緑確認後 ci.yml:276 の `|| true` を除去し E2E を gating 化（silent failure 穴を恒久封鎖・fail-closed 準拠）。commit 025eb99（1 file +1/-1）→ gating 後 CI run 27531346585 EXIT 0・全 6 ジョブ success で gating がビルドを壊さないことを確認。PR #31 OPEN・MERGEABLE・mergeStateStatus=CLEAN・7/7 checks SUCCESS（CodeRabbit 含む）。テスト・CI 設定のみで本番アプリコード無変更。PR merge は人間判断境界のため未実施（#27/#30 も人間マージ待ちで継続 OPEN）。",
     "last_stop_at": "2026-06-15T02:19:13.369Z",
-    "current_session_start_at": "2026-06-15T07:54:30.792Z",
+    "current_session_start_at": "2026-06-15T08:05:39.119Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260614-062412-CMDB-DocKit"
   },
@@ -53,10 +53,10 @@
     "name": "E2E Playwright knowledge ページ詳細 spec 追加 (Issue #20)",
     "completed_at": "2026-06-15",
     "pr": 31,
-    "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — branch feat/e2e-knowledge-detail (commits 315da69 + 025eb99 + c8d872c) — CI 全6ジョブ+CodeRabbit=7/7 GREEN (run 27531782412) — 人間マージ判断待ち",
+    "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — branch feat/e2e-knowledge-detail (commits 315da69 + 025eb99 + c8d872c + b9b8e96) — 最新 push b9b8e96 の CI run 27532632040 で全6ジョブ success（rerun 不要・一発緑）+ CodeRabbit=7/7 GREEN — 人間マージ判断待ち",
     "summary": "Issue #20（E2E Playwright テスト拡充）完遂。3 段階で進行。【段階1: spec 追加】欠落していたナレッジベースページの詳細 E2E spec を追加（frontend/e2e/knowledge.spec.ts 新規・8 ケース）。既存 compliance.spec.ts のバックエンド非依存パターンを踏襲し空状態でも通過する設計。【段階2: silent failure 発見と webServer 修正】CI ログ精査で E2E ジョブが 6/7 緑でも実際はテスト 0 件実行の silent failure を発見。根本原因2点: (1) next.config.mjs の output:standalone は `next start` で配信不可（webServer タイムアウト）。(2) playwright baseURL=3000 vs ポート不一致。修正: package.json に start:standalone 追加（Dockerfile 同手順で .next/static・public を .next/standalone へコピー→ PORT=3000 で node server.js 起動）、playwright.config.ts の webServer をポート整合化。【段階3: 11 件の E2E 失敗修正 + ゲート化】実走で顕在化した 11 件の失敗を DOM 正確なセレクタへ修正。根本原因3系統: (system A) shadcn CardTitle は <div> でレンダリングされ semantic heading でない → getByRole('heading') を getByText().first() へ（compliance/risks のカード）。(system B) <Button asChild><Link> は <a role='link'> → getByRole('button') を getByRole('link') へ（contracts 新規ボタン）。(system C) backend 非存在で Server Component が空状態 <p> をレンダリング（table でない）→ table.or(emptyState) フェイルセーフへ（contracts/reviews/risks テーブル）。加えて knowledge カテゴリ label は <p>、category= href スコープ化、strict-mode 違反回避（[class*=card] が bg-card 多重マッチ）を修正。commit 315da69（7 files +176/-40）push → CI run 27531080850 で『44 passed (32.9s)』を確認、11 件全て修正完了を実証。【ゲート化】44/44 緑を確認後 ci.yml:276 の `|| true` を除去し E2E を gating 化（silent failure の穴を恒久封鎖、fail-closed ポリシー準拠）。commit 025eb99（1 file +1/-1）push → gating 後 CI run 27531346585 EXIT 0、全 6 ジョブ success で gating がビルドを壊さないことを確認。PR #31 OPEN・MERGEABLE・mergeStateStatus=CLEAN・7/7 checks SUCCESS（CodeRabbit 含む）。追加・テスト・CI 設定のみで本番アプリコード無変更。PR merge は人間判断境界のため未実施。",
     "co_authored_by": "Claude Opus 4.8",
-    "ci_flaky_note": "c8d872c (docs-only) の初回 CI で Backend(pytest --maxfail=1) のみ間欠 failure。ローカル pytest は 888 passed/91% cov/EXIT0 で再現せず → flaky 確定。gh run rerun --failed で全6ジョブ success に回復（ソース無変更=最小差分修復）。追跡 Issue #32 起票。",
+    "ci_flaky_note": "c8d872c (docs-only) の初回 CI で Backend(pytest --maxfail=1) のみ間欠 failure。ローカル pytest は 888 passed/91% cov/EXIT0 で再現せず → flaky 確定。gh run rerun --failed で全6ジョブ success に回復（ソース無変更=最小差分修復）。追跡 Issue #32 起票。 / 後続 b9b8e96 (state-only) の run 27532632040 は backend flaky 再発なしで一発緑 → 間欠性を裏付け。",
     "flaky_tracking_issue": 32
   },
   "loop22": {
@@ -610,6 +610,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-15T07:53:01.659Z"
+    "last_pre_compact_at": "2026-06-15T08:04:27.198Z"
   }
 }
