@@ -273,7 +273,7 @@ jobs:
           AUTH_DEV_BYPASS: "true"
           NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000"
           CI: "true"
-        run: npx playwright test --reporter=github || true
+        run: npx playwright test --reporter=github
 
       - name: Upload Playwright report
         if: always()
