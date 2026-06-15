@@ -10,7 +10,7 @@
     "status": "code_complete_deployment_ready",
     "last_loop_completed": 21,
     "loops_total": 21,
-    "current_version": "0.1.10",
+    "current_version": "0.1.11",
     "cto_release_assessment": "code_complete_deployment_ready",
     "cto_assessment_date": "2026-05-30",
     "deployment_blockers": [
@@ -34,9 +34,9 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 21: weekly security.yml deep scan を GREEN 化（PR #30 OPEN, 人間マージ待ち）。3 つの独立した根本原因を 1 PR で修正。(1) pip-audit スコープ修正: 裸の pip-audit が runner の ambient pip (pip 24.0 CVE) を誤検知していたため、隔離 venv に `pip install -e .` → `pip freeze --exclude-editable` でロックファイル化し、プロジェクト実依存(77件)のみを --strict 監査。(2) python-jose 3.3.0 の実 CVE 解消 (PYSEC-2024-232/233, PYSEC-2025-185) → pyproject.toml で >=3.4.0 に bump（jose は JWT/SSO/JWKS RS256 で実使用）。(3) Bandit SARIF upload が private リポ + GHAS 未有効で 403 → continue-on-error + artifact fallback で graceful 化。ローカル検証: python-jose→3.5.0 clean / 77-dep pip-audit --strict EXIT=0 / YAML valid。PR #30 全7 CI チェック GREEN・MERGEABLE。security.yml 自体の真の green は main push/schedule トリガーで確認(PR checks には現れない)。",
-    "last_stop_at": "2026-06-04T05:15:14.972Z",
-    "current_session_start_at": "2026-06-15T01:29:22.090Z",
+    "last_session_summary": "Loop 21: weekly security.yml deep scan を GREEN 化（PR #30 OPEN, 人間マージ待ち）。3 つの独立した根本原因を 1 PR で修正。(1) pip-audit スコープ修正: 裸の pip-audit が runner の ambient pip (pip 24.0 CVE) を誤検知していたため、隔離 venv に `pip install -e .` → `pip freeze --exclude-editable` でロックファイル化し、プロジェクト実依存(77件)のみを --strict 監査。(2) python-jose 3.3.0 の実 CVE 解消 (PYSEC-2024-232/233, PYSEC-2025-185) → pyproject.toml で >=3.4.0 に bump（jose は JWT/SSO/JWKS RS256 で実使用）。(3) Bandit SARIF upload が private リポ + GHAS 未有効で 403 → continue-on-error + artifact fallback で graceful 化。ローカル検証: python-jose→3.5.0 clean / 77-dep pip-audit --strict EXIT=0 / YAML valid。PR #30 全7 CI チェック GREEN・MERGEABLE。人間承認を得て squash merge @6896426 (v0.1.11)。main push トリガーで security.yml 実行 run 27519028277 が全5ジョブ success = 真の green 実環境確定（直前 6/8 schedule は failure だった赤→緑証明）。",
+    "last_stop_at": "2026-06-15T01:42:00.000Z",
+    "current_session_start_at": "2026-06-15T01:45:39.961Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260614-062412-CMDB-DocKit"
   },
@@ -45,15 +45,15 @@
     "self_evolution": true
   },
   "stable": {
-    "consecutive_success": 4,
-    "target_n": 3,
+    "consecutive_success": 5,
+    "target_n": 5,
     "stable_achieved": true
   },
   "loop21": {
     "name": "Weekly Security Scan GREEN (pip-audit scope + python-jose CVE + Bandit graceful)",
     "completed_at": "2026-06-15",
     "pr": 30,
-    "pr_state": "OPEN (human merge pending)",
+    "pr_state": "MERGED @6896426 (v0.1.11) — true green confirmed (run 27519028277, all 5 jobs success)",
     "summary": "weekly security.yml deep scan の失敗を 1 PR で解消。3 つの独立した根本原因: (1) pip-audit スコープ誤り — 裸の pip-audit は runner の ambient pip (pip 24.0 の CVE 等) を監査してしまい誤検知。隔離 venv に `python -m venv` → `pip install -e .`(editable で自パッケージを freeze から除外) → `pip freeze --exclude-editable` でロックファイル化し、プロジェクト実依存 77 件のみを `--strict` 監査する方式に変更。(2) python-jose 3.3.0 の実 CVE (PYSEC-2024-232/233, PYSEC-2025-185) を pyproject.toml で >=3.4.0 に bump（jose は JWT/SSO/JWKS RS256 で本番使用中のため無視不可）→ 解決後 3.5.0/pyasn1 0.6.3 clean。(3) Bandit SARIF upload が private リポ + GHAS 未有効で 403 → SARIF + txt table 両出力、upload-sarif を continue-on-error 化、artifact fallback (bandit-report) を always() で保全。ローカル検証: 77-dep pip-audit --strict EXIT=0 'No known vulnerabilities found' / YAML valid。PR #30 全7 CI チェック GREEN・MERGEABLE。注意: security.yml は on:push(main)/schedule/workflow_dispatch のため PR checks には現れず、真の green は main マージ後の push/schedule で確認する(Loop 19 と同構造)。マージは人間判断境界のため未実施。"
   },
   "loop20": {
@@ -473,6 +473,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-15T01:28:13.982Z"
+    "last_pre_compact_at": "2026-06-15T01:44:32.425Z"
   }
 }
