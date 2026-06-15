@@ -56,8 +56,9 @@ test.describe("Knowledge", () => {
 
   test("shows category navigation", async ({ page }) => {
     // Sidebar Card titled カテゴリ plus the ソース種別 group.
+    // KnowledgeCategoryNav renders the label as <p>, not a heading — match by text.
     await expect(
-      page.getByRole("heading", { name: /カテゴリ/i }).first()
+      page.getByText(/カテゴリ/i).first()
     ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/ソース種別/i).first()).toBeVisible({
       timeout: 5_000,
@@ -66,7 +67,12 @@ test.describe("Knowledge", () => {
 
   test("category link filters via the URL", async ({ page }) => {
     // KnowledgeCategoryNav renders Links such as 建設業法 → ?category=建設業法.
-    await page.getByRole("link", { name: "建設業法" }).first().click();
+    // Scope to category= hrefs so we don't grab a result-card link with the same text.
+    await page
+      .locator('a[href*="category="]')
+      .filter({ hasText: "建設業法" })
+      .first()
+      .click();
     await expect(page).toHaveURL(/[?&]category=/, { timeout: 10_000 });
   });
 
