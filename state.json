@@ -34,9 +34,9 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 22: RS256 JWT 鍵ローテーション（Issue #19, P0 セキュリティ）の OPEN PR #27 を adversarial review 指摘反映 → マージ可能状態へ前進。worktree /tmp/jwt-rotation で feat/jwt-key-rotation を最新 main へ rebase。対抗レビュー（silent-failure-hunter + feature-dev code-reviewer）の指摘を反映: (1) 空文字 kid `{\"kid\":\"\"}` を `if kid:` で「kid なし」扱いし細工トークンをブロック。(2) 署名側 fail-fast / 検証側 resilient の責務分離 — `_jwt_active_kid()` は malformed 時 None+warning（検証セットは resilient、退役鍵は検証継続）だが `create_access_token` は raise で fail-fast（kid 無し RS256 トークンを絶対に発行しない）。(3) `JWT_REQUIRE_KID` 運用スイッチ追加（移行後 kid 無し RS256 を fail-closed 拒否、ロールアウト互換のため default False）。(4) 可観測性 — silent failure 禁止ポリシーに従い logging.warning で観測可能化（structlog 非依存の stdlib logging で security.py/config.py の import を軽量維持）。検証 ALL GREEN: RS256 19 tests pass / auth・token・security・jwt・login 回帰 99 tests pass・0 failed / ruff clean / mypy clean。commit 6af42be（4 files +187 -12, Refs #19）push 済み。PR #27 OPEN・MERGEABLE・mergeStateStatus=CLEAN。CI 7/7 ALL GREEN（run 27519954117: Backend ruff/mypy・Backend PostgreSQL16 pytest・CodeRabbit・Docker build・E2E Playwright smoke・Frontend・Security）。PR merge は人間判断境界のため未実施。",
+    "last_session_summary": "Loop 23: Issue #20（E2E Playwright テスト拡充）完遂。E2E ジョブが 6/7 緑でもテスト 0 件実行の silent failure を是正し、knowledge 詳細 spec 追加 + 11 件の E2E 失敗修正 + ゲート化まで完了。webServer 修正（output:standalone × next start 非互換 + ポート不一致 → start:standalone で node server.js を PORT=3000 起動）で全 E2E を実走化。実走で顕在化した 11 件の失敗を DOM 正確セレクタへ修正（system A: shadcn CardTitle は <div> で getByRole('heading') 不可 → getByText / system B: <Button asChild><Link> は role='link' / system C: backend 非存在で空状態 <p> → table.or(emptyState) フェイルセーフ）。commit 315da69（7 files +176/-40）→ CI run 27531080850『44 passed (32.9s)』で 11 件全修正を実証。44/44 緑確認後 ci.yml:276 の `|| true` を除去し E2E を gating 化（silent failure 穴を恒久封鎖・fail-closed 準拠）。commit 025eb99（1 file +1/-1）→ gating 後 CI run 27531346585 EXIT 0・全 6 ジョブ success で gating がビルドを壊さないことを確認。PR #31 OPEN・MERGEABLE・mergeStateStatus=CLEAN・7/7 checks SUCCESS（CodeRabbit 含む）。テスト・CI 設定のみで本番アプリコード無変更。PR merge は人間判断境界のため未実施（#27/#30 も人間マージ待ちで継続 OPEN）。",
     "last_stop_at": "2026-06-15T02:19:13.369Z",
-    "current_session_start_at": "2026-06-15T07:29:44.291Z",
+    "current_session_start_at": "2026-06-15T07:46:15.733Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260614-062412-CMDB-DocKit"
   },
@@ -53,8 +53,8 @@
     "name": "E2E Playwright knowledge ページ詳細 spec 追加 (Issue #20)",
     "completed_at": "2026-06-15",
     "pr": 31,
-    "pr_state": "OPEN — branch feat/e2e-knowledge-detail (commits 694566e + 16178db) — 人間マージ判断待ち",
-    "summary": "Issue #20（E2E Playwright テスト拡充）の一環で、欠落していたナレッジベースページの詳細 E2E spec を追加（frontend/e2e/knowledge.spec.ts 新規・89行・8 ケース）。既存 compliance.spec.ts のバックエンド非依存パターンを踏襲し、空状態でも通過する設計。検証: 見出し「ナレッジベース」/ AI ディスクレーマー（法的要件、/参考情報|法務担当者|顧問弁護士/）/ 検索バー（getByPlaceholder + 「検索」ボタン）→ ?q= 遷移 / カテゴリ・ソース種別ナビ → ?category= / ?source= 遷移 / 結果件数 or 空状態プロンプト。全アサーション resultCount.or(emptyState) 等でフェイルセーフ。Verify: tsc --noEmit クリーン / next lint クリーン。ローカル Playwright は chrome-headless-shell の SIGTRAP（環境制約）で未実行 — 既存 smoke.spec.ts も同条件で同クラッシュするためテスト固有問題でないと切り分け済み、CI E2E ジョブで検証。注意: CI の E2E ジョブ（ci.yml:276）は `npx playwright test --reporter=github || true` で非ゲート（情報提供・report artifact で結果確認）。追加のみ・本番コード無変更。PR merge は人間判断境界のため未実施。 【続報・重大発見】CI ログ精査で、E2E ジョブは 6/7 緑でも実際にはテストが1件も実行されていない silent failure を発見。根本原因2点: (1) next.config.mjs の output:\"standalone\" は `next start` で配信不可（webServer 120s タイムアウト）。(2) playwright baseURL=3000 vs npm start -p 3010 のポート不一致。修正: package.json に start:standalone を追加（Dockerfile と同手順で .next/static・public を .next/standalone にコピー→ PORT=3000 で node server.js 起動）、playwright.config.ts の webServer を start:standalone に変更しポート整合。これで smoke/knowledge 含む全 E2E が実走する。commit 16178db (Refs #20)。follow-up: 実走を CI で確認後 ci.yml の `|| true` を外して E2E を gating 化する余地あり。",
+    "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — branch feat/e2e-knowledge-detail (commits 315da69 + 025eb99) — CI 7/7 GREEN — 人間マージ判断待ち",
+    "summary": "Issue #20（E2E Playwright テスト拡充）完遂。3 段階で進行。【段階1: spec 追加】欠落していたナレッジベースページの詳細 E2E spec を追加（frontend/e2e/knowledge.spec.ts 新規・8 ケース）。既存 compliance.spec.ts のバックエンド非依存パターンを踏襲し空状態でも通過する設計。【段階2: silent failure 発見と webServer 修正】CI ログ精査で E2E ジョブが 6/7 緑でも実際はテスト 0 件実行の silent failure を発見。根本原因2点: (1) next.config.mjs の output:standalone は `next start` で配信不可（webServer タイムアウト）。(2) playwright baseURL=3000 vs ポート不一致。修正: package.json に start:standalone 追加（Dockerfile 同手順で .next/static・public を .next/standalone へコピー→ PORT=3000 で node server.js 起動）、playwright.config.ts の webServer をポート整合化。【段階3: 11 件の E2E 失敗修正 + ゲート化】実走で顕在化した 11 件の失敗を DOM 正確なセレクタへ修正。根本原因3系統: (system A) shadcn CardTitle は <div> でレンダリングされ semantic heading でない → getByRole('heading') を getByText().first() へ（compliance/risks のカード）。(system B) <Button asChild><Link> は <a role='link'> → getByRole('button') を getByRole('link') へ（contracts 新規ボタン）。(system C) backend 非存在で Server Component が空状態 <p> をレンダリング（table でない）→ table.or(emptyState) フェイルセーフへ（contracts/reviews/risks テーブル）。加えて knowledge カテゴリ label は <p>、category= href スコープ化、strict-mode 違反回避（[class*=card] が bg-card 多重マッチ）を修正。commit 315da69（7 files +176/-40）push → CI run 27531080850 で『44 passed (32.9s)』を確認、11 件全て修正完了を実証。【ゲート化】44/44 緑を確認後 ci.yml:276 の `|| true` を除去し E2E を gating 化（silent failure の穴を恒久封鎖、fail-closed ポリシー準拠）。commit 025eb99（1 file +1/-1）push → gating 後 CI run 27531346585 EXIT 0、全 6 ジョブ success で gating がビルドを壊さないことを確認。PR #31 OPEN・MERGEABLE・mergeStateStatus=CLEAN・7/7 checks SUCCESS（CodeRabbit 含む）。追加・テスト・CI 設定のみで本番アプリコード無変更。PR merge は人間判断境界のため未実施。",
     "co_authored_by": "Claude Opus 4.8"
   },
   "loop22": {
@@ -124,15 +124,16 @@
     ],
     "success_patterns": [
       {
+        "at": "2026-06-15T08:30:00.000Z",
+        "phase": "Build",
+        "tags": ["e2e", "playwright", "nextjs", "ci", "gating", "fail-closed"],
+        "problem": "実走化した E2E で 11 件失敗が顕在化 + 非ゲート `|| true` がサイレント障害を許す穴",
+        "insight": "Playwright セレクタ失敗は DOM の実体に合わせて系統別に直すと再発しない: (A) shadcn CardTitle は <div> なので getByRole('heading') は不可 → getByText().first()。(B) <Button asChild><Link> は <a role='link'> なので getByRole('button') でなく getByRole('link')。(C) backend 非存在だと Server Component は table でなく空状態 <p> を出すため table.or(emptyState) で両対応。ゲート化の順序が肝: まず 44/44 緑を CI run で確認 → その後に `|| true` を除去（先に外すと赤 PR リスク）。除去後も別 run で EXIT 0 を確認し gating がビルドを壊さないことを実証。これで silent failure 穴を恒久封鎖でき fail-closed ポリシーに準拠。commit 315da69(11 fixes)+025eb99(gating)。PR #31 7/7 GREEN・人間マージ待ち。"
+      },
+      {
         "at": "2026-06-15T07:10:00.000Z",
         "phase": "Build",
-        "tags": [
-          "e2e",
-          "playwright",
-          "nextjs",
-          "ci",
-          "silent-failure"
-        ],
+        "tags": ["e2e", "playwright", "nextjs", "ci", "silent-failure"],
         "problem": "E2E ジョブが CI 緑なのにテスト無実行（|| true が webServer 起動失敗を隠蔽）",
         "insight": "next output:standalone は next start で配信不可・standalone server.js + static/public コピーが必須。webServer.url と起動ポートの一致も必須。非ゲート `|| true` は構成バグを緑で隠すため、実走確認後に gating 化を検討。"
       },
@@ -594,6 +595,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-15T07:28:29.567Z"
+    "last_pre_compact_at": "2026-06-15T07:45:05.560Z"
   }
 }
