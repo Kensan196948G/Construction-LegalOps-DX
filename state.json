@@ -8,8 +8,8 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 20,
-    "loops_total": 20,
+    "last_loop_completed": 21,
+    "loops_total": 21,
     "current_version": "0.1.10",
     "cto_release_assessment": "code_complete_deployment_ready",
     "cto_assessment_date": "2026-05-30",
@@ -34,20 +34,27 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 20: AI プロバイダ設定 UI + Fernet 暗号化キー保管実装（PR #29 merged @36dab61, v0.1.10）。Perplexity Sonar / Claude AI プロバイダ設定 REST API (PATCH/GET /api/v1/admin/ai-settings/{provider}, POST /test-connection)。Fernet 暗号化 API キー保管・平文 DB 保存禁止。SSRF 防御（allowlist: api.perplexity.ai のみ）。フロントエンド ai-settings-panel.tsx + 設定ページ統合。Codex P2 Fix #1: _probe_perplexity に保存モデル使用（row.model if row else None）。Codex P2 Fix #2: _probe_claude は fail-closed（unavailable 返却）。19 files +2648 insertions / all 7 CI checks GREEN。",
-    "last_stop_at": "2026-06-04T05:04:43.226Z",
-    "current_session_start_at": "2026-06-04T05:10:52.546Z",
-    "last_trigger": "manual",
-    "last_cron_session_id": "20260604-095112-Construction-LegalOps-DX"
+    "last_session_summary": "Loop 21: weekly security.yml deep scan を GREEN 化（PR #30 OPEN, 人間マージ待ち）。3 つの独立した根本原因を 1 PR で修正。(1) pip-audit スコープ修正: 裸の pip-audit が runner の ambient pip (pip 24.0 CVE) を誤検知していたため、隔離 venv に `pip install -e .` → `pip freeze --exclude-editable` でロックファイル化し、プロジェクト実依存(77件)のみを --strict 監査。(2) python-jose 3.3.0 の実 CVE 解消 (PYSEC-2024-232/233, PYSEC-2025-185) → pyproject.toml で >=3.4.0 に bump（jose は JWT/SSO/JWKS RS256 で実使用）。(3) Bandit SARIF upload が private リポ + GHAS 未有効で 403 → continue-on-error + artifact fallback で graceful 化。ローカル検証: python-jose→3.5.0 clean / 77-dep pip-audit --strict EXIT=0 / YAML valid。PR #30 全7 CI チェック GREEN・MERGEABLE。security.yml 自体の真の green は main push/schedule トリガーで確認(PR checks には現れない)。",
+    "last_stop_at": "2026-06-04T05:15:14.972Z",
+    "current_session_start_at": "2026-06-15T01:29:22.090Z",
+    "last_trigger": "cron",
+    "last_cron_session_id": "20260614-062412-CMDB-DocKit"
   },
   "automation": {
     "auto_issue_generation": true,
     "self_evolution": true
   },
   "stable": {
-    "consecutive_success": 3,
+    "consecutive_success": 4,
     "target_n": 3,
     "stable_achieved": true
+  },
+  "loop21": {
+    "name": "Weekly Security Scan GREEN (pip-audit scope + python-jose CVE + Bandit graceful)",
+    "completed_at": "2026-06-15",
+    "pr": 30,
+    "pr_state": "OPEN (human merge pending)",
+    "summary": "weekly security.yml deep scan の失敗を 1 PR で解消。3 つの独立した根本原因: (1) pip-audit スコープ誤り — 裸の pip-audit は runner の ambient pip (pip 24.0 の CVE 等) を監査してしまい誤検知。隔離 venv に `python -m venv` → `pip install -e .`(editable で自パッケージを freeze から除外) → `pip freeze --exclude-editable` でロックファイル化し、プロジェクト実依存 77 件のみを `--strict` 監査する方式に変更。(2) python-jose 3.3.0 の実 CVE (PYSEC-2024-232/233, PYSEC-2025-185) を pyproject.toml で >=3.4.0 に bump（jose は JWT/SSO/JWKS RS256 で本番使用中のため無視不可）→ 解決後 3.5.0/pyasn1 0.6.3 clean。(3) Bandit SARIF upload が private リポ + GHAS 未有効で 403 → SARIF + txt table 両出力、upload-sarif を continue-on-error 化、artifact fallback (bandit-report) を always() で保全。ローカル検証: 77-dep pip-audit --strict EXIT=0 'No known vulnerabilities found' / YAML valid。PR #30 全7 CI チェック GREEN・MERGEABLE。注意: security.yml は on:push(main)/schedule/workflow_dispatch のため PR checks には現れず、真の green は main マージ後の push/schedule で確認する(Loop 19 と同構造)。マージは人間判断境界のため未実施。"
   },
   "loop20": {
     "name": "AI プロバイダ設定 + Codex P2 fix",
@@ -101,6 +108,18 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-06-15T01:30:00.000Z",
+        "summary": "Loop 21(Security green): pip-audit を CI で安全に回す定石 — 裸の `pip-audit` は runner の ambient pip を監査し誤検知するため、隔離 venv に `pip install -e .`(editable) → `pip freeze --exclude-editable` でプロジェクト実依存だけをロックファイル化して `--strict` 監査する。editable にしないと自パッケージが freeze に残り PyPI 未公開で --strict が落ちる。python-jose は実 CVE のため >=3.4.0 bump で解消。Bandit SARIF は private+GHAS未有効で 403 になるため continue-on-error + artifact fallback で graceful 化。PR #30 全7 CI GREEN。security.yml は PR checks に出ない(push/schedule トリガー)ので真の green は main マージ後に確認。"
+      },
+      {
+        "at": "2026-06-04T05:15:14.984Z",
+        "summary": "Loop 20: AI プロバイダ設定 UI + Fernet 暗号化キー保管実装（PR #29 merged @36dab61, v0.1.10）。Perplexity Sonar / Claude AI プロバイダ設定 REST API (PATCH/GET /api/v1/admin/ai-settings/{provider}, POST /test-connection)。Fernet "
+      },
+      {
+        "at": "2026-06-04T05:13:23.227Z",
+        "summary": "Loop 20: AI プロバイダ設定 UI + Fernet 暗号化キー保管実装（PR #29 merged @36dab61, v0.1.10）。Perplexity Sonar / Claude AI プロバイダ設定 REST API (PATCH/GET /api/v1/admin/ai-settings/{provider}, POST /test-connection)。Fernet "
+      },
       {
         "at": "2026-06-04T06:00:00.000Z",
         "summary": "Loop 20: AI プロバイダ設定（Perplexity/Claude）Fernet 暗号化保管 + SSRF 防御 + フロントエンド UI 実装。Codex P2 Fix #1: row.model if row else None（保存済みモデル参照）。Codex P2 Fix #2: _probe_claude fail-closed（unavailable 返却）。19 files +2648 insertions / 全7 CI GREEN。PR #29 squash merged @36dab61 (v0.1.10)。"
@@ -401,9 +420,59 @@
         "frontend/lib/api/schemas.ts"
       ],
       "truncated": false
+    },
+    {
+      "at": "2026-06-04T05:13:23.225Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 17 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/004_ai_provider_settings.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/admin.py",
+        "backend/app/core/config.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/app_settings.py",
+        "backend/app/schemas/settings.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/settings_service.py",
+        "backend/tests/integration/test_ai_settings.py",
+        "backend/tests/unit/test_audit_service.py",
+        "backend/tests/unit/test_settings_service.py",
+        "frontend/app/(authenticated)/settings/page.tsx",
+        "frontend/components/settings/ai-settings-panel.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-06-04T05:15:14.982Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 17 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/004_ai_provider_settings.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/admin.py",
+        "backend/app/core/config.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/app_settings.py",
+        "backend/app/schemas/settings.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/settings_service.py",
+        "backend/tests/integration/test_ai_settings.py",
+        "backend/tests/unit/test_audit_service.py",
+        "backend/tests/unit/test_settings_service.py",
+        "frontend/app/(authenticated)/settings/page.tsx",
+        "frontend/components/settings/ai-settings-panel.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-04T05:08:43.176Z"
+    "last_pre_compact_at": "2026-06-15T01:28:13.982Z"
   }
 }

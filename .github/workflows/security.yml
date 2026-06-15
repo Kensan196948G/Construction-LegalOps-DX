@@ -40,15 +40,30 @@ jobs:
       - name: Install Bandit
         run: pip install "bandit[toml,sarif]"
 
-      - name: Bandit scan (SARIF)
+      - name: Bandit scan (SARIF + table)
         run: |
+          # SARIF 出力（code scanning 連携用）と人間可読 table を両方生成。
           bandit -r backend/app -ll -ii -f sarif -o bandit.sarif || true
+          bandit -r backend/app -ll -ii -f txt -o bandit.txt || true
 
-      - name: Upload Bandit SARIF
+      - name: Upload Bandit SARIF (code scanning)
+        # private リポジトリで GitHub Advanced Security 未有効の場合、SARIF upload は 403 を返す。
+        # その場合でもジョブを失敗させず、下の artifact fallback で結果を保全する。
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: bandit.sarif
           category: bandit
+
+      - name: Upload Bandit report (artifact fallback)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: |
+            bandit.sarif
+            bandit.txt
+          if-no-files-found: ignore
 
   # ----------------------------------------------------------
   # Trivy (filesystem + config + secrets)
@@ -109,17 +124,30 @@ jobs:
       - name: Install pip-audit
         run: pip install pip-audit
 
-      - name: pip-audit (requirements)
+      - name: Resolve project dependencies (lockfile)
         working-directory: backend
+        # プロジェクトの実依存だけを隔離 venv に解決し、ロックファイル化する。
+        # 裸の `pip-audit` はランナーの ambient pip (例: pip 24.0 の CVE) を誤検知するため使わない。
         run: |
           set -e
+          python -m venv /tmp/audit-venv
+          /tmp/audit-venv/bin/pip install --upgrade pip
           if [ -f requirements.txt ]; then
-            pip-audit -r requirements.txt --strict --format json --output ../pip-audit.json
+            /tmp/audit-venv/bin/pip install -r requirements.txt
           elif [ -f pyproject.toml ]; then
-            pip-audit --strict --format json --output ../pip-audit.json
+            # editable install にすることで自プロジェクトを freeze --exclude-editable で除外し、
+            # pip-audit が PyPI 未公開の自パッケージを探して --strict で失敗するのを防ぐ。
+            /tmp/audit-venv/bin/pip install -e .
           else
-            echo "No Python dependency file found." > ../pip-audit.json
+            echo "No Python dependency file found." >&2
+            exit 1
           fi
+          /tmp/audit-venv/bin/pip freeze --exclude-editable > ../resolved-requirements.txt
+
+      - name: pip-audit (resolved project deps)
+        run: |
+          set -e
+          pip-audit -r resolved-requirements.txt --strict --format json --output pip-audit.json
 
       - name: Upload pip-audit report
         if: always()
