@@ -8,11 +8,14 @@ never re-parse the environment on each call.
 from __future__ import annotations
 
 import json
+import logging
 from functools import lru_cache
 from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 type Environment = Literal["development", "staging", "production", "test"]
 type LogLevel = Literal["debug", "info", "warning", "error", "critical"]
@@ -85,6 +88,10 @@ class Settings(BaseSettings):
     # Explicit key id (kid) for the active signing key. When unset, the kid is
     # derived deterministically from the active public key's SHA-256 thumbprint.
     jwt_key_id: str | None = Field(default=None, alias="JWT_KEY_ID")
+    # When true, RS256 tokens without a kid header are rejected (fail-closed).
+    # Leave false during rollout so legacy (pre-rotation) tokens still verify;
+    # flip to true once every active token carries a kid.
+    jwt_require_kid: bool = Field(default=False, alias="JWT_REQUIRE_KID")
 
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     jwt_expire_minutes: int = Field(default=60, alias="JWT_EXPIRE_MINUTES")
@@ -241,8 +248,15 @@ class Settings(BaseSettings):
         try:
             parsed = json.loads(raw)
         except (ValueError, TypeError):
+            logger.warning(
+                "JWT_PUBLIC_KEYS is not valid JSON; ignoring retired keys "
+                "(verification will use the active key only)"
+            )
             return []
         if not isinstance(parsed, list):
+            logger.warning(
+                "JWT_PUBLIC_KEYS must be a JSON array of PEM strings; ignoring retired keys"
+            )
             return []
         return [pem for pem in parsed if isinstance(pem, str) and pem.strip()]
 

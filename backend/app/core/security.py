@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -18,6 +19,11 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
+
+# Stdlib logger (no structlog dependency) keeps this module import-light so it
+# stays usable from workers / CLI. Key-config problems are logged loudly so a
+# malformed key never silently breaks authentication without a trace.
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # RBAC role taxonomy
@@ -157,7 +163,13 @@ def _jwt_active_kid() -> str | None:
     if settings.jwt_public_key:
         try:
             return _derive_kid(settings.jwt_public_key)
-        except Exception:  # malformed key → no kid, sign anyway (fail-open on kid only)
+        except Exception:
+            # Malformed active public key: we cannot derive a kid. Return None
+            # here (so verify-set building stays resilient and retired keys can
+            # still verify), but log loudly. The sign path in
+            # create_access_token turns this into a hard failure so we never
+            # mint a kid-less token while RS256 rotation is expected.
+            logger.warning("JWT active public key is malformed; cannot derive kid", exc_info=True)
             return None
     return None
 
@@ -177,7 +189,12 @@ def _jwt_public_key_set() -> dict[str, str]:
     for pem in settings.jwt_public_keys_list:
         try:
             kid = _derive_kid(pem)
-        except Exception:  # noqa: S112 — skip malformed retired key fail-closed
+        except Exception:
+            # A malformed retired key is dropped from the verify set rather than
+            # failing the whole build, so one bad entry in JWT_PUBLIC_KEYS does
+            # not break verification of every other (valid) key. Logged so the
+            # misconfiguration is visible instead of silently swallowed.
+            logger.warning("Skipping malformed retired key in JWT_PUBLIC_KEYS", exc_info=True)
             continue
         key_set.setdefault(kid, pem)
     return key_set
@@ -190,7 +207,9 @@ def _jwt_resolve_verify_key(token: str) -> str:
     - RS256 with a ``kid`` header: the matching public key, raising
       :class:`ValueError` (fail-closed) when the kid is unknown.
     - RS256 legacy token without a kid: falls back to the active public key,
-      so tokens minted before rotation was introduced still verify.
+      so tokens minted before rotation was introduced still verify — unless
+      ``JWT_REQUIRE_KID`` is set, which rejects kid-less tokens (fail-closed)
+      once a deployment has fully migrated to rotation.
     """
     if not settings.use_rs256:
         return _jwt_verify_key()
@@ -198,12 +217,16 @@ def _jwt_resolve_verify_key(token: str) -> str:
         header = jwt.get_unverified_header(token)
     except JWTError as exc:
         raise ValueError(f"invalid token: {exc}") from exc
+    # Treat an empty-string kid the same as a missing one ("" is not a usable
+    # key id), so a crafted {"kid": ""} cannot slip past the lookup branch.
     kid = header.get("kid")
-    if kid is not None:
+    if kid:
         key = _jwt_public_key_set().get(kid)
         if key is None:
             raise ValueError("invalid token: unknown key id")
         return key
+    if settings.jwt_require_kid:
+        raise ValueError("invalid token: missing key id")
     return _jwt_verify_key()
 
 
@@ -244,6 +267,16 @@ def create_access_token(
     # signed the token, enabling zero-downtime key rotation. HS256 tokens
     # carry no kid (single shared secret).
     active_kid = _jwt_active_kid()
+    if settings.use_rs256 and active_kid is None:
+        # Fail-fast on the sign path: RS256 is configured but we could not
+        # derive a kid (malformed public key / bad JWT_KEY_ID config). Minting
+        # a kid-less RS256 token here would quietly defeat rotation and could
+        # be rejected later by JWT_REQUIRE_KID verifiers — better to refuse to
+        # sign than to emit an un-rotatable token.
+        raise ValueError(
+            "RS256 is configured but no kid could be derived; refusing to sign "
+            "a kid-less token (check JWT_PUBLIC_KEY / JWT_KEY_ID)"
+        )
     headers = {"kid": active_kid} if active_kid else None
     return str(
         jwt.encode(

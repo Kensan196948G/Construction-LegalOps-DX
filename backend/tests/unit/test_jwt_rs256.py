@@ -94,13 +94,15 @@ def test_rs256_extra_claims_preserved(monkeypatch):
     assert claims["email"] == "u@example.com"
 
 
-def test_use_rs256_flag_false_by_default():
+def test_use_rs256_flag_false_by_default(monkeypatch):
     """Settings.use_rs256 is False when no asymmetric keys are configured."""
-    from app.core.config import settings
+    from app.core import config as cfg_module
 
-    # In test env JWT_PRIVATE_KEY / JWT_PUBLIC_KEY are not set
-    if settings.jwt_private_key is None and settings.jwt_public_key is None:
-        assert settings.use_rs256 is False
+    # Deterministically clear both keys instead of conditionally asserting:
+    # a conditional assert silently passes when the env happens to set keys.
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", None)
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", None)
+    assert cfg_module.settings.use_rs256 is False
 
 
 def test_rs256_kid_header_present(monkeypatch):
@@ -224,6 +226,129 @@ def test_jwt_public_keys_list_malformed_is_empty(monkeypatch):
 
     monkeypatch.setattr(cfg_module.settings, "jwt_public_keys", None)
     assert cfg_module.settings.jwt_public_keys_list == []
+
+
+def test_rs256_mixed_valid_and_malformed_retired_keys(monkeypatch):
+    """A malformed entry in JWT_PUBLIC_KEYS is skipped; valid retired keys work."""
+    from app.core import config as cfg_module
+    from app.core.security import create_access_token, decode_token
+
+    old_priv, old_pub = _generate_rsa_pem_pair()
+    new_priv, new_pub = _generate_rsa_pem_pair()
+
+    # Mint under the old key.
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", SecretStr(old_priv))
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", old_pub)
+    old_token = create_access_token("mixed-user")
+
+    # Rotate; retired set has one garbage PEM plus the real old_pub.
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", SecretStr(new_priv))
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", new_pub)
+    monkeypatch.setattr(
+        cfg_module.settings,
+        "jwt_public_keys",
+        json.dumps(["-----BEGIN PUBLIC KEY-----\nnot-a-real-key\n", old_pub]),
+    )
+
+    # The malformed entry is dropped, the valid retired key still verifies.
+    assert decode_token(old_token)["sub"] == "mixed-user"
+
+
+def test_rs256_explicit_kid_with_rotation(monkeypatch):
+    """JWT_KEY_ID active kid + a derived-kid retired key both verify."""
+    from app.core import config as cfg_module
+    from app.core.security import create_access_token, decode_token
+
+    old_priv, old_pub = _generate_rsa_pem_pair()
+    new_priv, new_pub = _generate_rsa_pem_pair()
+
+    # Old key active with a derived kid → mint old_token.
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", SecretStr(old_priv))
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", old_pub)
+    monkeypatch.setattr(cfg_module.settings, "jwt_key_id", None)
+    old_token = create_access_token("combo-old")
+
+    # Rotate to new key with an EXPLICIT kid; keep old_pub (derived kid) retired.
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", SecretStr(new_priv))
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", new_pub)
+    monkeypatch.setattr(cfg_module.settings, "jwt_key_id", "active-2026")
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_keys", json.dumps([old_pub]))
+
+    new_token = create_access_token("combo-new")
+    assert jose_jwt.get_unverified_header(new_token)["kid"] == "active-2026"
+    # Active explicit-kid token verifies.
+    assert decode_token(new_token)["sub"] == "combo-new"
+    # Retired derived-kid token still verifies.
+    assert decode_token(old_token)["sub"] == "combo-old"
+
+
+def test_rs256_empty_kid_rejected(monkeypatch):
+    """A crafted empty-string kid is treated as 'no kid', not a lookup hit."""
+    from app.core import config as cfg_module
+    from app.core.security import decode_token
+
+    private_pem, public_pem = _generate_rsa_pem_pair()
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", SecretStr(private_pem))
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", public_pem)
+    monkeypatch.setattr(cfg_module.settings, "jwt_require_kid", True)
+
+    now = dt.datetime.now(tz=dt.UTC)
+    payload = {
+        "sub": "empty-kid",
+        "iat": int(now.timestamp()),
+        "nbf": int(now.timestamp()),
+        "exp": int((now + dt.timedelta(minutes=5)).timestamp()),
+        "iss": cfg_module.settings.jwt_issuer,
+        "aud": cfg_module.settings.jwt_audience,
+    }
+    token = jose_jwt.encode(payload, private_pem, algorithm="RS256", headers={"kid": ""})
+    # Empty kid → treated as missing → JWT_REQUIRE_KID rejects it.
+    with pytest.raises(ValueError, match="missing key id"):
+        decode_token(token)
+
+
+def test_rs256_require_kid_rejects_legacy(monkeypatch):
+    """JWT_REQUIRE_KID rejects kid-less RS256 tokens (fail-closed)."""
+    from app.core import config as cfg_module
+    from app.core.security import decode_token
+
+    private_pem, public_pem = _generate_rsa_pem_pair()
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", SecretStr(private_pem))
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", public_pem)
+    monkeypatch.setattr(cfg_module.settings, "jwt_require_kid", True)
+
+    now = dt.datetime.now(tz=dt.UTC)
+    payload = {
+        "sub": "legacy-blocked",
+        "iat": int(now.timestamp()),
+        "nbf": int(now.timestamp()),
+        "exp": int((now + dt.timedelta(minutes=5)).timestamp()),
+        "iss": cfg_module.settings.jwt_issuer,
+        "aud": cfg_module.settings.jwt_audience,
+    }
+    legacy_token = jose_jwt.encode(payload, private_pem, algorithm="RS256")
+
+    with pytest.raises(ValueError, match="missing key id"):
+        decode_token(legacy_token)
+
+    # With the flag off, the same token verifies (backward compat).
+    monkeypatch.setattr(cfg_module.settings, "jwt_require_kid", False)
+    assert decode_token(legacy_token)["sub"] == "legacy-blocked"
+
+
+def test_rs256_sign_fails_fast_on_malformed_active_key(monkeypatch):
+    """create_access_token refuses to sign when RS256 active key yields no kid."""
+    from app.core import config as cfg_module
+    from app.core.security import create_access_token
+
+    private_pem, _ = _generate_rsa_pem_pair()
+    # Private key valid (use_rs256 True) but public key malformed → no kid.
+    monkeypatch.setattr(cfg_module.settings, "jwt_private_key", SecretStr(private_pem))
+    monkeypatch.setattr(cfg_module.settings, "jwt_public_key", "-----BEGIN PUBLIC KEY-----\nbad\n")
+    monkeypatch.setattr(cfg_module.settings, "jwt_key_id", None)
+
+    with pytest.raises(ValueError, match="refusing to sign"):
+        create_access_token("no-kid-user")
 
 
 def test_csp_enforce_defaults_to_is_production():
