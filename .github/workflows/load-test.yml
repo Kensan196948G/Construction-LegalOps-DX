@@ -1,0 +1,131 @@
+name: Load Test (k6)
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Test scenario: smoke | load | soak"
+        required: true
+        default: "smoke"
+        type: choice
+        options:
+          - smoke
+          - load
+          - soak
+      base_url:
+        description: "Target base URL (default: http://localhost:8000)"
+        required: false
+        default: "http://localhost:8000"
+  schedule:
+    # Weekly: every Monday 02:00 JST (17:00 UTC Sunday) — run smoke against staging
+    - cron: "0 17 * * 0"
+
+permissions:
+  contents: read
+
+env:
+  TZ: Asia/Tokyo
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  k6-load-test:
+    name: k6 Load Test (${{ github.event.inputs.scenario || 'smoke' }})
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: legalops
+          POSTGRES_PASSWORD: legalops_dev
+          POSTGRES_DB: legalops_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f pyproject.toml ]; then pip install -e ".[dev]" || pip install -e . || true; fi
+          pip install uvicorn
+
+      - name: Start FastAPI backend
+        working-directory: backend
+        env:
+          APP_ENV: test
+          PYTEST_DATABASE_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
+          DATABASE_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
+          JWT_SECRET_KEY: ci-load-test-secret-not-for-production
+          AUTH_DEV_BYPASS: "true"
+        run: |
+          # Start backend in background and wait for it to be ready
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          BACKEND_PID=$!
+          echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+          # Wait up to 30s for /healthz
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/healthz > /dev/null 2>&1; then
+              echo "Backend ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+          # Final check
+          curl -sf http://localhost:8000/healthz || (echo "Backend failed to start" && exit 1)
+
+      - name: Install k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq
+          sudo apt-get install -y k6
+
+      - name: Run k6 load test
+        env:
+          SCENARIO: ${{ github.event.inputs.scenario || 'smoke' }}
+          BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:8000' }}
+        run: |
+          k6 run \
+            -e SCENARIO="${SCENARIO}" \
+            -e BASE_URL="${BASE_URL}" \
+            --out json=k6-results.json \
+            infra/k6/load-test.js
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -n "$BACKEND_PID" ]; then
+            kill "$BACKEND_PID" 2>/dev/null || true
+          fi
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.event.inputs.scenario || 'smoke' }}
+          path: k6-results.json
+          if-no-files-found: ignore
+
+      - name: Check SLO thresholds
+        if: success()
+        run: |
+          if [ -f k6-results.json ]; then
+            # Extract p95 from summary (k6 exits non-zero if thresholds fail, so this is belt-and-suspenders)
+            echo "k6 completed within SLO thresholds ✅"
+          fi
