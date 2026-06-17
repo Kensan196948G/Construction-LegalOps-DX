@@ -110,7 +110,7 @@ jobs:
           PYTEST_DATABASE_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
           JWT_SECRET_KEY: ci-test-secret-key-not-for-production
         run: |
-          pytest tests/integration/ -q --disable-warnings --tb=short || true
+          pytest tests/integration/ -q --disable-warnings --tb=short
 
   # ============================================================
   # Frontend: Next.js / TypeScript

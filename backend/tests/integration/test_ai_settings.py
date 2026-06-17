@@ -76,13 +76,14 @@ async def fresh_session() -> AsyncGenerator[Any, None]:
     """
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-    from app.db.test_session import create_all_for_tests, create_test_engine
+    from app.db.test_session import DEFAULT_SQLITE_URL, create_all_for_tests, create_test_engine
 
-    engine = create_test_engine()
+    # Always use SQLite :memory: for service-layer isolation, regardless of
+    # PYTEST_USE_POSTGRES — PostgreSQL does not support :memory: databases,
+    # and this fixture's isolation contract requires a fresh schema per test.
+    engine = create_test_engine(DEFAULT_SQLITE_URL)
     await create_all_for_tests(engine)
-    Session = async_sessionmaker(
-        bind=engine, expire_on_commit=False, class_=AsyncSession
-    )
+    Session = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
     session = Session()
     try:
         yield session
@@ -119,9 +120,7 @@ async def test_upsert_encrypts_at_rest_and_masks(fresh_session: Any) -> None:
     # Assert — the row holds Fernet ciphertext, not the plaintext key
     row = (
         await fresh_session.execute(
-            select(AiProviderSetting).where(
-                AiProviderSetting.provider == "perplexity"
-            )
+            select(AiProviderSetting).where(AiProviderSetting.provider == "perplexity")
         )
     ).scalar_one()
     assert row.api_key_encrypted is not None
@@ -140,9 +139,7 @@ async def test_upsert_key_semantics_none_preserves_empty_clears(
     )
     row = (
         await fresh_session.execute(
-            select(AiProviderSetting).where(
-                AiProviderSetting.provider == "perplexity"
-            )
+            select(AiProviderSetting).where(AiProviderSetting.provider == "perplexity")
         )
     ).scalar_one()
     row.last_test_status = "ok"
@@ -205,13 +202,8 @@ async def test_get_active_provider_key_is_fail_closed(fresh_session: Any) -> Non
     assert await service.get_active_provider_key(fresh_session, "perplexity") is None
 
     # Act/Assert — active + configured: the plaintext key is released
-    await service.upsert(
-        fresh_session, "perplexity", _update(api_key="pplx-key-7", is_active=True)
-    )
-    assert (
-        await service.get_active_provider_key(fresh_session, "perplexity")
-        == "pplx-key-7"
-    )
+    await service.upsert(fresh_session, "perplexity", _update(api_key="pplx-key-7", is_active=True))
+    assert await service.get_active_provider_key(fresh_session, "perplexity") == "pplx-key-7"
 
 
 async def test_claude_probe_is_dormant_and_persists(fresh_session: Any) -> None:
@@ -228,9 +220,7 @@ async def test_claude_probe_is_dormant_and_persists(fresh_session: Any) -> None:
     assert "キー未設定" in no_key.message
 
     # Act 2 — key saved, probe again: still unavailable, now persisted on the row
-    await service.upsert(
-        fresh_session, "claude", _update(api_key="sk-ant-xxxx", is_active=True)
-    )
+    await service.upsert(fresh_session, "claude", _update(api_key="sk-ant-xxxx", is_active=True))
     saved = await service.test_connection(fresh_session, "claude")
 
     # Assert 2 — outcome reflects saved key and is written back to last_test_*
@@ -273,15 +263,14 @@ async def test_perplexity_probe_via_injected_transport(fresh_session: Any) -> No
 
 async def test_perplexity_probe_maps_401_to_auth_failure(fresh_session: Any) -> None:
     """A 401 from Perplexity becomes a friendly auth-failure (not an exception)."""
+
     # Arrange
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"error": "unauthorized"})
 
     mock_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     service = SettingsService(fernet=_TEST_FERNET, http_client=mock_client)
-    await service.upsert(
-        fresh_session, "perplexity", _update(api_key="pplx-bad", is_active=True)
-    )
+    await service.upsert(fresh_session, "perplexity", _update(api_key="pplx-bad", is_active=True))
 
     # Act
     try:
@@ -339,17 +328,13 @@ async def test_admin_put_then_get_shows_masked_never_plaintext(
 
     # Assert — masked on read too, full plaintext absent from the payload
     assert get.status_code == 200
-    perplexity = next(
-        p for p in get.json()["providers"] if p["provider"] == "perplexity"
-    )
+    perplexity = next(p for p in get.json()["providers"] if p["provider"] == "perplexity")
     assert perplexity["has_key"] is True
     assert perplexity["key_masked"] == "••••7777"
     assert secret not in get.text
 
 
-async def test_non_admin_get_is_forbidden(
-    client: Any, auth_headers_site: dict[str, str]
-) -> None:
+async def test_non_admin_get_is_forbidden(client: Any, auth_headers_site: dict[str, str]) -> None:
     """A site/drafter role may not read AI settings (admin-only)."""
     # Act
     resp = await client.get(AI_SETTINGS, headers=auth_headers_site)
@@ -372,9 +357,7 @@ async def test_post_test_claude_reports_unavailable(
 ) -> None:
     """The Claude connection test is gracefully 'unavailable' until the gate."""
     # Act
-    resp = await client.post(
-        f"{AI_SETTINGS}/claude/test", headers=auth_headers_admin
-    )
+    resp = await client.post(f"{AI_SETTINGS}/claude/test", headers=auth_headers_admin)
 
     # Assert
     assert resp.status_code == 200
@@ -396,9 +379,7 @@ async def test_post_test_perplexity_without_key_fails_without_network(
     assert clear.status_code == 200
 
     # Act
-    resp = await client.post(
-        f"{AI_SETTINGS}/perplexity/test", headers=auth_headers_admin
-    )
+    resp = await client.post(f"{AI_SETTINGS}/perplexity/test", headers=auth_headers_admin)
 
     # Assert — "failed / 未設定" comes from the service before any HTTP call
     assert resp.status_code == 200
@@ -412,9 +393,7 @@ async def test_unknown_provider_is_rejected_at_path_param(
 ) -> None:
     """An out-of-vocabulary provider is a 422 (Literal path-param) before DB work."""
     # Act — admin headers so the 422 is unambiguously the provider, not auth
-    resp = await client.post(
-        f"{AI_SETTINGS}/openai/test", headers=auth_headers_admin
-    )
+    resp = await client.post(f"{AI_SETTINGS}/openai/test", headers=auth_headers_admin)
 
     # Assert
     assert resp.status_code == 422
