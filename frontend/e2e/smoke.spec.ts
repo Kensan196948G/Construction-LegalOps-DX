@@ -17,7 +17,7 @@ const PAGES = [
   { path: "/workflows", heading: /ワークフロー|Workflow/i },
   { path: "/risks", heading: /リスク|Risk/i },
   { path: "/compliance", heading: /コンプライアンス|Compliance/i },
-  { path: "/templates", heading: /テンプレート|Template/i },
+  { path: "/templates", heading: /ひな形|テンプレート|Template/i },
   { path: "/knowledge", heading: /ナレッジ|Knowledge/i },
   { path: "/audit-logs", heading: /監査|Audit/i },
 ];

@@ -29,15 +29,17 @@ test.describe("Compliance", () => {
 
   test("shows framework checklist card", async ({ page }) => {
     // The page includes a Card titled "適用フレームワーク".
+    // shadcn CardTitle renders as <div>, not a semantic heading, so match by text.
     await expect(
-      page.getByRole("heading", { name: /適用フレームワーク/i })
+      page.getByText(/適用フレームワーク/i).first()
     ).toBeVisible({ timeout: 10_000 });
   });
 
   test("shows findings card", async ({ page }) => {
     // The page includes a Card titled "検出された是正対象".
+    // shadcn CardTitle renders as <div>, not a semantic heading, so match by text.
     await expect(
-      page.getByRole("heading", { name: /検出された是正対象|是正対象/i })
+      page.getByText(/検出された是正対象|是正対象/i).first()
     ).toBeVisible({ timeout: 10_000 });
   });
 

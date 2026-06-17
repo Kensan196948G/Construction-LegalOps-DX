@@ -31,7 +31,7 @@ test.describe("Reviews", () => {
     const table = page.locator(
       "table, [role='table'], [data-testid='reviews-table']"
     ).first();
-    const emptyState = page.getByText(/レビューがありません|0\s*件|該当する項目/i).first();
+    const emptyState = page.getByText(/レビューが見つかりません|レビューがありません|0\s*件|該当する項目/i).first();
 
     await expect(table.or(emptyState)).toBeVisible({ timeout: 10_000 });
   });

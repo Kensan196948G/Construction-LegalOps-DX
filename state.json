@@ -8,8 +8,8 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 21,
-    "loops_total": 21,
+    "last_loop_completed": 23,
+    "loops_total": 23,
     "current_version": "0.1.11",
     "cto_release_assessment": "code_complete_deployment_ready",
     "cto_assessment_date": "2026-05-30",
@@ -34,9 +34,9 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 21: weekly security.yml deep scan を GREEN 化（PR #30 OPEN, 人間マージ待ち）。3 つの独立した根本原因を 1 PR で修正。(1) pip-audit スコープ修正: 裸の pip-audit が runner の ambient pip (pip 24.0 CVE) を誤検知していたため、隔離 venv に `pip install -e .` → `pip freeze --exclude-editable` でロックファイル化し、プロジェクト実依存(77件)のみを --strict 監査。(2) python-jose 3.3.0 の実 CVE 解消 (PYSEC-2024-232/233, PYSEC-2025-185) → pyproject.toml で >=3.4.0 に bump（jose は JWT/SSO/JWKS RS256 で実使用）。(3) Bandit SARIF upload が private リポ + GHAS 未有効で 403 → continue-on-error + artifact fallback で graceful 化。ローカル検証: python-jose→3.5.0 clean / 77-dep pip-audit --strict EXIT=0 / YAML valid。PR #30 全7 CI チェック GREEN・MERGEABLE。人間承認を得て squash merge @6896426 (v0.1.11)。main push トリガーで security.yml 実行 run 27519028277 が全5ジョブ success = 真の green 実環境確定（直前 6/8 schedule は failure だった赤→緑証明）。",
-    "last_stop_at": "2026-06-15T01:42:00.000Z",
-    "current_session_start_at": "2026-06-15T01:45:39.961Z",
+    "last_session_summary": "Loop 23: Issue #20（E2E Playwright テスト拡充）完遂。E2E ジョブが 6/7 緑でもテスト 0 件実行の silent failure を是正し、knowledge 詳細 spec 追加 + 11 件の E2E 失敗修正 + ゲート化まで完了。webServer 修正（output:standalone × next start 非互換 + ポート不一致 → start:standalone で node server.js を PORT=3000 起動）で全 E2E を実走化。実走で顕在化した 11 件の失敗を DOM 正確セレクタへ修正（system A: shadcn CardTitle は <div> で getByRole('heading') 不可 → getByText / system B: <Button asChild><Link> は role='link' / system C: backend 非存在で空状態 <p> → table.or(emptyState) フェイルセーフ）。commit 315da69（7 files +176/-40）→ CI run 27531080850『44 passed (32.9s)』で 11 件全修正を実証。44/44 緑確認後 ci.yml:276 の `|| true` を除去し E2E を gating 化（silent failure 穴を恒久封鎖・fail-closed 準拠）。commit 025eb99（1 file +1/-1）→ gating 後 CI run 27531346585 EXIT 0・全 6 ジョブ success で gating がビルドを壊さないことを確認。PR #31 OPEN・MERGEABLE・mergeStateStatus=CLEAN・7/7 checks SUCCESS（CodeRabbit 含む）。テスト・CI 設定のみで本番アプリコード無変更。PR merge は人間判断境界のため未実施（#27/#30 も人間マージ待ちで継続 OPEN）。",
+    "last_stop_at": "2026-06-15T02:19:13.369Z",
+    "current_session_start_at": "2026-06-15T08:05:39.119Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260614-062412-CMDB-DocKit"
   },
@@ -48,6 +48,23 @@
     "consecutive_success": 5,
     "target_n": 5,
     "stable_achieved": true
+  },
+  "loop23": {
+    "name": "E2E Playwright knowledge ページ詳細 spec 追加 (Issue #20)",
+    "completed_at": "2026-06-15",
+    "pr": 31,
+    "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — branch feat/e2e-knowledge-detail (commits 315da69 + 025eb99 + c8d872c + b9b8e96) — 最新 push b9b8e96 の CI run 27532632040 で全6ジョブ success（rerun 不要・一発緑）+ CodeRabbit=7/7 GREEN — 人間マージ判断待ち",
+    "summary": "Issue #20（E2E Playwright テスト拡充）完遂。3 段階で進行。【段階1: spec 追加】欠落していたナレッジベースページの詳細 E2E spec を追加（frontend/e2e/knowledge.spec.ts 新規・8 ケース）。既存 compliance.spec.ts のバックエンド非依存パターンを踏襲し空状態でも通過する設計。【段階2: silent failure 発見と webServer 修正】CI ログ精査で E2E ジョブが 6/7 緑でも実際はテスト 0 件実行の silent failure を発見。根本原因2点: (1) next.config.mjs の output:standalone は `next start` で配信不可（webServer タイムアウト）。(2) playwright baseURL=3000 vs ポート不一致。修正: package.json に start:standalone 追加（Dockerfile 同手順で .next/static・public を .next/standalone へコピー→ PORT=3000 で node server.js 起動）、playwright.config.ts の webServer をポート整合化。【段階3: 11 件の E2E 失敗修正 + ゲート化】実走で顕在化した 11 件の失敗を DOM 正確なセレクタへ修正。根本原因3系統: (system A) shadcn CardTitle は <div> でレンダリングされ semantic heading でない → getByRole('heading') を getByText().first() へ（compliance/risks のカード）。(system B) <Button asChild><Link> は <a role='link'> → getByRole('button') を getByRole('link') へ（contracts 新規ボタン）。(system C) backend 非存在で Server Component が空状態 <p> をレンダリング（table でない）→ table.or(emptyState) フェイルセーフへ（contracts/reviews/risks テーブル）。加えて knowledge カテゴリ label は <p>、category= href スコープ化、strict-mode 違反回避（[class*=card] が bg-card 多重マッチ）を修正。commit 315da69（7 files +176/-40）push → CI run 27531080850 で『44 passed (32.9s)』を確認、11 件全て修正完了を実証。【ゲート化】44/44 緑を確認後 ci.yml:276 の `|| true` を除去し E2E を gating 化（silent failure の穴を恒久封鎖、fail-closed ポリシー準拠）。commit 025eb99（1 file +1/-1）push → gating 後 CI run 27531346585 EXIT 0、全 6 ジョブ success で gating がビルドを壊さないことを確認。PR #31 OPEN・MERGEABLE・mergeStateStatus=CLEAN・7/7 checks SUCCESS（CodeRabbit 含む）。追加・テスト・CI 設定のみで本番アプリコード無変更。PR merge は人間判断境界のため未実施。",
+    "co_authored_by": "Claude Opus 4.8",
+    "ci_flaky_note": "c8d872c (docs-only) の初回 CI で Backend(pytest --maxfail=1) のみ間欠 failure。ローカル pytest は 888 passed/91% cov/EXIT0 で再現せず → flaky 確定。gh run rerun --failed で全6ジョブ success に回復（ソース無変更=最小差分修復）。追跡 Issue #32 起票。 / 後続 b9b8e96 (state-only) の run 27532632040 は backend flaky 再発なしで一発緑 → 間欠性を裏付け。",
+    "flaky_tracking_issue": 32
+  },
+  "loop22": {
+    "name": "RS256 JWT Key Rotation — adversarial review fixes (Issue #19, P0 security)",
+    "completed_at": "2026-06-15",
+    "pr": 27,
+    "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — CI 7/7 GREEN (run 27519954117) — 人間マージ判断待ち (commit 6af42be)",
+    "summary": "RS256 JWT 鍵ローテーション（Issue #19, P0）の OPEN PR #27 を adversarial review 指摘反映でマージ可能状態へ。kid ヘッダ（SHA-256 DER SPKI 先頭16hex）+ JWT_PUBLIC_KEYS 退役鍵検証セットでゼロダウンタイム鍵ローテを実現。対抗レビュー（silent-failure-hunter + feature-dev code-reviewer）の指摘を反映: (1) 空文字 kid のブロック — `if kid:`（`is not None` でなく）で `{\"kid\":\"\"}` を「kid なし」扱いし細工トークンを排除。(2) 署名側 fail-fast / 検証側 resilient の責務分離 — `_jwt_active_kid()` は malformed 公開鍵で None を返し warning ログ（検証セットは resilient のまま、退役鍵での検証は継続）、対して `create_access_token` は raise で fail-fast し kid 無し RS256 トークンを決して発行しない。(3) `JWT_REQUIRE_KID` 運用スイッチ — 移行完了後に kid 無し RS256 を fail-closed で拒否、ロールアウト後方互換のため default False。(4) 可観測性 — プロジェクトの silent failure 禁止ポリシーに従い jwt_public_keys_list の JSON パース失敗等を logging.warning で観測可能化。structlog 非依存の stdlib logging を選択し security.py/config.py の import を軽量維持。テスト 14→19 ケースに拡充。検証 ALL GREEN: RS256 19 tests pass / auth・token・security・jwt・login 回帰 99 tests pass・0 failed（801 deselected）/ ruff 'All checks passed!' / mypy 'Success: no issues found in 2 source files'。commit 6af42be（4 files +187 -12, Co-Authored-By: Claude Opus 4.8, Refs #19）を force-with-lease push。PR #27 OPEN・not-draft・MERGEABLE・mergeStateStatus=CLEAN。CI 7/7 ALL GREEN（run 27519954117: Backend ruff/mypy 1m26s・Backend PostgreSQL16 pytest 2m44s・CodeRabbit・Docker build 3m3s・E2E Playwright smoke 3m44s・Frontend eslint/tsc/jest 49s・Security bandit/trivy 20s）。注意: 認証変更のため STABLE は N=5（§9）。merge は人間判断境界（PR merge 最終実行は人間明示選択待ち）のため未実施。"
   },
   "loop21": {
     "name": "Weekly Security Scan GREEN (pip-audit scope + python-jose CVE + Bandit graceful)",
@@ -108,6 +125,53 @@
       }
     ],
     "success_patterns": [
+      {
+        "at": "2026-06-15T08:30:00.000Z",
+        "phase": "Build",
+        "tags": [
+          "e2e",
+          "playwright",
+          "nextjs",
+          "ci",
+          "gating",
+          "fail-closed"
+        ],
+        "problem": "実走化した E2E で 11 件失敗が顕在化 + 非ゲート `|| true` がサイレント障害を許す穴",
+        "insight": "Playwright セレクタ失敗は DOM の実体に合わせて系統別に直すと再発しない: (A) shadcn CardTitle は <div> なので getByRole('heading') は不可 → getByText().first()。(B) <Button asChild><Link> は <a role='link'> なので getByRole('button') でなく getByRole('link')。(C) backend 非存在だと Server Component は table でなく空状態 <p> を出すため table.or(emptyState) で両対応。ゲート化の順序が肝: まず 44/44 緑を CI run で確認 → その後に `|| true` を除去（先に外すと赤 PR リスク）。除去後も別 run で EXIT 0 を確認し gating がビルドを壊さないことを実証。これで silent failure 穴を恒久封鎖でき fail-closed ポリシーに準拠。commit 315da69(11 fixes)+025eb99(gating)。PR #31 7/7 GREEN・人間マージ待ち。"
+      },
+      {
+        "at": "2026-06-15T07:10:00.000Z",
+        "phase": "Build",
+        "tags": [
+          "e2e",
+          "playwright",
+          "nextjs",
+          "ci",
+          "silent-failure"
+        ],
+        "problem": "E2E ジョブが CI 緑なのにテスト無実行（|| true が webServer 起動失敗を隠蔽）",
+        "insight": "next output:standalone は next start で配信不可・standalone server.js + static/public コピーが必須。webServer.url と起動ポートの一致も必須。非ゲート `|| true` は構成バグを緑で隠すため、実走確認後に gating 化を検討。"
+      },
+      {
+        "at": "2026-06-15T07:10:00.000Z",
+        "summary": "Loop 23(E2E): Issue #20 で欠落していた knowledge ページの詳細 E2E spec を追加（PR #31 OPEN, 人間マージ待ち）。既存 compliance.spec.ts の『バックエンド非依存・空状態でも通過』パターンを踏襲し 8 ケース実装。要点: (1) Playwright spec は resultCount.or(emptyState) のように OR ロケータで空/有データ両対応にするとバックエンド状態に依存せず安定する。(2) CI の E2E ジョブは `npx playwright test --reporter=github || true`(ci.yml:276) で非ゲート — 失敗しても CI 赤化せず report artifact で確認する設計。(3) ローカル chrome-headless-shell の SIGTRAP クラッシュは環境問題で、既存 smoke.spec.ts も同条件で落ちることで切り分け、tsc/next lint の static 検証 + ソース読解 + CI でテスト妥当性を担保。commit 694566e。"
+      },
+      {
+        "at": "2026-06-15T02:19:15.038Z",
+        "summary": "Loop 22: RS256 JWT 鍵ローテーション（Issue #19, P0 セキュリティ）の OPEN PR #27 を adversarial review 指摘反映 → マージ可能状態へ前進。worktree /tmp/jwt-rotation で feat/jwt-key-rotation を最新 main へ rebase。対抗レビュー（silent-failure-hunter "
+      },
+      {
+        "at": "2026-06-15T02:13:27.000Z",
+        "summary": "Loop 22(Auth/RS256): JWT 鍵ローテーションの対抗レビューで核心となった設計原則は『署名側 fail-fast / 検証側 resilient の責務分離』。検証パス（_jwt_active_kid / 退役鍵セット）は malformed 入力を None+warning で受け流し可用性を守る一方、署名パス（create_access_token）は raise で fail-fast し kid 無し RS256 トークンの発行を構造的に不可能にする。空文字 kid は `if kid:`（`is not None` でなく）で「kid なし」扱いしブロック。silent failure 禁止ポリシーに従い全 fallback を logging.warning で観測可能化（structlog でなく stdlib logging で core import を軽量維持）。JWT_REQUIRE_KID は default False でロールアウト互換を確保。認証変更は STABLE N=5。検証 GREEN: RS256 19 / 回帰 99 / ruff / mypy。PR #27 OPEN・MERGEABLE、merge は人間判断境界。"
+      },
+      {
+        "at": "2026-06-15T01:49:38.700Z",
+        "summary": "Loop 21: weekly security.yml deep scan を GREEN 化（PR #30 OPEN, 人間マージ待ち）。3 つの独立した根本原因を 1 PR で修正。(1) pip-audit スコープ修正: 裸の pip-audit が runner の ambient pip (pip 24.0 CVE) を誤検知していたため、隔離 venv に `pip install"
+      },
+      {
+        "at": "2026-06-15T01:47:17.586Z",
+        "summary": "Loop 21: weekly security.yml deep scan を GREEN 化（PR #30 OPEN, 人間マージ待ち）。3 つの独立した根本原因を 1 PR で修正。(1) pip-audit スコープ修正: 裸の pip-audit が runner の ambient pip (pip 24.0 CVE) を誤検知していたため、隔離 venv に `pip install"
+      },
       {
         "at": "2026-06-15T01:30:00.000Z",
         "summary": "Loop 21(Security green): pip-audit を CI で安全に回す定石 — 裸の `pip-audit` は runner の ambient pip を監査し誤検知するため、隔離 venv に `pip install -e .`(editable) → `pip freeze --exclude-editable` でプロジェクト実依存だけをロックファイル化して `--strict` 監査する。editable にしないと自パッケージが freeze に残り PyPI 未公開で --strict が落ちる。python-jose は実 CVE のため >=3.4.0 bump で解消。Bandit SARIF は private+GHAS未有効で 403 になるため continue-on-error + artifact fallback で graceful 化。PR #30 全7 CI GREEN。security.yml は PR checks に出ない(push/schedule トリガー)ので真の green は main マージ後に確認。"
@@ -171,18 +235,6 @@
       {
         "at": "2026-05-16T13:02:19.937Z",
         "summary": "Loop 10(UI Detail Pages): 詳細ページ・設定パネル・アップロードフォーム・テーブル1行化を実装。PR #6 merged to main。"
-      },
-      {
-        "at": "2026-05-16",
-        "summary": "whitespace-nowrap をバッジセルに、truncate をタイトルセルに付与するだけで全テーブルの2行問題を一括解決できた"
-      },
-      {
-        "at": "2026-05-23",
-        "summary": "Loop 11(CI/Test/Auth): JSDOMEnvironment を拡張して Node.js fetch globals を jsdom window に注入するパターンが MSW 2.x 対応の最善策"
-      },
-      {
-        "at": "2026-05-23",
-        "summary": "Loop 12(Design Impl): CSS Grid gridTemplateColumns='auto 1fr 1fr 1fr 1fr' + React.Fragment key パターンでヒートマップをクリーンに実装。JSX <> フラグメントに key は渡せないため Fragment 明示形式が必須。"
       }
     ],
     "usage_history": {
@@ -192,12 +244,22 @@
           "last_used": "2026-05-30T13:25:05.064Z",
           "last_description": "security_policy.md + RBAC テスト強化"
         },
-        "_total_agent_calls": 18,
-        "_last_agent_call_at": "2026-06-04T01:18:54.595Z",
+        "_total_agent_calls": 20,
+        "_last_agent_call_at": "2026-06-15T01:59:10.463Z",
         "Explore": {
           "call_count": 3,
           "last_used": "2026-06-04T01:18:54.595Z",
           "last_description": "Explore backend settings/secrets API"
+        },
+        "pr-review-toolkit_silent-failure-hunter": {
+          "call_count": 1,
+          "last_used": "2026-06-15T01:59:00.761Z",
+          "last_description": "対抗レビュー: JWT fail-open検出"
+        },
+        "feature-dev_code-reviewer": {
+          "call_count": 1,
+          "last_used": "2026-06-15T01:59:10.463Z",
+          "last_description": "対抗レビュー: 認証設計観点"
         }
       }
     }
@@ -470,9 +532,84 @@
         "frontend/lib/api/schemas.ts"
       ],
       "truncated": false
+    },
+    {
+      "at": "2026-06-15T01:47:17.584Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 17 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/004_ai_provider_settings.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/admin.py",
+        "backend/app/core/config.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/app_settings.py",
+        "backend/app/schemas/settings.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/settings_service.py",
+        "backend/tests/integration/test_ai_settings.py",
+        "backend/tests/unit/test_audit_service.py",
+        "backend/tests/unit/test_settings_service.py",
+        "frontend/app/(authenticated)/settings/page.tsx",
+        "frontend/components/settings/ai-settings-panel.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-06-15T01:49:38.698Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 17 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/004_ai_provider_settings.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/admin.py",
+        "backend/app/core/config.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/app_settings.py",
+        "backend/app/schemas/settings.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/settings_service.py",
+        "backend/tests/integration/test_ai_settings.py",
+        "backend/tests/unit/test_audit_service.py",
+        "backend/tests/unit/test_settings_service.py",
+        "frontend/app/(authenticated)/settings/page.tsx",
+        "frontend/components/settings/ai-settings-panel.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-06-15T02:19:15.036Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 17 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/004_ai_provider_settings.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/admin.py",
+        "backend/app/core/config.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/app_settings.py",
+        "backend/app/schemas/settings.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/settings_service.py",
+        "backend/tests/integration/test_ai_settings.py",
+        "backend/tests/unit/test_audit_service.py",
+        "backend/tests/unit/test_settings_service.py",
+        "frontend/app/(authenticated)/settings/page.tsx",
+        "frontend/components/settings/ai-settings-panel.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-15T01:44:32.425Z"
+    "last_pre_compact_at": "2026-06-15T08:04:27.198Z"
   }
 }
