@@ -19,7 +19,7 @@
     ],
     "deploy_ready": true
   },
-  "goal": "Construction-LegalOps-DX 自律開発",
+  "goal": "Construction-LegalOps-DX 自律開発 — k6 負荷テスト実装 (Issue #35)",
   "phase": "Build",
   "kpi": {
     "success_rate_target": 0.9,
@@ -34,11 +34,11 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 23: Issue #20（E2E Playwright テスト拡充）完遂。E2E ジョブが 6/7 緑でもテスト 0 件実行の silent failure を是正し、knowledge 詳細 spec 追加 + 11 件の E2E 失敗修正 + ゲート化まで完了。webServer 修正（output:standalone × next start 非互換 + ポート不一致 → start:standalone で node server.js を PORT=3000 起動）で全 E2E を実走化。実走で顕在化した 11 件の失敗を DOM 正確セレクタへ修正（system A: shadcn CardTitle は <div> で getByRole('heading') 不可 → getByText / system B: <Button asChild><Link> は role='link' / system C: backend 非存在で空状態 <p> → table.or(emptyState) フェイルセーフ）。commit 315da69（7 files +176/-40）→ CI run 27531080850『44 passed (32.9s)』で 11 件全修正を実証。44/44 緑確認後 ci.yml:276 の `|| true` を除去し E2E を gating 化（silent failure 穴を恒久封鎖・fail-closed 準拠）。commit 025eb99（1 file +1/-1）→ gating 後 CI run 27531346585 EXIT 0・全 6 ジョブ success で gating がビルドを壊さないことを確認。PR #31 OPEN・MERGEABLE・mergeStateStatus=CLEAN・7/7 checks SUCCESS（CodeRabbit 含む）。テスト・CI 設定のみで本番アプリコード無変更。PR merge は人間判断境界のため未実施（#27/#30 も人間マージ待ちで継続 OPEN）。",
+    "last_session_summary": "Loop 24: k6 負荷テスト基盤実装（Issue #35, PR #36）。3 シナリオ(smoke/load/soak)+GitHub Actions CI(workflow_dispatch+週次スケジュール)を新規実装。SLO p(95)<500ms/エラー率<1%。認証エンドポイントは JWT_TOKEN 設定時のみ実行(CI は無認証)。/readyz DB 過負荷防止に __ITER%5===0 ゲート。GHA workflow の ${{ github.event.inputs.* }} は env: ブロック経由で参照し CI でも安全なコマンドインジェクション防止パターンを採用。commit 42eaa41 → PR #36 OPEN → CI run 27688735498 in_progress。人間マージ待ち PR が計3件(#27 RS256・#31 E2E gating・#36 k6)。",
     "last_stop_at": "2026-06-15T02:19:13.369Z",
-    "current_session_start_at": "2026-06-15T08:05:39.119Z",
+    "current_session_start_at": "2026-06-17T13:14:39.042Z",
     "last_trigger": "cron",
-    "last_cron_session_id": "20260614-062412-CMDB-DocKit"
+    "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
   },
   "automation": {
     "auto_issue_generation": true,
@@ -48,6 +48,27 @@
     "consecutive_success": 5,
     "target_n": 5,
     "stable_achieved": true
+  },
+  "loop24": {
+    "name": "k6 負荷テスト基盤実装 (Issue #35)",
+    "completed_at": "2026-06-17",
+    "pr": 36,
+    "issue": 35,
+    "pr_state": "OPEN / MERGEABLE — CI run 27688735498 全6ジョブ SUCCESS (feat/k6-load-tests) — 人間マージ判断待ち",
+    "branch": "feat/k6-load-tests",
+    "commit": "42eaa41",
+    "files_created": [
+      "infra/k6/load-test.js",
+      "infra/k6/README.md",
+      ".github/workflows/load-test.yml"
+    ],
+    "summary": "k6 負荷テスト基盤を新規実装（Issue #35）。3 シナリオ構成: smoke(5VU/30s リリース前確認)・load(0→20VU ramp/hold/ramp SLO ゲート)・soak(10VU/10min メモリリーク検出)。SLO: p(95) < 500ms / エラー率 < 1%。設計上の要点: (1) AUTH_DEV_BYPASS はフロント専用でバックエンドには存在しないため、認証エンドポイント(testApiEndpoints)は JWT_TOKEN 環境変数が設定された場合のみ実行 — CI は無認証で liveness/readyz のみ計測。(2) /readyz は DB SELECT 1 込みのため高 VU 時の DB 過負荷回避に `__ITER % 5 === 0` ゲートで呼び出し頻度を制限（ピーク時 ~4 req/s）。(3) GitHub Actions の ${{ github.event.inputs.* }} を `env:` ブロックに格納してシェル変数として参照（コマンドインジェクション防止 — PostToolUse フック警告で確認済み・安全パターン）。週次スケジュール(月曜 02:00 JST/17:00 UTC Sunday) + workflow_dispatch(smoke/load/soak 選択)。PostgreSQL 16 サービスコンテナで backend 起動後に k6 実行。commit 42eaa41 push → PR #36 作成 → CI run 27688735498 queued/in_progress。",
+    "security_note": "workflow/load-test.yml の ${{ github.event.inputs.* }} は env: ブロック経由で参照 — コマンドインジェクション安全パターン採用済み",
+    "slo_targets": {
+      "p95_ms": 500,
+      "error_rate_pct": 1,
+      "db_query_p95_ms": 800
+    }
   },
   "loop23": {
     "name": "E2E Playwright knowledge ページ詳細 spec 追加 (Issue #20)",
@@ -113,7 +134,9 @@
     "CSP enforce 移行（infra/nginx/security-headers.enforce.conf 適用）— P0 7日後",
     "本番デプロイ準備（RELEASE_CHECKLIST §7 全項目チェック）",
     "E2E Playwright ブラウザ実行確認（AUTH_DEV_BYPASS=true + npm run start）",
-    "k6/Locust 負荷テスト（目標 50 req/s p95 < 500ms）"
+    "[PR #36] k6 負荷テスト CI GREEN 後に人間マージ — Issue #35 クローズ",
+    "[PR #27] RS256 JWT 鍵ローテーション 人間マージ待ち — 認証変更のため人間確認必須",
+    "[PR #31] E2E knowledge 詳細 spec + gating 人間マージ待ち"
   ],
   "completed_issues": [],
   "blocked_issues": [],
@@ -610,6 +633,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-15T08:04:27.198Z"
+    "last_pre_compact_at": "2026-06-17T13:13:09.684Z"
   }
 }
