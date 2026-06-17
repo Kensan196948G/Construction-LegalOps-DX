@@ -126,8 +126,9 @@ _PG_DEFAULT_REWRITES: Final[dict[str, str]] = {
     "'[]'::jsonb": "'[]'",
     "'{}'::json": "'{}'",
     "'[]'::json": "'[]'",
-    # ARRAY(Text) default literal — strip PG ARRAY syntax for SQLite
-    "'{}'": "'[]'",
+    # Note: ARRAY(Text) columns use "'{}'", which is also a valid SQLite string.
+    # Do NOT add a "'{}'": "'[]'" mapping here — that would corrupt TEXT[] DEFAULT
+    # on PostgreSQL runs sharing the same Base.metadata singleton.
 }
 
 # Tracks columns already rewritten to prevent double-rewrite across multiple

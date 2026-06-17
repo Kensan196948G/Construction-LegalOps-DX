@@ -32,10 +32,10 @@ class KnowledgeArticle(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     contract_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # tags stored as a JSONB array for PostgreSQL; SQLite fallback via test_session shim
     tags: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, default=list, server_default="[]"
+        JSONB, nullable=False, default=list, server_default="'[]'"
     )
     citations: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, default=list, server_default="[]"
+        JSONB, nullable=False, default=list, server_default="'[]'"
     )
     author_id: Mapped[int | None] = mapped_column(
         BigInteger,

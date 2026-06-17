@@ -32,13 +32,13 @@ def upgrade() -> None:
             "tags",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=False,
-            server_default="[]",
+            server_default="'[]'",
         ),
         sa.Column(
             "citations",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=False,
-            server_default="[]",
+            server_default="'[]'",
         ),
         sa.Column(
             "author_id",
