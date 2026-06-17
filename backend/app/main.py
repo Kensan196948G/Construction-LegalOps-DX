@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Final
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from starlette.datastructures import MutableHeaders, State
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import (
@@ -84,43 +86,74 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 # ---------------------------------------------------------------------------
 
 
-async def request_context_middleware(
-    request: Request,
-    call_next: Callable[[Request], Awaitable[Response]],
-) -> Response:
-    """Inject X-Request-Id and bind structlog context for the request."""
-    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
-    request.state.request_id = request_id
-    set_request_context(request_id=request_id)
+class RequestContextMiddleware:
+    """Pure-ASGI middleware: injects X-Request-Id and binds structlog context.
 
-    started = time.perf_counter()
-    try:
-        response = await call_next(request)
-    finally:
-        elapsed = time.perf_counter() - started
-        # Use route template when available, fall back to raw path.
-        route = request.scope.get("route")
-        path_label = getattr(route, "path", None) or request.url.path
+    Replaces the previous ``@app.middleware("http")`` function which used
+    ``BaseHTTPMiddleware`` internally and triggered asyncpg loop-binding
+    errors when combined with HTTPX ASGITransport in tests.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request_id = _get_request_id(scope)
+
+        # Store in scope state so downstream code (e.g. masking middleware)
+        # can access it via request.state.request_id.
+        if "state" not in scope:
+            scope["state"] = State()
+        scope["state"].request_id = request_id  # type: ignore[attr-defined]
+        set_request_context(request_id=request_id)
+
+        started = time.perf_counter()
+        response_status: list[int] = [200]
+
+        async def add_request_id_header(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                response_status[0] = message.get("status", 200)
+                message.setdefault("headers", [])
+                MutableHeaders(scope=message)["X-Request-Id"] = request_id
+            await send(message)
+
         try:
-            _REQUEST_LATENCY.labels(
-                method=request.method,
+            await self.app(scope, receive, add_request_id_header)
+        finally:
+            elapsed = time.perf_counter() - started
+            # Use route template when available (set by Starlette router after
+            # dispatch), fall back to raw ASGI path.
+            route = scope.get("route")
+            path_label: str = getattr(route, "path", None) or scope.get("path", "")
+            try:
+                _REQUEST_LATENCY.labels(
+                    method=scope.get("method", ""),
+                    path=path_label,
+                ).observe(elapsed)
+            except Exception:  # pragma: no cover — metrics must never break requests
+                logger.debug("metrics_latency_failure", exc_info=True)
+            clear_request_context()
+
+        try:
+            _REQUEST_COUNTER.labels(
+                method=scope.get("method", ""),
                 path=path_label,
-            ).observe(elapsed)
-        except Exception:  # pragma: no cover — metrics must never break requests
-            logger.debug("metrics_latency_failure", exc_info=True)
-        clear_request_context()
+                status=str(response_status[0]),
+            ).inc()
+        except Exception:  # pragma: no cover
+            logger.debug("metrics_counter_failure", exc_info=True)
 
-    try:
-        _REQUEST_COUNTER.labels(
-            method=request.method,
-            path=path_label,
-            status=str(response.status_code),
-        ).inc()
-    except Exception:  # pragma: no cover
-        logger.debug("metrics_counter_failure", exc_info=True)
 
-    response.headers["X-Request-Id"] = request_id
-    return response
+def _get_request_id(scope: Scope) -> str:
+    """Extract X-Request-Id from ASGI scope headers, or generate a new UUID."""
+    for name, value in scope.get("headers", []):
+        if name.lower() == b"x-request-id":
+            return value.decode("latin-1")
+    return str(uuid.uuid4())
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +186,7 @@ def create_app() -> FastAPI:
     #     SensitiveMasking -> request_context (innermost)
     #
     # so add them in reverse, ending with CORS.
-    app.middleware("http")(request_context_middleware)
+    app.add_middleware(RequestContextMiddleware)
     app.add_middleware(SensitiveMaskingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
