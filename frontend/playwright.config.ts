@@ -30,7 +30,10 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "AUTH_DEV_BYPASS=true npm run start",
+    // next.config.mjs uses `output: "standalone"`, which `next start` cannot serve.
+    // start:standalone copies static/public into .next/standalone (mirrors the
+    // Dockerfile) and runs the standalone server on PORT=3000 to match baseURL.
+    command: "AUTH_DEV_BYPASS=true npm run start:standalone",
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

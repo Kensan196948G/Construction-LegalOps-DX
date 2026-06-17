@@ -30,26 +30,27 @@ test.describe("Risks", () => {
 
   test("shows summary card", async ({ page }) => {
     // The page wraps RisksOverview in a Card with title "サマリー".
+    // shadcn CardTitle renders as <div>, not a semantic heading, so match by text.
     await expect(
-      page.getByRole("heading", { name: /サマリー/i })
+      page.getByText(/サマリー/i).first()
     ).toBeVisible({ timeout: 10_000 });
   });
 
   test("shows risks overview area", async ({ page }) => {
-    // RisksOverview renders bar/chart elements or heatmap cells.
-    // Accept either a visual chart container or an overview section.
-    const overview = page
-      .locator('[class*="overview"], [class*="heatmap"], [class*="chart"], [class*="summary"]')
-      .first();
-    const card = page.locator('[class*="card"]').first();
-    await expect(overview.or(card)).toBeVisible({ timeout: 10_000 });
+    // RisksOverview always renders the bar-chart labels "リスクレベル別" / "カテゴリ別"
+    // (heatmap "リスクマトリクス" only when data is present). Match by stable text
+    // instead of class globs — [class*="card"] matches shadcn bg-card on many
+    // elements and triggers a strict-mode violation.
+    await expect(
+      page.getByText(/リスクレベル別|カテゴリ別|リスクマトリクス/i).first()
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("shows risks table or empty state", async ({ page }) => {
     const table = page.locator(
       "table, [role='table'], [data-testid='risks-table']"
     ).first();
-    const emptyState = page.getByText(/リスクがありません|0\s*件|該当する項目/i).first();
+    const emptyState = page.getByText(/リスクが見つかりません|リスクがありません|0\s*件|該当する項目/i).first();
 
     await expect(table.or(emptyState)).toBeVisible({ timeout: 10_000 });
   });
