@@ -29,6 +29,72 @@ from app.schemas.knowledge import (
 )
 from app.services.similarity_search import CorpusEntry, SimilaritySearchService
 
+# ---------------------------------------------------------------------------
+# Article CRUD helpers
+# ---------------------------------------------------------------------------
+
+
+async def list_articles(
+    session: AsyncSession,
+    *,
+    page: int = 1,
+    size: int = 20,
+) -> tuple[list[KnowledgeArticleOut], int]:
+    """Return a paginated list of all non-deleted knowledge articles."""
+    base = select(KnowledgeArticle).where(KnowledgeArticle.deleted_at.is_(None))
+
+    count_result = await session.execute(select(func.count()).select_from(base.subquery()))
+    total: int = count_result.scalar() or 0
+
+    offset = (page - 1) * size
+    rows_result = await session.execute(
+        base.order_by(KnowledgeArticle.id).offset(offset).limit(size)
+    )
+    rows = rows_result.scalars().all()
+
+    items = [
+        KnowledgeArticleOut(
+            id=a.id,
+            title=a.title,
+            body=a.body,
+            tags=list(a.tags or []),
+            contract_type=a.contract_type,
+            citations=list(a.citations or []),
+            created_at=a.created_at,
+            updated_at=a.updated_at,
+        )
+        for a in rows
+    ]
+    return items, total
+
+
+async def get_article(
+    session: AsyncSession,
+    *,
+    article_id: int,
+) -> KnowledgeArticleOut | None:
+    """Return a single knowledge article by id, or None if not found."""
+    result = await session.execute(
+        select(KnowledgeArticle).where(
+            KnowledgeArticle.id == article_id,
+            KnowledgeArticle.deleted_at.is_(None),
+        )
+    )
+    a = result.scalar_one_or_none()
+    if a is None:
+        return None
+    return KnowledgeArticleOut(
+        id=a.id,
+        title=a.title,
+        body=a.body,
+        tags=list(a.tags or []),
+        contract_type=a.contract_type,
+        citations=list(a.citations or []),
+        created_at=a.created_at,
+        updated_at=a.updated_at,
+    )
+
+
 # Roles that may see all contracts (not just their own drafts).
 _PRIVILEGED_ROLES = frozenset({"admin", "legal", "auditor", "reviewer", "approver"})
 
