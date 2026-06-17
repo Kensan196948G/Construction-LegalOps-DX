@@ -12,9 +12,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Final
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
-from starlette.datastructures import MutableHeaders, State
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import (
@@ -26,6 +24,8 @@ from prometheus_client import (
 )
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import MutableHeaders, State
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
