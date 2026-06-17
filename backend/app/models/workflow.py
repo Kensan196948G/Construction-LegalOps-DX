@@ -58,13 +58,9 @@ class Workflow(IntPKMixin, TimestampMixin, Base):
     definition: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
-    version: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=1, server_default="1"
-    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
-    steps: Mapped[list[WorkflowStep]] = relationship(
-        "WorkflowStep", back_populates="workflow"
-    )
+    steps: Mapped[list[WorkflowStep]] = relationship("WorkflowStep", back_populates="workflow")
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Workflow id={self.id} code={self.code!r}>"
@@ -100,28 +96,18 @@ class WorkflowStep(IntPKMixin, TimestampMixin, Base):
     )
     assignee_role: Mapped[str | None] = mapped_column(String(32), nullable=True)
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="pending", server_default="pending"
+        String(32), nullable=False, default="pending", server_default="'pending'"
     )
-    due_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    decided_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     decision_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     workflow: Mapped[Workflow] = relationship("Workflow", back_populates="steps")
-    contract: Mapped[Contract] = relationship(
-        "Contract", back_populates="workflow_steps"
-    )
-    assignee: Mapped[User | None] = relationship(
-        "User", foreign_keys=[assignee_id]
-    )
+    contract: Mapped[Contract] = relationship("Contract", back_populates="workflow_steps")
+    assignee: Mapped[User | None] = relationship("User", foreign_keys=[assignee_id])
 
     __table_args__ = (
-        UniqueConstraint(
-            "contract_id", "seq", name="uq_wfsteps_contract_seq"
-        ),
+        UniqueConstraint("contract_id", "seq", name="uq_wfsteps_contract_seq"),
         CheckConstraint(
             f"step_type IN ({_ALLOWED_STEP_TYPE})",
             name="ck_wfsteps_step_type",

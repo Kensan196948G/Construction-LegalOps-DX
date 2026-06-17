@@ -57,17 +57,11 @@ class Notification(IntPKMixin, TimestampMixin, Base):
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
     status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="queued", server_default="queued"
+        String(16), nullable=False, default="queued", server_default="'queued'"
     )
-    scheduled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    sent_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    read_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     recipient: Mapped[User] = relationship("User", foreign_keys=[recipient_id])
     contract: Mapped[Contract | None] = relationship("Contract")
@@ -100,6 +94,5 @@ class Notification(IntPKMixin, TimestampMixin, Base):
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
-            f"<Notification id={self.id} recipient_id={self.recipient_id} "
-            f"channel={self.channel!r}>"
+            f"<Notification id={self.id} recipient_id={self.recipient_id} channel={self.channel!r}>"
         )

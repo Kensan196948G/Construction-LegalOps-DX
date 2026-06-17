@@ -51,20 +51,16 @@ class ClauseLibrary(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
         String(16),
         nullable=False,
         default="recommended",
-        server_default="recommended",
+        server_default="'recommended'",
     )
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(Text), nullable=False, default=list, server_default="'{}'"
     )
-    version: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=1, server_default="1"
-    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
     effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
 
-    clauses: Mapped[list[Clause]] = relationship(
-        "Clause", back_populates="library_clause"
-    )
+    clauses: Mapped[list[Clause]] = relationship("Clause", back_populates="library_clause")
 
     __table_args__ = (
         CheckConstraint(

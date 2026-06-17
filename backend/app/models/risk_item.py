@@ -60,10 +60,10 @@ class RiskItem(IntPKMixin, TimestampMixin, Base):
     category: Mapped[str] = mapped_column(String(64), nullable=False)
     severity: Mapped[str] = mapped_column(String(16), nullable=False)
     probability: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="medium", server_default="medium"
+        String(16), nullable=False, default="medium", server_default="'medium'"
     )
     impact: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="medium", server_default="medium"
+        String(16), nullable=False, default="medium", server_default="'medium'"
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
     mitigation: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -71,7 +71,7 @@ class RiskItem(IntPKMixin, TimestampMixin, Base):
     # populated by the service layer when AI suggests an action.
     recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="open", server_default="open"
+        String(32), nullable=False, default="open", server_default="'open'"
     )
     owner_id: Mapped[int | None] = mapped_column(
         BigInteger,
@@ -80,9 +80,7 @@ class RiskItem(IntPKMixin, TimestampMixin, Base):
     )
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
-    contract: Mapped[Contract] = relationship(
-        "Contract", back_populates="risk_items"
-    )
+    contract: Mapped[Contract] = relationship("Contract", back_populates="risk_items")
     clause: Mapped[Clause | None] = relationship("Clause")
     legal_review: Mapped[LegalReview | None] = relationship(
         "LegalReview", back_populates="risk_items"
@@ -124,7 +122,4 @@ class RiskItem(IntPKMixin, TimestampMixin, Base):
     )
 
     def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"<RiskItem id={self.id} contract_id={self.contract_id} "
-            f"severity={self.severity!r}>"
-        )
+        return f"<RiskItem id={self.id} contract_id={self.contract_id} severity={self.severity!r}>"

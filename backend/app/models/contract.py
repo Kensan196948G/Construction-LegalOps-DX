@@ -64,7 +64,7 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     contract_type: Mapped[str] = mapped_column(String(64), nullable=False)
     amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
     currency: Mapped[str] = mapped_column(
-        CHAR(3), nullable=False, default="JPY", server_default="JPY"
+        CHAR(3), nullable=False, default="JPY", server_default="'JPY'"
     )
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -79,17 +79,13 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
         nullable=False,
     )
     confidentiality: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="normal", server_default="normal"
+        String(16), nullable=False, default="normal", server_default="'normal'"
     )
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="draft", server_default="draft"
+        String(32), nullable=False, default="draft", server_default="'draft'"
     )
-    version: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=1, server_default="1"
-    )
-    sharepoint_item_id: Mapped[str | None] = mapped_column(
-        String(256), nullable=True
-    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    sharepoint_item_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
     extra_metadata: Mapped[dict[str, Any]] = mapped_column(
         "metadata",
         JSONB,
