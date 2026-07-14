@@ -40,7 +40,7 @@ from typing import Final
 from sqlalchemy import BigInteger
 from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 
 # ---------------------------------------------------------------------------
@@ -286,6 +286,35 @@ async def create_all_for_tests(engine: AsyncEngine) -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await _seed_master_rows(conn)
+
+
+async def _seed_master_rows(conn: AsyncConnection) -> None:
+    """Seed master rows API-level tests assume to exist.
+
+    Integration tests POST contracts with ``department_id=1``. SQLite does not
+    enforce foreign keys by default so the missing parent row went unnoticed;
+    PostgreSQL rejects the insert (``fk_contracts_department_id_departments``,
+    54 failures in run 29296646140). The insert is idempotent
+    (``WHERE NOT EXISTS``), and on PostgreSQL the identity sequence is bumped
+    past the explicit id so later ORM inserts don't collide with the seed.
+    """
+    from sqlalchemy import text as _sql_text
+
+    await conn.execute(
+        _sql_text(
+            "INSERT INTO departments (id, code, name) "
+            "SELECT 1, 'TEST-DEPT-1', 'テスト本部' "
+            "WHERE NOT EXISTS (SELECT 1 FROM departments WHERE id = 1)"
+        )
+    )
+    if conn.dialect.name == "postgresql":
+        await conn.execute(
+            _sql_text(
+                "SELECT setval(pg_get_serial_sequence('departments', 'id'), "
+                "(SELECT GREATEST(COALESCE(MAX(id), 1), 1) FROM departments))"
+            )
+        )
 
 
 __all__ = [

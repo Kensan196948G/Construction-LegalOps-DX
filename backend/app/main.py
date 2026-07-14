@@ -150,7 +150,8 @@ class RequestContextMiddleware:
 
 def _get_request_id(scope: Scope) -> str:
     """Extract X-Request-Id from ASGI scope headers, or generate a new UUID."""
-    for name, value in scope.get("headers", []):
+    headers: list[tuple[bytes, bytes]] = scope.get("headers", [])
+    for name, value in headers:
         if name.lower() == b"x-request-id":
             return value.decode("latin-1")
     return str(uuid.uuid4())
