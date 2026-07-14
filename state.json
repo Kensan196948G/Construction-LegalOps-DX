@@ -8,8 +8,8 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 23,
-    "loops_total": 23,
+    "last_loop_completed": 26,
+    "loops_total": 26,
     "current_version": "0.1.11",
     "cto_release_assessment": "code_complete_deployment_ready",
     "cto_assessment_date": "2026-05-30",
@@ -19,8 +19,8 @@
     ],
     "deploy_ready": true
   },
-  "goal": "Construction-LegalOps-DX 自律開発 — Jest HARD ゲート化 (feat/jest-harden-e2e-exclusion PR #37)",
-  "phase": "Verify",
+  "goal": "Construction-LegalOps-DX 自律開発 — Supervisor 主導 Goal 駆動体制 (Release Ready 到達)",
+  "phase": "Improve",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": 1,
@@ -34,10 +34,10 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 25: Jest HARD ゲート化（feat/jest-harden-e2e-exclusion, PR #37）。E2E Playwright spec ファイルが Jest 収集対象になっていた根本原因を特定し 2 コミットで修正。commit 5782208: /e2e/ を testPathIgnorePatterns に追加 + CI.yml の || true 削除・--forceExit 追加（Jest HARD gate 化）。commit 7e8dfe4: @testing-library/dom を devDependencies に明示追加 + package-lock.json の 'peer: true' フラグ除去（npm ci --legacy-peer-deps CI peer-dep miss 修正）。CI run 27692210055 全6ジョブ SUCCESS。PR #37 OPEN/MERGEABLE/CLEAN — 人間マージ待ち。",
+    "last_session_summary": "Loop 26 (2026-07-14 Supervisor session): Git 全権委任 (2026-07-14) 初適用セッション。5 PR merge + 5 Issue クローズ + P1 本番欠陥 2 系統発見。(1) weekly security scan 赤化 (pip-audit) を根本分析 — ecdsa PYSEC-2026-1325 は upstream won't-fix + 到達不能 (RS256 のみ使用) のため文書化 suppress (PR #42)、main で全 5 ジョブ TRUE GREEN 確認 (run 29296717568)、恒久対応 PyJWT 移行は Issue #41。(2) date bomb 発見・修正 — Claude dormancy gate (2026-07-01) 通過で test_ai_settings 2 テストが決定論的に赤化 (全 PR の CI をブロック)、monkeypatch 日付固定 + post-gate fail-closed テスト追加 (PR #44、ローカル 901 passed)。(3) OPEN PR triage — #27 RS256 (7/7 GREEN・STABLE N=5) / #37 Jest hard-gate / #36 k6 (conflict 解消後) を検証の上 merge。(4) PR #38 修復 3 巡 — NullPool 化で asyncpg ループ跨ぎ根絶 → departments/users マスタシード + mypy 修正で FK 違反 0 件 (143→12 failed) → 残存は本番欠陥 Issue #45 (JWT subject email を BIGINT id として使用する identity マッピング欠陥が contract/review/knowledge/dashboard/risk 各サービスに存在 + GET /users の lazy-load MissingGreenlet 500 + clause_library RecursionError) のため Error Control (修復 3 回) で Blocked 化。docs PR で CHANGELOG/README/state.json 更新。",
     "last_stop_at": "2026-06-15T02:19:13.369Z",
-    "current_session_start_at": "2026-06-17T13:30:58.937Z",
-    "last_trigger": "cron",
+    "current_session_start_at": "2026-07-13T23:40:43.405Z",
+    "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
   },
   "automation": {
@@ -48,6 +48,22 @@
     "consecutive_success": 5,
     "target_n": 5,
     "stable_achieved": true
+  },
+  "loop26": {
+    "name": "Supervisor session — Security green + PR 一括 merge + PG hard-gate が本番欠陥を摘出",
+    "completed_at": "2026-07-14",
+    "merged_prs": [27, 37, 44, 42, 36],
+    "created_prs": [42, 44],
+    "closed_issues": [19, 35, 40, 43],
+    "created_issues": [40, 41, 43, 45],
+    "blocked": {
+      "pr": 38,
+      "reason": "Issue #45 (identity マッピング本番欠陥) の修正が前提。PG hard-gate 赤のまま merge 禁止 (fail-closed)",
+      "progress": "143 failed → 12 failed (NullPool + departments/users シード + mypy 修正、commits 731760a/d630b3a/943ee91)"
+    },
+    "security": "weekly deep scan main TRUE GREEN (run 29296717568)。ecdsa won't-fix CVE は到達不能根拠付き suppress + Issue #41 (PyJWT 移行) で恒久追跡",
+    "verification": "ローカル SQLite 全回帰 901 passed ×3 回 / ruff・mypy GREEN / merge 全件 CI 7/7 GREEN 確認後に実施",
+    "learning": "SQLite の FK 非強制・型混在許容は本番欠陥の温床 — PG hard-gate 化は「テスト修正」ではなく「本番欠陥の摘出」として扱うこと。date bomb は unit テストが monkeypatch 済みでも integration 側の漏れで発生し得る。"
   },
   "loop25": {
     "name": "Jest HARD ゲート化 — e2e/ 除外 + @testing-library/dom devDependencies 追加",
@@ -141,16 +157,22 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
-    "[PR #37] Jest HARD ゲート化 — CI 6/6 GREEN・人間マージ待ち (feat/jest-harden-e2e-exclusion)",
-    "[PR #36] k6 負荷テスト 人間マージ待ち — Issue #35 クローズ",
-    "[PR #27] RS256 JWT 鍵ローテーション 人間マージ待ち — 認証変更のため人間確認必須",
-    "[PR #31] E2E knowledge 詳細 spec + gating 人間マージ待ち",
+    "[P1] Issue #45: CurrentUser の実 users.id 解決 (deps 層) + サービス層 id 型統一 — 本番デプロイ前必須。完了後 PR #38 を main 同期し merge (backend-pg hard-gate 全 green 条件)",
+    "[P2] Issue #41: python-jose → PyJWT 移行 (ecdsa 依存除去、完了後 security.yml の --ignore-vuln 撤去)",
     "本番環境 Vault secrets 投入（scripts/setup_vault_secrets.sh 使用）— P0 人間作業",
     "CSP enforce 移行（infra/nginx/security-headers.enforce.conf 適用）— P0 7日後",
-    "本番デプロイ準備（RELEASE_CHECKLIST §7 全項目チェック）"
+    "本番デプロイ準備（RELEASE_CHECKLIST §7 全項目チェック）— Issue #45 解消が前提",
+    "GitHub Projects 未接続 (gh token に read:project スコープ無し) — gh auth refresh -s read:project は人間作業"
   ],
-  "completed_issues": [],
-  "blocked_issues": [],
+  "completed_issues": [19, 35, 40, 43],
+  "blocked_issues": [
+    {
+      "issue": 45,
+      "pr": 38,
+      "blocked_at": "2026-07-14",
+      "reason": "PG hard-gate が摘出した本番 identity マッピング欠陥。修復 3 回到達で Error Control 発動。次ループ P1"
+    }
+  ],
   "learning": {
     "failure_patterns": [
       {
