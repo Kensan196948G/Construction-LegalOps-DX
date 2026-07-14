@@ -69,6 +69,14 @@ def _compile_array_sqlite(_type_: object, _compiler: object, **_: object) -> str
     return "JSON"
 
 
+# Originals MUST be captured before the monkey-patch below: the non-sqlite
+# fallback used to call ``ARRAY.bind_processor`` — i.e. the already-patched
+# wrapper itself — recursing infinitely on PostgreSQL (RecursionError, only
+# reachable via ARRAY(Text) columns such as clause_library.tags).
+_ORIG_ARRAY_BIND_PROCESSOR = ARRAY.bind_processor
+_ORIG_ARRAY_RESULT_PROCESSOR = ARRAY.result_processor
+
+
 def _sqlite_array_bind_processor(self: object, dialect: object) -> object:  # type: ignore[override]
     """Serialize Python lists to JSON strings for SQLite ARRAY columns.
 
@@ -84,7 +92,7 @@ def _sqlite_array_bind_processor(self: object, dialect: object) -> object:  # ty
             return value
 
         return _bind
-    return ARRAY.bind_processor(self, dialect)  # type: ignore[arg-type, no-untyped-call]
+    return _ORIG_ARRAY_BIND_PROCESSOR(self, dialect)  # type: ignore[arg-type, no-untyped-call]
 
 
 def _sqlite_array_result_processor(self: object, dialect: object, coltype: object) -> object:  # type: ignore[override]
@@ -101,7 +109,7 @@ def _sqlite_array_result_processor(self: object, dialect: object, coltype: objec
             return value
 
         return _result
-    return ARRAY.result_processor(self, dialect, coltype)  # type: ignore[arg-type, no-untyped-call]
+    return _ORIG_ARRAY_RESULT_PROCESSOR(self, dialect, coltype)  # type: ignore[arg-type, no-untyped-call]
 
 
 # Monkey-patch ARRAY so the SQLite processor fires without altering production.

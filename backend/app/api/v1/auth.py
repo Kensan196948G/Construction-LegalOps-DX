@@ -19,8 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_db
-from app.deps import get_current_user
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user
 from app.schemas.auth import (
     LoginResponse,
     MeResponse,
@@ -149,7 +148,7 @@ async def refresh_token(
     description="JWT で認証されたユーザーのプロファイル・ロール・部署を返す。",
 )
 async def get_me(
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> MeResponse:
     return MeResponse.from_user(current_user)
 
@@ -164,15 +163,15 @@ async def logout(
     request: Request,
     response: Response,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Response:
-    await auth_service.revoke_session(session, user_id=current_user.id)
+    await auth_service.revoke_session(session, user_id=current_user.db_id)
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="auth.logout",
         target_type="users",
-        target_id=current_user.id,
+        target_id=current_user.db_id,
         request=request,
     )
     response.delete_cookie("lo_session")

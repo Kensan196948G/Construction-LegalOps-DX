@@ -96,7 +96,7 @@ async def create_contract(
     )
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="contract.create",
         target_type="contracts",
         target_id=contract.id,
@@ -156,7 +156,7 @@ async def update_contract(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="contract.update",
         target_type="contracts",
         target_id=contract.id,
@@ -189,7 +189,7 @@ async def delete_contract(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="contract.delete",
         target_type="contracts",
         target_id=contract_id,
@@ -222,7 +222,7 @@ async def submit_contract(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="contract.submit",
         target_type="contracts",
         target_id=contract.id,

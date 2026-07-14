@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
+from app.deps import CurrentUser, get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.knowledge import (
@@ -59,7 +59,7 @@ async def search_knowledge(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[KnowledgeSearchResult]:
     items, total = await knowledge_service.search(
         session,
@@ -86,7 +86,7 @@ async def find_similar_contracts(
     contract_id: int,
     top_k: int = Query(default=10, ge=1, le=50),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> list[SimilarContractOut]:
     try:
         return await knowledge_service.find_similar(
@@ -123,13 +123,13 @@ async def create_article(
     payload: KnowledgeArticleCreate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> KnowledgeArticleOut:
     article = await knowledge_service.create_article(session, data=payload, creator=current_user)
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="knowledge.create",
         target_type="knowledge_articles",
         target_id=article.id,

@@ -12,8 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user
 from app.schemas.dashboard import DashboardSummary, DashboardTrends
 from app.services import dashboard_service
 
@@ -33,7 +32,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 async def get_summary(
     department_id: int | None = Query(default=None, description="部署で絞り込み"),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> DashboardSummary:
     return await dashboard_service.get_summary(
         session, viewer=current_user, department_id=department_id
@@ -51,7 +50,7 @@ async def get_trends(
     weeks: int = Query(default=12, ge=1, le=52, description="集計期間 (interval の単位数)"),
     department_id: int | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> DashboardTrends:
     return await dashboard_service.get_trends(
         session,

@@ -14,8 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.common import Page
 from app.schemas.template import (
     ClauseLibraryCreate,
@@ -40,7 +39,7 @@ async def list_templates(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[TemplateOut]:
     items, total = await template_service.list_templates(
         session, contract_type=contract_type, q=q, page=page, size=size
@@ -56,7 +55,7 @@ async def list_templates(
 async def get_template(
     template_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> TemplateOut:
     template = await template_service.get_template(session, template_id=template_id)
     if template is None:
@@ -74,7 +73,7 @@ async def create_template(
     payload: TemplateCreate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> TemplateOut:
     try:
@@ -85,7 +84,7 @@ async def create_template(
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from exc
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="template.create",
         target_type="templates",
         target_id=template.id,
@@ -108,7 +107,7 @@ async def list_clauses_library(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[ClauseLibraryOut]:
     items, total = await template_service.list_clauses(
         session,
@@ -132,13 +131,13 @@ async def create_clause(
     payload: ClauseLibraryCreate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> ClauseLibraryOut:
     clause = await template_service.create_clause(session, data=payload, creator=current_user)
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="clause_library.create",
         target_type="clause_library",
         target_id=clause.id,
@@ -157,7 +156,7 @@ async def update_clause(
     payload: ClauseLibraryUpdate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> ClauseLibraryOut:
     try:
@@ -171,7 +170,7 @@ async def update_clause(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="clause_library.update",
         target_type="clause_library",
         target_id=clause.id,
