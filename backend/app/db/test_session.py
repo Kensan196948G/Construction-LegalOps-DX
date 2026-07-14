@@ -239,6 +239,13 @@ def create_test_engine(url: str | None = None) -> AsyncEngine:
     For SQLite (the default) a shared :memory: connection is required so
     multiple async sessions see the same schema. We use ``StaticPool``
     via the ``connect_args`` + ``poolclass`` recipe.
+
+    For PostgreSQL we use ``NullPool``: pytest-asyncio gives every test its
+    own event loop, but asyncpg connections are bound to the loop that
+    created them, so a session-scoped engine with a default ``QueuePool``
+    hands loop-A connections to loop-B tests ("Future attached to a
+    different loop"). ``NullPool`` opens a fresh connection per checkout on
+    the *current* loop and closes it on release, so nothing crosses loops.
     """
     target = url or resolve_test_db_url()
 
@@ -253,7 +260,9 @@ def create_test_engine(url: str | None = None) -> AsyncEngine:
             poolclass=StaticPool,
         )
     else:
-        engine = create_async_engine(target, future=True, echo=False)
+        from sqlalchemy.pool import NullPool
+
+        engine = create_async_engine(target, future=True, echo=False, poolclass=NullPool)
 
     return engine
 
