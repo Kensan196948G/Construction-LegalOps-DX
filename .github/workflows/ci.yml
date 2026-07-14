@@ -143,8 +143,8 @@ jobs:
       - name: TypeScript check — HARD
         run: npm run typecheck
 
-      - name: Jest — SOFT (MSW セットアップ完了で硬化予定)
-        run: npm test --if-present -- --ci --passWithNoTests || true
+      - name: Jest — HARD
+        run: npm test --if-present -- --ci --passWithNoTests --forceExit
 
   # ============================================================
   # Security: Bandit + Trivy (PR / push 時の軽量チェック)

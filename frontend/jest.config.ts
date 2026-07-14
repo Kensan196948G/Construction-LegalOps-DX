@@ -40,7 +40,7 @@ const customConfig: Config = {
     "/node_modules/.pnpm/(?!(geist|rettime)@)",
     "^.+\\.module\\.(css|sass|scss)$",
   ],
-  testPathIgnorePatterns: ["/node_modules/", "/.next/", "/dist/", "/coverage/"],
+  testPathIgnorePatterns: ["/node_modules/", "/.next/", "/dist/", "/coverage/", "/e2e/"],
   collectCoverageFrom: [
     "app/**/*.{ts,tsx}",
     "components/**/*.{ts,tsx}",
