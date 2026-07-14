@@ -10,8 +10,9 @@ the invariants that replaced the old hash-synthesised ids:
   provisioned ``users.id`` (write/read symmetry for drafter scoping);
 * a non-privileged user can fetch their own ``/users/{id}`` (was always
   403 while the raw token subject was compared to the int path param);
-* token-only roles (auditor) are clamped to a DB-storable role on the
-  provisioned row while authorization keeps using the token role.
+* the token role is stored truthfully on the provisioned row, an email
+  bound to a different Entra oid is rejected instead of merged, and a
+  deactivated account stops resolving even while its token is valid.
 """
 
 from __future__ import annotations
@@ -28,10 +29,13 @@ CONTRACTS = "/api/v1/contracts"
 USERS = "/api/v1/users"
 
 
-def _headers(role: str, subject: str) -> dict[str, str]:
+def _headers(role: str, subject: str, *, oid: str | None = None) -> dict[str, str]:
     from app.core.security import create_access_token
 
-    token = create_access_token(subject=subject, extra_claims={"role": role})
+    claims: dict[str, Any] = {"role": role}
+    if oid is not None:
+        claims["oid"] = oid
+    token = create_access_token(subject=subject, extra_claims=claims)
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -139,8 +143,8 @@ async def test_get_user_self_access_allowed(client: Any, db_session: Any) -> Non
 
 
 @pytest.mark.asyncio
-async def test_token_only_role_is_clamped_on_provisioned_row(client: Any, db_session: Any) -> None:
-    """auditor is not storable in users.role (ck_users_role) — clamped to viewer."""
+async def test_token_role_is_stored_truthfully(client: Any, db_session: Any) -> None:
+    """ck_users_role accepts every UserRole (incl. auditor) — no silent clamp."""
     email = "jit-auditor-5@example.com"
     headers = _headers("auditor", email)
 
@@ -148,4 +152,49 @@ async def test_token_only_role_is_clamped_on_provisioned_row(client: Any, db_ses
     assert r.status_code == 200
     rows = await _user_rows(db_session, email)
     assert len(rows) == 1
-    assert rows[0].role == "viewer"
+    assert rows[0].role == "auditor"
+
+
+@pytest.mark.asyncio
+async def test_same_email_different_oid_is_rejected(client: Any, db_session: Any) -> None:
+    """An email match bound to a different Entra oid must never merge (401).
+
+    Emails get reassigned (offboarding, B2B guests); the oid is the immutable
+    identifier. Adopting the row would hand the new principal the old
+    identity's contracts, audit trail, and self-access rights.
+    """
+    import uuid as _uuid
+
+    email = "jit-oid-6@example.com"
+    oid_a = str(_uuid.uuid4())
+    oid_b = str(_uuid.uuid4())
+
+    first = await client.get(CONTRACTS, headers=_headers("drafter", email, oid=oid_a))
+    assert first.status_code == 200
+    rows = await _user_rows(db_session, email)
+    assert len(rows) == 1
+
+    hijack = await client.get(CONTRACTS, headers=_headers("drafter", email, oid=oid_b))
+    assert hijack.status_code == 401
+    # No second row was provisioned and the original binding is untouched.
+    rows_after = await _user_rows(db_session, email)
+    assert len(rows_after) == 1
+    assert str(rows_after[0].entra_oid) == oid_a
+
+
+@pytest.mark.asyncio
+async def test_deactivated_user_is_rejected(client: Any, db_session: Any) -> None:
+    """is_active=false blocks resolution even while the token is still valid."""
+    email = "jit-inactive-7@example.com"
+    headers = _headers("drafter", email)
+
+    first = await client.get(CONTRACTS, headers=headers)
+    assert first.status_code == 200
+    rows = await _user_rows(db_session, email)
+    assert len(rows) == 1
+
+    rows[0].is_active = False
+    await db_session.commit()
+
+    blocked = await client.get(CONTRACTS, headers=headers)
+    assert blocked.status_code == 403

@@ -127,7 +127,7 @@ async def get_summary(
     # 7. my_tasks: workflow steps assigned to viewer
     mt_q = await session.execute(
         select(func.count(WorkflowStep.id)).where(
-            WorkflowStep.assignee_id == getattr(viewer, "id", None),
+            WorkflowStep.assignee_id == viewer.db_id,
             WorkflowStep.status.in_(
                 [
                     WorkflowStepStatus.PENDING,

@@ -153,7 +153,7 @@ async def accept(
         raise ValueError(f"cannot accept review in status '{review.status}'")
 
     review.status = ReviewStatus.COMPLETED.value
-    review.reviewer_id = getattr(actor, "id", None)
+    review.reviewer_id = actor.db_id
     review.finished_at = datetime.now(UTC)
     review.updated_at = datetime.now(UTC)
     if comment:
@@ -179,7 +179,7 @@ async def reject(
         raise LookupError(f"review {review_id} not found")
 
     review.status = ReviewStatus.REJECTED.value
-    review.reviewer_id = getattr(actor, "id", None)
+    review.reviewer_id = actor.db_id
     review.finished_at = datetime.now(UTC)
     review.updated_at = datetime.now(UTC)
     if reason:

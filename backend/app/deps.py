@@ -6,6 +6,7 @@ Loop 4. The principal is built directly from the decoded JWT claims.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -18,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_token
 from app.db.session import get_db
+
+logger = logging.getLogger(__name__)
 
 # Roles defined by docs/api_design.md §1 (3).
 type Role = str
@@ -88,14 +91,6 @@ def _coerce_user_id(value: object) -> uuid.UUID | str:
     return str(value)
 
 
-# Roles storable in users.role (ck_users_role allows only UserRole values).
-# Token-only roles (auditor / guest) are clamped for the provisioned row;
-# authorization always uses the TOKEN role, never the stored one.
-_DB_STORABLE_ROLES: Final[frozenset[str]] = frozenset(
-    {ROLE_VIEWER, ROLE_DRAFTER, ROLE_REVIEWER, ROLE_APPROVER, ROLE_ADMIN}
-)
-
-
 async def _resolve_db_user_id(
     session: AsyncSession,
     *,
@@ -106,12 +101,26 @@ async def _resolve_db_user_id(
 ) -> int:
     """Resolve (JIT-provision) the ``users`` row for this principal.
 
-    Lookup order: Entra ``oid`` claim (or a UUID subject) → email (``email``
-    claim, falling back to an email-shaped subject). When no row exists the
-    principal is provisioned on the spot — the SSO IdP has already
-    authenticated it, so a missing row means "first visit", not "intruder".
-    A savepoint guards the insert so a concurrent first request degrades to
-    re-reading the winner's row instead of failing the request.
+    Lookup order: effective oid → email. The effective oid is the Entra
+    ``oid`` claim (or a UUID subject) when present, otherwise a uuid5
+    DERIVED deterministically from the subject — deriving it *before* the
+    lookup is what lets an opaque-subject principal be found again on the
+    second request instead of colliding with its own first insert. When no
+    row exists the principal is provisioned on the spot — the SSO IdP has
+    already authenticated it, so a missing row means "first visit", not
+    "intruder". A savepoint guards the insert so a concurrent first request
+    degrades to re-reading the winner's row instead of failing the request.
+
+    Fail-closed guards (adversarial review of Issue #45):
+
+    * an email match whose stored ``entra_oid`` differs from the token's
+      REAL oid is REJECTED, not merged — emails get reassigned (offboarding,
+      B2B guests) while the Entra oid is the immutable identifier, so
+      silently adopting the row would hand the new principal the old
+      identity's contracts, audit trail, and self-access rights (a derived
+      oid carries no such guarantee, so the guard only fires for real ones);
+    * deactivated (``is_active = false``) or soft-deleted rows never resolve
+      — a still-valid token must not outlive the operator's kill switch.
     """
     from sqlalchemy import select
     from sqlalchemy.exc import IntegrityError
@@ -128,39 +137,66 @@ async def _resolve_db_user_id(
     if entra_oid is None and isinstance(subject, uuid.UUID):
         entra_oid = subject
 
+    # Deterministic fallback identity for opaque subjects — MUST be part of
+    # the lookup, not only the insert (silent-failure review C-2).
+    effective_oid = entra_oid or uuid.uuid5(uuid.NAMESPACE_URL, f"legalops:sub:{subject}")
+
     lookup_email = email
     if lookup_email is None and isinstance(subject, str) and "@" in subject:
         lookup_email = subject
+    if lookup_email is not None:
+        # Entra may vary casing between tokens; users.email is unique and
+        # case-sensitive, so normalise or the same person splits into rows.
+        lookup_email = lookup_email.strip().lower()
+        if len(lookup_email) > 256:
+            raise UnauthorizedError("email claim exceeds the supported length.")
+
+    def _gate_active(user_id: int, is_active: bool, deleted_at: object) -> int:
+        if not is_active or deleted_at is not None:
+            raise ForbiddenError("Account is deactivated.")
+        return int(user_id)
 
     async def _find() -> int | None:
-        if entra_oid is not None:
-            found = (
-                await session.execute(select(User.id).where(User.entra_oid == entra_oid))
-            ).scalar_one_or_none()
-            if found is not None:
-                return int(found)
+        oid_row = (
+            await session.execute(
+                select(User.id, User.is_active, User.deleted_at).where(
+                    User.entra_oid == effective_oid
+                )
+            )
+        ).first()
+        if oid_row is not None:
+            return _gate_active(oid_row[0], oid_row[1], oid_row[2])
         if lookup_email is not None:
-            found = (
-                await session.execute(select(User.id).where(User.email == lookup_email))
-            ).scalar_one_or_none()
-            if found is not None:
-                return int(found)
+            email_row = (
+                await session.execute(
+                    select(User.id, User.entra_oid, User.is_active, User.deleted_at).where(
+                        User.email == lookup_email
+                    )
+                )
+            ).first()
+            if email_row is not None:
+                if entra_oid is not None and str(email_row[1]) != str(entra_oid):
+                    # Same email, different immutable identity — never merge.
+                    raise UnauthorizedError(
+                        "Token identity does not match the account bound to this email."
+                    )
+                return _gate_active(email_row[0], email_row[2], email_row[3])
         return None
 
     existing = await _find()
     if existing is not None:
         return existing
 
-    derived_oid = entra_oid or uuid.uuid5(uuid.NAMESPACE_URL, f"legalops:sub:{subject}")
-    derived_email = lookup_email or f"{derived_oid}@sub.invalid"
+    derived_email = lookup_email or f"{effective_oid}@sub.invalid"
     display_name = (lookup_email or str(subject)).split("@")[0] or str(subject)
-    db_role = role if role in _DB_STORABLE_ROLES else ROLE_VIEWER
-
+    # users.ck_users_role accepts every UserRole value (incl. auditor/guest);
+    # unknown roles were already degraded to guest upstream. Store the token
+    # role as-is so audit queries over users.role stay truthful.
     user = User(
-        entra_oid=derived_oid,
+        entra_oid=effective_oid,
         email=derived_email,
         display_name=display_name[:128],
-        role=db_role,
+        role=role,
         is_active=True,
     )
     try:
@@ -173,6 +209,12 @@ async def _resolve_db_user_id(
         if raced is None:  # pragma: no cover — constraint other than the race
             raise
         return raced
+    logger.info(
+        "user.jit_provisioned id=%s role=%s oid_source=%s",
+        user.id,
+        role,
+        "token" if entra_oid is not None else "derived",
+    )
     return int(user.id)
 
 

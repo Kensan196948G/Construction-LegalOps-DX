@@ -306,7 +306,7 @@ async def create_article(
         contract_type=data.contract_type,
         tags=data.tags,
         citations=data.citations,
-        author_id=getattr(creator, "db_id", None),
+        author_id=creator.db_id,
     )
     session.add(article)
     await session.flush()
