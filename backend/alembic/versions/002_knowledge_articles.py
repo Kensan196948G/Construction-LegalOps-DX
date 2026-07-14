@@ -32,13 +32,15 @@ def upgrade() -> None:
             "tags",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=False,
-            server_default="'[]'",
+            # Must be sa.text(): a plain str is re-quoted by the DDL compiler
+            # ('''[]''') and PostgreSQL rejects it as invalid JSON.
+            server_default=sa.text("'[]'::jsonb"),
         ),
         sa.Column(
             "citations",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=False,
-            server_default="'[]'",
+            server_default=sa.text("'[]'::jsonb"),
         ),
         sa.Column(
             "author_id",

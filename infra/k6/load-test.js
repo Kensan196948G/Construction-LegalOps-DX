@@ -107,7 +107,9 @@ function testLiveness() {
   });
   recordError(res, "/healthz");
 
-  const ping = http.get(`${BASE_URL}/ping`);
+  // NOTE: /ping is mounted under the v1 router (app/api/v1/health.py) — the
+  // root path does not exist and 404'd every iteration on the first real run.
+  const ping = http.get(`${BASE_URL}/api/v1/ping`);
   check(ping, {
     "ping: status 200": (r) => r.status === 200,
     "ping: body pong": (r) => {
@@ -118,7 +120,7 @@ function testLiveness() {
       }
     },
   });
-  recordError(ping, "/ping");
+  recordError(ping, "/api/v1/ping");
 }
 
 /** Readiness deep check — hits DB (SELECT 1) and optional Redis/Claude. */
