@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-07-14: k6 負荷テスト基盤 — Issue #35, PR #36)
+
+- **k6 負荷テストスイート** (`infra/k6/load-test.js`): smoke (5VU/30s) / load (最大20VU/約5min,
+  SLO ゲート) / soak (10VU/10min) の 3 シナリオ。SLO: `p(95) < 500ms`・エラー率 `< 1%`。
+- **CI ワークフロー** (`.github/workflows/load-test.yml`): workflow_dispatch + 週次スケジュール。
+  `github.event.inputs.*` は `env:` 経由参照 (command injection 防御)、JWT は env 注入のみ。
+
+### Fixed (2026-07-14 Supervisor session)
+
+- **test_ai_settings の date bomb 解消 (Issue #43, PR #44)**: Claude dormancy gate (2026-07-01)
+  通過で決定論的に失敗していた 2 テストを monkeypatch の日付固定で恒久修正。post-gate の
+  fail-closed 挙動 (キー無し→failed / 形式不正→failed / 形式OK→unavailable) に新規テストを追加。
+- **weekly pip-audit の赤化解消 (Issue #40, PR #42)**: `ecdsa 0.19.2` の PYSEC-2026-1325
+  (CVE-2024-23342, Minerva timing attack, upstream won't-fix) を到達不能根拠付きで
+  `--ignore-vuln` 化 (本プロジェクトは RS256/RSA のみ・ES*/ECDSA 使用 0 件)。
+  恒久対応 (python-jose → PyJWT 移行による ecdsa 依存除去) は Issue #41 で追跡。
+  main での security.yml 全 5 ジョブ TRUE GREEN を確認 (run 29296717568)。
+
+### Changed (2026-07-14: CI fail-closed 化の継続 — PR #37)
+
+- **Jest HARD gate 化** (`ci.yml`): `|| true` を除去 + `--forceExit`。`jest.config.ts` の
+  `testPathIgnorePatterns` に `/e2e/` を追加し Playwright spec の誤収集 (7 スイート失敗) を解消。
+- **既知の残課題**: backend-pg ジョブの hard-gate 化 (PR #38) は、それが暴いた本番欠陥
+  Issue #45 (JWT subject を数値 id として扱う identity マッピング欠陥) の修正待ちで Blocked。
+
 ### Added (Loop 20: AI プロバイダ設定 UI + 暗号化キー保管)
 
 - **管理設定に「AI設定」タブを追加**: 管理者が Perplexity / Claude の API キーを
