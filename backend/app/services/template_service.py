@@ -19,8 +19,8 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deps import CurrentUser
 from app.models.clause import ClauseLibrary
-from app.models.user import User
 from app.schemas.template import (
     ClauseLibraryCreate,
     ClauseLibraryOut,
@@ -350,7 +350,7 @@ async def create_template(
     session: AsyncSession,
     *,
     data: TemplateCreate,
-    creator: User,
+    creator: CurrentUser,
 ) -> Any:
     """Create a template. Not yet implemented (no persistent store)."""
     raise NotImplementedError(
@@ -424,7 +424,7 @@ async def create_clause(
     session: AsyncSession,
     *,
     data: ClauseLibraryCreate,
-    creator: User,
+    creator: CurrentUser,
 ) -> ClauseLibraryOut:
     """Create and persist a clause-library entry."""
     clause = ClauseLibrary(
@@ -446,7 +446,7 @@ async def update_clause(
     *,
     clause_id: int,
     data: ClauseLibraryUpdate,
-    editor: User,
+    editor: CurrentUser,
 ) -> ClauseLibraryOut:
     """Apply a partial update to a ClauseLibrary entry.
 

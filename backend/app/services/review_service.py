@@ -70,7 +70,7 @@ async def list_reviews(
         from app.models.contract import Contract  # avoid circular at module level
 
         stmt = stmt.join(Contract, Contract.id == LegalReview.contract_id).where(
-            Contract.drafter_id == viewer.id
+            Contract.drafter_id == viewer.db_id
         )
     if contract_id is not None:
         stmt = stmt.where(LegalReview.contract_id == contract_id)
@@ -108,7 +108,7 @@ async def get_review(
         from app.models.contract import Contract
 
         cr = await session.get(Contract, review.contract_id)
-        if cr is None or cr.drafter_id != viewer.id:
+        if cr is None or cr.drafter_id != viewer.db_id:
             return None
     return _to_dict(review)
 

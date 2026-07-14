@@ -16,8 +16,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.audit_log import (
     AuditLogOut,
     AuditVerifyResponse,
@@ -44,7 +43,7 @@ async def list_audit_logs(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=500),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin", "auditor")),
 ) -> Page[AuditLogOut]:
     items, total = await audit_service.list_logs(
@@ -72,15 +71,13 @@ async def verify_audit_chain(
     date_from: datetime | None = Query(default=None, alias="from"),
     date_to: datetime | None = Query(default=None, alias="to"),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin", "auditor")),
 ) -> AuditVerifyResponse:
-    result = await audit_service.verify_chain(
-        session, date_from=date_from, date_to=date_to
-    )
+    result = await audit_service.verify_chain(session, date_from=date_from, date_to=date_to)
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="audit.verify",
         target_type="audit_logs",
         target_id=None,
@@ -101,7 +98,7 @@ async def export_audit_logs(
     date_to: datetime | None = Query(default=None, alias="to"),
     target_type: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("auditor", "admin")),
 ) -> StreamingResponse:
     iterator = audit_service.export_csv(

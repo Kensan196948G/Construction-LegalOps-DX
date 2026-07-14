@@ -17,15 +17,6 @@ from app.services._stub import make_stub
 _stub = make_stub("contract_service")
 
 
-def _drafter_int_id(user_id: Any) -> int:
-    """Convert UUID/str user id to a BigInteger-compatible int for SQLite tests.
-
-    PostgreSQL FK targets the users table, but SQLite (test env) doesn't enforce
-    FK constraints, so a deterministic hash is safe here.
-    """
-    return abs(hash(str(user_id))) % (2**31)
-
-
 async def create_contract(
     session: AsyncSession,
     *,
@@ -34,7 +25,9 @@ async def create_contract(
     idempotency_key: str | None = None,
 ) -> Contract:
     contract_no = f"C-{uuid.uuid4().hex[:12].upper()}"
-    drafter_id = _drafter_int_id(creator.id)
+    # Resolved users.id from JIT provisioning (Issue #45). Never derive an id
+    # from the token subject — contracts.drafter_id is a real FK on PG.
+    drafter_id = creator.db_id
     contract = Contract(
         contract_no=contract_no,
         title=data.title,
@@ -132,10 +125,7 @@ async def list_contracts(
     stmt = select(Contract).where(Contract.deleted_at.is_(None))
 
     if q:
-        stmt = stmt.where(
-            Contract.title.ilike(f"%{q}%")
-            | Contract.counterparty.ilike(f"%{q}%")
-        )
+        stmt = stmt.where(Contract.title.ilike(f"%{q}%") | Contract.counterparty.ilike(f"%{q}%"))
     if status:
         stmt = stmt.where(Contract.status == status)
     if contract_type:

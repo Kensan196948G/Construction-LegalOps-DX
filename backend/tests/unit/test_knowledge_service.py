@@ -27,6 +27,7 @@ def _make_user(role: str = "admin", user_id: int = 1) -> MagicMock:
     user = MagicMock()
     user.role = role
     user.id = user_id
+    user.db_id = user_id  # resolved users.id (Issue #45)
     return user
 
 
@@ -440,7 +441,7 @@ class TestCreateArticle:
 
     @pytest.mark.asyncio
     async def test_create_article_sets_author_id(self) -> None:
-        """create_article() assigns creator.id as author_id on the ORM object."""
+        """create_article() assigns creator.db_id as author_id on the ORM object."""
         session = _make_session()
         creator = _make_user(role="legal", user_id=42)
 

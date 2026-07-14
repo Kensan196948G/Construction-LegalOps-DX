@@ -13,8 +13,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, s
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.common import Page
 from app.schemas.review import (
     ReviewAcceptRequest,
@@ -41,14 +40,14 @@ async def start_review(
     request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> ReviewOut:
     try:
         review = await ai_review_service.start_review(
             session,
             contract_id=contract_id,
-            user_id=current_user.id,
+            user_id=current_user.db_id,
             payload=payload,
             idempotency_key=idempotency_key,
         )
@@ -59,7 +58,7 @@ async def start_review(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="review.start",
         target_type="reviews",
         target_id=review["id"],
@@ -82,7 +81,7 @@ async def list_reviews(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[ReviewOut]:
     items, total = await review_service.list_reviews(
         session,
@@ -105,7 +104,7 @@ async def list_reviews(
 async def get_review(
     review_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ReviewOut:
     review = await review_service.get_review(session, review_id=review_id, viewer=current_user)
     if review is None:
@@ -124,7 +123,7 @@ async def update_review(
     payload: ReviewUpdate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("reviewer", "admin")),
 ) -> ReviewOut:
     try:
@@ -141,7 +140,7 @@ async def update_review(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="review.update",
         target_type="reviews",
         target_id=review["id"],
@@ -162,7 +161,7 @@ async def accept_review(
     payload: ReviewAcceptRequest,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("reviewer", "admin")),
 ) -> ReviewOut:
     try:
@@ -175,7 +174,7 @@ async def accept_review(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="review.accept",
         target_type="reviews",
         target_id=review["id"],
@@ -194,7 +193,7 @@ async def reject_review(
     payload: ReviewRejectRequest,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("reviewer", "admin")),
 ) -> ReviewOut:
     try:
@@ -207,7 +206,7 @@ async def reject_review(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="review.reject",
         target_type="reviews",
         target_id=review["id"],

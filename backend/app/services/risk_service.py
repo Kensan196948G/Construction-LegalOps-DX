@@ -76,7 +76,7 @@ async def list_risks(
         from app.models.contract import Contract  # local import avoids circular dep
 
         stmt = stmt.join(Contract, Contract.id == RiskItem.contract_id).where(
-            Contract.drafter_id == viewer.id
+            Contract.drafter_id == viewer.db_id
         )
 
     if severity is not None:
@@ -115,7 +115,7 @@ async def aggregate(
         from app.models.contract import Contract
 
         base = base.join(Contract, Contract.id == RiskItem.contract_id).where(
-            Contract.drafter_id == viewer.id
+            Contract.drafter_id == viewer.db_id
         )
 
     # Optional date range filter on due_date.
@@ -138,16 +138,12 @@ async def aggregate(
     base_subq = base.subquery()
 
     severity_q = await session.execute(
-        select(base_subq.c.severity, func.count(base_subq.c.id)).group_by(
-            base_subq.c.severity
-        )
+        select(base_subq.c.severity, func.count(base_subq.c.id)).group_by(base_subq.c.severity)
     )
     by_severity: dict[str, int] = {row[0]: row[1] for row in severity_q}
 
     status_q = await session.execute(
-        select(base_subq.c.status, func.count(base_subq.c.id)).group_by(
-            base_subq.c.status
-        )
+        select(base_subq.c.status, func.count(base_subq.c.id)).group_by(base_subq.c.status)
     )
     by_status: dict[str, int] = {row[0]: row[1] for row in status_q}
 

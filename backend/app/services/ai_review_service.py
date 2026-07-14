@@ -50,7 +50,7 @@ async def start_review(
     session: AsyncSession,
     *,
     contract_id: int,
-    user_id: int,
+    user_id: int | None,
     payload: Any,
     idempotency_key: str | None = None,
 ) -> dict[str, Any]:

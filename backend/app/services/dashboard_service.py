@@ -3,7 +3,7 @@
 Computes KPI snapshots and trend series from Contract / LegalReview /
 WorkflowStep tables.  All queries are role-scoped:
   - viewer.role in (admin, legal, auditor) → all rows
-  - otherwise → rows where drafter_id == viewer.id
+  - otherwise → rows where drafter_id == viewer.db_id
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _is_full_access(viewer: Any) -> bool:
 def _apply_scope(stmt: Any, viewer: Any) -> Any:
     """Restrict a Contract-scoped statement to the viewer's accessible rows."""
     if not _is_full_access(viewer):
-        stmt = stmt.where(Contract.drafter_id == viewer.id)
+        stmt = stmt.where(Contract.drafter_id == viewer.db_id)
     return stmt
 
 
@@ -79,7 +79,7 @@ async def get_summary(
             WorkflowStep.deleted_at.is_(None),
             Contract.deleted_at.is_(None),
             *([Contract.department_id == department_id] if department_id else []),
-            *([Contract.drafter_id == viewer.id] if not _is_full_access(viewer) else []),
+            *([Contract.drafter_id == viewer.db_id] if not _is_full_access(viewer) else []),
         )
     )
     pending_approval = wf_q.scalar() or 0
@@ -106,7 +106,7 @@ async def get_summary(
             LegalReview.deleted_at.is_(None),
             Contract.deleted_at.is_(None),
             *([Contract.department_id == department_id] if department_id else []),
-            *([Contract.drafter_id == viewer.id] if not _is_full_access(viewer) else []),
+            *([Contract.drafter_id == viewer.db_id] if not _is_full_access(viewer) else []),
         )
     )
     high_risk = hr_q.scalar() or 0
@@ -148,7 +148,7 @@ async def get_summary(
             LegalReview.deleted_at.is_(None),
             Contract.deleted_at.is_(None),
             *([Contract.department_id == department_id] if department_id else []),
-            *([Contract.drafter_id == viewer.id] if not _is_full_access(viewer) else []),
+            *([Contract.drafter_id == viewer.db_id] if not _is_full_access(viewer) else []),
         )
     )
     raw_avg = avg_q.scalar()
@@ -163,7 +163,7 @@ async def get_summary(
             LegalReview.deleted_at.is_(None),
             Contract.deleted_at.is_(None),
             *([Contract.department_id == department_id] if department_id else []),
-            *([Contract.drafter_id == viewer.id] if not _is_full_access(viewer) else []),
+            *([Contract.drafter_id == viewer.db_id] if not _is_full_access(viewer) else []),
         )
     )
     pending_reviews = pr_q.scalar() or 0
@@ -207,7 +207,7 @@ async def get_trends(
             if department_id is not None:
                 stmt = stmt.where(Contract.department_id == department_id)
             if not _is_full_access(viewer):
-                stmt = stmt.where(Contract.drafter_id == viewer.id)
+                stmt = stmt.where(Contract.drafter_id == viewer.db_id)
             return stmt
 
         cr_q = await session.execute(
@@ -242,7 +242,7 @@ async def get_trends(
                 LegalReview.deleted_at.is_(None),
                 Contract.deleted_at.is_(None),
                 *([Contract.department_id == department_id] if department_id else []),
-                *([Contract.drafter_id == viewer.id] if not _is_full_access(viewer) else []),
+                *([Contract.drafter_id == viewer.db_id] if not _is_full_access(viewer) else []),
             )
         )
         review_series.append(DashboardTrendPoint(bucket=bucket, value=rv_q.scalar() or 0))

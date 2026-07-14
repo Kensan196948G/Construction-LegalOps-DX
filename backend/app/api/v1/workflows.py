@@ -17,8 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.common import Page
 from app.schemas.workflow import (
     WorkflowActionRequest,
@@ -43,7 +42,7 @@ async def list_workflow_definitions(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[WorkflowDefinitionOut]:
     items, total = await workflow_service.list_definitions(
         session, contract_type=contract_type, page=page, size=size
@@ -61,7 +60,7 @@ async def create_workflow_definition(
     payload: WorkflowDefinitionCreate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> WorkflowDefinitionOut:
     try:
@@ -73,7 +72,7 @@ async def create_workflow_definition(
         )
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="workflow.definition.create",
         target_type="workflow_definitions",
         target_id=definition.id,
@@ -94,7 +93,7 @@ async def start_workflow(
     payload: WorkflowStartRequest,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> WorkflowInstanceOut:
     try:
@@ -111,7 +110,7 @@ async def start_workflow(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="workflow.start",
         target_type="workflow_instances",
         target_id=instance.id,
@@ -129,7 +128,7 @@ async def start_workflow(
 async def get_workflow_instance(
     instance_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> WorkflowInstanceOut:
     instance = await workflow_service.get_instance(
         session, instance_id=instance_id, viewer=current_user
@@ -147,7 +146,7 @@ async def get_workflow_instance(
 async def list_workflow_steps(
     instance_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> list[WorkflowStepOut]:
     return cast(
         list[WorkflowStepOut],
@@ -169,7 +168,7 @@ async def execute_workflow_action(
     payload: WorkflowActionRequest,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> WorkflowInstanceOut:
     if payload.action not in ("approve", "reject", "send_back", "delegate"):
         raise HTTPException(
@@ -192,7 +191,7 @@ async def execute_workflow_action(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action=f"workflow.{payload.action}",
         target_type="workflow_instances",
         target_id=instance.id,

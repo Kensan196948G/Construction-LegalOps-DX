@@ -8,7 +8,7 @@ Role-scope rules
 ----------------
 * admin / legal / auditor / reviewer / approver  →  all contracts visible
 * drafter (and any other role)                   →  only their own contracts
-  (``contracts.drafter_id == viewer.id``)
+  (``contracts.drafter_id == viewer.db_id``)
 """
 
 from __future__ import annotations
@@ -18,9 +18,9 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deps import CurrentUser
 from app.models.contract import Contract
 from app.models.knowledge_article import KnowledgeArticle
-from app.models.user import User
 from app.schemas.knowledge import (
     KnowledgeArticleCreate,
     KnowledgeArticleOut,
@@ -99,11 +99,11 @@ async def get_article(
 _PRIVILEGED_ROLES = frozenset({"admin", "legal", "auditor", "reviewer", "approver"})
 
 
-def _base_query(viewer: User) -> Any:
+def _base_query(viewer: CurrentUser) -> Any:
     """Return a SELECT query scoped to what ``viewer`` is allowed to see."""
     q = select(Contract).where(Contract.deleted_at.is_(None))
     if viewer.role not in _PRIVILEGED_ROLES:
-        q = q.where(Contract.drafter_id == viewer.id)
+        q = q.where(Contract.drafter_id == viewer.db_id)
     return q
 
 
@@ -111,7 +111,7 @@ async def search(
     session: AsyncSession,
     *,
     q: str,
-    viewer: User,
+    viewer: CurrentUser,
     tag: str | None = None,
     contract_type: str | None = None,
     page: int = 1,
@@ -214,7 +214,7 @@ async def find_similar(
     session: AsyncSession,
     *,
     contract_id: int,
-    viewer: User,
+    viewer: CurrentUser,
     top_k: int = 10,
 ) -> list[SimilarContractOut]:
     """Return the top-k contracts most similar to ``contract_id``.
@@ -282,7 +282,7 @@ async def create_article(
     session: AsyncSession,
     *,
     data: KnowledgeArticleCreate,
-    creator: User,
+    creator: CurrentUser,
 ) -> KnowledgeArticleOut:
     """Create and persist a knowledge article.
 
@@ -306,7 +306,7 @@ async def create_article(
         contract_type=data.contract_type,
         tags=data.tags,
         citations=data.citations,
-        author_id=getattr(creator, "id", None),
+        author_id=getattr(creator, "db_id", None),
     )
     session.add(article)
     await session.flush()
