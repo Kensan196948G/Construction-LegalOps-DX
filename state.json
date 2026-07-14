@@ -19,8 +19,8 @@
     ],
     "deploy_ready": true
   },
-  "goal": "Construction-LegalOps-DX 自律開発 — k6 負荷テスト実装 (Issue #35)",
-  "phase": "Build",
+  "goal": "Construction-LegalOps-DX 自律開発 — Jest HARD ゲート化 (feat/jest-harden-e2e-exclusion PR #37)",
+  "phase": "Verify",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": 1,
@@ -34,9 +34,9 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 24: k6 負荷テスト基盤実装（Issue #35, PR #36）。3 シナリオ(smoke/load/soak)+GitHub Actions CI(workflow_dispatch+週次スケジュール)を新規実装。SLO p(95)<500ms/エラー率<1%。認証エンドポイントは JWT_TOKEN 設定時のみ実行(CI は無認証)。/readyz DB 過負荷防止に __ITER%5===0 ゲート。GHA workflow の ${{ github.event.inputs.* }} は env: ブロック経由で参照し CI でも安全なコマンドインジェクション防止パターンを採用。commit 42eaa41 → PR #36 OPEN → CI run 27688735498 in_progress。人間マージ待ち PR が計3件(#27 RS256・#31 E2E gating・#36 k6)。",
+    "last_session_summary": "Loop 25: Jest HARD ゲート化（feat/jest-harden-e2e-exclusion, PR #37）。E2E Playwright spec ファイルが Jest 収集対象になっていた根本原因を特定し 2 コミットで修正。commit 5782208: /e2e/ を testPathIgnorePatterns に追加 + CI.yml の || true 削除・--forceExit 追加（Jest HARD gate 化）。commit 7e8dfe4: @testing-library/dom を devDependencies に明示追加 + package-lock.json の 'peer: true' フラグ除去（npm ci --legacy-peer-deps CI peer-dep miss 修正）。CI run 27692210055 全6ジョブ SUCCESS。PR #37 OPEN/MERGEABLE/CLEAN — 人間マージ待ち。",
     "last_stop_at": "2026-06-15T02:19:13.369Z",
-    "current_session_start_at": "2026-06-17T12:27:28.044Z",
+    "current_session_start_at": "2026-06-17T13:30:58.937Z",
     "last_trigger": "cron",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
   },
@@ -48,6 +48,17 @@
     "consecutive_success": 5,
     "target_n": 5,
     "stable_achieved": true
+  },
+  "loop25": {
+    "name": "Jest HARD ゲート化 — e2e/ 除外 + @testing-library/dom devDependencies 追加",
+    "completed_at": "2026-06-17",
+    "pr": 37,
+    "branch": "feat/jest-harden-e2e-exclusion",
+    "commits": ["5782208", "7e8dfe4"],
+    "ci_run": "27692210055",
+    "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — CI run 27692210055 全6ジョブ SUCCESS — 人間マージ待ち",
+    "summary": "Jest ソフトフェイル（|| true）を廃止し HARD CI ゲート化。2 段階の根本原因修正: (1) Jest が frontend/e2e/*.spec.ts (Playwright spec 7 件) を収集し 'Playwright Test needs to be invoked via npx playwright test' エラーで 7 スイート失敗していた。修正: frontend/jest.config.ts の testPathIgnorePatterns に '/e2e/' を追加。(2) @testing-library/dom が devDependencies に未記載のため package-lock.json で 'peer: true' マーク → npm ci --legacy-peer-deps がスキップ → CI 4スイートで 'Cannot find module @testing-library/dom' 失敗。修正: package.json に '@testing-library/dom': '^10.0.0' を追加 + package-lock.json から 'peer: true' フラグを除去。ローカルは Node.js v25.2.1 非互換(Jest 29 と不一致)でローカル実行不可だったため CI で検証（GitHub Actions Node 24 使用）。最終 CI run 27692210055: Backend pytest・Security bandit/trivy・Backend PG・Frontend eslint/tsc/jest(Jest HARD 通過)・E2E Playwright 44 passed・Docker build — 全6ジョブ SUCCESS。",
+    "learning": "npm ci --legacy-peer-deps は package-lock.json に 'peer: true' がついたパッケージをインストールしない。ローカルの npm install は peer dep を自動解決するため CI でのみ再現する隠れバグになる。Playwright spec は Jest testPathIgnorePatterns に '/e2e/' を必ず追加すること。"
   },
   "loop24": {
     "name": "k6 負荷テスト基盤実装 (Issue #35)",
@@ -130,13 +141,13 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
+    "[PR #37] Jest HARD ゲート化 — CI 6/6 GREEN・人間マージ待ち (feat/jest-harden-e2e-exclusion)",
+    "[PR #36] k6 負荷テスト 人間マージ待ち — Issue #35 クローズ",
+    "[PR #27] RS256 JWT 鍵ローテーション 人間マージ待ち — 認証変更のため人間確認必須",
+    "[PR #31] E2E knowledge 詳細 spec + gating 人間マージ待ち",
     "本番環境 Vault secrets 投入（scripts/setup_vault_secrets.sh 使用）— P0 人間作業",
     "CSP enforce 移行（infra/nginx/security-headers.enforce.conf 適用）— P0 7日後",
-    "本番デプロイ準備（RELEASE_CHECKLIST §7 全項目チェック）",
-    "E2E Playwright ブラウザ実行確認（AUTH_DEV_BYPASS=true + npm run start）",
-    "[PR #36] k6 負荷テスト CI GREEN 後に人間マージ — Issue #35 クローズ",
-    "[PR #27] RS256 JWT 鍵ローテーション 人間マージ待ち — 認証変更のため人間確認必須",
-    "[PR #31] E2E knowledge 詳細 spec + gating 人間マージ待ち"
+    "本番デプロイ準備（RELEASE_CHECKLIST §7 全項目チェック）"
   ],
   "completed_issues": [],
   "blocked_issues": [],
@@ -620,6 +631,6 @@
     }
   ],
   "compact": {
-    "last_pre_compact_at": "2026-06-17T12:25:48.202Z"
+    "last_pre_compact_at": "2026-06-17T13:29:25.477Z"
   }
 }

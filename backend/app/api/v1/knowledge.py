@@ -28,6 +28,22 @@ router = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
 
 @router.get(
+    "",
+    response_model=Page[KnowledgeArticleOut],
+    summary="ナレッジ記事一覧",
+    description="全ナレッジ記事をページネーションで返す。",
+)
+async def list_articles(
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=20, ge=1, le=100),
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> Page[KnowledgeArticleOut]:
+    items, total = await knowledge_service.list_articles(session, page=page, size=size)
+    return Page[KnowledgeArticleOut](items=items, total=total, page=page, size=size)
+
+
+@router.get(
     "/search",
     response_model=Page[KnowledgeSearchResult],
     summary="ナレッジ検索 (stub)",
@@ -78,6 +94,23 @@ async def find_similar_contracts(
         )
     except LookupError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
+
+
+@router.get(
+    "/{article_id}",
+    response_model=KnowledgeArticleOut,
+    summary="ナレッジ記事詳細",
+    description="指定 ID のナレッジ記事を返す。見つからない場合は 404。",
+)
+async def get_article(
+    article_id: int,
+    session: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> KnowledgeArticleOut:
+    article = await knowledge_service.get_article(session, article_id=article_id)
+    if article is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="article not found")
+    return article
 
 
 @router.post(

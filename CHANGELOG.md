@@ -34,6 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 機密契約本文は Perplexity に送らない方針を `config.py` の設計コメントに明文化
   （送信は抽象化した論点・キーワードのみ、引用は公的ソース allowlist に限定）。
 
+### Added (RS256 JWT 鍵ローテーション — Issue #19)
+
+- **`kid` ヘッダ付き RS256 トークン**: 署名鍵の SHA-256 サムプリント先頭 8 バイト（16 hex）を `kid` として埋め込み。`JWT_KEY_ID` で明示指定も可能。
+- **複数鍵検証セット (zero-downtime rotation)**: `JWT_PUBLIC_KEYS`（PEM の JSON 配列）に退役鍵を保持することで、旧鍵で署名されたトークンが失効まで検証可能。
+- **Fail-closed 設計**: 不正な `JWT_PUBLIC_KEYS` は空集合へフォールバック（信頼鍵を黙って拡張しない）。未知の `kid` を持つトークンは拒否。空文字列 `kid`（`{"kid": ""}`）も「kid なし」として扱い、細工トークンが鍵探索をすり抜けるのを防止。
+- **署名側 fail-fast / 検証側 resilient の責務分離**: `create_access_token` は RS256 設定下で kid を導出できない場合に署名を拒否（kid なし RS256 トークンを発行しない）。一方、検証セット構築（`_jwt_active_kid` / 退役鍵スキップ）は壊れた鍵を None+警告で受け流し、退役鍵による検証可用性を維持。
+- **`JWT_REQUIRE_KID` 運用スイッチ**: ローテーション移行完了後に kid なし RS256 トークンを fail-closed で拒否（既定 false。全トークンが kid を持つ運用に切り替わってから true へ）。
+- **可観測性**: 鍵設定の不正（公開鍵 malformed・`JWT_PUBLIC_KEYS` の JSON parse 失敗・非 list・退役鍵スキップ）は全て `logging.warning` で記録（本番でのサイレント失敗を禁止）。`security.py` / `config.py` の import 軽量性を保つため structlog ではなく stdlib `logging` を採用。
+- **後方互換**: `kid` を持たないローテーション前トークンはアクティブ公開鍵にフォールバック（`JWT_REQUIRE_KID=false` 時）。HS256 パスも維持（dev/test）。
+- **テスト**: `tests/unit/test_jwt_rs256.py` に 19 ケース（HS256/RS256 roundtrip・wrong key 拒否・rotation・unknown kid 拒否・explicit kid・legacy token・malformed 退役鍵混在・空 kid 拒否・`JWT_REQUIRE_KID` legacy 拒否・署名側 fail-fast）。
+
 ## [0.1.8] - 2026-05-30
 
 ### Added (Loop 18 Part 2: Test Coverage 91% Milestone)
