@@ -34,8 +34,8 @@
     "max_repair": 3,
     "same_error_limit": 2,
     "phase": "Build",
-    "last_session_summary": "Loop 26-27 (2026-07-14 Supervisor session): 8 PR merge (#27/#37/#44/#42/#36/#46/#47/#38)・Issue 5 件クローズ (#19/#35/#40/#43/#45)・CI 全ゲート fail-closed 化完遂・PG 統合 151 passed 真 green・deploy_ready 復帰。Loop 27: Issue #45 根治 (JIT プロビジョニング、対抗レビュー 2 系統で Critical 2/High 2 検出→全反映) + PR #38 完遂。Loop 26 詳細: 5 PR merge + P1 本番欠陥 2 系統発見。(1) weekly security scan 赤化 (pip-audit) を根本分析 — ecdsa PYSEC-2026-1325 は upstream won't-fix + 到達不能 (RS256 のみ使用) のため文書化 suppress (PR #42)、main で全 5 ジョブ TRUE GREEN 確認 (run 29296717568)、恒久対応 PyJWT 移行は Issue #41。(2) date bomb 発見・修正 — Claude dormancy gate (2026-07-01) 通過で test_ai_settings 2 テストが決定論的に赤化 (全 PR の CI をブロック)、monkeypatch 日付固定 + post-gate fail-closed テスト追加 (PR #44、ローカル 901 passed)。(3) OPEN PR triage — #27 RS256 (7/7 GREEN・STABLE N=5) / #37 Jest hard-gate / #36 k6 (conflict 解消後) を検証の上 merge。(4) PR #38 修復 3 巡 — NullPool 化で asyncpg ループ跨ぎ根絶 → departments/users マスタシード + mypy 修正で FK 違反 0 件 (143→12 failed) → 残存は本番欠陥 Issue #45 (JWT subject email を BIGINT id として使用する identity マッピング欠陥が contract/review/knowledge/dashboard/risk 各サービスに存在 + GET /users の lazy-load MissingGreenlet 500 + clause_library RecursionError) のため Error Control (修復 3 回) で Blocked 化。docs PR で CHANGELOG/README/state.json 更新。",
-    "last_stop_at": "2026-06-15T02:19:13.369Z",
+    "last_session_summary": "Loop 26-28 (2026-07-14 Supervisor session)。Loop 28: 新 Goal (リリース後検証・CF/Neon 安定化) に対し Monitor 全数調査で『本番デプロイ実績なし』を確定 (git tag 0 / GitHub Deployments 0 / DNS 未設定 / CD 経路なし / CF・Neon 採用証跡ゼロ、現行設計は Docker Compose オンプレ)。指示に従い legalops.mirai-dx-platform.com を候補として CLOUDFLARE_NEON_MIGRATION_PLAN.md に文書化 (DNS 変更等は未実行)。欠落していた運用文書 4 本 (OPERATIONS / INCIDENT_RESPONSE / MONITORING / BACKUP_RESTORE) を実体 grounding で新規整備。Issue #50 (CF/Neon 採否判断・人間) / #51 (運用基盤ギャップ P2) 起票。Loop 26-27: 8 PR merge (#27/#37/#44/#42/#36/#46/#47/#38)・Issue 5 件クローズ (#19/#35/#40/#43/#45)・CI 全ゲート fail-closed 化完遂・PG 統合 151 passed 真 green・deploy_ready 復帰。Loop 27: Issue #45 根治 (JIT プロビジョニング、対抗レビュー 2 系統で Critical 2/High 2 検出→全反映) + PR #38 完遂。Loop 26 詳細: 5 PR merge + P1 本番欠陥 2 系統発見。(1) weekly security scan 赤化 (pip-audit) を根本分析 — ecdsa PYSEC-2026-1325 は upstream won't-fix + 到達不能 (RS256 のみ使用) のため文書化 suppress (PR #42)、main で全 5 ジョブ TRUE GREEN 確認 (run 29296717568)、恒久対応 PyJWT 移行は Issue #41。(2) date bomb 発見・修正 — Claude dormancy gate (2026-07-01) 通過で test_ai_settings 2 テストが決定論的に赤化 (全 PR の CI をブロック)、monkeypatch 日付固定 + post-gate fail-closed テスト追加 (PR #44、ローカル 901 passed)。(3) OPEN PR triage — #27 RS256 (7/7 GREEN・STABLE N=5) / #37 Jest hard-gate / #36 k6 (conflict 解消後) を検証の上 merge。(4) PR #38 修復 3 巡 — NullPool 化で asyncpg ループ跨ぎ根絶 → departments/users マスタシード + mypy 修正で FK 違反 0 件 (143→12 failed) → 残存は本番欠陥 Issue #45 (JWT subject email を BIGINT id として使用する identity マッピング欠陥が contract/review/knowledge/dashboard/risk 各サービスに存在 + GET /users の lazy-load MissingGreenlet 500 + clause_library RecursionError) のため Error Control (修復 3 回) で Blocked 化。docs PR で CHANGELOG/README/state.json 更新。",
+    "last_stop_at": "2026-07-14T03:02:03.112Z",
     "current_session_start_at": "2026-07-13T23:40:43.405Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
@@ -49,12 +49,34 @@
     "target_n": 5,
     "stable_achieved": true
   },
+  "loop28": {
+    "name": "リリース後検証 Goal — 本番未デプロイの事実確定 + 運用文書整備 + CF/Neon 移行候補文書化",
+    "completed_at": "2026-07-14",
+    "created_issues": [50, 51],
+    "deployment_status": "未デプロイ確定 (git tag 0 / GitHub Deployments 0 / legalops.mirai-dx-platform.com NXDOMAIN / apex HTTPS 不通 / CD パイプライン不在 / wrangler・CF token・Neon 接続情報なし)",
+    "docs_created": [
+      "docs/OPERATIONS.md",
+      "docs/INCIDENT_RESPONSE.md",
+      "docs/MONITORING.md",
+      "docs/BACKUP_RESTORE.md",
+      "docs/CLOUDFLARE_NEON_MIGRATION_PLAN.md"
+    ],
+    "safety_compliance": "DNS 変更・課金・Secrets 投入・デプロイ・破壊的マイグレーションは一切未実行 (Goal 安全制約遵守)",
+    "learning": "『リリース後検証』の Goal は対象の実在確認から始める — DNS/GitHub Deployments/リポジトリ証跡の三点照合で 15 分で未デプロイと確定でき、存在しない本番への検証作業という空振りを回避できた。指示に埋め込まれた fallback (候補文書化・DNS 変更禁止) が誠実な着地点を定義していた。"
+  },
   "loop27": {
     "name": "Issue #45 根治 (identity JIT プロビジョニング) + PR #38 hard-gate 完遂",
     "completed_at": "2026-07-14",
-    "merged_prs": [47, 38],
-    "closed_issues": [45],
-    "created_issues": [48],
+    "merged_prs": [
+      47,
+      38
+    ],
+    "closed_issues": [
+      45
+    ],
+    "created_issues": [
+      48
+    ],
     "summary": "Issue #45 の本体修正 PR #47: CurrentUser.db_id + get_current_user の JIT プロビジョニング (oid/email lookup → get-or-create、savepoint 競合吸収)。誤用全数修正 (hash 合成廃止 / WHERE ×8 / 認可比較 / 監査 actor ×30 / 注釈乖離是正) + user_service selectinload + ARRAY patch 自己再帰修正。対抗レビュー 2 系統 (adversarial + silent-failure-hunter) が Critical 2 (workflow_service の getattr 移行漏れ / opaque subject の恒久 500) + High 2 (email-oid 不一致 merge / is_active 素通り) を検出し全反映。反例テスト含む identity テスト 7 本。PR #38: main 同期 + users シード撤去 (JIT が代替) + 検証セッションの短寿命化 (teardown ループ跨ぎ解消) で backend-pg hard-gate 下 151 passed / 0 failed の真の green を達成し merge。main CI 全ゲート fail-closed で success。",
     "verification": "ローカル 903 passed ×3 / ruff・mypy GREEN / PG 実証: identity 系エラー全クラス 0 → 最終 151 passed / 対抗レビュー Critical・High 全解消",
     "learning": "grep ベースの移行は getattr(obj, 'attr', default) パターンを見逃す — 属性移行では getattr 形も必ず併せて検索する。対抗レビュー 2 系統の並行実施は単独レビューが見逃す相補的欠陥 (設計観点: email merge / silent-failure 観点: 移行漏れ・恒久 500) を捕捉した。fixture 保持の DB セッションは PG + pytest-asyncio で teardown のループ跨ぎを踏む — 検証クエリはテスト本体内の短寿命セッションで。"
@@ -62,10 +84,29 @@
   "loop26": {
     "name": "Supervisor session — Security green + PR 一括 merge + PG hard-gate が本番欠陥を摘出",
     "completed_at": "2026-07-14",
-    "merged_prs": [27, 37, 44, 42, 36],
-    "created_prs": [42, 44],
-    "closed_issues": [19, 35, 40, 43],
-    "created_issues": [40, 41, 43, 45],
+    "merged_prs": [
+      27,
+      37,
+      44,
+      42,
+      36
+    ],
+    "created_prs": [
+      42,
+      44
+    ],
+    "closed_issues": [
+      19,
+      35,
+      40,
+      43
+    ],
+    "created_issues": [
+      40,
+      41,
+      43,
+      45
+    ],
     "blocked": {
       "pr": 38,
       "reason": "Issue #45 (identity マッピング本番欠陥) の修正が前提。PG hard-gate 赤のまま merge 禁止 (fail-closed)",
@@ -80,7 +121,10 @@
     "completed_at": "2026-06-17",
     "pr": 37,
     "branch": "feat/jest-harden-e2e-exclusion",
-    "commits": ["5782208", "7e8dfe4"],
+    "commits": [
+      "5782208",
+      "7e8dfe4"
+    ],
     "ci_run": "27692210055",
     "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — CI run 27692210055 全6ジョブ SUCCESS — 人間マージ待ち",
     "summary": "Jest ソフトフェイル（|| true）を廃止し HARD CI ゲート化。2 段階の根本原因修正: (1) Jest が frontend/e2e/*.spec.ts (Playwright spec 7 件) を収集し 'Playwright Test needs to be invoked via npx playwright test' エラーで 7 スイート失敗していた。修正: frontend/jest.config.ts の testPathIgnorePatterns に '/e2e/' を追加。(2) @testing-library/dom が devDependencies に未記載のため package-lock.json で 'peer: true' マーク → npm ci --legacy-peer-deps がスキップ → CI 4スイートで 'Cannot find module @testing-library/dom' 失敗。修正: package.json に '@testing-library/dom': '^10.0.0' を追加 + package-lock.json から 'peer: true' フラグを除去。ローカルは Node.js v25.2.1 非互換(Jest 29 と不一致)でローカル実行不可だったため CI で検証（GitHub Actions Node 24 使用）。最終 CI run 27692210055: Backend pytest・Security bandit/trivy・Backend PG・Frontend eslint/tsc/jest(Jest HARD 通過)・E2E Playwright 44 passed・Docker build — 全6ジョブ SUCCESS。",
@@ -167,6 +211,8 @@
     "summary": "workflows/[id]/page.tsx に contractsApi.workflowSteps(id) 実装。workflowInstanceSchema + decided_at フィールド追加。toStepStatus/mapStep ヘルパー実装(sent_back→returned, delegated→in_progress)。unused import ESLint warnings 2件修正(cn/Link)。Loop 16 未コミットの contracts/dashboard/knowledge/risks/workflows ページを追加コミット。npm run build TypeScript エラーなし。PR #13 merged(v0.1.5)。"
   },
   "next_actions": [
+    "[決定] Issue #50: Cloudflare+Neon 移行の採否 — 人間のアーキテクチャ判断 (候補: legalops.mirai-dx-platform.com、計画書: docs/CLOUDFLARE_NEON_MIGRATION_PLAN.md)",
+    "[P2] Issue #51: 運用基盤ギャップ (監視基盤/アラート/自動バックアップ) — リリース前必須分あり",
     "本番環境 Vault secrets 投入（scripts/setup_vault_secrets.sh 使用）— P0 人間作業",
     "CSP enforce 移行（infra/nginx/security-headers.enforce.conf 適用）— P0 7日後",
     "Release 宣言判断 — 人間確認事項 (code complete・全ゲート green 到達済み)",
@@ -176,7 +222,13 @@
     "本番デプロイ準備（RELEASE_CHECKLIST §7 全項目チェック）",
     "GitHub Projects 未接続 (gh token に read:project スコープ無し) — gh auth refresh -s read:project は人間作業"
   ],
-  "completed_issues": [19, 35, 40, 43, 45],
+  "completed_issues": [
+    19,
+    35,
+    40,
+    43,
+    45
+  ],
   "blocked_issues": [],
   "learning": {
     "failure_patterns": [
@@ -187,16 +239,33 @@
     ],
     "success_patterns": [
       {
+        "at": "2026-07-14T03:02:03.677Z",
+        "summary": "Loop 26-27 (2026-07-14 Supervisor session): 8 PR merge (#27/#37/#44/#42/#36/#46/#47/#38)・Issue 5 件クローズ (#19/#35/#40/#43/#45)・CI 全ゲート fail-closed 化完遂・PG 統合 151 passed 真 green・deploy_ready 復帰。Loop 27: I"
+      },
+      {
         "at": "2026-06-15T08:30:00.000Z",
         "phase": "Build",
-        "tags": ["e2e", "playwright", "nextjs", "ci", "gating", "fail-closed"],
+        "tags": [
+          "e2e",
+          "playwright",
+          "nextjs",
+          "ci",
+          "gating",
+          "fail-closed"
+        ],
         "problem": "実走化した E2E で 11 件失敗が顕在化 + 非ゲート `|| true` がサイレント障害を許す穴",
         "insight": "Playwright セレクタ失敗は DOM の実体に合わせて系統別に直すと再発しない: (A) shadcn CardTitle は <div> なので getByRole('heading') は不可 → getByText().first()。(B) <Button asChild><Link> は <a role='link'> なので getByRole('button') でなく getByRole('link')。(C) backend 非存在だと Server Component は table でなく空状態 <p> を出すため table.or(emptyState) で両対応。ゲート化の順序が肝: まず 44/44 緑を CI run で確認 → その後に `|| true` を除去（先に外すと赤 PR リスク）。除去後も別 run で EXIT 0 を確認し gating がビルドを壊さないことを実証。これで silent failure 穴を恒久封鎖でき fail-closed ポリシーに準拠。commit 315da69(11 fixes)+025eb99(gating)。PR #31 7/7 GREEN・人間マージ待ち。"
       },
       {
         "at": "2026-06-15T07:10:00.000Z",
         "phase": "Build",
-        "tags": ["e2e", "playwright", "nextjs", "ci", "silent-failure"],
+        "tags": [
+          "e2e",
+          "playwright",
+          "nextjs",
+          "ci",
+          "silent-failure"
+        ],
         "problem": "E2E ジョブが CI 緑なのにテスト無実行（|| true が webServer 起動失敗を隠蔽）",
         "insight": "next output:standalone は next start で配信不可・standalone server.js + static/public コピーが必須。webServer.url と起動ポートの一致も必須。非ゲート `|| true` は構成バグを緑で隠すため、実走確認後に gating 化を検討。"
       },
@@ -267,37 +336,21 @@
       {
         "at": "2026-05-30T10:45:52.698Z",
         "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
-      },
-      {
-        "at": "2026-05-30T10:35:51.212Z",
-        "summary": "Loop 18(Backend Services + Tests): FastAPI 0.115 204-route fix（29 integration tests復旧）。risk/compliance/knowledge/template 4サービス実装。24統合テスト追加（108 passed）。Playwright E2E基盤整備。Trivy @0.31.0修正。code-review指摘"
-      },
-      {
-        "at": "2026-05-23T13:45:45.217Z",
-        "summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21"
-      },
-      {
-        "at": "2026-05-23T11:49:54.919Z",
-        "summary": "Loop 14(Integration Tests): 全3件の失敗 integration test を修正。include_deleted Query param 追加・get_db commit lifecycle・BigInteger SQLite shim・Decimal JSON serialize・AliasChoices fix・audit test fallback fix。21"
-      },
-      {
-        "at": "2026-05-16T13:02:19.937Z",
-        "summary": "Loop 10(UI Detail Pages): 詳細ページ・設定パネル・アップロードフォーム・テーブル1行化を実装。PR #6 merged to main。"
       }
     ],
     "usage_history": {
       "agents": {
         "general-purpose": {
-          "call_count": 15,
-          "last_used": "2026-05-30T13:25:05.064Z",
-          "last_description": "security_policy.md + RBAC テスト強化"
+          "call_count": 16,
+          "last_used": "2026-07-14T03:38:17.204Z",
+          "last_description": "運用文書 4 本の起草"
         },
-        "_total_agent_calls": 20,
-        "_last_agent_call_at": "2026-06-15T01:59:10.463Z",
+        "_total_agent_calls": 22,
+        "_last_agent_call_at": "2026-07-14T03:38:17.204Z",
         "Explore": {
-          "call_count": 3,
-          "last_used": "2026-06-04T01:18:54.595Z",
-          "last_description": "Explore backend settings/secrets API"
+          "call_count": 4,
+          "last_used": "2026-07-14T03:34:08.607Z",
+          "last_description": "Cloudflare/Neon デプロイ証跡の全数調査"
         },
         "pr-review-toolkit_silent-failure-hunter": {
           "call_count": 1,
@@ -655,6 +708,44 @@
         "frontend/lib/api/schemas.ts"
       ],
       "truncated": false
+    },
+    {
+      "at": "2026-07-14T03:02:03.677Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 47 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/002_knowledge_articles.py",
+        "backend/app/api/v1/admin.py",
+        "backend/app/api/v1/audit_logs.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/dashboard.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/reviews.py",
+        "backend/app/api/v1/risks.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/api/v1/workflows.py",
+        "backend/app/core/security.py",
+        "backend/app/db/test_session.py",
+        "backend/app/deps.py",
+        "backend/app/middleware/security_headers.py",
+        "backend/app/middleware/sensitive_masking.py",
+        "backend/app/models/attachment.py",
+        "backend/app/models/clause.py",
+        "backend/app/models/comment.py",
+        "backend/app/models/contract.py",
+        "backend/app/models/knowledge_article.py",
+        "backend/app/models/legal_review.py",
+        "backend/app/models/notification.py",
+        "backend/app/models/risk_item.py",
+        "backend/app/models/workflow.py",
+        "backend/app/services/ai_review_service.py"
+      ],
+      "truncated": true
     }
   ],
   "compact": {

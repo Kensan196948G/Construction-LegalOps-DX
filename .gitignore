@@ -119,3 +119,6 @@ tmp/
 backend/**/CLAUDE.md
 frontend/**/CLAUDE.md
 .github/**/CLAUDE.md
+docs/CLAUDE.md
+infra/**/CLAUDE.md
+scripts/**/CLAUDE.md
