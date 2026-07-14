@@ -677,7 +677,7 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 > | 🏥 /readyz            | Deep check (DB critical + Redis/Claude degraded)                                     |
 > | 🔐 RS256              | 鍵ローテーション対応（kid ヘッダ + JWT_PUBLIC_KEYS 退役鍵検証）main マージ済み       |
 >
-> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) / Issue #45（drafter_id 合成 + /users lazy-load, P1）
+> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) — コードブロッカー 0（Issue #45 根治済・PG 統合 151 passed・全 CI ゲート fail-closed）
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)
 
 ---

@@ -25,12 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   恒久対応 (python-jose → PyJWT 移行による ecdsa 依存除去) は Issue #41 で追跡。
   main での security.yml 全 5 ジョブ TRUE GREEN を確認 (run 29296717568)。
 
-### Changed (2026-07-14: CI fail-closed 化の継続 — PR #37)
+### Fixed (2026-07-14: identity マッピング根治 — Issue #45, PR #47)
 
-- **Jest HARD gate 化** (`ci.yml`): `|| true` を除去 + `--forceExit`。`jest.config.ts` の
+- **JIT ユーザープロビジョニング**: `get_current_user` が JWT principal を実 `users.id`
+  (`CurrentUser.db_id`) へ解決 (oid/email lookup → get-or-create、savepoint 競合吸収)。
+  JWT subject 文字列を BIGINT id として使う誤用 (hash 合成 drafter_id / スコープ WHERE 型不一致 /
+  本人アクセス恒久 403 / 監査 actor_id 常時 NULL / workflow assignee 恒久拒否) を全数根絶。
+- **fail-closed ガード**: 同一 email + 異 oid の解決拒否 (メール再割当てによる別人 merge 防止)、
+  `is_active=false` / 論理削除行の解決拒否、token role の真実保存。対抗レビュー 2 系統
+  (adversarial + silent-failure-hunter) の Critical 2 / High 2 を反映。残課題は Issue #48。
+- **GET /users の MissingGreenlet 500 解消**: department の selectinload + `get_user` 実装。
+
+### Changed (2026-07-14: CI fail-closed 化の完遂)
+
+- **Jest HARD gate 化** (`ci.yml`, PR #37): `|| true` を除去 + `--forceExit`。`jest.config.ts` の
   `testPathIgnorePatterns` に `/e2e/` を追加し Playwright spec の誤収集 (7 スイート失敗) を解消。
-- **既知の残課題**: backend-pg ジョブの hard-gate 化 (PR #38) は、それが暴いた本番欠陥
-  Issue #45 (JWT subject を数値 id として扱う identity マッピング欠陥) の修正待ちで Blocked。
+- **backend-pg HARD gate 化** (`ci.yml`, PR #38): PG 統合テストの `|| true` を除去。
+  SQLAlchemy 2.x の plain-str `server_default` DDL 破壊の `text()` ラップ修正、
+  PG テストエンジンの NullPool 化 (asyncpg のループ跨ぎ根絶)、departments マスタシード、
+  pure-ASGI ミドルウェア化 (BaseHTTPMiddleware 廃止)、電話マスキング最小桁ガードを含む。
+  hard-gate 下で **PG 統合 151 passed / 0 failed** の真の green を実証。
 
 ### Added (Loop 20: AI プロバイダ設定 UI + 暗号化キー保管)
 
