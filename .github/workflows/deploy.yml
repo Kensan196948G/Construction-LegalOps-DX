@@ -1,0 +1,127 @@
+name: CD (image publish)
+
+# ============================================================
+# 承認済み CI/CD 経路 (Issue #50 / Loop 29)
+#
+# - 手動トリガー (workflow_dispatch) のみ。push では一切起動しない。
+#   マージしただけでは何も実行されない = DNS/課金/Secrets 無断変更なし。
+# - GITHUB_TOKEN (packages:write) だけで動く範囲 = GHCR への
+#   コンテナイメージ発行に限定。デプロイ先ホストは本ワークフローに
+#   接続情報を持たない (ホスト側で `docker compose pull` する pull 型)。
+# - Cloudflare Pages / Tunnel / Neon を使う後続ステップは、人間が
+#   GitHub Secrets (CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID /
+#   NEON_DATABASE_URL) を登録した後に別 PR で追加する
+#   (docs/CLOUDFLARE_NEON_MIGRATION_PLAN.md §5)。
+# ============================================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "発行するイメージタグ (例: v0.1.11 / staging)"
+        required: true
+        default: staging
+      push_latest:
+        description: "latest タグも併せて更新するか"
+        type: boolean
+        default: false
+
+concurrency:
+  group: cd-image-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  TZ: Asia/Tokyo
+
+jobs:
+  # ----------------------------------------------------------
+  # 前提確認: 対象 ref の CI が green であることを人間が確認済みの
+  # 前提だが、fail-closed のため最低限のビルド検証をここでも行う
+  # ----------------------------------------------------------
+  publish:
+    name: Build & push images (GHCR)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - component: backend
+            context: backend
+          - component: frontend
+            context: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image name (lowercase)
+        id: img
+        env:
+          REPO: ${{ github.repository }}
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          echo "name=${REGISTRY}/${REPO,,}/${COMPONENT}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.img.outputs.name }}
+          tags: |
+            type=raw,value=${{ inputs.image_tag }}
+            type=raw,value=latest,enable=${{ inputs.push_latest }}
+            type=sha,format=short
+          labels: |
+            org.opencontainers.image.title=Construction-LegalOps-DX ${{ matrix.component }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=cd-${{ matrix.component }}
+          cache-to: type=gha,scope=cd-${{ matrix.component }},mode=max
+
+  # ----------------------------------------------------------
+  # 発行結果サマリ (デプロイ先ホスト向けの pull 手順を明示)
+  # ----------------------------------------------------------
+  summary:
+    name: Publish summary
+    runs-on: ubuntu-latest
+    needs: publish
+    steps:
+      - name: Write summary
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          {
+            echo "## 📦 CD (image publish) 完了"
+            echo ""
+            echo "| コンポーネント | イメージ |"
+            echo "|---|---|"
+            echo "| backend | \`${REGISTRY}/${REPO,,}/backend:${TAG}\` |"
+            echo "| frontend | \`${REGISTRY}/${REPO,,}/frontend:${TAG}\` |"
+            echo ""
+            echo "デプロイ先ホストでの適用 (docs/OPERATIONS.md 参照):"
+            echo '```bash'
+            echo "docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml pull"
+            echo "docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml up -d"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
