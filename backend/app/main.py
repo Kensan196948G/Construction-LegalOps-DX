@@ -24,7 +24,7 @@ from prometheus_client import (
 )
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.datastructures import MutableHeaders, State
+from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.config import settings
@@ -105,10 +105,14 @@ class RequestContextMiddleware:
         request_id = _get_request_id(scope)
 
         # Store in scope state so downstream code (e.g. masking middleware)
-        # can access it via request.state.request_id.
-        if "state" not in scope:
-            scope["state"] = State()
-        scope["state"].request_id = request_id  # type: ignore[attr-defined]
+        # can access it via request.state.request_id. scope["state"] must be
+        # treated as a PLAIN DICT: real ASGI servers (uvicorn) pre-populate it
+        # as a dict, and Starlette's Request.state wraps that dict — assigning
+        # an attribute on it blew up with AttributeError and 500'd every
+        # request under uvicorn (caught by the first real k6 smoke run; the
+        # httpx ASGITransport used in tests never populates "state", which is
+        # why the integration suite could not see it).
+        scope.setdefault("state", {})["request_id"] = request_id
         set_request_context(request_id=request_id)
 
         started = time.perf_counter()

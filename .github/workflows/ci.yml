@@ -113,6 +113,65 @@ jobs:
           pytest tests/integration/ -q --disable-warnings --tb=short
 
   # ============================================================
+  # Backend: Alembic migration chain against real PostgreSQL 16
+  #  - integration tests は create_all 経由のため、本番デプロイが踏む
+  #    「マイグレーション連鎖の実行可能性」はこのジョブだけが検証する
+  #    (env.py の URL 解決欠陥が本番初回 upgrade を壊していた再発防止)
+  # ============================================================
+  migrations:
+    name: Backend (alembic upgrade / PostgreSQL 16)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: legalops
+          POSTGRES_PASSWORD: legalops_dev
+          POSTGRES_DB: legalops_migrations
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Alembic upgrade head (real migration chain)
+        env:
+          DB_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_migrations
+          APP_ENV: test
+          JWT_SECRET_KEY: ci-test-secret-key-not-for-production
+        run: |
+          alembic upgrade head
+          alembic current | grep "(head)"
+
+      - name: Alembic upgrade head is idempotent (second run = no-op)
+        env:
+          DB_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_migrations
+          APP_ENV: test
+          JWT_SECRET_KEY: ci-test-secret-key-not-for-production
+        run: |
+          alembic upgrade head
+          alembic current | grep "(head)"
+
+  # ============================================================
   # Frontend: Next.js / TypeScript
   #  - eslint / tsc はハードフェイル
   #  - jest は MSW セットアップ完了までソフトフェイル (Loop 5 で硬化)

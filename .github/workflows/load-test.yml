@@ -64,12 +64,23 @@ jobs:
           if [ -f pyproject.toml ]; then pip install -e ".[dev]" || pip install -e . || true; fi
           pip install uvicorn
 
+      - name: Apply migrations (real chain, same as production deploy)
+        working-directory: backend
+        env:
+          DB_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
+          APP_ENV: test
+          JWT_SECRET_KEY: ci-load-test-secret-not-for-production
+        run: alembic upgrade head
+
       - name: Start FastAPI backend
         working-directory: backend
         env:
           APP_ENV: test
-          PYTEST_DATABASE_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
-          DATABASE_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
+          # NOTE: the settings field is db_url (env: DB_URL). The previous
+          # DATABASE_URL/PYTEST_DATABASE_URL names are not read by the app,
+          # so the server silently fell back to the compose-only host
+          # "postgres" and /readyz 503'd on every iteration.
+          DB_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
           JWT_SECRET_KEY: ci-load-test-secret-not-for-production
           AUTH_DEV_BYPASS: "true"
         run: |
