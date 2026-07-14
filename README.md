@@ -661,20 +661,23 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-> 📌 本 README は **Loop 18（Backend DB Persistence + Tests, 2026-05-30 更新）** 時点のものです。
+> 📌 本 README は **Supervisor session（PR #27/#36/#37/#42/#44 マージ, 2026-07-14 更新）** 時点のものです。
 >
 > | 指標                  | 値                                                                                   |
 > | --------------------- | ------------------------------------------------------------------------------------ |
-> | 📦 バージョン         | v0.1.8                                                                               |
-> | 🧪 バックエンドテスト | 832 passed / 0 failed                                                                |
-> | 📊 カバレッジ         | 90%                                                                                  |
-> | 🔧 mypy               | 0 errors / Bandit clean                                                              |
+> | 📦 バージョン         | v0.1.11+                                                                             |
+> | 🧪 バックエンドテスト | 901 passed / 0 failed                                                                |
+> | 📊 カバレッジ         | 90%+                                                                                 |
+> | 🔧 mypy               | 0 errors (95 files) / Bandit clean                                                   |
+> | 🔒 Security scan      | weekly deep scan TRUE GREEN（Bandit / Trivy fs+image / pip-audit / npm audit）       |
 > | 🗄️ 全サービス         | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
-> | ⚡ E2E                | Playwright 6ファイル: smoke/contracts/dashboard/reviews/risks/compliance             |
+> | ⚡ E2E                | Playwright 7ファイル（knowledge 詳細含む・CI HARD gate）                             |
+> | 🧪 Jest               | CI HARD gate（`|| true` 廃止・e2e/ を収集除外）                                      |
+> | 📈 負荷テスト         | k6 smoke/load/soak（`infra/k6/`・SLO p95<500ms・週次 + 手動 CI）                     |
 > | 🏥 /readyz            | Deep check (DB critical + Redis/Claude degraded)                                     |
-> | 🔐 RS256              | コード実装済み・scripts/generate_rsa_keys.sh / setup_vault_secrets.sh 完備           |
+> | 🔐 RS256              | 鍵ローテーション対応（kid ヘッダ + JWT_PUBLIC_KEYS 退役鍵検証）main マージ済み       |
 >
-> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0)
+> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) / Issue #45（drafter_id 合成 + /users lazy-load, P1）
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)
 
 ---

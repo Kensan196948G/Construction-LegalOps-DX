@@ -18,8 +18,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.upload import (
     UploadCompleteRequest,
     UploadInitRequest,
@@ -44,7 +43,7 @@ async def init_upload(
     payload: UploadInitRequest,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("site", "legal", "admin")),
 ) -> UploadInitResponse:
     if payload.size_bytes > 100 * 1024 * 1024:
@@ -62,7 +61,7 @@ async def init_upload(
     )
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="upload.init",
         target_type="uploads",
         target_id=response.upload_id,
@@ -83,7 +82,7 @@ async def complete_upload(
     payload: UploadCompleteRequest,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("site", "legal", "admin")),
 ) -> UploadOut:
     try:
@@ -97,7 +96,7 @@ async def complete_upload(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="upload.complete",
         target_type="uploads",
         target_id=upload.id,
@@ -115,7 +114,7 @@ async def complete_upload(
 async def get_upload(
     upload_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> UploadOut:
     upload = await upload_service.get_upload(session, upload_id=upload_id, viewer=current_user)
     if upload is None:
@@ -131,7 +130,7 @@ async def download_upload(
     upload_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> RedirectResponse:
     try:
         url = await upload_service.create_download_url(
@@ -144,7 +143,7 @@ async def download_upload(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="upload.download",
         target_type="uploads",
         target_id=upload_id,
@@ -163,7 +162,7 @@ async def delete_upload(
     upload_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> None:
     try:
         await upload_service.soft_delete(session, upload_id=upload_id, actor=current_user)
@@ -173,7 +172,7 @@ async def delete_upload(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="upload.delete",
         target_type="uploads",
         target_id=upload_id,

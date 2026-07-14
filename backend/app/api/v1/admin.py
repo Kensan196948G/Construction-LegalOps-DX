@@ -23,8 +23,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.settings import (
     AiProvider,
     AiProviderConfigOut,
@@ -49,7 +48,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 )
 async def get_ai_settings(
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> AiSettingsOut:
     """両プロバイダのマスク済み設定行を返す（未保存は空行を合成）。"""
@@ -70,7 +69,7 @@ async def upsert_ai_settings(
     body: AiSettingsUpdateIn,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> AiProviderConfigOut:
     """プロバイダ設定を upsert し、変更証跡を監査ログに残す。
@@ -83,7 +82,7 @@ async def upsert_ai_settings(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="ai_settings.update",
         target_type="ai_provider_settings",
         target_id=None,
@@ -111,7 +110,7 @@ async def test_ai_settings(
     provider: AiProvider,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> ConnectionTestOut:
     """保存済みキーで疎通確認し、結果（ok/failed/unavailable）を返す。"""
@@ -119,7 +118,7 @@ async def test_ai_settings(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="ai_settings.test",
         target_type="ai_provider_settings",
         target_id=None,

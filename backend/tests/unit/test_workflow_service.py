@@ -77,6 +77,7 @@ def _make_actor(role: str = "admin", user_id: int = 1) -> MagicMock:
     actor = MagicMock()
     actor.role = role
     actor.id = user_id
+    actor.db_id = user_id  # resolved users.id (Issue #45)
     return actor
 
 

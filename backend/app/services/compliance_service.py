@@ -137,7 +137,7 @@ async def get_result(
         Contract.deleted_at.is_(None),
     )
     if getattr(viewer, "role", None) not in _FULL_ACCESS_ROLES:
-        stmt = stmt.where(Contract.drafter_id == viewer.id)
+        stmt = stmt.where(Contract.drafter_id == viewer.db_id)
     row = await session.execute(stmt)
     contract: Contract | None = row.scalar_one_or_none()
     if contract is None:

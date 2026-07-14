@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.user import User
 from app.schemas.user import UserOut
@@ -25,12 +26,13 @@ async def list_users(
     size: int = 20,
 ) -> tuple[list[UserOut], int]:
     """Return paginated user list."""
-    stmt = select(User)
+    # Eager-load department: UserOut.department would otherwise lazy-load
+    # during model_validate and raise MissingGreenlet under async whenever a
+    # row has department_id set (Issue #45 Bug 2).
+    stmt = select(User).options(selectinload(User.department))
 
     if q:
-        stmt = stmt.where(
-            User.display_name.ilike(f"%{q}%") | User.email.ilike(f"%{q}%")
-        )
+        stmt = stmt.where(User.display_name.ilike(f"%{q}%") | User.email.ilike(f"%{q}%"))
     if role:
         stmt = stmt.where(User.role == role)
     if department_id is not None:
@@ -48,6 +50,16 @@ async def list_users(
     rows = list(result.scalars().all())
     items = [UserOut.model_validate(r) for r in rows]
     return items, total
+
+
+async def get_user(session: AsyncSession, *, user_id: int) -> User | None:
+    """Return a single active user (department eager-loaded) or None."""
+    stmt = (
+        select(User)
+        .options(selectinload(User.department))
+        .where(User.id == user_id, User.deleted_at.is_(None))
+    )
+    return (await session.execute(stmt)).scalar_one_or_none()
 
 
 def __getattr__(item: str) -> Any:

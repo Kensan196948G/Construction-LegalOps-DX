@@ -145,9 +145,19 @@ jobs:
           /tmp/audit-venv/bin/pip freeze --exclude-editable > ../resolved-requirements.txt
 
       - name: pip-audit (resolved project deps)
+        # --ignore-vuln の根拠 (Issue #40):
+        #   PYSEC-2026-1325 / CVE-2024-23342 / GHSA-wj6h-64fc-37mp (ecdsa: Minerva timing attack)
+        #   - upstream (python-ecdsa) はサイドチャネル攻撃をスコープ外とし fix_versions なし (won't-fix)
+        #   - ecdsa は python-jose[cryptography] の推移的依存。本プロジェクトは RS256/RSA のみ使用し
+        #     ES*/ECDSA アルゴリズムの使用は 0 件 (脆弱 API ecdsa.SigningKey.sign_digest() へ到達不能)
+        #   - cryptography backend 指定のため EC 演算は pyca/cryptography が担い ecdsa は実行経路に乗らない
+        #   - 恒久対応 (python-jose → PyJWT 移行で ecdsa 依存自体を除去) は追跡 Issue #41 参照
         run: |
           set -e
-          pip-audit -r resolved-requirements.txt --strict --format json --output pip-audit.json
+          pip-audit -r resolved-requirements.txt --strict --format json --output pip-audit.json \
+            --ignore-vuln PYSEC-2026-1325 \
+            --ignore-vuln CVE-2024-23342 \
+            --ignore-vuln GHSA-wj6h-64fc-37mp
 
       - name: Upload pip-audit report
         if: always()

@@ -16,7 +16,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services import contract_service
-from app.services.contract_service import _drafter_int_id
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -27,6 +26,7 @@ def _make_actor(role: str = "admin", user_id: int = 1) -> MagicMock:
     actor = MagicMock()
     actor.role = role
     actor.id = user_id
+    actor.db_id = user_id  # resolved users.id (Issue #45)
     return actor
 
 
@@ -110,36 +110,6 @@ def _make_contract_update(
         updates["title"] = title
     data.model_dump.return_value = updates
     return data
-
-
-# ===========================================================================
-# _drafter_int_id
-# ===========================================================================
-
-
-class TestDrafterIntId:
-    def test_returns_int(self) -> None:
-        result = _drafter_int_id("some-uuid-string")
-        assert isinstance(result, int)
-
-    def test_non_negative(self) -> None:
-        result = _drafter_int_id("test")
-        assert result >= 0
-
-    def test_deterministic(self) -> None:
-        uid = "550e8400-e29b-41d4-a716-446655440000"
-        assert _drafter_int_id(uid) == _drafter_int_id(uid)
-
-    def test_within_bigint_range(self) -> None:
-        result = _drafter_int_id("any-user-id")
-        assert result < 2**31
-
-    def test_different_ids_produce_different_values(self) -> None:
-        r1 = _drafter_int_id("user-1")
-        r2 = _drafter_int_id("user-2")
-        # In general these should differ; just ensure the function runs without error
-        assert isinstance(r1, int)
-        assert isinstance(r2, int)
 
 
 # ===========================================================================

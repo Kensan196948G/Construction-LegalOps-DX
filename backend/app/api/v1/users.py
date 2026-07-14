@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
+from app.deps import CurrentUser, get_current_user, require_role
 from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.user import (
@@ -43,7 +43,7 @@ async def list_users(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin", "auditor")),
 ) -> Page[UserOut]:
     items, total = await user_service.list_users(
@@ -67,9 +67,11 @@ async def list_users(
 async def get_user(
     user_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> UserOut:
-    if current_user.role not in ("admin", "auditor") and current_user.id != user_id:
+    # Compare the resolved DB id — the raw token subject is a UUID/str and
+    # would never equal an int path param (Issue #45: self-access was 403).
+    if current_user.role not in ("admin", "auditor") and current_user.db_id != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
     user = await user_service.get_user(session, user_id=user_id)
     if user is None:
@@ -88,13 +90,13 @@ async def create_user(
     payload: UserCreate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> UserOut:
     user = await user_service.create_user(session, data=payload)
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="user.create",
         target_type="users",
         target_id=user.id,
@@ -115,7 +117,7 @@ async def update_user(
     payload: UserUpdate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> UserOut:
     try:
@@ -127,7 +129,7 @@ async def update_user(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="user.update",
         target_type="users",
         target_id=user.id,
@@ -164,8 +166,8 @@ async def delete_user(
 )
 async def sync_users(
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> UserSyncJob:
-    result = await user_service.start_graph_sync(session, triggered_by=current_user.id)
+    result = await user_service.start_graph_sync(session, triggered_by=current_user.db_id)
     return cast(UserSyncJob, result)

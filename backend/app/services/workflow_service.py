@@ -255,7 +255,7 @@ async def get_instance(
         from app.models.contract import Contract
 
         contract = await session.get(Contract, instance_id)
-        if contract is None or contract.drafter_id != getattr(viewer, "id", None):
+        if contract is None or contract.drafter_id != viewer.db_id:
             return None
     return _compute_instance(steps)
 
@@ -274,7 +274,7 @@ async def list_steps(
         from app.models.contract import Contract
 
         contract = await session.get(Contract, instance_id)
-        if contract is None or contract.drafter_id != getattr(viewer, "id", None):
+        if contract is None or contract.drafter_id != viewer.db_id:
             return []
     return steps
 
@@ -299,8 +299,10 @@ async def execute_action(
     if active_step is None:
         raise ValueError("no active step available for this action")
 
-    # Authorise: assignee or full-access role
-    actor_id = getattr(actor, "id", None)
+    # Authorise: assignee or full-access role. assignee_id holds a real
+    # users.id, so compare the resolved db identity (Issue #45) — the raw
+    # token subject would never match and silently locked assignees out.
+    actor_id = actor.db_id
     if active_step.assignee_id is not None:
         if actor_id != active_step.assignee_id and not _is_full_access(actor):
             raise PermissionError("you are not the assignee for this step")

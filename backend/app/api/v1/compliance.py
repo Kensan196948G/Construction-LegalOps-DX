@@ -13,8 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user, require_role
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.compliance import (
     ComplianceChecklist,
     ComplianceCheckResult,
@@ -37,11 +36,14 @@ async def list_checklists(
         default=None, description="construction_law / subcontract_act / others"
     ),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> list[ComplianceChecklist]:
-    return cast(list[ComplianceChecklist], await compliance_service.list_checklists(
-        session, contract_type=contract_type, category=category
-    ))
+    return cast(
+        list[ComplianceChecklist],
+        await compliance_service.list_checklists(
+            session, contract_type=contract_type, category=category
+        ),
+    )
 
 
 @router.get(
@@ -56,7 +58,7 @@ async def list_checklists(
 async def get_compliance_result(
     contract_id: int,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ComplianceCheckResult:
     result = await compliance_service.get_result(
         session, contract_id=contract_id, viewer=current_user
@@ -77,7 +79,7 @@ async def run_compliance_check(
     request: Request,
     checklist_codes: list[str] | None = Query(default=None, description="未指定時は全件"),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("legal", "admin")),
 ) -> ComplianceRunResponse:
     try:
@@ -92,7 +94,7 @@ async def run_compliance_check(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="compliance.run",
         target_type="contracts",
         target_id=contract_id,

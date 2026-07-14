@@ -63,6 +63,7 @@ def _make_viewer(role: str = "admin", user_id: int = 1) -> MagicMock:
     v = MagicMock()
     v.role = role
     v.id = user_id
+    v.db_id = user_id  # resolved users.id (Issue #45)
     return v
 
 

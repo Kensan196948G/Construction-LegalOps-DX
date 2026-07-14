@@ -114,3 +114,8 @@ tmp/
 *.pid
 *.seed
 .DS_Store?
+
+# claude-mem plugin generates per-directory context files — never commit
+backend/**/CLAUDE.md
+frontend/**/CLAUDE.md
+.github/**/CLAUDE.md

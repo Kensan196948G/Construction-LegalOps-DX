@@ -11,8 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.deps import get_current_user
-from app.models.user import User
+from app.deps import CurrentUser, get_current_user
 from app.schemas.common import Page
 from app.schemas.notification import NotificationOut, NotificationReadResult
 from app.services import audit_service, notification_service
@@ -31,11 +30,11 @@ async def list_notifications(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[NotificationOut]:
     items, total = await notification_service.list_for_user(
         session,
-        user_id=current_user.id,
+        user_id=current_user.db_id,
         status=status_,
         channel=channel,
         page=page,
@@ -53,11 +52,11 @@ async def mark_read(
     notification_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> NotificationOut:
     try:
         notification = await notification_service.mark_read(
-            session, notification_id=notification_id, user_id=current_user.id
+            session, notification_id=notification_id, user_id=current_user.db_id
         )
     except LookupError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="notification not found")
@@ -66,7 +65,7 @@ async def mark_read(
 
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="notification.read",
         target_type="notifications",
         target_id=notification.id,
@@ -83,12 +82,12 @@ async def mark_read(
 async def mark_all_read(
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> NotificationReadResult:
-    updated = await notification_service.mark_all_read(session, user_id=current_user.id)
+    updated = await notification_service.mark_all_read(session, user_id=current_user.db_id)
     await audit_service.log(
         session,
-        actor_id=current_user.id,
+        actor_id=current_user.db_id,
         action="notification.read_all",
         target_type="notifications",
         target_id=None,
