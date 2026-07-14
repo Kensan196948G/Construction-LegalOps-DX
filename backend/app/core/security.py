@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -18,6 +19,11 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
+
+# Stdlib logger (no structlog dependency) keeps this module import-light so it
+# stays usable from workers / CLI. Key-config problems are logged loudly so a
+# malformed key never silently breaks authentication without a trace.
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # RBAC role taxonomy
@@ -123,6 +129,107 @@ def _jwt_algorithm() -> str:
     return "RS256" if settings.use_rs256 else settings.jwt_algorithm
 
 
+def _derive_kid(public_pem: str) -> str:
+    """Derive a stable key id (kid) from an RSA public key.
+
+    The kid is the first 16 hex chars of the SHA-256 digest over the key's
+    DER ``SubjectPublicKeyInfo`` encoding. It is deterministic, so the signer
+    and every verifier compute the same kid for a given key without any extra
+    coordination (RFC 7638-style thumbprint, taken over DER for simplicity).
+
+    ``cryptography`` is imported lazily to keep this module import-light.
+    """
+    from cryptography.hazmat.primitives import serialization
+
+    public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+    der = public_key.public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    return hashlib.sha256(der).hexdigest()[:16]
+
+
+def _jwt_active_kid() -> str | None:
+    """Return the kid for the active signing key, or ``None`` for HS256.
+
+    Uses the explicit ``JWT_KEY_ID`` when set (e.g. to match an external IdP),
+    else derives it from the active public key thumbprint. HS256 tokens carry
+    no kid. Returns ``None`` (no kid header) if the kid cannot be derived.
+    """
+    if not settings.use_rs256:
+        return None
+    if settings.jwt_key_id:
+        return settings.jwt_key_id
+    if settings.jwt_public_key:
+        try:
+            return _derive_kid(settings.jwt_public_key)
+        except Exception:
+            # Malformed active public key: we cannot derive a kid. Return None
+            # here (so verify-set building stays resilient and retired keys can
+            # still verify), but log loudly. The sign path in
+            # create_access_token turns this into a hard failure so we never
+            # mint a kid-less token while RS256 rotation is expected.
+            logger.warning("JWT active public key is malformed; cannot derive kid", exc_info=True)
+            return None
+    return None
+
+
+def _jwt_public_key_set() -> dict[str, str]:
+    """Build the ``{kid: public_pem}`` RS256 verification set.
+
+    Combines the active public key (indexed by its possibly-overridden kid)
+    with any retired keys from ``JWT_PUBLIC_KEYS`` (indexed by their derived
+    thumbprint). Retired keys never override the active kid. Keys whose kid
+    cannot be derived (malformed PEM) are skipped fail-closed.
+    """
+    key_set: dict[str, str] = {}
+    active_kid = _jwt_active_kid()
+    if active_kid and settings.jwt_public_key:
+        key_set[active_kid] = settings.jwt_public_key
+    for pem in settings.jwt_public_keys_list:
+        try:
+            kid = _derive_kid(pem)
+        except Exception:
+            # A malformed retired key is dropped from the verify set rather than
+            # failing the whole build, so one bad entry in JWT_PUBLIC_KEYS does
+            # not break verification of every other (valid) key. Logged so the
+            # misconfiguration is visible instead of silently swallowed.
+            logger.warning("Skipping malformed retired key in JWT_PUBLIC_KEYS", exc_info=True)
+            continue
+        key_set.setdefault(kid, pem)
+    return key_set
+
+
+def _jwt_resolve_verify_key(token: str) -> str:
+    """Select the verification key for a token (kid-aware for RS256).
+
+    - HS256: the shared secret (tokens carry no kid).
+    - RS256 with a ``kid`` header: the matching public key, raising
+      :class:`ValueError` (fail-closed) when the kid is unknown.
+    - RS256 legacy token without a kid: falls back to the active public key,
+      so tokens minted before rotation was introduced still verify — unless
+      ``JWT_REQUIRE_KID`` is set, which rejects kid-less tokens (fail-closed)
+      once a deployment has fully migrated to rotation.
+    """
+    if not settings.use_rs256:
+        return _jwt_verify_key()
+    try:
+        header = jwt.get_unverified_header(token)
+    except JWTError as exc:
+        raise ValueError(f"invalid token: {exc}") from exc
+    # Treat an empty-string kid the same as a missing one ("" is not a usable
+    # key id), so a crafted {"kid": ""} cannot slip past the lookup branch.
+    kid = header.get("kid")
+    if kid:
+        key = _jwt_public_key_set().get(kid)
+        if key is None:
+            raise ValueError("invalid token: unknown key id")
+        return key
+    if settings.jwt_require_kid:
+        raise ValueError("invalid token: missing key id")
+    return _jwt_verify_key()
+
+
 def create_access_token(
     subject: str,
     *,
@@ -156,17 +263,42 @@ def create_access_token(
                 continue
             payload[key] = value
 
-    return str(jwt.encode(payload, _jwt_sign_key(), algorithm=_jwt_algorithm()))
+    # Stamp a kid header for RS256 so verifiers can pick the exact key that
+    # signed the token, enabling zero-downtime key rotation. HS256 tokens
+    # carry no kid (single shared secret).
+    active_kid = _jwt_active_kid()
+    if settings.use_rs256 and active_kid is None:
+        # Fail-fast on the sign path: RS256 is configured but we could not
+        # derive a kid (malformed public key / bad JWT_KEY_ID config). Minting
+        # a kid-less RS256 token here would quietly defeat rotation and could
+        # be rejected later by JWT_REQUIRE_KID verifiers — better to refuse to
+        # sign than to emit an un-rotatable token.
+        raise ValueError(
+            "RS256 is configured but no kid could be derived; refusing to sign "
+            "a kid-less token (check JWT_PUBLIC_KEY / JWT_KEY_ID)"
+        )
+    headers = {"kid": active_kid} if active_kid else None
+    return str(
+        jwt.encode(
+            payload,
+            _jwt_sign_key(),
+            algorithm=_jwt_algorithm(),
+            headers=headers,
+        )
+    )
 
 
 def decode_token(token: str) -> dict[str, Any]:
     """Decode and validate a JWT. Raises :class:`ValueError` on failure."""
     if not token:
         raise ValueError("token must not be empty")
+    # Resolve the verification key first (kid-aware for RS256); an unknown kid
+    # fails closed with ValueError before any signature work is attempted.
+    verify_key = _jwt_resolve_verify_key(token)
     try:
         payload: dict[str, Any] = jwt.decode(
             token,
-            _jwt_verify_key(),
+            verify_key,
             algorithms=[_jwt_algorithm()],
             audience=settings.jwt_audience,
             issuer=settings.jwt_issuer,

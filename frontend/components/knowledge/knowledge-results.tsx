@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Scale, HelpCircle, BookOpen } from "lucide-react";
@@ -24,7 +26,9 @@ export function KnowledgeResults({ items, total }: Props) {
                 <div className="flex items-start gap-3 min-w-0">
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                   <div className="min-w-0">
-                    <h3 className="font-medium leading-snug hover:underline cursor-pointer">{k.title}</h3>
+                    <Link href={`/knowledge/${k.id}`}>
+                      <h3 className="font-medium leading-snug hover:underline cursor-pointer">{k.title}</h3>
+                    </Link>
                     <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">{k.excerpt}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <Badge variant={SOURCE_V[k.source]} className="text-xs">{SOURCE_LABEL[k.source]}</Badge>

@@ -28,9 +28,11 @@ an inactive/unconfigured provider yields no usable key (fail-closed).
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from datetime import date
 from typing import Any
 
 import httpx
+import pytest
 import pytest_asyncio
 from cryptography.fernet import Fernet
 from pydantic import SecretStr
@@ -206,9 +208,13 @@ async def test_get_active_provider_key_is_fail_closed(fresh_session: Any) -> Non
     assert await service.get_active_provider_key(fresh_session, "perplexity") == "pplx-key-7"
 
 
-async def test_claude_probe_is_dormant_and_persists(fresh_session: Any) -> None:
+async def test_claude_probe_is_dormant_and_persists(
+    fresh_session: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Before 2026-07-01 the Claude test is 'unavailable' — never an error."""
-    # Arrange
+    # Arrange — pin the clock to the day before the gate so the dormancy
+    # behaviour stays verifiable after 2026-07-01 has passed in real time.
+    monkeypatch.setattr("app.services.settings_service._today", lambda: date(2026, 6, 30))
     service = SettingsService(fernet=_TEST_FERNET)
 
     # Act 1 — no key yet: reported unavailable with a clear notice, no row to persist
@@ -229,6 +235,41 @@ async def test_claude_probe_is_dormant_and_persists(fresh_session: Any) -> None:
     view = await service.get_view(fresh_session)
     claude = next(p for p in view.providers if p.provider == "claude")
     assert claude.last_test_status == "unavailable"
+
+
+async def test_claude_probe_post_gate_is_fail_closed(
+    fresh_session: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """From 2026-07-01 on: no/bad key ⇒ 'failed'; valid format ⇒ still not 'ok'.
+
+    The gate compares with ``<``, so the gate day itself is post-gate — pinning
+    to exactly 2026-07-01 also locks the boundary semantics.
+    """
+    # Arrange — pin the clock to the first post-gate day
+    monkeypatch.setattr("app.services.settings_service._today", lambda: date(2026, 7, 1))
+    service = SettingsService(fernet=_TEST_FERNET)
+
+    # Act/Assert 1 — no key stored: fail-closed, not a graceful 'unavailable'
+    no_key = await service.test_connection(fresh_session, "claude")
+    assert no_key.status == "failed"
+    assert "未設定" in no_key.message
+
+    # Act/Assert 2 — malformed key: surfaced as an explicit format failure
+    await service.upsert(
+        fresh_session, "claude", _update(api_key="not-an-anthropic-key", is_active=True)
+    )
+    bad_format = await service.test_connection(fresh_session, "claude")
+    assert bad_format.status == "failed"
+    assert "形式が不正" in bad_format.message
+
+    # Act/Assert 3 — well-formed key: never claims 'ok' without a real
+    # round-trip (Codex P2 #2 fail-closed) — reported 'unavailable' instead
+    await service.upsert(
+        fresh_session, "claude", _update(api_key="sk-ant-test-0001", is_active=True)
+    )
+    ok_format = await service.test_connection(fresh_session, "claude")
+    assert ok_format.status == "unavailable"
+    assert "有効性は未検証" in ok_format.message
 
 
 async def test_perplexity_probe_via_injected_transport(fresh_session: Any) -> None:
@@ -353,9 +394,13 @@ async def test_unauthenticated_get_is_unauthorized(client: Any) -> None:
 
 
 async def test_post_test_claude_reports_unavailable(
-    client: Any, auth_headers_admin: dict[str, str]
+    client: Any, auth_headers_admin: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The Claude connection test is gracefully 'unavailable' until the gate."""
+    # Arrange — pin the clock pre-gate; the route's module-level singleton
+    # resolves `_today` at call time, so the monkeypatch reaches it too.
+    monkeypatch.setattr("app.services.settings_service._today", lambda: date(2026, 6, 30))
+
     # Act
     resp = await client.post(f"{AI_SETTINGS}/claude/test", headers=auth_headers_admin)
 
