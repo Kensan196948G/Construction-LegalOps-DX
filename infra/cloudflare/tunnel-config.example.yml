@@ -1,0 +1,15 @@
+# cloudflared Tunnel 設定テンプレート (Phase 1: 既存 nginx への ingress)
+# 実値コピー後も TUNNEL_TOKEN / credentials はリポジトリへコミットしないこと。
+# 参照: docs/CLOUDFLARE_NEON_MIGRATION_PLAN.md / infra/cloudflare/README.md
+
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  # 本番候補ドメイン → compose 内 nginx (TLS は Cloudflare 終端)
+  - hostname: legalops.mirai-dx-platform.com
+    service: http://nginx:80
+    originRequest:
+      httpHostHeader: legalops.mirai-dx-platform.com
+  # 未定義ホストは 404 (fail-closed)
+  - service: http_status:404
