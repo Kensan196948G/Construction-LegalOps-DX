@@ -13,6 +13,7 @@ runnable even before the Core team lands their config.
 from __future__ import annotations
 
 import asyncio
+import os
 from logging.config import fileConfig
 from typing import Any
 
@@ -36,15 +37,26 @@ target_metadata = Base.metadata
 
 
 def _get_url() -> str:
-    """Resolve the DB URL: prefer ``settings.DATABASE_URL`` then alembic.ini."""
+    """Resolve the DB URL: env override → app settings → alembic.ini.
+
+    The previous implementation looked up ``settings.DATABASE_URL`` /
+    ``settings.database_url`` — attributes that have never existed (the real
+    field is ``db_url``, a ``SecretStr``), so every environment silently fell
+    through to the alembic.ini placeholder and ``alembic upgrade head`` could
+    not reach a real database. ``str(SecretStr)`` would also have returned the
+    masked value, so the secret must be unwrapped via ``get_secret_value()``.
+    """
+    env_url = os.getenv("ALEMBIC_DATABASE_URL") or os.getenv("DB_URL")
+    if env_url:
+        return env_url
     try:
         from app.core.config import settings  # type: ignore[import-not-found]
 
-        url = getattr(settings, "DATABASE_URL", None) or getattr(
-            settings, "database_url", None
-        )
-        if url:
-            return str(url)
+        db_url = getattr(settings, "db_url", None)
+        if db_url is not None:
+            if hasattr(db_url, "get_secret_value"):
+                return str(db_url.get_secret_value())
+            return str(db_url)
     except Exception:
         # Core / config module not available yet — fall back to alembic.ini.
         pass
