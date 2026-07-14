@@ -20,7 +20,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.models.contract import Contract
 from app.models.user import User
@@ -39,33 +39,51 @@ def _headers(role: str, subject: str, *, oid: str | None = None) -> dict[str, st
     return {"Authorization": f"Bearer {token}"}
 
 
-async def _user_rows(db_session: Any, email: str) -> list[User]:
-    result = await db_session.execute(select(User).where(User.email == email))
-    return list(result.scalars().all())
+def _session_for(engine: Any) -> Any:
+    """Short-lived session opened INSIDE the test body.
+
+    Deliberately not the ``db_session`` fixture: a fixture-held session keeps
+    its (NullPool) asyncpg connection alive into the teardown phase, where
+    pytest-asyncio may finalise on a different event loop and the rollback
+    explodes with "Future attached to a different loop". Opening and closing
+    within the test keeps every connection on the test's own loop.
+    """
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    return async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)()
+
+
+async def _user_rows(engine: Any, email: str) -> list[User]:
+    session = _session_for(engine)
+    try:
+        result = await session.execute(select(User).where(User.email == email))
+        return list(result.scalars().all())
+    finally:
+        await session.close()
 
 
 @pytest.mark.asyncio
-async def test_first_request_provisions_single_user_row(client: Any, db_session: Any) -> None:
+async def test_first_request_provisions_single_user_row(client: Any, test_engine: Any) -> None:
     """1st request creates exactly one users row; 2nd reuses it."""
     email = "jit-provision-1@example.com"
     headers = _headers("drafter", email)
 
-    assert await _user_rows(db_session, email) == []
+    assert await _user_rows(test_engine, email) == []
 
     r1 = await client.get(CONTRACTS, headers=headers)
     assert r1.status_code == 200
-    rows = await _user_rows(db_session, email)
+    rows = await _user_rows(test_engine, email)
     assert len(rows) == 1
     assert rows[0].role == "drafter"
     assert rows[0].is_active is True
 
     r2 = await client.get(CONTRACTS, headers=headers)
     assert r2.status_code == 200
-    assert len(await _user_rows(db_session, email)) == 1
+    assert len(await _user_rows(test_engine, email)) == 1
 
 
 @pytest.mark.asyncio
-async def test_contract_drafter_id_is_provisioned_users_id(client: Any, db_session: Any) -> None:
+async def test_contract_drafter_id_is_provisioned_users_id(client: Any, test_engine: Any) -> None:
     """POST /contracts writes the caller's real users.id into drafter_id."""
     email = "jit-drafter-2@example.com"
     headers = _headers("drafter", email)
@@ -83,12 +101,16 @@ async def test_contract_drafter_id_is_provisioned_users_id(client: Any, db_sessi
     )
     assert r.status_code == 201, r.text
 
-    rows = await _user_rows(db_session, email)
+    rows = await _user_rows(test_engine, email)
     assert len(rows) == 1
-    contract = (
-        await db_session.execute(select(Contract).where(Contract.title == title))
-    ).scalar_one()
-    assert contract.drafter_id == rows[0].id
+    session = _session_for(test_engine)
+    try:
+        contract = (
+            await session.execute(select(Contract).where(Contract.title == title))
+        ).scalar_one()
+        assert contract.drafter_id == rows[0].id
+    finally:
+        await session.close()
 
 
 @pytest.mark.asyncio
@@ -121,14 +143,14 @@ async def test_drafter_sees_own_contract_in_scoped_list(client: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_user_self_access_allowed(client: Any, db_session: Any) -> None:
+async def test_get_user_self_access_allowed(client: Any, test_engine: Any) -> None:
     """A non-privileged user can read their own /users/{id} (was 403)."""
     email = "jit-self-4@example.com"
     headers = _headers("drafter", email)
 
     provision = await client.get(CONTRACTS, headers=headers)
     assert provision.status_code == 200
-    rows = await _user_rows(db_session, email)
+    rows = await _user_rows(test_engine, email)
     assert len(rows) == 1
 
     r = await client.get(f"{USERS}/{rows[0].id}", headers=headers)
@@ -143,20 +165,20 @@ async def test_get_user_self_access_allowed(client: Any, db_session: Any) -> Non
 
 
 @pytest.mark.asyncio
-async def test_token_role_is_stored_truthfully(client: Any, db_session: Any) -> None:
+async def test_token_role_is_stored_truthfully(client: Any, test_engine: Any) -> None:
     """ck_users_role accepts every UserRole (incl. auditor) — no silent clamp."""
     email = "jit-auditor-5@example.com"
     headers = _headers("auditor", email)
 
     r = await client.get(CONTRACTS, headers=headers)
     assert r.status_code == 200
-    rows = await _user_rows(db_session, email)
+    rows = await _user_rows(test_engine, email)
     assert len(rows) == 1
     assert rows[0].role == "auditor"
 
 
 @pytest.mark.asyncio
-async def test_same_email_different_oid_is_rejected(client: Any, db_session: Any) -> None:
+async def test_same_email_different_oid_is_rejected(client: Any, test_engine: Any) -> None:
     """An email match bound to a different Entra oid must never merge (401).
 
     Emails get reassigned (offboarding, B2B guests); the oid is the immutable
@@ -171,30 +193,36 @@ async def test_same_email_different_oid_is_rejected(client: Any, db_session: Any
 
     first = await client.get(CONTRACTS, headers=_headers("drafter", email, oid=oid_a))
     assert first.status_code == 200
-    rows = await _user_rows(db_session, email)
+    rows = await _user_rows(test_engine, email)
     assert len(rows) == 1
 
     hijack = await client.get(CONTRACTS, headers=_headers("drafter", email, oid=oid_b))
     assert hijack.status_code == 401
     # No second row was provisioned and the original binding is untouched.
-    rows_after = await _user_rows(db_session, email)
+    rows_after = await _user_rows(test_engine, email)
     assert len(rows_after) == 1
     assert str(rows_after[0].entra_oid) == oid_a
 
 
 @pytest.mark.asyncio
-async def test_deactivated_user_is_rejected(client: Any, db_session: Any) -> None:
+async def test_deactivated_user_is_rejected(client: Any, test_engine: Any) -> None:
     """is_active=false blocks resolution even while the token is still valid."""
     email = "jit-inactive-7@example.com"
     headers = _headers("drafter", email)
 
     first = await client.get(CONTRACTS, headers=headers)
     assert first.status_code == 200
-    rows = await _user_rows(db_session, email)
+    rows = await _user_rows(test_engine, email)
     assert len(rows) == 1
 
-    rows[0].is_active = False
-    await db_session.commit()
+    session = _session_for(test_engine)
+    try:
+        await session.execute(
+            update(User).where(User.email == email).values(is_active=False)
+        )
+        await session.commit()
+    finally:
+        await session.close()
 
     blocked = await client.get(CONTRACTS, headers=headers)
     assert blocked.status_code == 403
