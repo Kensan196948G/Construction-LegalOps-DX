@@ -306,6 +306,10 @@ async def _seed_master_rows(conn: AsyncConnection) -> None:
     54 failures in run 29296646140). The insert is idempotent
     (``WHERE NOT EXISTS``), and on PostgreSQL the identity sequence is bumped
     past the explicit id so later ORM inserts don't collide with the seed.
+
+    users rows are NOT seeded here: ``get_current_user`` JIT-provisions the
+    principal's row on first request (Issue #45), which keeps drafter_id /
+    scope filters consistent without any out-of-band id derivation.
     """
     from sqlalchemy import text as _sql_text
 
@@ -317,56 +321,13 @@ async def _seed_master_rows(conn: AsyncConnection) -> None:
         )
     )
 
-    # contracts.drafter_id is synthesised by contract_service._drafter_int_id()
-    # from the JWT subject (fk_contracts_drafter_id_users). hash() is
-    # per-process randomised (PYTHONHASHSEED), so the ids must be computed
-    # HERE, in the same process that will serve the requests — never
-    # hard-coded. Personas mirror tests/conftest.py and test_rbac_extended.py.
-    try:
-        from app.services.contract_service import _drafter_int_id
-    except Exception:  # pragma: no cover — service layer must be importable
-        _drafter_int_id = None  # type: ignore[assignment]
-    if _drafter_int_id is not None:
-        import uuid as _uuid
-
-        personas: list[tuple[str, str]] = [
-            ("admin-user@example.com", "admin"),
-            ("legal-user@example.com", "reviewer"),
-            ("site-user@example.com", "drafter"),
-            ("viewer-user@example.com", "viewer"),
-            ("drafter-user@example.com", "drafter"),
-            ("reviewer-user@example.com", "reviewer"),
-            ("approver-user@example.com", "approver"),
-        ]
-        # department_id is left NULL: user_service.list_users lazy-loads the
-        # ``department`` relationship during UserOut validation, which raises
-        # MissingGreenlet under async when the FK is set (latent production
-        # bug — tracked separately; a NULL FK resolves to None without IO).
-        for email, role in personas:
-            await conn.execute(
-                _sql_text(
-                    "INSERT INTO users "
-                    "(id, entra_oid, email, display_name, role) "
-                    "SELECT :uid, :oid, :email, :name, :role "
-                    "WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = :uid)"
-                ),
-                {
-                    "uid": _drafter_int_id(email),
-                    "oid": str(_uuid.uuid5(_uuid.NAMESPACE_DNS, email)),
-                    "email": email,
-                    "name": email.split("@")[0],
-                    "role": role,
-                },
-            )
-
     if conn.dialect.name == "postgresql":
-        for table in ("departments", "users"):
-            await conn.execute(
-                _sql_text(
-                    f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), "  # noqa: S608
-                    f"(SELECT GREATEST(COALESCE(MAX(id), 1), 1) FROM {table}))"
-                )
+        await conn.execute(
+            _sql_text(
+                "SELECT setval(pg_get_serial_sequence('departments', 'id'), "
+                "(SELECT GREATEST(COALESCE(MAX(id), 1), 1) FROM departments))"
             )
+        )
 
 
 __all__ = [
