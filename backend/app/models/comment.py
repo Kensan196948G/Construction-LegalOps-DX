@@ -70,21 +70,17 @@ class Comment(IntPKMixin, TimestampMixin, Base):
         String(16),
         nullable=False,
         default="internal",
-        server_default="internal",
+        server_default="'internal'",
     )
     resolved: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
-    resolved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     contract: Mapped[Contract] = relationship("Contract", back_populates="comments")
     clause: Mapped[Clause | None] = relationship("Clause")
     author: Mapped[User] = relationship("User", foreign_keys=[author_id])
-    parent: Mapped[Comment | None] = relationship(
-        "Comment", remote_side="Comment.id"
-    )
+    parent: Mapped[Comment | None] = relationship("Comment", remote_side="Comment.id")
 
     __table_args__ = (
         CheckConstraint(
@@ -118,7 +114,4 @@ class Comment(IntPKMixin, TimestampMixin, Base):
         return self.clause_id if self.clause_id is not None else self.contract_id
 
     def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"<Comment id={self.id} contract_id={self.contract_id} "
-            f"author_id={self.author_id}>"
-        )
+        return f"<Comment id={self.id} contract_id={self.contract_id} author_id={self.author_id}>"

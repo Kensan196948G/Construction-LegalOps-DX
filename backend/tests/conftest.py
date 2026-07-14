@@ -19,26 +19,12 @@ early Loops.
 
 from __future__ import annotations
 
-import asyncio
 import os
 from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 import pytest
 import pytest_asyncio
-
-# ---------------------------------------------------------------------------
-# Event loop
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Provide a single event loop for the whole test session."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
 
 # ---------------------------------------------------------------------------
 # Database URL helpers

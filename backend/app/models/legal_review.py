@@ -53,7 +53,7 @@ class LegalReview(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     )
     review_type: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(
-        String(32), nullable=False, default="pending", server_default="pending"
+        String(32), nullable=False, default="pending", server_default="'pending'"
     )
     ai_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
     ai_input_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -65,25 +65,17 @@ class LegalReview(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     result: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
-    started_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reviewer_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="RESTRICT", use_alter=True),
         nullable=True,
     )
 
-    contract: Mapped[Contract] = relationship(
-        "Contract", back_populates="legal_reviews"
-    )
+    contract: Mapped[Contract] = relationship("Contract", back_populates="legal_reviews")
     reviewer: Mapped[User | None] = relationship("User", foreign_keys=[reviewer_id])
-    risk_items: Mapped[list[RiskItem]] = relationship(
-        "RiskItem", back_populates="legal_review"
-    )
+    risk_items: Mapped[list[RiskItem]] = relationship("RiskItem", back_populates="legal_review")
 
     __table_args__ = (
         CheckConstraint(
@@ -120,7 +112,4 @@ class LegalReview(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     )
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
-        return (
-            f"<LegalReview id={self.id} contract_id={self.contract_id} "
-            f"status={self.status!r}>"
-        )
+        return f"<LegalReview id={self.id} contract_id={self.contract_id} status={self.status!r}>"

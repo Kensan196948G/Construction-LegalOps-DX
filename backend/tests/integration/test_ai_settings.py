@@ -78,9 +78,12 @@ async def fresh_session() -> AsyncGenerator[Any, None]:
     """
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-    from app.db.test_session import create_all_for_tests, create_test_engine
+    from app.db.test_session import DEFAULT_SQLITE_URL, create_all_for_tests, create_test_engine
 
-    engine = create_test_engine()
+    # Always use SQLite :memory: for service-layer isolation, regardless of
+    # PYTEST_USE_POSTGRES — PostgreSQL does not support :memory: databases,
+    # and this fixture's isolation contract requires a fresh schema per test.
+    engine = create_test_engine(DEFAULT_SQLITE_URL)
     await create_all_for_tests(engine)
     Session = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
     session = Session()

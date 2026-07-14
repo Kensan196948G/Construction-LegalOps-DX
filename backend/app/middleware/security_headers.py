@@ -1,4 +1,4 @@
-"""Security response-header middleware.
+"""Security response-header middleware (pure ASGI, no BaseHTTPMiddleware).
 
 Attaches the standard browser-side hardening headers required by
 ``docs/security_policy.md``:
@@ -20,17 +20,17 @@ Attaches the standard browser-side hardening headers required by
 
 The middleware is *additive only*: existing headers set by downstream
 handlers (e.g. ``X-Request-Id``) are preserved.
+
+Implementation note: pure ASGI (no ``BaseHTTPMiddleware``) to avoid the
+anyio task-group loop-binding issue that occurs with asyncpg in tests.
 """
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from typing import Final
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
-from starlette.types import ASGIApp
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.config import settings
 
@@ -92,53 +92,57 @@ def _build_csp() -> str:
 _CSP_HEADER_VALUE: Final[str] = _build_csp()
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Append browser-hardening response headers."""
+class SecurityHeadersMiddleware:
+    """Append browser-hardening response headers (pure ASGI, no BaseHTTPMiddleware)."""
 
     def __init__(self, app: ASGIApp, *, force_https: bool | None = None) -> None:
-        super().__init__(app)
+        self.app = app
         self._force_https = settings.is_production if force_https is None else force_https
 
-    async def dispatch(  # type: ignore[override]
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        response = await call_next(request)
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-        # Enforce CSP when is_csp_enforce is True (production by default, or
-        # when CSP_ENFORCE=true is set explicitly e.g. on staging).
-        csp_header = (
-            "Content-Security-Policy"
-            if settings.is_csp_enforce
-            else "Content-Security-Policy-Report-Only"
-        )
-        response.headers.setdefault(csp_header, _CSP_HEADER_VALUE)
-        response.headers.setdefault("X-Frame-Options", "DENY")
-        response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        response.headers.setdefault("Permissions-Policy", _PERMISSIONS_POLICY)
-        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
-        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
-        response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
-        # Cache hint for authenticated API responses — never store on shared
-        # caches. Individual endpoints may override.
-        response.headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, private")
+        # Resolve HTTPS from the incoming scope (request headers are in scope).
+        is_https = self._force_https or _is_https_scope(scope)
 
-        # HSTS only over HTTPS to avoid pinning unreachable hosts during
-        # local docker-compose loops.
-        if self._force_https or _is_https(request):
-            response.headers.setdefault("Strict-Transport-Security", _HSTS_VALUE)
+        async def add_security_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                # MutableHeaders(scope=message) reads/writes message["headers"] in-place.
+                message.setdefault("headers", [])
+                headers = MutableHeaders(scope=message)
+                csp_header = (
+                    "Content-Security-Policy"
+                    if settings.is_csp_enforce
+                    else "Content-Security-Policy-Report-Only"
+                )
+                headers.setdefault(csp_header, _CSP_HEADER_VALUE)
+                headers.setdefault("X-Frame-Options", "DENY")
+                headers.setdefault("X-Content-Type-Options", "nosniff")
+                headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+                headers.setdefault("Permissions-Policy", _PERMISSIONS_POLICY)
+                headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+                headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+                headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
+                # Cache hint for authenticated API responses — never store on shared
+                # caches. Individual endpoints may override.
+                headers.setdefault("Cache-Control", "no-store, no-cache, must-revalidate, private")
+                if is_https:
+                    headers.setdefault("Strict-Transport-Security", _HSTS_VALUE)
+            await send(message)
 
-        return response
+        await self.app(scope, receive, add_security_headers)
 
 
-def _is_https(request: Request) -> bool:
+def _is_https_scope(scope: Scope) -> bool:
     """Detect HTTPS taking ``X-Forwarded-Proto`` into account."""
-    if request.url.scheme == "https":
+    if scope.get("scheme") == "https":
         return True
-    forwarded = request.headers.get("x-forwarded-proto", "").lower()
-    return "https" in forwarded
+    for name, value in scope.get("headers", []):
+        if name.lower() == b"x-forwarded-proto":
+            return b"https" in value.lower()
+    return False
 
 
 __all__ = ["SecurityHeadersMiddleware"]

@@ -402,6 +402,9 @@ def _mask_my_number(match: re.Match[str]) -> str:
 
 
 def _mask_phone(match: re.Match[str]) -> str:
+    total_digits = len(match.group(1)) + len(match.group(2)) + len(match.group(3))
+    if total_digits < 10:
+        return match.group(0)  # too short to be a real Japanese phone number
     return f"{match.group(1)}-****-{match.group(3)}"
 
 
