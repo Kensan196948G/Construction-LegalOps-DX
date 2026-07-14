@@ -7,17 +7,18 @@
     "release_deadline": "2026-11-16",
     "duration_months": 6,
     "phase_mode": "development",
-    "status": "code_complete_deployment_ready",
+    "status": "development_p1_defect_found",
     "last_loop_completed": 26,
     "loops_total": 26,
     "current_version": "0.1.11",
-    "cto_release_assessment": "code_complete_deployment_ready",
-    "cto_assessment_date": "2026-05-30",
+    "cto_release_assessment": "not_deploy_ready — Issue #45 (PG hard-gate が identity マッピング本番欠陥を摘出: contracts 作成が実 PG で FK 違反 / GET /users が department 保持行で 500)。修正まで deploy 不可",
+    "cto_assessment_date": "2026-07-14",
     "deployment_blockers": [
+      "Issue #45: JWT subject を数値 id として扱う identity マッピング欠陥 (contract/review/knowledge/dashboard/risk 各サービス) — P1 コード修正",
       "Vault secrets injection (human operation: ./scripts/setup_vault_secrets.sh)",
       "CSP enforce (ops: apply infra/nginx/security-headers.enforce.conf after 7-day data)"
     ],
-    "deploy_ready": true
+    "deploy_ready": false
   },
   "goal": "Construction-LegalOps-DX 自律開発 — Supervisor 主導 Goal 駆動体制 (Release Ready 到達)",
   "phase": "Improve",
@@ -26,7 +27,7 @@
     "ci_success_rate": 1,
     "test_pass_rate": 1,
     "security_critical": 0,
-    "blocker_count": 0
+    "blocker_count": 1
   },
   "execution": {
     "max_duration_minutes": 300,
