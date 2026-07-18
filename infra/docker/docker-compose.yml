@@ -304,8 +304,109 @@ volumes:
     name: legalops-redisdata
   nginx-certs:
     name: legalops-nginx-certs
+  prometheus-data:
+    name: legalops-prometheus-data
+  grafana-data:
+    name: legalops-grafana-data
 
 networks:
   legalops-net:
     name: legalops-net
     driver: bridge
+
+  # ----------------------------------------------------------
+  # Prometheus (metrics collection)
+  # `--profile monitoring` で起動
+  # ----------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: legalops-prometheus
+    <<: *restart
+    user: "65534:65534"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["monitoring"]
+
+  # ----------------------------------------------------------
+  # Alertmanager (alert routing)
+  # `--profile monitoring` で起動
+  # ----------------------------------------------------------
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: legalops-alertmanager
+    <<: *restart
+    user: "65534:65534"
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["monitoring"]
+
+  # ----------------------------------------------------------
+  # Grafana (dashboards)
+  # `--profile monitoring` で起動
+  # ----------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: legalops-grafana
+    <<: *restart
+    user: "472:472"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/legalops-backend.json:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["monitoring"]

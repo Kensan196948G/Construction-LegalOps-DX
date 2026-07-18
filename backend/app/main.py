@@ -6,6 +6,7 @@ structured logging middleware, Prometheus metrics, and the v1 router.
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -35,7 +36,7 @@ from app.core.logging import (
     get_logger,
     set_request_context,
 )
-from app.db.session import dispose_engine, get_db
+from app.db.session import dispose_engine, get_db, update_pool_metrics
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sensitive_masking import SensitiveMaskingMiddleware
 
@@ -74,11 +75,29 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         app_env=settings.app_env,
         app_name=settings.app_name,
     )
+    _pool_metrics_task: asyncio.Task[None] | None = None
     try:
+        _pool_metrics_task = asyncio.create_task(_pool_metrics_loop())
         yield
     finally:
+        if _pool_metrics_task is not None:
+            _pool_metrics_task.cancel()
+            try:
+                await _pool_metrics_task
+            except asyncio.CancelledError:
+                pass
         logger.info("app_shutdown")
         await dispose_engine()
+
+
+async def _pool_metrics_loop(interval: float = 30.0) -> None:
+    """Periodically update DB pool metrics for Prometheus scraping."""
+    while True:
+        try:
+            update_pool_metrics()
+        except Exception:
+            logger.debug("pool_metrics_update_failed", exc_info=True)
+        await asyncio.sleep(interval)
 
 
 # ---------------------------------------------------------------------------

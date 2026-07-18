@@ -2,17 +2,46 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from typing import Final
 
+from prometheus_client import Counter, Gauge
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+_COMMIT_FAILURES: Final[Counter] = Counter(
+    "db_commit_failures_total",
+    "Total number of failed DB commits (commit-after-response window).",
+    registry=None,
+)
+
+_DB_POOL_SIZE: Final[Gauge] = Gauge(
+    "db_pool_size",
+    "Configured size of the asyncpg connection pool.",
+    registry=None,
+)
+
+_DB_POOL_AVAILABLE: Final[Gauge] = Gauge(
+    "db_pool_available",
+    "Number of idle connections available in the asyncpg pool.",
+    registry=None,
+)
+
+_DB_CONNECTION_ERRORS: Final[Counter] = Counter(
+    "db_connection_errors_total",
+    "Total number of database connection errors.",
+    registry=None,
+)
 
 
 def _build_engine() -> AsyncEngine:
@@ -57,6 +86,8 @@ async def get_db() -> AsyncIterator[AsyncSession]:
     """FastAPI dependency that yields an async DB session.
 
     Auto-commits on clean exit; rolls back on exception; always closes.
+    Commit failures are logged and metered so the commit-after-response
+    window (JIT provisioning / audit writes) is observable.
     """
     session = AsyncSessionLocal()
     try:
@@ -64,6 +95,8 @@ async def get_db() -> AsyncIterator[AsyncSession]:
         await session.commit()
     except Exception:
         await session.rollback()
+        _COMMIT_FAILURES.inc()
+        logger.warning("db_commit_failed", exc_info=True)
         raise
     finally:
         await session.close()
@@ -74,9 +107,22 @@ async def dispose_engine() -> None:
     await engine.dispose()
 
 
+async def update_pool_metrics() -> None:
+    """Update Prometheus gauges with current connection pool state.
+
+    Called periodically (e.g. from the FastAPI lifespan background task)
+    to expose asyncpg pool metrics for Prometheus scraping.
+    """
+    pool = engine.pool
+    if isinstance(pool, AsyncAdaptedQueuePool):
+        _DB_POOL_SIZE.set(pool.size())
+        _DB_POOL_AVAILABLE.set(pool.size() - pool.checkedout())
+
+
 __all__ = [
     "AsyncSessionLocal",
     "dispose_engine",
     "engine",
     "get_db",
+    "update_pool_metrics",
 ]

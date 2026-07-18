@@ -61,3 +61,13 @@ groups:
         annotations:
           summary: "Database connection errors detected"
           description: "DB connection errors are occurring."
+
+      # ---- Commit-after-response window ----
+      - alert: DatabaseCommitFailures
+        expr: rate(db_commit_failures_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database commit failures detected"
+          description: "DB commit failures (commit-after-response window) are occurring. JIT provisioning or audit writes may be silently lost."
