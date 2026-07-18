@@ -8,20 +8,21 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 32,
-    "loops_total": 32,
+    "last_loop_completed": 33,
+    "loops_total": 33,
     "current_version": "0.1.12",
-    "cto_release_assessment": "production_ready_pending_human_actions",
-    "cto_assessment_date": "2026-07-17",
+    "cto_release_assessment": "phase1_complete_production_ready_pending_human_actions",
+    "cto_assessment_date": "2026-07-18",
     "deployment_blockers": [
       "Vault secrets injection (human operation: ./scripts/setup_vault_secrets.sh)",
-      "CSP enforce (ops: apply infra/nginx/security-headers.enforce.conf after 7-day data)"
+      "CSP enforce (ops: apply infra/nginx/security-headers.enforce.conf after 7-day data)",
+      "CF/Neon 本番リソース作成 (人間: API token + Neon project + DNS) — Issue #50"
     ],
     "deploy_ready": true,
-    "last_session_summary": "Loop 31: /goal-driven final prep session — main synced to HEAD 8f1c180 (was 04efb5a, +30 ループ分). CHANGELOG / README / HANDOVER を Loop 30 まで最新化. 全 PR マージ済み確認 (56 件 MERGED, 0 OPEN). main CI run 29309456627 SUCCESS (2026-07-14). secrets 漏洩スキャン完了 (生キー/AWS key ゼロ). WebUI 起動確認 (frontend 3010 / backend 8010). Issue 整備 (#23 #24 #41 #48 #50 #51). 本番デプロイは人間承認待ちで停止."
+    "last_session_summary": "Loop 33: Phase 1 最終整備完了. P2 #41 PyJWT 移行 (906 passed). P2 #48 JIT 残課題 5/6 完了. P2 #51 運用基盤完成. CF/Neon IaC 整備 + CD 経路 3 ジョブ. 全文書最新化. 全検証 green. 本番デプロイは人間承認待ち. Issues #41 #48 #51 完了, #50 進捗更新."
   },
-  "goal": "Phase 1: P2 コード改善完了 (#41 + #48 + #51) → 検証 → WebUI 確認 → 文書更新 → 停止",
-  "phase": "Verify",
+  "goal": "Phase 1 完了. 本番デプロイ・Vault secrets 投入・CSP enforce・CF/Neon リソース作成は人間待ち",
+  "phase": "Completed",
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": 1.0,
@@ -236,10 +237,9 @@
   "next_actions": [
     "本番環境 Vault secrets 投入 — P0 人間作業 (#23)",
     "CSP enforce 移行 — P0 人間作業 (#24)",
-    "Cloudflare/Neon 移行採否判断 — 人間判断 (#50)",
-    "PR マージ最終判断 — 人間判断 (該当 PR なし、現在 0 OPEN)",
-    "本番デプロイ実行 — 人間判断 (RELEASE_CHECKLIST §7 通過後)",
-    "P2 #41 PyJWT 移行 / #48 JIT 残課題 / #51 運用基盤ギャップ"
+    "CF/Neon 本番リソース作成 — P0 人間作業 (#50)",
+    "本番デプロイ実行 — 人間判断",
+    "Phase 2: 本番後確認・安定化 (本番デプロイ後に別セッションで)"
   ],
   "completed_issues": [
     19,
@@ -248,7 +248,8 @@
     43,
     45,
     41,
-    48
+    48,
+    51
   ],
   "blocked_issues": [],
   "learning": {
