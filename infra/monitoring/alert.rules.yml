@@ -1,0 +1,63 @@
+# Alertmanager rules for Construction-LegalOps-DX
+# Deploy: mount at /etc/prometheus/alert.rules.yml
+
+groups:
+  - name: legalops_critical
+    rules:
+      # ---- Service availability ----
+      - alert: BackendDown
+        expr: up{job="legalops-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend service is down"
+          description: "FastAPI backend has been unreachable for more than 2 minutes."
+
+      - alert: HealthCheckFailing
+        expr: probe_success{job="legalops-backend"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Health check endpoint failing"
+          description: "/healthz on backend is returning non-200 or unreachable."
+
+      # ---- Latency SLO ----
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 latency exceeds SLO (500ms)"
+          description: "API p95 latency is above 500ms over the last 5 minutes."
+
+      # ---- Error rate ----
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Error rate exceeds SLO (1%)"
+          description: "5xx error rate is above 1% over the last 5 minutes."
+
+      # ---- Database ----
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_pool_size - db_pool_available < 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB connection pool near exhaustion"
+          description: "Less than 2 connections available in the asyncpg pool."
+
+      - alert: DatabaseConnectionFailures
+        expr: rate(db_connection_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection errors detected"
+          description: "DB connection errors are occurring."

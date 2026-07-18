@@ -1,0 +1,31 @@
+# Prometheus scrape configuration for Construction-LegalOps-DX
+# Deploy: copy to /etc/prometheus/prometheus.yml or mount via docker compose
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: construction-legalops-dx
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - "/etc/prometheus/alert.rules.yml"
+
+scrape_configs:
+  - job_name: "legalops-backend"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: "fastapi"
+          env: "${APP_ENV:-development}"
+
+  - job_name: "legalops-nginx"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["nginx-exporter:9113"]
+        labels:
+          service: "nginx"
