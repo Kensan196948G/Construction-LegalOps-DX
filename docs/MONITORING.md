@@ -6,7 +6,7 @@
 | 項目 | 内容 |
 |---|---|
 | 👥 対象読者 | 運用担当者・インフラ担当者・監視基盤の構築担当者 |
-| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。**Prometheus / Grafana 等の監視基盤は未構築** (§5)。現状の監視は compose healthcheck + 手動確認 + 週次 CI スキャン |
+| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。**Prometheus / Alertmanager / Grafana は IaC 設定完成** (--profile monitoring で起動可)。`infra/monitoring/` 配下に設定一式あり |
 | 📄 関連文書 | `docs/OPERATIONS.md` (ログの見方) / `docs/INCIDENT_RESPONSE.md` (異常検知後の対応) / `docs/PORT_ALLOCATION.md` (ポート) |
 
 ---

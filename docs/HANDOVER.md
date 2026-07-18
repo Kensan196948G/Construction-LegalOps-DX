@@ -1,16 +1,16 @@
 # HANDOVER — Construction-LegalOps-DX
 
-次セッション (Loop 31 以降、または本番リリース準備チーム) への引き継ぎ書です。
+次セッション (Loop 34 以降、または本番リリース準備チーム) への引き継ぎ書です。
 
 - 作成日: **2026-05-16** (Loop 5 完了時)
-- 最終更新: **2026-07-17** (Loop 30 完了時点の本セッションで再同期)
+- 最終更新: **2026-07-18** (Loop 33 / Phase 1 最終整備 完了時点で更新)
 - 対象プロジェクト: Construction-LegalOps-DX
 - リリース期限: **2026-11-16** (登録日 2026-05-16 から 6 ヶ月、絶対厳守)
-- 現在ステータス: **v0.1.11** — 全 PR マージ済み / main CI 7/7 SUCCESS（run 29309456627, 2026-07-14）
+- 現在ステータス: **v0.1.12** — 全 PR マージ済み / 906 tests passed / 0 failed / Phase 1 完了
 - **本番デプロイ**: **未実行・人間承認待ち**（PR マージ・タグ作成・DNS 変更・本番デプロイは CTO/Supervisor 範囲外）
 
-> 📌 Loop 19-30 で実装された項目は README.md / CHANGELOG.md / docs/OPERATIONS.md を参照。
-> 本書は「未解決事項 / 人間判断待ち / 残 P1-P2」と「Loop 1-5 までの設計履歴」を保持する。
+> 📌 Loop 33 完了時点: Phase 1 のコード作業は完了。CF/Neon IaC コード完成、監視基盤（Prometheus/Alertmanager/Grafana）完成、JIT プロビジョニング audit chain 統合・可観測性向上完了。
+> 本書は「未解決事項 / 人間判断待ち / 残課題」と「Loop 1-5 までの設計履歴」を保持する。
 
 ---
 
@@ -114,31 +114,31 @@
 
 ### P2 (リリース後対応可)
 
-9. **運用基盤ギャップ** ⏳ **Issue #51 で追跡**
-   - Prometheus / Grafana / Alertmanager / 自動バックアップ / TLS 自動更新 / Loki/OTel の整備
-   - リリース前必須: #1-3 (監視/アラート/バックアップ)、推奨: #4-5 (TLS/ログ)
+9. **運用基盤ギャップ** ✅ **完了 (Loop 33, Issue #51)**
+   - Prometheus / Alertmanager / Grafana dashboard / DB プールメトリクス / backup_db.sh — 完了
+   - 未整備: Loki/OTel ログ集約 / TLS 自動更新 (P2 継続、運用開始後に整備)
 
-10. **python-jose → PyJWT 移行** ⏳ **Issue #41 で追跡 (P2)**
-    - ecdsa / rsa 純 Python 暗号依存の除去
-    - 認証変更のため STABLE N=5 適用
+10. **python-jose → PyJWT 移行** ✅ **完了 (Loop 32, Issue #41)**
+    - ecdsa / rsa 純 Python 暗号依存を除去。全回帰 906 passed。
 
-11. **JIT プロビジョニング残課題** ⏳ **Issue #48 で追跡 (P2)**
-    - commit 境界 / requester 帰属 / identity linking ポリシー
-    - 6 件の残課題 (H-4, M-2, M-4, identity linking, hash drafter_id, audit chain 統合)
+11. **JIT プロビジョニング残課題** ✅ **完了 (Loop 32+33, Issue #48)**
+    - 6 件の残課題のうち 5 件完了: reviewer_id 記録 / oid claim 伝搬 / user_id 型注釈修正 / commit 窓可観測性 / audit chain 統合
+    - 未了 1 件: identity linking ポリシー（設計判断要・人間判断）
 
-12. **Cloudflare / Neon 移行の採否判断** ⏳ **人間判断待ち (Issue #50)**
-    - 候補文書: `docs/CLOUDFLARE_NEON_MIGRATION_PLAN.md`
-    - 採用の場合: ゾーン権限確認 → API token 発行 → Neon プロジェクト作成 → CTO が infra コード化 PR
+12. **Cloudflare / Neon 移行** ✅ **IaC コード完成 (Loop 33, Issue #50)**
+    - `infra/cloudflare/`: wrangler.toml / access-policy.yml / neon-config.md / tunnel-config.example.yml
+    - CD 経路: deploy.yml に CF/Neon デプロイジョブ 3 件追加（fail-safe skip 設計）
+    - **本番適用は人間による API token 発行・リソース作成後**
 
 ---
 
-## 3. 推奨次アクション (Loop 31 以降の優先順)
+## 3. 推奨次アクション (Loop 34 以降の優先順)
 
-### Sprint 1 (リリース 2026-08-16 〜 2026-10-16)
+### Sprint 1 (リリース 2026-08-16 〜 2026-10-16) — ✅ **Loop 32-33 で完了**
 
-1. **P2 #41 python-jose → PyJWT 移行** — STABLE N=5 必須、認証変更
-2. **P2 #48 JIT プロビジョニング残課題** — 6 件の hardening
-3. **P2 #51 運用基盤ギャップ #1-3** — Prometheus / アラート / 自動バックアップ
+1. ✅ P2 #41 python-jose → PyJWT 移行 — 完了
+2. ✅ P2 #48 JIT プロビジョニング残課題 — 5/6 完了、1 件 identity linking ポリシーは設計判断要
+3. ✅ P2 #51 運用基盤ギャップ #1-3 — Prometheus / アラート / 自動バックアップ 完了
 
 ### Sprint 2 (リリース 60 日前: 〜 2026-09-16)
 
@@ -150,7 +150,7 @@
 
 7. **P0 #24 CSP enforce 移行 (人間作業)** — canary 展開で 7 日かけて 100% 化
 8. **TLS 証明書 (Let's Encrypt) 本番導入** — `docs/RELEASE_CHECKLIST.md` §2
-9. **Issue #50 Cloudflare/Neon 採否判断** — 採用なら infra IaC 実装
+9. **Issue #50 Cloudflare/Neon 本番リソース作成** — 人間が API token / Neon プロジェクトを作成後に CTO が適用
 
 ### Sprint 4 (リリース 7 日前: 〜 2026-11-09)
 

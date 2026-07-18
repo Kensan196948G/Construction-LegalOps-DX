@@ -7,7 +7,7 @@
 | 項目 | 内容 |
 |---|---|
 | 👥 対象読者 | インフラ担当者・運用担当者・オンコール対応者 |
-| 🏗️ 前提 | **本番未リリース**。Docker Compose によるオンプレ (社内サーバー) 構成。Kubernetes / クラウドマネージドサービスは不使用 |
+| 🏗️ 前提 | **本番未リリース**。Docker Compose によるオンプレ構成。Cloudflare/Neon 移行の IaC コード完成（`infra/cloudflare/`）。監視基盤（Prometheus/Alertmanager/Grafana）設定完成（`--profile monitoring`） |
 | 📄 関連文書 | `docs/PORT_ALLOCATION.md` / `docs/RELEASE_CHECKLIST.md` / `docs/INCIDENT_RESPONSE.md` / `docs/MONITORING.md` / `docs/BACKUP_RESTORE.md` |
 
 ---

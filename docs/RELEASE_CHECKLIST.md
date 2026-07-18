@@ -1,21 +1,23 @@
 # RELEASE CHECKLIST — Construction-LegalOps-DX
 
-本ドキュメントは **2026-11-16 本番リリース** に向けた最終確認チェックリストです。すべての項目をリリース責任者・法務担当者・インフラ担当者の三者でクロスチェックしてください。
+本ドキュメントは **2026-11-16 本番リリース** に向けた最終確認チェックリストです。
 
-**最終更新: 2026-05-30 (v0.1.8)** — Loop 18 完了時点の実施状況を反映
+**最終更新: 2026-07-18 (v0.1.12)** — Phase 1 最終整備 (Loop 33) 完了時点の実施状況を反映
 
-## 📊 Release Readiness ダッシュボード (2026-05-30)
+## 📊 Release Readiness ダッシュボード (2026-07-18)
 
 | カテゴリ     | 状態            | 詳細                                                    |
 | ------------ | --------------- | ------------------------------------------------------- |
-| 🧪 テスト    | ✅              | 812 passed / 91% coverage / mypy 0 errors               |
+| 🧪 テスト    | ✅              | 906 passed / 0 failed / ruff clean / mypy 0 errors      |
 | 🔐 RS256 JWT | ✅ コード完成   | `scripts/generate_rsa_keys.sh` 準備済み。Vault 投入待ち |
 | 🏥 /readyz   | ✅ Deep check   | DB(critical) + Redis/Claude(degraded) 実装済み          |
 | 📋 全 API    | ✅              | 12 エンドポイント全 DB バック化完了                     |
-| 🐳 Docker    | ✅              | docker-compose.yml + prod overlay 動作確認済み          |
-| ⚡ E2E       | 🔄 基盤整備済み | Playwright smoke/contracts/dashboard 3件                |
-| 🔑 Vault     | ⏳              | 本番 secrets 投入が残課題                               |
-| 🛡️ CSP       | ⏳ Report-Only  | enforce 移行は 7日間データ収集後                        |
+| 🐳 Docker    | ✅              | docker-compose.yml + prod overlay + monitoring profile  |
+| ⚡ E2E       | ✅ 44 passed    | Playwright 7 ファイル（CI HARD gate）                   |
+| 🔑 Vault     | ⏳              | 本番 secrets 投入が残課題 (#23)                         |
+| 🛡️ CSP       | ⏳ Report-Only  | enforce 移行は 7日間データ収集後 (#24)                  |
+| ☁️ CF/Neon   | ✅ IaC 完成     | wrangler/Access/Tunnel/Neon config。本番リソース作成待ち|
+| 📊 監視基盤  | ✅ IaC 完成     | Prometheus/Alertmanager/Grafana (`--profile monitoring`)|
 
 ---
 

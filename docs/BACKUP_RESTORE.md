@@ -7,7 +7,7 @@
 | 項目 | 内容 |
 |---|---|
 | 👥 対象読者 | インフラ担当者・障害対応でリストアを実施する運用担当者 |
-| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。**自動バックアップは未整備** (§6) — 現状は手動取得のみ |
+| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。**自動バックアップスクリプト整備済み** (`scripts/backup_db.sh`)。Neon 移行後は Neon branching による PITR と併用 |
 | 📄 関連文書 | `docs/INCIDENT_RESPONSE.md` (リストア判断・エスカレーション) / `docs/RELEASE_CHECKLIST.md` §3 (本番 DB 要件) / `docs/database_design.md` |
 
 > 🚨 **RPO / RTO は未定義** (本番未リリースのため業務側と未合意)。
