@@ -122,3 +122,6 @@ frontend/**/CLAUDE.md
 docs/CLAUDE.md
 infra/**/CLAUDE.md
 scripts/**/CLAUDE.md
+
+# opencode plugin directory (auto-generated)
+.opencode/
