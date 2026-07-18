@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (2026-07-18 Loop 32: Phase 1 最終整備 — P2 改善)
+
+- **PyJWT 移行 (Issue #41, commit 4ca68f3)**: `python-jose[cryptography]` → `PyJWT[crypto]>=2.9.0`。
+  ecdsa/rsa 純 Python 暗号依存を除去。`security.py` の `JWTError` → `jwt.PyJWTError` への
+  例外クラス変更 2 箇所、import を `import jwt` に統一。`session.py` に SQLite NullPool 検出を
+  追加し pool_size 引数競合を防止。全回帰 906 passed / 19 JWT tests passed。
+- **JIT プロビジョニング残課題 3 件修正 (Issue #48, commit 52d5a88)**:
+  `ai_review_service.start_review` に `reviewer_id` を記録、
+  `auth.refresh_token` に `oid` claim を伝搬（リフレッシュ後 JIT 不整合防止）、
+  `audit_service` の `user_id` 型注釈を `UUID|None` → `int|UUID|None` に修正。
+- **運用基盤設定追加 (Issue #51, commit 62e0032)**:
+  `infra/monitoring/prometheus.yml` (FastAPI scrape 設定) +
+  `infra/monitoring/alert.rules.yml` (6 alert rules) +
+  `scripts/backup_db.sh` (pg_dump 圧縮バックアップ + restore スクリプト、30 日世代管理)。
+
 ### Added (2026-07-14: k6 負荷テスト基盤 — Issue #35, PR #36)
 
 - **k6 負荷テストスイート** (`infra/k6/load-test.js`): smoke (5VU/30s) / load (最大20VU/約5min,
@@ -83,6 +98,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **可観測性**: 鍵設定の不正（公開鍵 malformed・`JWT_PUBLIC_KEYS` の JSON parse 失敗・非 list・退役鍵スキップ）は全て `logging.warning` で記録（本番でのサイレント失敗を禁止）。`security.py` / `config.py` の import 軽量性を保つため structlog ではなく stdlib `logging` を採用。
 - **後方互換**: `kid` を持たないローテーション前トークンはアクティブ公開鍵にフォールバック（`JWT_REQUIRE_KID=false` 時）。HS256 パスも維持（dev/test）。
 - **テスト**: `tests/unit/test_jwt_rs256.py` に 19 ケース（HS256/RS256 roundtrip・wrong key 拒否・rotation・unknown kid 拒否・explicit kid・legacy token・malformed 退役鍵混在・空 kid 拒否・`JWT_REQUIRE_KID` legacy 拒否・署名側 fail-fast）。
+
+### Added (Loop 24-30: 本番同等スタック検証 + CD 経路確立 + 運用文書整備)
+
+> **現状**: v0.1.11 / Loop 30 完了 / 全 PR マージ済み / main CI 7/7 SUCCESS（run 29309456627, 2026-07-14）。
+> **本番デプロイ**: 未実行（人間承認待ち状態）。
+
+#### Loop 24 (k6 負荷テスト基盤 — Issue #35, PR #36)
+- 3 シナリオ構成: smoke(5VU/30s) / load(0→20VU ramp SLO ゲート) / soak(10VU/10min メモリリーク検出)
+- SLO: p(95) < 500ms / エラー率 < 1%
+- 認証エンドポイントは `JWT_TOKEN` 環境変数設定時のみ実行、CI は無認証で liveness/readyz 計測
+- `/readyz` 呼び出し頻度制限（`__ITER % 5 === 0` ゲート）で DB 過負荷回避
+- `infra/k6/load-test.js` + `infra/k6/README.md`
+
+#### Loop 25 (Jest HARD ゲート化 — PR #37)
+- `|| true` ソフトフェイル廃止 → HARD CI ゲート化
+- `frontend/e2e/` を Jest `testPathIgnorePatterns` に追加（Playwright spec の誤収集解消）
+- `@testing-library/dom` を devDependencies に追加
+
+#### Loop 27 (Issue #45 根治 + PR #38 hard-gate)
+- **CurrentUser.db_id + JIT プロビジョニング**: `get_current_user` で oid/email lookup → get-or-create、savepoint 競合吸収
+- 誤用全数修正: hash 合成廃止 / WHERE ×8 / 認可比較 / 監査 actor ×30
+- `user_service.selectinload` + ARRAY patch 自己再帰修正
+- users シード撤去（JIT が代替）
+- PR #47 / PR #38
+
+#### Loop 28 (運用文書 4 本 + Cloudflare/Neon 移行計画)
+- `docs/OPERATIONS.md` — 日常運用手順（サービス構成・起動停止・ログ・スケール）
+- `docs/MONITORING.md` — 監視対象・エンドポイント仕様・未整備項目の明示
+- `docs/INCIDENT_RESPONSE.md` — 障害対応手順（エスカレーション・復旧ランブック）
+- `docs/BACKUP_RESTORE.md` — バックアップ・リストア手順
+- `docs/CLOUDFLARE_NEON_MIGRATION_PLAN.md` — 採用判断用候補文書（人間判断待ち、Issue #50）
+- PR #52
+
+#### Loop 29 (CD 経路 + マイグレーション CI ゲート)
+- `.github/workflows/deploy.yml` (CD: image publish) — GHCR イメージ発行
+- `infra/cloudflare/tunnel-config.example.yml` — Cloudflare Tunnel IaC 雛形
+- `infra/cloudflare/README.md`
+- alembic URL 解決の欠陥修正 + マイグレーション CI ゲート新設
+- PR #53 / PR #54
+
+#### Loop 30 (P1 ×3 根治 + 本番同等スタック検証)
+- CI 内本番同等スタック検証の確立（PostgreSQL 16 + Redis 7 で実走）
+- k6 SLO 達成（p95 < 500ms、エラー率 < 1%）
+- マイグレーションゲートで本番スキーマ整合性を保証
+- PR #55
+
+### Security (Loop 21-30)
+- **weekly security.yml true green**: pip-audit スコープ修正 + python-jose >=3.4.0 bump + Bandit SARIF graceful (PR #30, v0.1.11)
+- **HIGH CVE 修正**: form-data CRLF injection + ws DoS を npm audit fix で解消 (PR #33)
+- **ecdsa PYSEC-2026-1325 (won't-fix) 到達不能根拠付き ignore**: 依存ツリーには存在するが実コードで未使用 (PR #42, Issue #40)
+- **Trivy install 404 回避**: main 版・version 引数省略 + backend/frontend image CVE 解消 (PR #26)
+
+### Compliance Notes
+- 本プロダクトは **生成 AI による法的判断の確定を提供しません**。AI 出力は下書きであり、弁護士法第 72 条の遵守、社内法務ガバナンス、顧問弁護士の最終確認を必須運用とします。
+- 監査ログ (プロンプト・応答・モデルバージョン) は法定保存期間に従い保持されます。
+- 認証・認可・DB スキーマ・並列処理変更は Codex 対抗レビュー必須。
+
+### Known Limitations (Loop 30 時点の本番デプロイ前残課題)
+- ⚠️ **P0: 本番環境 Vault secrets 投入**（人間作業: `./scripts/setup_vault_secrets.sh`、Issue #23）
+- ⚠️ **P0: CSP Report-Only → enforce 移行**（ops 7 日後: `infra/nginx/security-headers.enforce.conf` 適用、Issue #24）
+- ⚠️ **P2: Cloudflare/Neon 移行の採否**（人間判断: Issue #50）
+- ⚠️ **P2: 運用基盤ギャップ**（Prometheus/Grafana/Alertmanager/自動バックアップ — Issue #51）
+- ⚠️ **P2: python-jose → PyJWT 移行**（ecdsa/rsa 純 Python 暗号依存の除去 — Issue #41）
+- ⚠️ **P2: JIT プロビジョニング残課題**（commit 境界 / requester 帰属 / identity linking — Issue #48）
+
+[Unreleased]: https://github.com/Construction-LegalOps-DX/Construction-LegalOps-DX/compare/v0.1.11...HEAD
 
 ## [0.1.8] - 2026-05-30
 
