@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-07-18 Loop 33: Phase 1 最終整備 — CF/Neon IaC + 監視基盤完成)
+
+- **Cloudflare/Neon IaC 整備 (Issue #50)**:
+  `infra/cloudflare/wrangler.toml` (Pages 設定)、`access-policy.yml` (Access ポリシー定義)、
+  `neon-config.md` (Neon 接続設定・マイグレーション手順)、`README.md` 更新。
+  CD 経路に CF/Neon デプロイジョブ 3 件追加（fail-safe skip 設計）。
+- **JIT プロビジョニング残課題 2 件 (Issue #48)**:
+  commit-after-response 窓の可観測性向上（`db_commit_failures_total` Counter + ログ警告）、
+  JIT プロビジョニングを audit chain に統合（`audit_service.log` で `user.jit_provision` 記録）。
+- **運用基盤完成 (Issue #51)**:
+  `infra/monitoring/alertmanager.yml` (Alertmanager 設定)、
+  `infra/monitoring/grafana-dashboard.json` (Grafana ダッシュボード 8 パネル)、
+  DB プールメトリクス（`db_pool_size`/`db_pool_available`/`db_connection_errors_total`）、
+  `DatabaseCommitFailures` アラートルール追加、
+  docker-compose に Prometheus/Alertmanager/Grafana サービス追加（`--profile monitoring`）。
+
 ### Changed (2026-07-18 Loop 32: Phase 1 最終整備 — P2 改善)
 
 - **PyJWT 移行 (Issue #41, commit 4ca68f3)**: `python-jose[cryptography]` → `PyJWT[crypto]>=2.9.0`。
