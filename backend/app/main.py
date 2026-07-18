@@ -10,7 +10,7 @@ import asyncio
 import time
 import uuid
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any, Final
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
@@ -82,10 +82,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     finally:
         if _pool_metrics_task is not None:
             _pool_metrics_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await _pool_metrics_task
-            except asyncio.CancelledError:
-                pass
         logger.info("app_shutdown")
         await dispose_engine()
 
@@ -151,7 +149,7 @@ class RequestContextMiddleware:
             # Use route template when available (set by Starlette router after
             # dispatch), fall back to raw ASGI path.
             route = scope.get("route")
-            path_label: str = getattr(route, "path", None) or scope.get("path", "")
+            path_label: str = str(getattr(route, "path", None) or scope.get("path", ""))
             try:
                 _REQUEST_LATENCY.labels(
                     method=scope.get("method", ""),

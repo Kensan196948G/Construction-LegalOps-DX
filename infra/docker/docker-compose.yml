@@ -297,23 +297,6 @@ services:
     security_opt:
       - no-new-privileges:true
 
-volumes:
-  pgdata:
-    name: legalops-pgdata
-  redisdata:
-    name: legalops-redisdata
-  nginx-certs:
-    name: legalops-nginx-certs
-  prometheus-data:
-    name: legalops-prometheus-data
-  grafana-data:
-    name: legalops-grafana-data
-
-networks:
-  legalops-net:
-    name: legalops-net
-    driver: bridge
-
   # ----------------------------------------------------------
   # Prometheus (metrics collection)
   # `--profile monitoring` で起動
@@ -410,3 +393,20 @@ networks:
     security_opt:
       - no-new-privileges:true
     profiles: ["monitoring"]
+
+volumes:
+  pgdata:
+    name: legalops-pgdata
+  redisdata:
+    name: legalops-redisdata
+  nginx-certs:
+    name: legalops-nginx-certs
+  prometheus-data:
+    name: legalops-prometheus-data
+  grafana-data:
+    name: legalops-grafana-data
+
+networks:
+  legalops-net:
+    name: legalops-net
+    driver: bridge

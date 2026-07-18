@@ -107,7 +107,7 @@ async def dispose_engine() -> None:
     await engine.dispose()
 
 
-async def update_pool_metrics() -> None:
+def update_pool_metrics() -> None:
     """Update Prometheus gauges with current connection pool state.
 
     Called periodically (e.g. from the FastAPI lifespan background task)
