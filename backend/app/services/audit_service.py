@@ -47,7 +47,7 @@ class AuditRecord:
     action: str
     target_type: str
     target_id: str | None
-    user_id: UUID | None
+    user_id: int | UUID | None
     before: dict[str, Any] | None
     after: dict[str, Any] | None
     prev_hash: str
@@ -94,7 +94,7 @@ class AuditService:
         action: AuditAction | str,
         target_type: str,
         target_id: str | UUID | None,
-        user_id: UUID | None,
+        user_id: int | UUID | None,
         before: dict[str, Any] | None,
         after: dict[str, Any] | None,
         session: Any = None,

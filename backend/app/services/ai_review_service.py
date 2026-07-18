@@ -71,6 +71,7 @@ async def start_review(
             review_type=review_type,
             status=ReviewStatus.RUNNING.value,
             ai_model=ai_model or "stub",
+            reviewer_id=user_id,
             started_at=now,
             result={},
             created_at=now,

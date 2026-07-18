@@ -132,7 +132,7 @@ async def refresh_token(
             detail="refresh token missing subject",
         )
 
-    extra = {k: v for k, v in claims.items() if k in {"role", "department_ids", "email"}}
+    extra = {k: v for k, v in claims.items() if k in {"role", "department_ids", "email", "oid"}}
     new_access = create_access_token(subject=str(subject), extra_claims=extra)
     return RefreshResponse(
         access_token=new_access,
