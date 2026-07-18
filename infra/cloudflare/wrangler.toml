@@ -1,0 +1,30 @@
+# wrangler.toml — Cloudflare Pages configuration for Construction-LegalOps-DX
+# Deploy: npx wrangler pages deploy .next --project-name=legalops-dx
+# Requires: CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID in CI secrets
+# Status: IaC 雛形（本番適用は人間による API token 発行後）
+
+name = "legalops-dx"
+compatibility_date = "2026-07-18"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".next"
+
+# Custom domain (DNS CNAME は人間が Cloudflare ダッシュボードで作成)
+# pages_build_output_dir の成果物が legalops.mirai-dx-platform.com で配信される
+
+[env.production]
+# Production environment variables (secrets は CI の GitHub Secrets から注入)
+# NEXT_PUBLIC_API_BASE_URL は Cloudflare Tunnel 経由の backend を指す
+vars = { NODE_VERSION = "20" }
+
+# Cloudflare Access で保護する場合は以下を有効化
+# [env.production.services]
+# access = { enabled = true }
+
+# ============================================================
+# 注意事項:
+# - Next.js 15 output: "standalone" は Pages 非互換。
+#   Phase 3 移行時に OpenNext adapter への切替が必要。
+#   現状は Docker Compose の frontend コンテナ + Tunnel 公開が現実解。
+# - 本ファイルは wrangler deploy の dry-run 検証用。
+#   実際のデプロイは人間が API token を設定した後。
+# ============================================================

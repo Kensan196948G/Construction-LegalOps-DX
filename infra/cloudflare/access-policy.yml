@@ -1,0 +1,39 @@
+# Cloudflare Access ポリシー定義 — Construction-LegalOps-DX
+# 適用: Cloudflare Zero Trust → Access → Applications
+# Status: IaC 雛形（本番適用は人間による Access アプリ作成後）
+
+applications:
+  - name: "LegalOps-DX"
+    domain: "legalops.mirai-dx-platform.com"
+    type: self_hosted
+    session_duration: "24h"
+    # Entra ID を IdP として連携（既存の Entra ID テナントを再利用）
+    identity_providers:
+      - type: azure_ad
+        # Azure AD (Entra ID) の OIDC 設定
+        # 人間が Cloudflare ダッシュボードで IdP 追加後に有効化
+    policies:
+      - name: "Allow LegalOps Users"
+        decision: allow
+        include:
+          # 全 Entra ID ユーザー（社内 SSO 済み）を許可
+          - everyone:
+              identity_provider: azure_ad
+        require: []
+        exclude: []
+      - name: "Admin Panel — Legal Lead+ Only"
+        decision: allow
+        include:
+          - group:
+              identity_provider: azure_ad
+              name: "LegalOps-Admins"
+        # /settings /admin パスのみに適用（Access の path-based routing で制御）
+        path: "/settings*"
+
+# ============================================================
+# 適用手順:
+# 1. 人間: Cloudflare Zero Trust ダッシュボードで Entra ID IdP を追加
+# 2. 人間: Access → Applications で legalops.mirai-dx-platform.com を登録
+# 3. 人間: 上記ポリシーを GUI または Terraform/API で適用
+# 4. CTO: 動作確認（認証フロー・RBAC 境界）
+# ============================================================
