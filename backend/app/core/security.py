@@ -15,7 +15,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any, Final
 
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -215,7 +215,7 @@ def _jwt_resolve_verify_key(token: str) -> str:
         return _jwt_verify_key()
     try:
         header = jwt.get_unverified_header(token)
-    except JWTError as exc:
+    except jwt.PyJWTError as exc:
         raise ValueError(f"invalid token: {exc}") from exc
     # Treat an empty-string kid the same as a missing one ("" is not a usable
     # key id), so a crafted {"kid": ""} cannot slip past the lookup branch.
@@ -304,7 +304,7 @@ def decode_token(token: str) -> dict[str, Any]:
             issuer=settings.jwt_issuer,
         )
         return payload
-    except JWTError as exc:
+    except jwt.PyJWTError as exc:
         raise ValueError(f"invalid token: {exc}") from exc
 
 

@@ -17,8 +17,21 @@ from app.core.config import settings
 
 def _build_engine() -> AsyncEngine:
     """Build the async engine from settings (created once at import time)."""
+    db_url = settings.db_url.get_secret_value()
+    # SQLite requires NullPool — pool_size/max_overflow/pool_timeout are not
+    # valid and will raise TypeError.  Rebuilding engines that differ per
+    # environment (SQLite for dev/tests, asyncpg for prod) requires a
+    # Mono-repo-safe approach.  We detect SQLite early and skip pool params.
+    if "sqlite" in db_url:
+        from sqlalchemy.pool import NullPool
+        return create_async_engine(
+            db_url,
+            echo=settings.db_echo,
+            poolclass=NullPool,
+            future=True,
+        )
     return create_async_engine(
-        settings.db_url.get_secret_value(),
+        db_url,
         echo=settings.db_echo,
         pool_pre_ping=True,
         pool_size=settings.db_pool_size,

@@ -10,7 +10,7 @@ development could proceed without a live Entra tenant. Loop 4 (Security
 * Authorisation-code redemption against the resolved ``token_endpoint``.
 * Refresh-token redemption against the same endpoint.
 * ID-token signature validation through the JWKS published at
-  ``jwks_uri`` (RS256 — uses ``python-jose`` which is already a
+  ``jwks_uri`` (RS256 — uses ``PyJWT`` which is already a
   dependency, see ``backend/app/core/security.py``).
 
 Public surface (stable across loops):
@@ -406,7 +406,7 @@ class SSOService:
 # Minimal JOSE HS256 implementation
 # ---------------------------------------------------------------------------
 #
-# We intentionally avoid importing python-jose at module load: in stub mode
+# We intentionally avoid importing PyJWT at module load: in stub mode
 # the dependency may not be present in slim test environments. The fixed
 # HS256 + JSON header keeps the surface tiny and inspectable.
 

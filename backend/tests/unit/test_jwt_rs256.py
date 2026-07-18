@@ -12,10 +12,10 @@ from __future__ import annotations
 import datetime as dt
 import json
 
+import jwt
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from jose import jwt as jose_jwt
 from pydantic import SecretStr
 
 
@@ -115,7 +115,7 @@ def test_rs256_kid_header_present(monkeypatch):
     monkeypatch.setattr(cfg_module.settings, "jwt_public_key", public_pem)
 
     token = create_access_token("kid-user")
-    header = jose_jwt.get_unverified_header(token)
+    header = jwt.get_unverified_header(token)
     assert "kid" in header
     assert len(header["kid"]) == 16  # 8-byte SHA-256 prefix, hex-encoded
 
@@ -125,7 +125,7 @@ def test_hs256_has_no_kid_header(monkeypatch):
     from app.core.security import create_access_token
 
     token = create_access_token("hs-user")
-    header = jose_jwt.get_unverified_header(token)
+    header = jwt.get_unverified_header(token)
     assert "kid" not in header
 
 
@@ -185,7 +185,7 @@ def test_rs256_explicit_key_id(monkeypatch):
     monkeypatch.setattr(cfg_module.settings, "jwt_key_id", "prod-2026-q2")
 
     token = create_access_token("explicit-kid-user")
-    header = jose_jwt.get_unverified_header(token)
+    header = jwt.get_unverified_header(token)
     assert header["kid"] == "prod-2026-q2"
     assert decode_token(token)["sub"] == "explicit-kid-user"
 
@@ -209,7 +209,7 @@ def test_rs256_legacy_token_without_kid(monkeypatch):
         "aud": cfg_module.settings.jwt_audience,
     }
     # Mint a token WITHOUT a kid header (simulates tokens issued before rotation).
-    legacy_token = jose_jwt.encode(payload, private_pem, algorithm="RS256")
+    legacy_token = jwt.encode(payload, private_pem, algorithm="RS256")
 
     assert decode_token(legacy_token)["sub"] == "legacy-user"
 
@@ -275,7 +275,7 @@ def test_rs256_explicit_kid_with_rotation(monkeypatch):
     monkeypatch.setattr(cfg_module.settings, "jwt_public_keys", json.dumps([old_pub]))
 
     new_token = create_access_token("combo-new")
-    assert jose_jwt.get_unverified_header(new_token)["kid"] == "active-2026"
+    assert jwt.get_unverified_header(new_token)["kid"] == "active-2026"
     # Active explicit-kid token verifies.
     assert decode_token(new_token)["sub"] == "combo-new"
     # Retired derived-kid token still verifies.
@@ -301,7 +301,7 @@ def test_rs256_empty_kid_rejected(monkeypatch):
         "iss": cfg_module.settings.jwt_issuer,
         "aud": cfg_module.settings.jwt_audience,
     }
-    token = jose_jwt.encode(payload, private_pem, algorithm="RS256", headers={"kid": ""})
+    token = jwt.encode(payload, private_pem, algorithm="RS256", headers={"kid": ""})
     # Empty kid → treated as missing → JWT_REQUIRE_KID rejects it.
     with pytest.raises(ValueError, match="missing key id"):
         decode_token(token)
@@ -326,7 +326,7 @@ def test_rs256_require_kid_rejects_legacy(monkeypatch):
         "iss": cfg_module.settings.jwt_issuer,
         "aud": cfg_module.settings.jwt_audience,
     }
-    legacy_token = jose_jwt.encode(payload, private_pem, algorithm="RS256")
+    legacy_token = jwt.encode(payload, private_pem, algorithm="RS256")
 
     with pytest.raises(ValueError, match="missing key id"):
         decode_token(legacy_token)
