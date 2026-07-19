@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Tag, Calendar, FileText } from "lucide-react";
+import { Tag, Calendar, FileText } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { AiDisclaimerInline } from "@/components/legal/ai-disclaimer-inline";
+import { BackToKnowledgeLink } from "@/components/knowledge/back-to-knowledge-link";
 import { bindServerSession } from "@/lib/auth/session-bridge.server";
 import { knowledgeApi } from "@/lib/api/endpoints";
 import type { KnowledgeArticle } from "@/lib/api/schemas";
@@ -57,14 +57,9 @@ export default async function KnowledgeDetailPage({ params }: Props) {
     return (
       <div className="space-y-6" data-testid="knowledge-detail-page">
         <nav aria-label="パンくず">
-          <Link
-            href="/knowledge"
+          <BackToKnowledgeLink
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-            data-testid="back-link"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            ナレッジベースに戻る
-          </Link>
+          />
         </nav>
         <AiDisclaimerInline>
           AI 要約は参考情報です。法的判断は法務担当者・顧問弁護士が行ってください。
@@ -83,14 +78,9 @@ export default async function KnowledgeDetailPage({ params }: Props) {
   return (
     <div className="space-y-6" data-testid="knowledge-detail-page">
       <nav aria-label="パンくず">
-        <Link
-          href="/knowledge"
+        <BackToKnowledgeLink
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-          data-testid="back-link"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          ナレッジベースに戻る
-        </Link>
+        />
       </nav>
 
       <header>

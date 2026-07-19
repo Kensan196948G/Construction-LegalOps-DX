@@ -1,5 +1,11 @@
 // @ts-check
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const needsWindowsUncLoaderAlias = process.platform === "win32" && __dirname.startsWith("\\\\");
+
 /**
  * Next.js 15 設定。
  *
@@ -15,10 +21,12 @@
 const nextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  outputFileTracingRoot: __dirname,
   poweredByHeader: false,
-
+  typedRoutes: true,
   experimental: {
-    typedRoutes: true,
+    cpus: Number.parseInt(process.env.NEXT_BUILD_CPUS || "1", 10),
+    webpackMemoryOptimizations: true,
   },
 
   eslint: {
@@ -27,6 +35,24 @@ const nextConfig = {
 
   typescript: {
     ignoreBuildErrors: false,
+  },
+
+  webpack: (config) => {
+    config.parallelism = Number.parseInt(process.env.NEXT_WEBPACK_PARALLELISM || "1", 10);
+    if (config.cache) {
+      config.cache = Object.freeze({ type: "memory" });
+    }
+    if (needsWindowsUncLoaderAlias) {
+      config.resolveLoader = config.resolveLoader || {};
+      config.resolveLoader.alias = {
+        ...(config.resolveLoader.alias || {}),
+        "next-flight-client-entry-loader": path.join(
+          __dirname,
+          "node_modules/next/dist/build/webpack/loaders/next-flight-client-entry-loader.js",
+        ),
+      };
+    }
+    return config;
   },
 
   images: {

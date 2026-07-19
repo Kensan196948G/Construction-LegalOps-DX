@@ -39,6 +39,8 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       AUTH_DEV_BYPASS: "true",
+      AUTH_SECRET: "playwright-local-placeholder-secret",
+      NEXTAUTH_SECRET: "playwright-local-placeholder-secret",
     },
   },
 });

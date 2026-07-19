@@ -472,7 +472,7 @@ export const clauseLibrarySchema = z.object({
   title: z.string(),
   body: z.string(),
   category: z.string().optional(),
-  recommendation: z.enum(["recommended", "neutral", "avoid"]).optional(),
+  recommendation: z.enum(["required", "recommended", "optional", "prohibited"]).optional(),
   tags: z.array(z.string()).optional(),
   created_at: datetimeSchema.optional(),
 });
