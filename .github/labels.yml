@@ -1,0 +1,21 @@
+# GitHub label catalog for release/incident operations.
+# Apply with: gh label create/update or a label sync tool before production.
+
+- name: incident
+  color: "b60205"
+  description: "Production or staging incident requiring postmortem tracking"
+- name: incident:P1
+  color: "b60205"
+  description: "P1 incident: outage, data loss/leak suspicion, or security event"
+- name: incident:P2
+  color: "d93f0b"
+  description: "P2 incident: major function unavailable or severe degradation"
+- name: incident:P3
+  color: "fbca04"
+  description: "P3 incident: partial degradation with workaround"
+- name: on-call
+  color: "5319e7"
+  description: "Requires on-call owner or escalation-route confirmation"
+- name: postmortem
+  color: "1d76db"
+  description: "Requires or contains blameless postmortem and follow-up actions"
