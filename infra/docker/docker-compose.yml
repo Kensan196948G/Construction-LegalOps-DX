@@ -247,10 +247,11 @@ services:
         condition: service_healthy
     healthcheck:
       # Next.js standalone は /api/health 等を持たないため、TCP/HTTP 200 確認
-      test:
-        [
+      test: [
           "CMD-SHELL",
-          "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1",
+          # localhost はコンテナ内で ::1 (IPv6) に解決されるが Next.js は IPv4 のみ
+          # listen するため、busybox wget では常に失敗する。127.0.0.1 に固定する。
+          "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1",
         ]
       interval: 15s
       timeout: 5s
