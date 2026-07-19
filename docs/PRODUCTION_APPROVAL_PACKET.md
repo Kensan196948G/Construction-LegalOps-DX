@@ -16,17 +16,17 @@
 | 破壊的 migration | 🚫 予定なし | Alembic rollback は手順化済み。実行は承認後 |
 | CD workflow | 🔒 承認待ち | `.github/workflows/deploy.yml` は手動起動 + production environment + `APPROVE_PRODUCTION_CHANGE` 入力で fail-closed |
 
-## 📊 2. 現在の検証スナップショット (2026-07-19 / Loop 91)
+## 📊 2. 現在の検証スナップショット (2026-07-19 / Loop 93)
 
 | 項目 | 現在値 | 判定 |
 |---|---|---|
 | GitHub open Issues | #23 / #24 / #50 の P0 人間ゲートのみ | ✅ コード系 blocker 0 |
 | Open PR | 0 | ✅ 未検証 PR なし |
-| GitHub Project #30 | `Construction-LegalOps-DX 開発管理` readme を Loop 91 に同期済み（legalops 新規サブドメイン対応を含む）。#23/#24/#50 は Todo / human gate | ✅ |
+| GitHub Project #30 | `Construction-LegalOps-DX 開発管理` readme を Loop 93 に同期済み（legalops 新規サブドメイン対応を含む）。#23/#24/#50 は Todo / human gate | ✅ |
 | 直近 CI | `CI` success (2026-07-18) | ✅ Green |
 | GitHub release gate | `./scripts/verify_github_release_gate.sh` → Passed 24 / Failed 0。latest main CI completed/success も検証 | ✅ |
 | WebUI runtime | `./scripts/verify_standalone_webui_runtime.sh` → Passed 27 / Failed 0。systemd enabled/active / status JSON / 自動port範囲 / listen実体 / health ok / HTML実体一致 | ✅ |
-| Pre-deploy gate | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` → Passed 22 / Failed 0 / Warnings 5 | ✅ Mandatory checks 通過 |
+| Pre-deploy gate | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` → Passed 24 / Failed 0 / Warnings 5 | ✅ Mandatory checks 通過 |
 | Goal completion evidence | `./scripts/verify_goal_completion_evidence.sh` → Passed 40 / Failed 0。`/goal` 完了条件と証拠表の対応をread-only検証 | ✅ |
 | Review evidence | `./scripts/verify_review_evidence.sh` → Passed 29 / Failed 0。CodeRabbit timeout と代替レビュー境界をread-only検証 | ✅ |
 | Dependency audit evidence | `./scripts/verify_dependency_audit_evidence.sh` → Passed 23 / Failed 0。npm audit high/critical 0、moderate 4 は既知残リスク。pip-audit 72 deps / 0 vulnerabilities | ✅ |
@@ -34,6 +34,8 @@
 | Notification real mode | `backend/tests/unit/test_notification_service.py` → 32 passed。Exchange Graph sendMail / Teams webhook / desknet's webhook / fail-closed を検証 | ✅ |
 | Contract submit | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 38 passed。draft → in_review 遷移 / 二重提出 409 / legacy 501 stub 回帰防止を検証 | ✅ |
 | Contract subresources | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 43 passed。`/versions` current snapshot / `/clauses` DB-backed seq order / legacy 501 stub 回帰防止を検証 | ✅ |
+| Monitoring config | `bash scripts/verify_monitoring_config.sh` → Passed 19 / Failed 0。Prometheus backend DNS discovery / YAML / Grafana / docs 整合を検証 | ✅ |
+| Backup / restore evidence | `bash scripts/verify_backup_restore_docs.sh` → Passed 36 / Failed 0。pg_dump / pg_restore 手順、backup_db.sh checksum、Alembic rollback、PITR未実演停止線をread-only検証 | ✅ / ⏳ |
 | Warning classification | `./scripts/verify_predeploy_warning_classification.sh` → Passed 13 / Failed 0。既知warning 5件のみ、未知warning 0 | ✅ |
 | Checklist pending classification | `./scripts/verify_release_checklist_pending_items.sh` → Passed 5 / Failed 0。未チェック73件は承認後/本番時/リリース後項目として分類済み | ✅ |
 | Production stop-line | `./scripts/verify_production_stop_line.sh` → Passed 13 / Failed 0。Git tag 0 / GitHub Release 0 / GitHub Deployments 0 / DNS未作成 | ✅ |

@@ -1,6 +1,6 @@
 # 📊 Release Evidence Matrix — Construction-LegalOps-DX
 
-> **最終更新: 2026-07-19 / Loop 91**
+> **最終更新: 2026-07-19 / Loop 93**
 > 本書は `/goal` の完了条件を、現在の証拠・検証コマンド・未解決ゲートへ対応付ける CTO 監査表です。  
 > 本番 deploy / 公開 DNS 変更 / secret 投入 / PR merge / release tag は、本書の対象外ではなく **人間承認後の実行項目** として扱います。
 > 最終報告は [`docs/FINAL_RELEASE_STOP_REPORT.md`](./FINAL_RELEASE_STOP_REPORT.md) を正とする。
@@ -25,12 +25,12 @@
 | `/goal` 要求 | 現在証拠 | 判定 |
 |---|---|---|
 | 必須機能が実装済み | `README.md` の Phase 1 指標、`docs/HANDOVER.md` §1、DB-backed API 群、SharePoint Graph real mode、Notification real mode、frontend E2E 51 passed | ✅ |
-| Lint / 型チェック / テスト / ビルドが成功 | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` → Passed 22 / Failed 0 / Warnings 5。goal evidence / review evidence / dependency audit evidence gate を含む | ✅ Mandatory checks 通過 |
+| Lint / 型チェック / テスト / ビルドが成功 | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` → Passed 24 / Failed 0 / Warnings 5。goal evidence / review evidence / dependency audit evidence / backup-restore evidence gate を含む | ✅ Mandatory checks 通過 |
 | 重大または高危険度の脆弱性なし | Bandit / npm audit high/critical 0 / dependency audit evidence / secret scan が pre-deploy gate で成功。npm moderate 4 は既知残リスク。`scripts/scan_secrets.sh` は high-confidence secret なし | ✅ |
-| DB migration と rollback 手順を検証 | `scripts/verify_migrations_roundtrip.sh` が pre-deploy gate 内で成功。PITR は本番 backup / WAL / Neon 承認後 | ✅ / ⏳ |
-| リリース前チェックリストが完成 | `docs/RELEASE_CHECKLIST.md` は Loop 88 まで同期。未チェック73件は `scripts/verify_release_checklist_pending_items.sh` で人間承認 / 本番実行 / リリース後確認項目として分類済み | ✅ / ⏳ |
+| DB migration と rollback 手順を検証 | `scripts/verify_migrations_roundtrip.sh` が pre-deploy gate 内で成功。`scripts/verify_backup_restore_docs.sh` → Passed 36 / Failed 0。PITR は本番 backup / WAL / Neon 承認後 | ✅ / ⏳ |
+| リリース前チェックリストが完成 | `docs/RELEASE_CHECKLIST.md` は Loop 93 まで同期。未チェック73件は `scripts/verify_release_checklist_pending_items.sh` で人間承認 / 本番実行 / リリース後確認項目として分類済み | ✅ / ⏳ |
 | WebUI を提示できる | `http://192.168.0.185:38100/`、`/healthz` → `ok`、systemd user service enabled/active、`192.168.0.185:38100` listen、`scripts/verify_standalone_webui_runtime.sh` → Passed 27 / Failed 0 | ✅ |
-| GitHub Projects / Issue / CI / 進捗が最新 | GitHub Project #30 readme を Loop 88 に同期済み。`scripts/verify_github_release_gate.sh` → Passed 24 / Failed 0。`scripts/verify_production_stop_line.sh` → Passed 13 / Failed 0。open issues は #23 / #24 / #50 の P0 人間ゲートのみ、open PR 0、#50 は blocked label、最新 main CI は completed/success。#50 に Loop 88 までコメント済み (`issuecomment-5015901828`) | ✅ |
+| GitHub Projects / Issue / CI / 進捗が最新 | GitHub Project #30 readme を Loop 93 に同期済み。`scripts/verify_github_release_gate.sh` → Passed 24 / Failed 0。`scripts/verify_production_stop_line.sh` → Passed 13 / Failed 0。open issues は #23 / #24 / #50 の P0 人間ゲートのみ、open PR 0、#50 は blocked label、最新 main CI は completed/success | ✅ |
 | 本番 deploy だけを残した承認待ち | deploy そのものに加え、secret / CSP enforce / Cloudflare DNS-Tunnel-Access / Neon は人間承認ゲート。`scripts/verify_production_stop_line.sh` → Passed 13 / Failed 0 | ✅ / ⏳ |
 
 ---
@@ -39,15 +39,17 @@
 
 | 検証 | コマンド | 結果 |
 |---|---|---|
-| Pre-deploy gate | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` | ✅ Passed 22 / Failed 0 / Warnings 5 |
+| Pre-deploy gate | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` | ✅ Passed 24 / Failed 0 / Warnings 5 |
 | Secret scan | `./scripts/scan_secrets.sh` | ✅ high-confidence secret なし |
 | Cloudflare legalops preflight | `./scripts/verify_cloudflare_legalops.sh` | ✅ Passed 22 / Failed 0 / Warnings 0 |
 | JSON / diff | `python3 -m json.tool state.json` + `git diff --check` | ✅ |
-| Release docs | `./scripts/verify_release_docs.sh` | ✅ Passed 178 / Failed 0 |
+| Release docs | `./scripts/verify_release_docs.sh` | ✅ Passed 191 / Failed 0 |
 | SharePoint Graph real mode | `cd backend && python -m pytest tests/unit/test_sharepoint_service.py -q && python -m ruff check app/services/sharepoint_service.py tests/unit/test_sharepoint_service.py && python -m mypy app/services/sharepoint_service.py` | ✅ 33 passed / ruff clean / mypy success |
 | Notification real mode | `cd backend && python -m pytest tests/unit/test_notification_service.py -q && python -m ruff check app/services/notification_service.py tests/unit/test_notification_service.py && python -m mypy app/services/notification_service.py` | ✅ 32 passed / ruff clean / mypy success |
 | Contract submit | `cd backend && python -m pytest tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -q && python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py && python -m mypy app/services/contract_service.py app/api/v1/contracts.py` | ✅ 38 passed / ruff clean / mypy success |
 | Contract subresources | `cd backend && python -m pytest tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -q && python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py && python -m mypy app/services/contract_service.py app/api/v1/contracts.py` | ✅ 43 passed / versions current snapshot / clauses DB rows / ruff clean / mypy success |
+| Monitoring config | `bash scripts/verify_monitoring_config.sh` | ✅ Passed 19 / Failed 0。Prometheus backend DNS discovery、YAML/JSON parse、Grafana dashboard、monitoring docs整合 |
+| Backup / restore evidence | `bash scripts/verify_backup_restore_docs.sh` | ✅ Passed 36 / Failed 0。pg_dump / pg_restore 手順、backup_db.sh checksum、Alembic rollback、PITR未実演停止線を検証 |
 | Goal completion evidence | `./scripts/verify_goal_completion_evidence.sh` | ✅ Passed 40 / Failed 0。`/goal` 完了条件を証拠表・最終報告・停止線へ対応付け |
 | Review evidence | `./scripts/verify_review_evidence.sh` | ✅ Passed 29 / Failed 0。CodeRabbit timeout、代替静的検証、security review、Critical/High limitationを検証 |
 | Dependency audit evidence | `./scripts/verify_dependency_audit_evidence.sh` | ✅ Passed 23 / Failed 0。npm audit high/critical 0、moderate 4 は既知残リスク。pip-audit は隔離venv方式で72 deps / 0 vulnerabilities |

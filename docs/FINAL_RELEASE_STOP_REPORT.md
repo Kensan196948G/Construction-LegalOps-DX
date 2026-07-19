@@ -1,6 +1,6 @@
 # 🚦 Final Release Stop Report — Construction-LegalOps-DX
 
-> **最終更新: 2026-07-19 / Loop 91**
+> **最終更新: 2026-07-19 / Loop 93**
 > 本書は、本番リリース直前で CTO/Supervisor が停止するための最終報告書です。  
 > 本番 deploy / 公開 DNS 変更 / secret 投入 / PR merge / release tag は実行していません。
 
@@ -34,9 +34,12 @@
 | SharePoint Integration | SharePoint Graph real mode を実装。Entra client-credentials、Graph drive upload、webUrl 解決、設定不足/不正応答 fail-closed を unit contract で検証 |
 | Notification Integration | Notification real mode を実装。Exchange Graph sendMail、Teams webhook、desknet's webhook、設定不足 fail-closed を unit contract で検証 |
 | DB | Alembic migrations、roundtrip verifier、rollback 手順 |
+| Backup / Restore | `backup_db.sh` に `.sha256` 記録/復元前検証を追加。pg_dump / pg_restore 手順、Alembic rollback、PITR未実演停止線を backup/restore evidence preflight で検証 |
 | Infra | Docker Compose、prod overlay、Cloudflare Tunnel overlay、`legalops.mirai-dx-platform.com` 新規サブドメイン適用 Runbook、monitoring / logging IaC |
 | Security | RS256 対応、RBAC、audit hash chain、secret scan、CSP Report-Only |
 | Monitoring | Prometheus / Alertmanager / Grafana / Loki / Promtail / unhealthy watchdog |
+| Monitoring config | Prometheus backend scrape を Docker DNS discovery (`dns_sd_configs`) に更新し、backend replica ごとの `/metrics` scrape を構成として検証 |
+| Backup / Restore Evidence | `scripts/verify_backup_restore_docs.sh` を追加し、pre-deploy gateへ接続。PITRが未実演であることを完了扱いにしない guard を追加 |
 | Docs | README、Release checklist、Approval packet、Evidence matrix、Runbooks |
 | GitHub Gate | open PR 0、open issues #23/#24/#50、latest main CI success、Project #30 Todo状態を read-only verifier で確認 |
 | WebUI Runtime | status JSON、systemd enabled/active、auto port範囲、listen実体、health ok、HEAD 200、Content-Length一致、source endpoint一致を read-only verifier で確認 |
@@ -64,7 +67,7 @@
 
 | 検証 | 結果 |
 |---|---|
-| Pre-deploy gate | Passed 22 / Failed 0 / Warnings 5 |
+| Pre-deploy gate | Passed 24 / Failed 0 / Warnings 5 |
 | Backend tests | pytest 900+ tests |
 | Migration rollback | Alembic roundtrip verifier 成功 |
 | Frontend E2E | Playwright 51 passed |
@@ -75,8 +78,10 @@
 | Notification real mode | `backend/tests/unit/test_notification_service.py` → 32 passed。Exchange Graph sendMail / Teams webhook / desknet's webhook / 設定不足 fail-closed |
 | Contract submit | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 38 passed。ruff clean / mypy success |
 | Contract subresources | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 43 passed。versions current snapshot / clauses DB rows / ruff clean / mypy success |
+| Monitoring config | `bash scripts/verify_monitoring_config.sh` → Passed 19 / Failed 0。Prometheus YAML / alert rules / Alertmanager / Grafana JSON / backend DNS discovery / docs 整合を検証 |
+| Backup / restore evidence | `bash scripts/verify_backup_restore_docs.sh` → Passed 36 / Failed 0。pg_dump / pg_restore 手順、backup_db.sh checksum、Alembic rollback、PITR未実演停止線を検証 |
 | Cloudflare legalops preflight | Passed 22 / Failed 0 / Warnings 0 |
-| Release docs preflight | Passed 178 / Failed 0 |
+| Release docs preflight | Passed 191 / Failed 0 |
 | Goal completion evidence | Passed 40 / Failed 0 |
 | Review evidence | Passed 29 / Failed 0 |
 | Standalone WebUI runtime | Passed 27 / Failed 0 |

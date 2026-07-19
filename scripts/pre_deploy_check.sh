@@ -95,7 +95,27 @@ if [ -x "./scripts/verify_standalone_webui_runtime.sh" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Security
+# 5. Monitoring
+# ---------------------------------------------------------------------------
+echo ""
+echo "📊 Monitoring"
+
+if [ -f "./scripts/verify_monitoring_config.sh" ]; then
+  bash ./scripts/verify_monitoring_config.sh >/dev/null && check "monitoring config preflight" 0 || check "monitoring config preflight" 1
+fi
+
+# ---------------------------------------------------------------------------
+# 6. Backup / restore release evidence
+# ---------------------------------------------------------------------------
+echo ""
+echo "💾 Backup / Restore"
+
+if [ -f "./scripts/verify_backup_restore_docs.sh" ]; then
+  bash ./scripts/verify_backup_restore_docs.sh >/dev/null && check "backup/restore evidence preflight" 0 || check "backup/restore evidence preflight" 1
+fi
+
+# ---------------------------------------------------------------------------
+# 7. Security
 # ---------------------------------------------------------------------------
 echo ""
 echo "🔒 Security"
@@ -134,7 +154,7 @@ if [ -x "./scripts/verify_github_release_gate.sh" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 6. Environment
+# 8. Environment
 # ---------------------------------------------------------------------------
 echo ""
 echo "🔧 Environment"
@@ -145,7 +165,7 @@ echo "🔧 Environment"
 [ -n "${CLAUDE_API_KEY:-}" ] && check "CLAUDE_API_KEY is set" 0 || warn "CLAUDE_API_KEY not set (AI review disabled)"
 
 # ---------------------------------------------------------------------------
-# 7. Docker images
+# 9. Docker images
 # ---------------------------------------------------------------------------
 echo ""
 echo "🐳 Docker"

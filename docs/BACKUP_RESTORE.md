@@ -207,7 +207,8 @@ DB_URL=postgresql+asyncpg://<user>:<password>@<host>:5432/<db> \
 
 ## 📌 7. 自動バックアップ
 
-> ✅ `scripts/backup_db.sh` を整備済み。手動実行、30 日世代管理、`--restore` による復元に対応する。
+> ✅ `scripts/backup_db.sh` を整備済み。手動実行、30 日世代管理、`.sha256` チェックサム記録、
+> `--restore` による復元前チェックサム検証に対応する。
 > 本番 cron / systemd timer 登録、退避先、暗号化、通知先は RPO/RTO 合意と secret 投入後に人間承認で確定する。
 
 ### 6.1 🔧 導入時の cron 例

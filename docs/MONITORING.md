@@ -103,7 +103,7 @@ backend (FastAPI) が公開する監視用エンドポイント。実装箇所�
 
 - ✅ `path` ラベルは **route テンプレート** (例: `/api/v1/contracts/{id}`) を優先使用 — ID によるカーディナリティ爆発を回避
 - ✅ メトリクス記録の失敗はリクエストを壊さない (例外は debug ログに落とすのみ)
-- ⚠️ レジストリは**プロセス単位**。本番 overlay では backend が `replicas: 2` のため、**各レプリカの `/metrics` を個別に scrape して集計する必要がある** (multiprocess 集約は未実装)
+- ✅ レジストリは**プロセス単位**。本番 overlay では backend が `replicas: 2` のため、Prometheus は Docker DNS service discovery (`dns_sd_configs`) で `backend` の複数 A レコードを検出し、各レプリカの `/metrics` を個別 target として scrape する
 - ✅ DB プール・Celery キュー長・ビジネスメトリクス (契約/レビュー/ワークフロー/通知 status 別件数) は実装済み
 - ⚠️ Celery queue 長は Redis から `LLEN` で取得する。Redis 不通時は `/metrics` 自体を落とさず `celery_queue_length=-1` を出す
 
@@ -151,19 +151,20 @@ curl -s http://localhost:8010/metrics | grep -E '^(db_pool_|legalops_|celery_que
    docker compose -f infra/docker/docker-compose.yml --profile monitoring up -d prometheus alertmanager grafana
    ```
 
-2. Prometheus の scrape 対象は Docker 内部名で指定済み — backend はコンテナ内部ポート **8000**:
+2. Prometheus の scrape 対象は Docker 内部名で指定済み — backend は Docker DNS service discovery でコンテナ内部ポート **8000** を検出:
 
    ```yaml
    # infra/monitoring/prometheus.yml
    scrape_configs:
      - job_name: legalops-backend
        metrics_path: /metrics
-       static_configs:
-         - targets: ["backend:8000"]
+       dns_sd_configs:
+         - names: ["backend"]
+           type: A
+           port: 8000
    ```
 
-3. ⚠️ 本番 overlay では backend が `replicas: 2` かつ `container_name` 解除のため、必要に応じて
-   `dns_sd_configs` (compose のサービス名 DNS ラウンドロビン) 等で全レプリカを発見する構成にする
+3. 本番 overlay では backend が `replicas: 2` かつ `container_name` 解除のため、`dns_sd_configs` により全レプリカを発見する
 4. ホスト公開ポートを追加する場合は `docs/PORT_ALLOCATION.md` の割当表に**必ず追記**する (共存ホストのため衝突注意)
 5. `/metrics` は認証なしで公開されているため、監視基盤構築時に **nginx で外部からの `/metrics` アクセスを遮断**する
    (現状 nginx は `/api/` と `/` のみプロキシしており `/metrics` は外部公開されていないが、backend ポート直結時は注意)
