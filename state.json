@@ -8,8 +8,8 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 90,
-    "loops_total": 90,
+    "last_loop_completed": 91,
+    "loops_total": 91,
     "current_version": "0.1.12",
     "cto_release_assessment": "phase1_complete_production_ready_pending_human_actions",
     "cto_assessment_date": "2026-07-19",
@@ -19,7 +19,7 @@
       "CF/Neon 本番リソース作成 (人間: API token + Neon project + DNS) — Issue #50"
     ],
     "deploy_ready": true,
-    "last_session_summary": "Loop 90: Implemented contract submit lifecycle that had still been falling through the legacy 501 stub. POST /contracts/{id}/submit now moves draft contracts to in_review, increments version, rejects non-draft resubmission with 409 through the API, and is covered by unit and integration tests. Also removed a stale frontend compliance mock item that claimed transaction-amount search was unimplemented. No production deploy, public DNS change, Tunnel/Access creation, secret injection, push, merge, or tag executed."
+    "last_session_summary": "Loop 91: Closed remaining contract_service legacy 501 fallback paths for public contract subresource APIs. GET /contracts/{id}/versions now returns the current version snapshot from the authoritative contract row, and GET /contracts/{id}/clauses returns DB-backed clauses in seq order. Added unit and integration tests, updated release documentation gates, and aligned API design docs. No production deploy, public DNS change, Tunnel/Access creation, secret injection, push, merge, or tag executed."
   },
   "goal": "Phase 1 完了. 本番デプロイ・Vault secrets 投入・CSP enforce・CF/Neon リソース作成は人間待ち",
   "phase": "ReleaseGate",
@@ -367,8 +367,8 @@
           "last_used": "2026-07-14T03:38:17.204Z",
           "last_description": "運用文書 4 本の起草"
         },
-        "_total_agent_calls": 22,
-        "_last_agent_call_at": "2026-07-14T03:38:17.204Z",
+        "_total_agent_calls": 24,
+        "_last_agent_call_at": "2026-07-19T13:57:17.742Z",
         "Explore": {
           "call_count": 4,
           "last_used": "2026-07-14T03:34:08.607Z",
@@ -383,6 +383,11 @@
           "call_count": 1,
           "last_used": "2026-06-15T01:59:10.463Z",
           "last_description": "対抗レビュー: 認証設計観点"
+        },
+        "qa": {
+          "call_count": 2,
+          "last_used": "2026-07-19T13:57:17.742Z",
+          "last_description": "Frontend検証スイート実行"
         }
       }
     }
@@ -1165,6 +1170,20 @@
       "#24 CSP Report-Only to enforce",
       "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
       "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop91": {
+    "name": "Contract subresource API closure",
+    "completed_at": "2026-07-19",
+    "summary": "Implemented backend/app/services/contract_service.py list_versions and list_clauses so /api/v1/contracts/{id}/versions and /api/v1/contracts/{id}/clauses no longer fall through the legacy 501 stub. versions returns the current row version snapshot because no contract_versions history table exists in the current schema. clauses returns active Clause rows in seq order and maps body to ClauseOut.text. Routes now translate missing contracts to 404.",
+    "verification": "backend/tests/unit/test_contract_service.py + backend/tests/integration/test_contracts_crud.py -> 43 passed; python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -> All checks passed; python -m mypy app/services/contract_service.py app/api/v1/contracts.py -> Success; AST service-call check found no api/v1 service calls missing concrete service functions.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection including Exchange/Teams/desknet/SharePoint/Entra production values",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval",
+      "Optional future non-destructive contract_versions history table migration if full version history is required beyond current snapshot"
     ]
   }
 }

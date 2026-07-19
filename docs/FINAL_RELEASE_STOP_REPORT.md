@@ -1,6 +1,6 @@
 # 🚦 Final Release Stop Report — Construction-LegalOps-DX
 
-> **最終更新: 2026-07-19 / Loop 90**  
+> **最終更新: 2026-07-19 / Loop 91**
 > 本書は、本番リリース直前で CTO/Supervisor が停止するための最終報告書です。  
 > 本番 deploy / 公開 DNS 変更 / secret 投入 / PR merge / release tag は実行していません。
 
@@ -30,6 +30,7 @@
 | Frontend | Next.js App Router、認証済み UI、E2E 51 passed、Standalone WebUI 配信 |
 | Backend | FastAPI、DB-backed API、auth / users / uploads / notifications / knowledge / templates / reviews / audit |
 | Contract Submit | `POST /contracts/{id}/submit` の legacy 501 stub を撤去し、draft → in_review 遷移、二重提出 409、version increment を unit / integration で検証 |
+| Contract subresources | `/contracts/{id}/versions` は current version snapshot、`/contracts/{id}/clauses` は DB-backed seq 昇順として実装し、legacy 501 stub 回帰を防止 |
 | SharePoint Integration | SharePoint Graph real mode を実装。Entra client-credentials、Graph drive upload、webUrl 解決、設定不足/不正応答 fail-closed を unit contract で検証 |
 | Notification Integration | Notification real mode を実装。Exchange Graph sendMail、Teams webhook、desknet's webhook、設定不足 fail-closed を unit contract で検証 |
 | DB | Alembic migrations、roundtrip verifier、rollback 手順 |
@@ -73,8 +74,9 @@
 | SharePoint Graph real mode | `backend/tests/unit/test_sharepoint_service.py` → 33 passed。token取得 / drive upload / webUrl 解決 / drive id不足 / Graph不正応答 fail-closed |
 | Notification real mode | `backend/tests/unit/test_notification_service.py` → 32 passed。Exchange Graph sendMail / Teams webhook / desknet's webhook / 設定不足 fail-closed |
 | Contract submit | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 38 passed。ruff clean / mypy success |
+| Contract subresources | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 43 passed。versions current snapshot / clauses DB rows / ruff clean / mypy success |
 | Cloudflare legalops preflight | Passed 22 / Failed 0 / Warnings 0 |
-| Release docs preflight | Passed 171 / Failed 0 |
+| Release docs preflight | Passed 178 / Failed 0 |
 | Goal completion evidence | Passed 40 / Failed 0 |
 | Review evidence | Passed 29 / Failed 0 |
 | Standalone WebUI runtime | Passed 27 / Failed 0 |

@@ -6,6 +6,8 @@ remains queryable through audit / admin paths).
 
 from __future__ import annotations
 
+from app.models.clause import Clause
+
 
 async def test_contract_lifecycle_post_get_patch_delete(
     client, auth_headers_legal, auth_headers_admin
@@ -140,3 +142,72 @@ async def test_submit_contract_rejects_second_submit(client, auth_headers_legal)
 
     second = await client.post(f"/api/v1/contracts/{cid}/submit", headers=auth_headers_legal)
     assert second.status_code == 409
+
+
+async def test_contract_versions_returns_current_snapshot(client, auth_headers_legal):
+    """GET /contracts/{id}/versions returns a non-501 current-version snapshot."""
+    r_create = await client.post(
+        "/api/v1/contracts",
+        json={
+            "title": "バージョン履歴テスト契約",
+            "contract_type": "ukeoi",
+            "counterparty": "履歴テスト建設",
+            "department_id": 1,
+        },
+        headers=auth_headers_legal,
+    )
+    assert r_create.status_code in (200, 201), r_create.text
+    contract = r_create.json()
+
+    r_versions = await client.get(
+        f"/api/v1/contracts/{contract['id']}/versions",
+        headers=auth_headers_legal,
+    )
+
+    assert r_versions.status_code == 200, r_versions.text
+    body = r_versions.json()
+    assert body["total"] == 1
+    assert body["items"][0]["contract_id"] == contract["id"]
+    assert body["items"][0]["version"] == contract["version"]
+
+
+async def test_contract_clauses_returns_db_rows(client, db_session, auth_headers_legal):
+    """GET /contracts/{id}/clauses returns DB-backed clauses in seq order."""
+    r_create = await client.post(
+        "/api/v1/contracts",
+        json={
+            "title": "条項一覧テスト契約",
+            "contract_type": "ukeoi",
+            "counterparty": "条項テスト建設",
+            "department_id": 1,
+        },
+        headers=auth_headers_legal,
+    )
+    assert r_create.status_code in (200, 201), r_create.text
+    cid = r_create.json()["id"]
+
+    db_session.add_all(
+        [
+            Clause(contract_id=cid, seq=2, title="第2条", body="第2条本文", risk_level="low"),
+            Clause(
+                contract_id=cid,
+                seq=1,
+                title="第1条",
+                body="第1条本文",
+                risk_level="medium",
+                ai_findings={"category": "支払"},
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    r_clauses = await client.get(
+        f"/api/v1/contracts/{cid}/clauses",
+        headers=auth_headers_legal,
+    )
+
+    assert r_clauses.status_code == 200, r_clauses.text
+    body = r_clauses.json()
+    assert [item["seq"] for item in body] == [1, 2]
+    assert body[0]["text"] == "第1条本文"
+    assert body[0]["category"] == "支払"

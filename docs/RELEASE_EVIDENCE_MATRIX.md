@@ -1,6 +1,6 @@
 # 📊 Release Evidence Matrix — Construction-LegalOps-DX
 
-> **最終更新: 2026-07-19 / Loop 90**  
+> **最終更新: 2026-07-19 / Loop 91**
 > 本書は `/goal` の完了条件を、現在の証拠・検証コマンド・未解決ゲートへ対応付ける CTO 監査表です。  
 > 本番 deploy / 公開 DNS 変更 / secret 投入 / PR merge / release tag は、本書の対象外ではなく **人間承認後の実行項目** として扱います。
 > 最終報告は [`docs/FINAL_RELEASE_STOP_REPORT.md`](./FINAL_RELEASE_STOP_REPORT.md) を正とする。
@@ -43,10 +43,11 @@
 | Secret scan | `./scripts/scan_secrets.sh` | ✅ high-confidence secret なし |
 | Cloudflare legalops preflight | `./scripts/verify_cloudflare_legalops.sh` | ✅ Passed 22 / Failed 0 / Warnings 0 |
 | JSON / diff | `python3 -m json.tool state.json` + `git diff --check` | ✅ |
-| Release docs | `./scripts/verify_release_docs.sh` | ✅ Passed 171 / Failed 0 |
+| Release docs | `./scripts/verify_release_docs.sh` | ✅ Passed 178 / Failed 0 |
 | SharePoint Graph real mode | `cd backend && python -m pytest tests/unit/test_sharepoint_service.py -q && python -m ruff check app/services/sharepoint_service.py tests/unit/test_sharepoint_service.py && python -m mypy app/services/sharepoint_service.py` | ✅ 33 passed / ruff clean / mypy success |
 | Notification real mode | `cd backend && python -m pytest tests/unit/test_notification_service.py -q && python -m ruff check app/services/notification_service.py tests/unit/test_notification_service.py && python -m mypy app/services/notification_service.py` | ✅ 32 passed / ruff clean / mypy success |
 | Contract submit | `cd backend && python -m pytest tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -q && python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py && python -m mypy app/services/contract_service.py app/api/v1/contracts.py` | ✅ 38 passed / ruff clean / mypy success |
+| Contract subresources | `cd backend && python -m pytest tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -q && python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py && python -m mypy app/services/contract_service.py app/api/v1/contracts.py` | ✅ 43 passed / versions current snapshot / clauses DB rows / ruff clean / mypy success |
 | Goal completion evidence | `./scripts/verify_goal_completion_evidence.sh` | ✅ Passed 40 / Failed 0。`/goal` 完了条件を証拠表・最終報告・停止線へ対応付け |
 | Review evidence | `./scripts/verify_review_evidence.sh` | ✅ Passed 29 / Failed 0。CodeRabbit timeout、代替静的検証、security review、Critical/High limitationを検証 |
 | Dependency audit evidence | `./scripts/verify_dependency_audit_evidence.sh` | ✅ Passed 23 / Failed 0。npm audit high/critical 0、moderate 4 は既知残リスク。pip-audit は隔離venv方式で72 deps / 0 vulnerabilities |

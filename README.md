@@ -15,7 +15,7 @@
 
 ---
 
-## 🚦 現在のリリース直前状態 (2026-07-19 / Loop 90)
+## 🚦 現在のリリース直前状態 (2026-07-19 / Loop 91)
 
 | 項目 | 現在状態 | 補足 |
 |---|---|---|
@@ -36,6 +36,7 @@
 | 📎 SharePoint Graph | 実装・検証済み | SharePoint Graph real mode は Entra client-credentials + Microsoft Graph drive upload / webUrl 解決に対応。unit contract 33 passed |
 | 📣 Notification real mode | 実装・検証済み | Exchange Graph sendMail / Teams webhook / desknet's webhook を mock contract で検証。unit 32 passed |
 | 📤 Contract submit | 実装・検証済み | `POST /contracts/{id}/submit` は draft → in_review に遷移。unit/integration contract 38 passed、ruff/mypy clean |
+| 📑 Contract subresources | 実装・検証済み | `/contracts/{id}/versions` と `/contracts/{id}/clauses` は DB-backed / current snapshot で 501 stub 回避。unit/integration contract 43 passed |
 | 📋 最終判断資料 | 整備済み | [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) / [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md) |
 
 ```mermaid
@@ -803,6 +804,7 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 > | 📎 SharePoint Graph   | SharePoint Graph real mode 実装済み（client-credentials / drive upload / webUrl 解決 / fail-closed tests 33 passed） |
 > | 📣 Notification real  | Notification real mode 実装済み（Exchange Graph sendMail / Teams webhook / desknet's webhook / fail-closed tests 32 passed） |
 > | 📤 Contract submit    | `POST /contracts/{id}/submit` は legacy 501 stub を撤去し draft → in_review 遷移を実装（unit/integration 38 passed / ruff / mypy） |
+> | 📑 Contract subresources | `/contracts/{id}/versions` current snapshot と `/contracts/{id}/clauses` DB-backed seq order を実装（unit/integration 43 passed / ruff / mypy） |
 > | 🔐 SSO callback/logout | SSOService wrapper + HttpOnly cookie / idempotent logout                            |
 > | ⚡ E2E                | Playwright 51 passed（Docker公式イメージ・knowledge詳細含む・CI HARD gate）          |
 > | 🧪 Jest               | 35 passed / CI HARD gate                                                             |
@@ -822,11 +824,11 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-## 🔌 Backend API カバレッジ（v0.1.12 / Loop 90）
+## 🔌 Backend API カバレッジ（v0.1.12 / Loop 91）
 
 | エンドポイント            | ステータス     | テスト数        |
 | ------------------------- | -------------- | --------------- |
-| `/api/v1/contracts`       | ✅ 実装+テスト | CRUD + submit 回帰 |
+| `/api/v1/contracts`       | ✅ 実装+テスト | CRUD + submit + versions + clauses 回帰 |
 | `/api/v1/reviews`         | ✅ 実装+テスト | 13件            |
 | `/api/v1/workflows`       | ✅ 実装+テスト | 8件             |
 | `/api/v1/risks`           | ✅ 実装+テスト | 5件             |

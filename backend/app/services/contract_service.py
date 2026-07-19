@@ -10,9 +10,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import CurrentUser
+from app.models.clause import Clause
 from app.models.contract import Contract
 from app.models.enums import ContractStatus
-from app.schemas.contract import ContractCreate, ContractOut, ContractUpdate
+from app.schemas.clause import ClauseOut
+from app.schemas.contract import ContractCreate, ContractOut, ContractUpdate, ContractVersionOut
 from app.services._stub import make_stub
 
 _stub = make_stub("contract_service")
@@ -171,6 +173,72 @@ async def list_contracts(
     rows = list(result.scalars().all())
     items = [ContractOut.model_validate(r) for r in rows]
     return items, total
+
+
+async def list_versions(
+    session: AsyncSession,
+    *,
+    contract_id: int,
+    viewer: CurrentUser,
+    page: int = 1,
+    size: int = 20,
+) -> tuple[list[ContractVersionOut], int]:
+    """Return the current contract version as a stable API snapshot.
+
+    The current schema does not include a separate ``contract_versions`` table.
+    Until a non-destructive history table migration is approved, the endpoint
+    exposes the authoritative current row so callers do not hit the legacy
+    501 fallback.
+    """
+
+    contract = await get_contract(session, contract_id=contract_id, viewer=viewer)
+    if contract is None:
+        raise LookupError(f"Contract {contract_id} not found")
+    if page != 1:
+        return [], 1
+    item = ContractVersionOut(
+        id=contract.id,
+        contract_id=contract.id,
+        version=contract.version,
+        title=contract.title,
+        status=ContractStatus(contract.status),
+        sharepoint_item_id=contract.sharepoint_item_id,
+        created_at=contract.updated_at or contract.created_at,
+        created_by=contract.updated_by or contract.created_by,
+    )
+    return [item][:size], 1
+
+
+async def list_clauses(
+    session: AsyncSession,
+    *,
+    contract_id: int,
+    viewer: CurrentUser,
+) -> list[ClauseOut]:
+    """Return active clauses for a contract in ``seq`` order."""
+
+    contract = await get_contract(session, contract_id=contract_id, viewer=viewer)
+    if contract is None:
+        raise LookupError(f"Contract {contract_id} not found")
+    stmt = (
+        select(Clause)
+        .where(Clause.contract_id == contract_id, Clause.deleted_at.is_(None))
+        .order_by(Clause.seq.asc())
+    )
+    result = await session.execute(stmt)
+    clauses = list(result.scalars().all())
+    return [
+        ClauseOut(
+            id=clause.id,
+            contract_id=clause.contract_id,
+            seq=clause.seq,
+            title=clause.title,
+            text=clause.body,
+            category=(clause.ai_findings or {}).get("category"),
+            risk_level=clause.risk_level,
+        )
+        for clause in clauses
+    ]
 
 
 def __getattr__(item: str) -> Any:

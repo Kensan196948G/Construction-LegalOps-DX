@@ -268,16 +268,23 @@ oid 無しトークンで JIT 作成されたユーザーを、後日取得し�
 ### 5.6 `POST /contracts/{id}/submit`
 
 - 認可: `drafter` (本人) / `admin`
-- 動作: status を `draft → in_review` に遷移し、ワークフローを開始
+- 動作: status を `draft → in_review` に遷移する
 - レスポンス: 200 + 更新後 Contract
 - 409: 状態遷移違反
+- 備考: 承認ワークフローの開始は `POST /contracts/{id}/workflows` で行う
 
 ### 5.7 `GET /contracts/{id}/clauses`
 
 - 認可: `viewer` 以上
 - レスポンス: clauses 配列 (seq 昇順)
 
-### 5.8 `GET /contracts/{id}/audit-trail`
+### 5.8 `GET /contracts/{id}/versions`
+
+- 認可: `viewer` 以上
+- レスポンス: 現行スキーマでは `contract_versions` 履歴テーブルを持たないため、現在行の version snapshot を返す
+- 備考: 完全な履歴テーブル化は非破壊 migration として別途承認後に実施
+
+### 5.9 `GET /contracts/{id}/audit-trail`
 
 - 認可: `auditor` / `admin`
 - レスポンス: audit_logs を contract_id で絞った時系列

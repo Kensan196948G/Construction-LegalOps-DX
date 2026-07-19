@@ -2,10 +2,10 @@
 
 本ドキュメントは **2026-11-16 本番リリース** に向けた最終確認チェックリストです。
 
-**最終更新: 2026-07-19 (v0.1.12 / Loop 90)** — `legalops.mirai-dx-platform.com` Cloudflare 適用手順、SharePoint Graph real mode、Notification real mode、公式根拠、pre-deploy gate、Standalone WebUI runtime preflight、release docs preflight、goal evidence preflight、review evidence preflight、dependency audit evidence preflight、GitHub release gate、latest main CI success、warning classification、checklist pending classification、production stop-line、final stop report を反映
+**最終更新: 2026-07-19 (v0.1.12 / Loop 91)** — `legalops.mirai-dx-platform.com` Cloudflare 適用手順、SharePoint Graph real mode、Notification real mode、公式根拠、pre-deploy gate、Standalone WebUI runtime preflight、release docs preflight、goal evidence preflight、review evidence preflight、dependency audit evidence preflight、GitHub release gate、latest main CI success、warning classification、checklist pending classification、production stop-line、final stop report を反映
 
 > 📎 承認者向けの集約資料: [`docs/PRODUCTION_APPROVAL_PACKET.md`](./PRODUCTION_APPROVAL_PACKET.md)。
-> Loop 90 時点の CI / pre-deploy / Cloudflare / SharePoint Graph real mode / Notification real mode / WebUI runtime / goal evidence / review evidence / dependency audit evidence / GitHub release gate / warning classification / checklist pending classification / production stop-line / review 実施状況は同パケット §2 を正とする。
+> Loop 91 時点の CI / pre-deploy / Cloudflare / SharePoint Graph real mode / Notification real mode / WebUI runtime / goal evidence / review evidence / dependency audit evidence / GitHub release gate / warning classification / checklist pending classification / production stop-line / review 実施状況は同パケット §2 を正とする。
 > `/goal` 完了条件ごとの証拠は [`docs/RELEASE_EVIDENCE_MATRIX.md`](./RELEASE_EVIDENCE_MATRIX.md) を正とする。
 
 ## 📊 Release Readiness ダッシュボード (2026-07-19)
@@ -226,5 +226,5 @@
 
 ---
 
-> 本チェックリストは Loop 90 (2026-07-19) 時点の実装・検証状態に同期済みです。
+> 本チェックリストは Loop 91 (2026-07-19) 時点の実装・検証状態に同期済みです。
 > 本番リリース日 (2026-11-16) までに各項目の責任者・期限を再確認し、本番 deploy / DNS / secrets は人間承認後に実行すること。
