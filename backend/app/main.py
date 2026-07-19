@@ -6,10 +6,11 @@ structured logging middleware, Prometheus metrics, and the v1 router.
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any, Final
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
@@ -17,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
+    REGISTRY,
     CollectorRegistry,
     Counter,
     Histogram,
@@ -35,9 +37,10 @@ from app.core.logging import (
     get_logger,
     set_request_context,
 )
-from app.db.session import dispose_engine, get_db
+from app.db.session import dispose_engine, get_db, update_pool_metrics
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sensitive_masking import SensitiveMaskingMiddleware
+from app.observability.operational_metrics import update_operational_metrics
 
 # Router import is intentionally lazy at module level to avoid pulling
 # the entire API layer into worker processes that don't need it.
@@ -74,11 +77,27 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         app_env=settings.app_env,
         app_name=settings.app_name,
     )
+    _pool_metrics_task: asyncio.Task[None] | None = None
     try:
+        _pool_metrics_task = asyncio.create_task(_pool_metrics_loop())
         yield
     finally:
+        if _pool_metrics_task is not None:
+            _pool_metrics_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await _pool_metrics_task
         logger.info("app_shutdown")
         await dispose_engine()
+
+
+async def _pool_metrics_loop(interval: float = 30.0) -> None:
+    """Periodically update DB pool metrics for Prometheus scraping."""
+    while True:
+        try:
+            update_pool_metrics()
+        except Exception:
+            logger.debug("pool_metrics_update_failed", exc_info=True)
+        await asyncio.sleep(interval)
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +151,7 @@ class RequestContextMiddleware:
             # Use route template when available (set by Starlette router after
             # dispatch), fall back to raw ASGI path.
             route = scope.get("route")
-            path_label: str = getattr(route, "path", None) or scope.get("path", "")
+            path_label: str = str(getattr(route, "path", None) or scope.get("path", ""))
             try:
                 _REQUEST_LATENCY.labels(
                     method=scope.get("method", ""),
@@ -241,10 +260,16 @@ def create_app() -> FastAPI:
         return {"status": "ok", "version": app.version}
 
     @app.get("/metrics", include_in_schema=False)
-    async def metrics() -> Response:
+    async def metrics(session: AsyncSession = Depends(get_db)) -> Response:
         """Prometheus scrape endpoint."""
+        try:
+            update_pool_metrics()
+            await update_operational_metrics(session)
+        except Exception:
+            logger.debug("operational_metrics_refresh_failed", exc_info=True)
+        payload = generate_latest(_REGISTRY) + generate_latest(REGISTRY)
         return Response(
-            content=generate_latest(_REGISTRY),
+            content=payload,
             media_type=CONTENT_TYPE_LATEST,
         )
 
@@ -256,7 +281,7 @@ def create_app() -> FastAPI:
     except ImportError as exc:
         logger.warning(
             "api_router_unavailable",
-            detail="app.api.v1.api_router not yet implemented",
+            detail="api_router import failed; API v1 routes unavailable",
             error=str(exc),
         )
     else:

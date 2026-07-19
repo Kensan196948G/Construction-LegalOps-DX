@@ -4,7 +4,7 @@ Covers:
   - ``start_review()`` in stub mode (AI_REVIEW_STUB=1)
   - ``_to_dict()`` helper via start_review output
   - contract not found → LookupError
-  - non-stub mode → HTTPException 501
+  - non-stub mode without production key → deterministic AIReviewService fallback
 
 Target coverage: >= 80 % of ai_review_service.py
 """
@@ -254,26 +254,25 @@ async def test_start_review_contract_not_found_raises_lookup_error(
 
 
 # ---------------------------------------------------------------------------
-# 9. Non-stub mode (AI_REVIEW_STUB unset) → HTTPException 501
+# 9. Non-stub mode (AI_REVIEW_STUB unset) → no 501 fallback
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_start_review_non_stub_raises_501(
+async def test_start_review_non_stub_uses_configured_service_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Arrange: AI_REVIEW_STUB not set. Act: start_review. Assert: HTTP 501."""
-    from fastapi import HTTPException
-
-    # Arrange — ensure env var is absent
+    """Arrange: AI_REVIEW_STUB absent. Act: start_review. Assert: review row returned."""
     monkeypatch.delenv("AI_REVIEW_STUB", raising=False)
     session = _make_session(_make_contract())
 
-    # Act / Assert
-    with pytest.raises(HTTPException) as exc_info:
-        await start_review(session, contract_id=1, user_id=1, payload=_make_payload())
+    result = await start_review(session, contract_id=1, user_id=1, payload=_make_payload())
 
-    assert exc_info.value.status_code == 501
+    assert isinstance(result, dict)
+    assert result["contract_id"] == 1
+    assert result["status"] == "running"
+    assert result["summary"]
+    assert isinstance(result["findings"], list)
 
 
 # ---------------------------------------------------------------------------

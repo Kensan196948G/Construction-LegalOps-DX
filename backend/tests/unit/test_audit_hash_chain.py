@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-security = pytest.importorskip("app.core.security")
+from app.core import security
 
 
 def test_hash_chain_deterministic_for_same_input():

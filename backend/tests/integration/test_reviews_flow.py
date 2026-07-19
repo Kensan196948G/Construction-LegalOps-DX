@@ -49,14 +49,21 @@ async def test_full_review_flow(client, auth_headers_legal, monkeypatch):
     body = r_get.json()
     assert body["status"] in {"pending", "running", "completed"}
 
-    # Act: add legal comment via PATCH (no separate comments endpoint)
+    # Act: add legal decision metadata via PATCH (no separate comments endpoint)
     r_patch = await client.patch(
         f"/api/v1/reviews/{review_id}",
-        json={"summary": "条項 12 を再検討が必要"},
+        json={
+            "legal_comment": "条項 12 を再検討済み",
+            "final_decision": "accept",
+            "overall_risk": "low",
+        },
         headers=auth_headers_legal,
     )
-    # Assert — patch may not be supported for all fields; 200 or 422 both acceptable
-    assert r_patch.status_code in (200, 422)
+    assert r_patch.status_code == 200, r_patch.text
+    patched = r_patch.json()
+    assert patched["overall_risk"] == "low"
+    assert patched["result"]["legal_comment"] == "条項 12 を再検討済み"
+    assert patched["result"]["final_decision"] == "accept"
 
     # Act: final decision (accept)
     r_accept = await client.post(

@@ -93,6 +93,8 @@ pgdata/
 # ---------- ログ ----------
 *.log
 logs/
+reports/webui/*.log
+reports/webui/standalone-webui.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -122,3 +124,10 @@ frontend/**/CLAUDE.md
 docs/CLAUDE.md
 infra/**/CLAUDE.md
 scripts/**/CLAUDE.md
+
+# opencode plugin directory (auto-generated)
+.opencode/
+
+# local agent tool state (auto-generated, may contain machine-local config)
+.agents/
+.codex/

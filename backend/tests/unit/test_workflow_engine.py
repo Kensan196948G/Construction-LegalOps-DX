@@ -15,12 +15,8 @@ from uuid import uuid4
 
 import pytest
 
-we = pytest.importorskip(
-    "app.services.workflow_engine",
-    reason="workflow engine implemented in Loop 3",
-)
-
-from app.models.enums import RiskLevel, WorkflowStepStatus  # type: ignore  # noqa: E402
+from app.models.enums import RiskLevel, WorkflowStepStatus
+from app.services import workflow_engine as we
 
 # ---------------------------------------------------------------------------
 # select_route — pure routing matrix

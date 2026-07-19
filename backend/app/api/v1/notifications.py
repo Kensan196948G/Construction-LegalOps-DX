@@ -32,14 +32,17 @@ async def list_notifications(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[NotificationOut]:
-    items, total = await notification_service.list_for_user(
-        session,
-        user_id=current_user.db_id,
-        status=status_,
-        channel=channel,
-        page=page,
-        size=size,
-    )
+    try:
+        items, total = await notification_service.list_for_user(
+            session,
+            user_id=current_user.db_id,
+            status=status_,
+            channel=channel,
+            page=page,
+            size=size,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return Page[NotificationOut](items=items, total=total, page=page, size=size)
 
 
@@ -71,7 +74,7 @@ async def mark_read(
         target_id=notification.id,
         request=request,
     )
-    return NotificationOut.model_validate(notification)
+    return notification
 
 
 @router.post(

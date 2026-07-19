@@ -9,10 +9,12 @@
 # 守るべき方針:
 #   - 秘匿値は `${VAR:?required in production}` で fail-fast
 #   - resource limits (mem/cpu) を全サービスに設定
-#   - ポートは Nginx (443/80) のみ公開、他は internal
-#   - ログドライバは json-file + rotation (将来 OTel/Loki に切替予定)
-#   - TLS: ACME (Let's Encrypt) で `/etc/nginx/certs/{fullchain.pem,privkey.pem}` を更新
-#     TODO(Ops): certbot コンテナ or external ACME client (e.g. acme.sh) を追加
+#   - 直接公開時のホスト公開は Nginx (443/80) のみ、他は internal
+#   - Cloudflare Tunnel 採用時は cloudflared を同一 Docker network に置き、
+#     nginx:80 を origin とする。ホスト公開ポートは環境に応じて閉じる。
+#   - ログドライバは json-file + rotation。`--profile logging` で Loki/Promtail 集約を有効化
+#   - TLS: Cloudflare Tunnel 採用時は edge TLS を外部境界にする。
+#     直接公開 / origin TLS 採用時のみ ACME (Let's Encrypt) を certbot-renew で更新
 # ============================================================
 name: construction-legalops-dx
 
@@ -159,7 +161,9 @@ services:
     logging: *default-logging
 
   nginx:
-    # 本番のみ 443 を公開。80 → 443 redirect は default.conf で実施。
+    # 直接公開 / origin TLS 採用時の本番公開ポート。
+    # Cloudflare Tunnel 採用時は cloudflared が compose network 内の nginx:80 に接続するため、
+    # 公開ポートを閉じた追加 overlay の適用を承認ゲートで判断する。
     ports:
       - "80:80"
       - "443:443"

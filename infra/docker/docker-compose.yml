@@ -6,6 +6,9 @@
 #   - default (none specified): postgres / redis / backend / frontend / nginx
 #   - worker : celery-worker / celery-beat (`--profile worker`)
 #   - tools  : 補助 (init-db 等)        (`--profile tools`)
+#   - monitoring : Prometheus / Alertmanager / Grafana
+#   - logging : Loki / Promtail
+#   - tls-renewal : certbot renewal helper
 #
 # 本番設定は `docker-compose.prod.yml` をオーバーレイで適用すること。
 #   例: docker compose -f infra/docker/docker-compose.yml \
@@ -244,10 +247,11 @@ services:
         condition: service_healthy
     healthcheck:
       # Next.js standalone は /api/health 等を持たないため、TCP/HTTP 200 確認
-      test:
-        [
+      test: [
           "CMD-SHELL",
-          "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1",
+          # localhost はコンテナ内で ::1 (IPv6) に解決されるが Next.js は IPv4 のみ
+          # listen するため、busybox wget では常に失敗する。127.0.0.1 に固定する。
+          "wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1",
         ]
       interval: 15s
       timeout: 5s
@@ -277,6 +281,7 @@ services:
       - ../nginx/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
       # TLS 証明書 (staging: self-signed / production: Let's Encrypt をマウント)
       - nginx-certs:/etc/nginx/certs:ro
+      - certbot-www:/var/www/certbot:ro
     depends_on:
       backend:
         condition: service_healthy
@@ -297,6 +302,193 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # ----------------------------------------------------------
+  # Prometheus (metrics collection)
+  # `--profile monitoring` で起動
+  # ----------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: legalops-prometheus
+    <<: *restart
+    user: "65534:65534"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["monitoring"]
+
+  # ----------------------------------------------------------
+  # Alertmanager (alert routing)
+  # `--profile monitoring` で起動
+  # ----------------------------------------------------------
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: legalops-alertmanager
+    <<: *restart
+    user: "65534:65534"
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ../monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["monitoring"]
+
+  # ----------------------------------------------------------
+  # Grafana (dashboards)
+  # `--profile monitoring` で起動
+  # ----------------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: legalops-grafana
+    <<: *restart
+    user: "472:472"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/legalops-backend.json:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["monitoring"]
+
+  # ----------------------------------------------------------
+  # Loki (log aggregation)
+  # `--profile logging` で起動
+  # ----------------------------------------------------------
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: legalops-loki
+    <<: *restart
+    user: "10001:10001"
+    command:
+      - "-config.file=/etc/loki/loki-config.yml"
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ../monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["logging"]
+
+  # ----------------------------------------------------------
+  # Promtail (Docker container log shipper)
+  # `--profile logging` で起動
+  # ----------------------------------------------------------
+  promtail:
+    image: grafana/promtail:3.2.1
+    container_name: legalops-promtail
+    <<: *restart
+    command:
+      - "-config.file=/etc/promtail/promtail-config.yml"
+    volumes:
+      - ../monitoring/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - legalops-net
+    security_opt:
+      - no-new-privileges:true
+    profiles: ["logging"]
+
+  # ----------------------------------------------------------
+  # Certbot renewal helper
+  # `--profile tls-renewal` で起動
+  # ----------------------------------------------------------
+  certbot-renew:
+    image: certbot/certbot:v2.11.0
+    container_name: legalops-certbot-renew
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        if [ -z "$${CERTBOT_DOMAINS:-}" ] || [ -z "$${CERTBOT_EMAIL:-}" ]; then
+          echo "CERTBOT_DOMAINS and CERTBOT_EMAIL are required for certificate issuance/renewal." >&2
+          exit 64
+        fi
+        domain_args=""
+        for domain in $${CERTBOT_DOMAINS}; do
+          domain_args="$${domain_args} -d $${domain}"
+        done
+        primary_domain="$${CERTBOT_PRIMARY_DOMAIN:-}"
+        if [ -z "$${primary_domain}" ]; then
+          set -- $${CERTBOT_DOMAINS}
+          primary_domain="$$1"
+        fi
+        if [ ! -f /etc/letsencrypt/live/$${primary_domain}/fullchain.pem ]; then
+          certbot certonly --webroot --webroot-path /var/www/certbot \
+            --email "$${CERTBOT_EMAIL}" --agree-tos --no-eff-email \
+            $${domain_args}
+        fi
+        while :; do
+          certbot renew --webroot --webroot-path /var/www/certbot --quiet
+          sleep "$${CERTBOT_RENEW_INTERVAL_SECONDS:-43200}"
+        done
+    volumes:
+      - nginx-certs:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    networks:
+      - legalops-net
+    profiles: ["tls-renewal"]
+
 volumes:
   pgdata:
     name: legalops-pgdata
@@ -304,6 +496,14 @@ volumes:
     name: legalops-redisdata
   nginx-certs:
     name: legalops-nginx-certs
+  prometheus-data:
+    name: legalops-prometheus-data
+  grafana-data:
+    name: legalops-grafana-data
+  loki-data:
+    name: legalops-loki-data
+  certbot-www:
+    name: legalops-certbot-www
 
 networks:
   legalops-net:

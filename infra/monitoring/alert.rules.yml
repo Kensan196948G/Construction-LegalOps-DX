@@ -61,3 +61,32 @@ groups:
         annotations:
           summary: "Database connection errors detected"
           description: "DB connection errors are occurring."
+
+      # ---- Commit-after-response window ----
+      - alert: DatabaseCommitFailures
+        expr: rate(db_commit_failures_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database commit failures detected"
+          description: "DB commit failures (commit-after-response window) are occurring. JIT provisioning or audit writes may be silently lost."
+
+      # ---- Celery / async jobs ----
+      - alert: CeleryQueueMetricsUnavailable
+        expr: celery_queue_length < 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue metrics unavailable"
+          description: "The backend could not read Redis queue depth for at least 5 minutes."
+
+      - alert: CeleryQueueBacklog
+        expr: celery_queue_length > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue backlog is growing"
+          description: "A Celery queue has more than 100 waiting jobs for at least 10 minutes."

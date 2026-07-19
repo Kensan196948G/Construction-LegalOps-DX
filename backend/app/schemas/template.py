@@ -46,8 +46,8 @@ class ClauseLibraryCreate(BaseModel):
     title: Annotated[str, Field(min_length=1, max_length=256)]
     category: Annotated[str, Field(min_length=1, max_length=64)]
     recommendation: Annotated[
-        str, Field(pattern="^(recommended|caution|prohibited|neutral)$")
-    ] = "neutral"
+        str, Field(pattern="^(required|recommended|optional|prohibited)$")
+    ] = "recommended"
     text: Annotated[str, Field(min_length=1)]
     tags: list[str] = Field(default_factory=list)
 
@@ -58,7 +58,7 @@ class ClauseLibraryUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=256)
     category: str | None = Field(default=None, max_length=64)
     recommendation: str | None = Field(
-        default=None, pattern="^(recommended|caution|prohibited|neutral)$"
+        default=None, pattern="^(required|recommended|optional|prohibited)$"
     )
     text: str | None = None
     tags: list[str] | None = None

@@ -11,8 +11,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -201,7 +199,10 @@ async def delete_contract(
     "/{contract_id}/submit",
     response_model=ContractOut,
     summary="契約レビュー提出",
-    description="status を draft → in_review に遷移し、ワークフローを起動する。",
+    description=(
+        "status を draft → in_review に遷移する。"
+        "承認ワークフローは /contracts/{id}/workflows で開始する。"
+    ),
 )
 async def submit_contract(
     contract_id: int,
@@ -243,13 +244,16 @@ async def list_versions(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> Page[ContractVersionOut]:
-    items, total = await contract_service.list_versions(
-        session,
-        contract_id=contract_id,
-        viewer=current_user,
-        page=page,
-        size=size,
-    )
+    try:
+        items, total = await contract_service.list_versions(
+            session,
+            contract_id=contract_id,
+            viewer=current_user,
+            page=page,
+            size=size,
+        )
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
     return Page[ContractVersionOut](items=items, total=total, page=page, size=size)
 
 
@@ -263,14 +267,14 @@ async def list_clauses(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> list[ClauseOut]:
-    return cast(
-        list[ClauseOut],
-        await contract_service.list_clauses(
+    try:
+        return await contract_service.list_clauses(
             session,
             contract_id=contract_id,
             viewer=current_user,
-        ),
-    )
+        )
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
 
 
 @router.get(

@@ -3,7 +3,7 @@
 最終更新: 2026-05-16
 版数: v1.0 (Draft)
 所管: アーキテクチャドキュメントチーム
-ベース URL: `https://legalops.example.co.jp/api/v1`
+ベース URL: `https://legalops.mirai-dx-platform.com/api/v1`
 
 ---
 
@@ -51,7 +51,7 @@
 
 ```json
 {
-  "type": "https://legalops.example.co.jp/errors/validation",
+  "type": "https://legalops.mirai-dx-platform.com/errors/validation",
   "title": "Validation Error",
   "status": 422,
   "detail": "title must not be empty",
@@ -139,9 +139,36 @@ Entra ID 認可コードを受け、ID/Access トークンを取得して HttpOn
 - 認可: `admin` / `auditor` / 本人
 - レスポンス: 200 + ユーザー
 
-### 4.3 `PATCH /users/{id}`
+### 4.3 `POST /users/{id}/identity-link`
+
+oid 無しトークンで JIT 作成されたユーザーを、後日取得した Microsoft Entra ID の実 `oid` に **admin が明示的に紐付ける**。
+通常ログイン時の自動マージは禁止し、同一メール・異なる実 `oid` は引き続き `401` で fail-closed する。
 
 - 認可: `admin`
+- 監査: `user.identity_link`
+- 成功: 200 + 更新後ユーザー
+- 失敗: `404` (対象ユーザーなし) / `409` (現在 oid 不一致、同一 oid、または別ユーザーへ既に紐付け済み)
+
+リクエスト例:
+
+```json
+{
+  "expected_current_entra_oid": "2b0c1c8a-1111-4444-8888-0f7a7d1c0001",
+  "new_entra_oid": "5f9f2b12-2222-4444-9999-0f7a7d1c0002",
+  "reason": "Operator verified the user's Entra oid during identity migration."
+}
+```
+
+安全条件:
+
+- `expected_current_entra_oid` が現在の `users.entra_oid` と一致しない場合は拒否。
+- `new_entra_oid` が別ユーザーに存在する場合は拒否。
+- `attributes.identity_link_history[]` に `from/to/linked_by/linked_at/reason` を保持。
+
+### 4.4 `PATCH /users/{id}`
+
+- 認可: `admin`
+- 動作: `display_name`, `role`, `department_id`, `is_active`, `attributes` を部分更新する
 - リクエスト:
 
 ```json
@@ -149,12 +176,20 @@ Entra ID 認可コードを受け、ID/Access トークンを取得して HttpOn
 ```
 
 - レスポンス: 200 + 更新後ユーザー
-- 409: 楽観ロック (version 不一致)
+- 409: `users` テーブルには現時点で `version` 列がないため、`version` を指定した更新は fail-closed で拒否
 
-### 4.4 `POST /users/sync`
+### 4.5 `DELETE /users/{id}`
 
 - 認可: `admin`
-- 動作: Microsoft Graph からユーザー / グループを同期
+- 動作: ユーザーを `is_active=false` にし、`deleted_at` を設定する論理削除
+- 監査: `user.delete`
+- 成功: 204
+- 失敗: `404` (対象ユーザーなし) / `409` (admin 自身の自己削除)
+
+### 4.6 `POST /users/sync`
+
+- 認可: `admin`
+- 動作: Microsoft Graph からユーザー / グループを同期するジョブを受付。Secrets 未投入環境では外部通信せず `queued` を返す。
 - レスポンス: 202 (ジョブ ID 返却)
 
 ---
@@ -233,16 +268,23 @@ Entra ID 認可コードを受け、ID/Access トークンを取得して HttpOn
 ### 5.6 `POST /contracts/{id}/submit`
 
 - 認可: `drafter` (本人) / `admin`
-- 動作: status を `draft → in_review` に遷移し、ワークフローを開始
+- 動作: status を `draft → in_review` に遷移する
 - レスポンス: 200 + 更新後 Contract
 - 409: 状態遷移違反
+- 備考: 承認ワークフローの開始は `POST /contracts/{id}/workflows` で行う
 
 ### 5.7 `GET /contracts/{id}/clauses`
 
 - 認可: `viewer` 以上
 - レスポンス: clauses 配列 (seq 昇順)
 
-### 5.8 `GET /contracts/{id}/audit-trail`
+### 5.8 `GET /contracts/{id}/versions`
+
+- 認可: `viewer` 以上
+- レスポンス: 現行スキーマでは `contract_versions` 履歴テーブルを持たないため、現在行の version snapshot を返す
+- 備考: 完全な履歴テーブル化は非破壊 migration として別途承認後に実施
+
+### 5.9 `GET /contracts/{id}/audit-trail`
 
 - 認可: `auditor` / `admin`
 - レスポンス: audit_logs を contract_id で絞った時系列
@@ -253,7 +295,8 @@ Entra ID 認可コードを受け、ID/Access トークンを取得して HttpOn
 
 ### 6.1 `POST /contracts/{id}/reviews`
 
-AI レビューを起動する。
+AI レビューを起動し、`legal_reviews` に構造化レビュー結果を保存する。実本番 Claude key が未投入の環境では、
+API 契約を維持するため決定論的 fallback を使い、501 ではなく `running` 状態のレビューを返す。
 
 - 認可: `reviewer` / `drafter` / `admin`
 - ヘッダ: `Idempotency-Key`
@@ -312,19 +355,36 @@ AI レビューを起動する。
 }
 ```
 
-### 6.3 `POST /reviews/{id}/accept`
+### 6.3 `PATCH /reviews/{id}`
+
+- 認可: `reviewer` / `admin`
+- 用途: 法務担当者の人間判断メモ、最終判断メタデータ、リスク再評価を保存
+- リクエスト:
+
+```json
+{
+  "final_decision": "accept",
+  "legal_comment": "人間確認済み。解除条項は別紙修正で許容。",
+  "overall_risk": "low"
+}
+```
+
+- 動作: `overall_risk` / `reviewer_id` は `legal_reviews` の列に反映し、`final_decision` / `legal_comment` はレビュー結果の `result` JSON に保持する。`accept` / `reject` の状態遷移は専用エンドポイントで実行する。
+- レスポンス: 200 + 更新後 Review
+
+### 6.4 `POST /reviews/{id}/accept`
 
 - 認可: `reviewer`
 - 動作: AI 結果を受領、契約 status を更新
 - レスポンス: 200
 
-### 6.4 `POST /reviews/{id}/reject`
+### 6.5 `POST /reviews/{id}/reject`
 
 - 認可: `reviewer`
 - リクエスト: `{ "reason": "再レビュー要求" }`
 - レスポンス: 200
 
-### 6.5 `GET /reviews?contract_id=...`
+### 6.6 `GET /reviews?contract_id=...`
 
 - 認可: `viewer` 以上
 - 用途: 同一契約の過去レビューを時系列で取得
@@ -448,10 +508,11 @@ AI レビューを起動する。
 
 - 認可: `viewer` 以上
 - クエリ: `category`, `recommendation`, `tag`, `q`
+- `recommendation`: `required` / `recommended` / `optional` / `prohibited`
 
 ### 10.2 `POST /clauses-library`
 
-- 認可: `admin`
+- 認可: `legal` / `admin`
 - リクエスト: 条項のフルテキスト + メタ
 
 ### 10.3 `GET /templates`
@@ -459,18 +520,60 @@ AI レビューを起動する。
 - 認可: `viewer` 以上
 - 用途: 契約類型ごとのテンプレ一覧
 
+### 10.4 `GET /templates/{id}`
+
+- 認可: `viewer` 以上
+- 用途: 永続化済み契約ひな形の詳細取得
+
+### 10.5 `POST /templates`
+
+- 認可: `legal` / `admin`
+- 動作: 契約ひな形を `contract_templates` に永続化し、`template.create` を監査ログへ記録
+- 競合: `code` 重複時は `409 Conflict`
+- リクエスト例:
+
+```json
+{
+  "code": "TMPL-UKEOI-CUSTOM-001",
+  "name": "工事請負契約書（社内標準）",
+  "contract_type": "請負",
+  "description": "社内標準条項を反映した工事請負契約ひな形",
+  "body": "契約本文...",
+  "is_active": true
+}
+```
+
 ---
 
 ## 11. ナレッジ (`/knowledge`)
 
 ### 11.1 `GET /knowledge`
 
-- クエリ: `q`, `tag`
-- レスポンス: ナレッジ記事配列
+- クエリ: `page`, `size`
+- レスポンス: `Page<KnowledgeArticleOut>`
 
-### 11.2 `POST /knowledge`
+### 11.2 `GET /knowledge/search`
 
-- 認可: `reviewer` / `admin`
+- クエリ: `q`, `tag`, `contract_type`, `page`, `size`
+- 動作: `knowledge_articles` と契約メタデータをDB-backedで横断検索し、スコア付きで返す
+- レスポンス: `Page<KnowledgeSearchResult>`
+
+### 11.3 `GET /knowledge/similar/{contract_id}`
+
+- クエリ: `top_k`
+- 動作: 対象契約の本文・メタデータを元に、過去契約とのTF-cosine類似度を算出する
+- レスポンス: `SimilarContractOut[]`
+
+### 11.4 `GET /knowledge/{id}`
+
+- 動作: 指定IDのナレッジ記事を返す。存在しない場合は `404`
+- レスポンス: `KnowledgeArticleOut`
+
+### 11.5 `POST /knowledge`
+
+- 認可: `legal` / `admin`
+- 動作: ナレッジ記事を `knowledge_articles` に永続化し、`knowledge.create` 監査ログを記録
+- レスポンス: `201 KnowledgeArticleOut`
 
 ---
 
@@ -521,28 +624,31 @@ AI レビューを起動する。
 
 ## 13. ファイルアップロード (`/uploads`)
 
-### 13.1 `POST /uploads`
+### 13.1 `POST /uploads/init`
 
-- 認可: `drafter` 以上
-- Content-Type: `multipart/form-data`
-- パート:
-  - `file`: バイナリ
-  - `contract_id`: 関連契約 (任意、後付け関連付け可)
-  - `is_primary`: bool
+- 認可: `drafter` / `reviewer` / `admin`
+- 動作: ファイルメタデータを検証し、完了報告に使う署名付き `upload_token` を発行する。APIサーバーはファイル本体を受け取らない。
+- リクエスト:
+
+```json
+{
+  "contract_id": 1001,
+  "filename": "draft.docx",
+  "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "size_bytes": 234123,
+  "is_primary": true
+}
+```
+
 - レスポンス例:
 
 ```json
 {
-  "data": {
-    "id": 5001,
-    "contract_id": 1001,
-    "filename": "draft.docx",
-    "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "size_bytes": 234123,
-    "checksum_sha256": "abc123...",
-    "storage": "sharepoint",
-    "sharepoint_item_id": "01ABCD..."
-  }
+  "upload_id": "opaque-upload-id",
+  "upload_url": "sharepoint-stub://uploads/opaque-upload-id",
+  "upload_token": "signed-token",
+  "storage": "sharepoint",
+  "expires_in": 3600
 }
 ```
 
@@ -551,15 +657,27 @@ AI レビューを起動する。
   - 受理 MIME: `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
   - 受理 NG 時は `415 Unsupported Media Type`
 
-### 13.2 `GET /uploads/{id}/download`
+### 13.2 `POST /uploads/complete`
+
+- 認可: `drafter` / `reviewer` / `admin`
+- 動作: `upload_token` を検証し、SharePoint item ID / checksum を `attachments` に登録する
+- 成功: `201 Created` + Attachment metadata
+- 失敗: `404` (契約なし) / `403` (他ユーザー token) / `409` (token 不正・期限切れ等)
+
+### 13.3 `GET /uploads/{id}`
+
+- 認可: `admin` / `auditor` / `reviewer` / `approver` / アップロード者
+- 動作: attachment metadata を返す
+
+### 13.4 `GET /uploads/{id}/download`
 
 - 認可: 契約に対するアクセス権あり
 - 動作: SharePoint への署名付き URL を生成し `302` リダイレクト
 
-### 13.3 `DELETE /uploads/{id}`
+### 13.5 `DELETE /uploads/{id}`
 
-- 認可: `admin` (または起案者・未署名段階のみ)
-- 動作: 論理削除
+- 認可: `admin` / アップロード者
+- 動作: `deleted_at` を設定する論理削除
 
 ---
 
@@ -568,13 +686,20 @@ AI レビューを起動する。
 ### 14.1 `GET /notifications`
 
 - 認可: 本人のみ
-- クエリ: `status`, `channel`
-- 用途: アプリ内通知センター
+- クエリ: `status=unread|read`, `channel=in_app|mail|teams|desknets|email`
+- 用途: 自身宛て通知センター。`email` は API 利便性のため `mail` channel に正規化する。
+- レスポンス: `Page<NotificationOut>`
 
-### 14.2 `POST /notifications/{id}/read`
+### 14.2 `PATCH /notifications/{id}/read`
 
 - 動作: `read_at = now()` を設定
-- レスポンス: 204
+- 所有者以外は `403 Forbidden`
+- レスポンス: `NotificationOut`
+
+### 14.3 `POST /notifications/read-all`
+
+- 動作: 自身の未読通知すべてに `read_at = now()` を設定
+- レスポンス: `{ "updated": <件数> }`
 
 ---
 
@@ -601,7 +726,8 @@ AI レビューを起動する。
 | ルート | 制限 |
 |--------|------|
 | `POST /contracts/{id}/reviews` | 1 ユーザー 30 req/h |
-| `POST /uploads` | 1 ユーザー 60 req/h |
+| `POST /uploads/init` | 1 ユーザー 60 req/h |
+| `POST /uploads/complete` | 1 ユーザー 60 req/h |
 | 既定 | 1 ユーザー 600 req/min |
 
 超過時 `429 Too Many Requests` + `Retry-After` ヘッダ。

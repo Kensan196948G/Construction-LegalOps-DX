@@ -1,19 +1,24 @@
-"""SharePoint Online integration (stub).
+"""SharePoint Online integration.
 
 Loop 2 keeps uploaded bytes on the local filesystem under a configurable
 root directory so the rest of the platform can persist attachments
-without an Entra app registration. Loop 4 replaces these methods with
-Microsoft Graph API calls.
+without an Entra app registration. Real mode uses Microsoft Graph with the
+client-credentials grant and fails closed when operator configuration is
+missing or Graph rejects a request.
 """
 
 from __future__ import annotations
 
 import hashlib
+import json
 import os
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Final
+from typing import Any, Final, cast
 from uuid import uuid4
 
 import structlog
@@ -24,11 +29,16 @@ from tenacity import (
     wait_exponential,
 )
 
+from app.core.config import get_settings
+
 logger = structlog.get_logger(__name__)
 
 _DEFAULT_STUB_ROOT: Final[Path] = Path(
     os.getenv("SHAREPOINT_STUB_ROOT", "/tmp/legalops-sharepoint-stub")  # nosec B108
 )
+_GRAPH_BASE_URL: Final[str] = "https://graph.microsoft.com/v1.0"
+_GRAPH_SCOPE: Final[str] = "https://graph.microsoft.com/.default"
+_HTTP_TIMEOUT: Final[float] = 10.0
 
 
 class SharePointError(RuntimeError):
@@ -53,7 +63,7 @@ class SharePointService:
     Two modes:
 
     * ``stub`` (default for Loop 2): writes to ``SHAREPOINT_STUB_ROOT``.
-    * ``real`` (Loop 4): authenticates with MSAL and calls Microsoft Graph.
+    * ``real``: authenticates with Entra ID and calls Microsoft Graph.
     """
 
     def __init__(
@@ -62,12 +72,15 @@ class SharePointService:
         mode: str | None = None,
         stub_root: Path | None = None,
         site_url: str | None = None,
+        drive_id: str | None = None,
     ) -> None:
         self._mode = (mode or os.getenv("SHAREPOINT_MODE", "stub") or "stub").lower()
         self._stub_root = stub_root or _DEFAULT_STUB_ROOT
         self._site_url = site_url or os.getenv(
             "SHAREPOINT_SITE_URL", "https://contoso.sharepoint.com/sites/legalops"
         )
+        self._drive_id = drive_id or os.getenv("SHAREPOINT_DRIVE_ID", "").strip()
+        self._access_token: str | None = None
         if self._mode == "stub":
             self._stub_root.mkdir(parents=True, exist_ok=True)
 
@@ -143,12 +156,99 @@ class SharePointService:
             url=f"{self._site_url}/Shared%20Documents/{rel}?docid={doc_id}",
         )
 
-    async def _real_upload(self, file_bytes: bytes, path: str) -> str:  # pragma: no cover
-        raise SharePointError(
-            "real SharePoint upload is not implemented in Loop 2 — set SHAREPOINT_MODE=stub"
+    async def _real_upload(self, file_bytes: bytes, path: str) -> str:
+        drive_id = self._require_drive_id()
+        token = self._graph_access_token()
+        encoded_path = urllib.parse.quote(path.lstrip("/"), safe="/")
+        url = f"{_GRAPH_BASE_URL}/drives/{drive_id}/root:/{encoded_path}:/content"
+        req = urllib.request.Request(  # noqa: S310  # nosec B310
+            url,
+            data=file_bytes,
+            method="PUT",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/octet-stream",
+                "Accept": "application/json",
+            },
         )
+        payload = self._read_json(req, action="sharepoint.upload")
+        item_id = payload.get("id")
+        if not isinstance(item_id, str) or not item_id:
+            raise SharePointError("Graph upload response missing item id")
+        logger.info("sharepoint.upload.real", item_id=item_id, path=path)
+        return item_id
 
-    async def _real_get_url(self, doc_id: str) -> str:  # pragma: no cover
-        raise SharePointError(
-            "real SharePoint URL resolution is not implemented in Loop 2 — set SHAREPOINT_MODE=stub"
+    async def _real_get_url(self, doc_id: str) -> str:
+        drive_id = self._require_drive_id()
+        token = self._graph_access_token()
+        encoded_id = urllib.parse.quote(doc_id, safe="")
+        url = f"{_GRAPH_BASE_URL}/drives/{drive_id}/items/{encoded_id}?$select=webUrl"
+        req = urllib.request.Request(  # noqa: S310  # nosec B310
+            url,
+            method="GET",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+            },
         )
+        payload = self._read_json(req, action="sharepoint.get_url")
+        web_url = payload.get("webUrl")
+        if not isinstance(web_url, str) or not web_url:
+            raise SharePointError("Graph item response missing webUrl")
+        return web_url
+
+    def _require_drive_id(self) -> str:
+        if not self._drive_id:
+            raise SharePointError("SHAREPOINT_DRIVE_ID is required for real SharePoint mode")
+        return self._drive_id
+
+    def _graph_access_token(self) -> str:
+        if self._access_token:
+            return self._access_token
+        settings = get_settings()
+        tenant = settings.entra_tenant_id
+        token_url = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
+        body = urllib.parse.urlencode(
+            {
+                "client_id": settings.entra_client_id,
+                "client_secret": settings.entra_client_secret.get_secret_value(),
+                "grant_type": "client_credentials",
+                "scope": _GRAPH_SCOPE,
+            }
+        ).encode("utf-8")
+        req = urllib.request.Request(  # noqa: S310  # nosec B310
+            token_url,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+        )
+        payload = self._read_json(req, action="sharepoint.token")
+        token = payload.get("access_token")
+        if not isinstance(token, str) or not token:
+            raise SharePointError("Entra token response missing access_token")
+        self._access_token = token
+        return token
+
+    def _read_json(self, req: urllib.request.Request, *, action: str) -> dict[str, Any]:
+        try:
+            with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:  # noqa: S310  # nosec B310
+                raw = resp.read()
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+            logger.warning(action, status=exc.code, detail=detail[:512])
+            raise SharePointError(f"{action} failed with HTTP {exc.code}") from exc
+        except urllib.error.URLError as exc:
+            raise SharePointError(f"{action} endpoint unreachable: {exc.reason}") from exc
+
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SharePointError(f"{action} returned invalid JSON") from exc
+        if not isinstance(parsed, dict):
+            raise SharePointError(f"{action} returned a non-object JSON payload")
+        if "error" in parsed:
+            raise SharePointError(f"{action} rejected request")
+        return cast(dict[str, Any], parsed)

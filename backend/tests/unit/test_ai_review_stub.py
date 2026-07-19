@@ -11,17 +11,11 @@ from __future__ import annotations
 
 import pytest
 
-ai_review = pytest.importorskip(
-    "app.services.ai_review",
-    reason="ai_review service implemented in Loop 3",
-)
+from app.services import ai_review
 
 
 def _make_service():
-    cls = getattr(ai_review, "AIReviewService", None)
-    if cls is None:
-        pytest.skip("AIReviewService not implemented")
-    return cls(mode="stub")
+    return ai_review.AIReviewService(mode="stub")
 
 
 async def test_stub_returns_structured_result():

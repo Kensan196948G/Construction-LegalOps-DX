@@ -13,10 +13,7 @@ from pathlib import Path
 
 import pytest
 
-fp = pytest.importorskip(
-    "app.services.file_parser",
-    reason="file_parser implemented in Loop 3",
-)
+from app.services import file_parser as fp
 
 
 async def test_parse_txt_returns_text_content(tmp_path: Path):

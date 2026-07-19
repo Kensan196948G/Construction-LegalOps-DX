@@ -69,6 +69,10 @@ class Settings(BaseSettings):
         default=SecretStr("redis://redis:6379/0"),
         alias="REDIS_URL",
     )
+    celery_queue_names_raw: str = Field(
+        default="legalops.default",
+        alias="CELERY_QUEUE_NAMES",
+    )
 
     # ----- JWT / Auth -----
     jwt_secret: SecretStr = Field(
@@ -211,6 +215,11 @@ class Settings(BaseSettings):
     def trusted_hosts(self) -> list[str]:
         """Parsed trusted hosts list (comma-separated env var)."""
         return [h.strip() for h in self.trusted_hosts_raw.split(",") if h.strip()]
+
+    @property
+    def celery_queue_names(self) -> list[str]:
+        """Parsed Celery queue names for operational queue-depth metrics."""
+        return [q.strip() for q in self.celery_queue_names_raw.split(",") if q.strip()]
 
     @property
     def is_production(self) -> bool:

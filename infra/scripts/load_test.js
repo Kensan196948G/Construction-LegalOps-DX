@@ -3,7 +3,7 @@
  *
  * 使用方法:
  *   k6 run infra/scripts/load_test.js
- *   k6 run --env BASE_URL=https://staging.legalops.example.co.jp infra/scripts/load_test.js
+ *   k6 run --env BASE_URL=https://legalops.mirai-dx-platform.com infra/scripts/load_test.js
  *
  * 目標 KPI (RELEASE_CHECKLIST §負荷テスト):
  *   - スループット: 50 req/s

@@ -41,6 +41,8 @@ const customConfig: Config = {
     "^.+\\.module\\.(css|sass|scss)$",
   ],
   testPathIgnorePatterns: ["/node_modules/", "/.next/", "/dist/", "/coverage/", "/e2e/"],
+  modulePathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/dist/", "<rootDir>/coverage/"],
+  watchPathIgnorePatterns: ["<rootDir>/.next/", "<rootDir>/dist/", "<rootDir>/coverage/"],
   collectCoverageFrom: [
     "app/**/*.{ts,tsx}",
     "components/**/*.{ts,tsx}",

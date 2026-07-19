@@ -62,7 +62,7 @@ async def test_hash_chain_is_continuous(client, auth_headers_admin):
     items = sorted(items, key=lambda x: x["id"])
 
     # Assert: each row's prev_hash equals previous row's hash_chain
-    # list_logs is a stub returning [] so pairwise yields nothing — passes trivially
+    assert len(items) >= 3
     for prev, cur in itertools.pairwise(items):
         assert cur["prev_hash"] == prev["hash_chain"]
 

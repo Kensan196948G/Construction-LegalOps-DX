@@ -52,6 +52,8 @@ do_backup() {
         --file="${backup_file}"
 
     log "Backup complete: $(du -h "${backup_file}" | cut -f1)"
+    sha256sum "${backup_file}" > "${backup_file}.sha256"
+    log "Checksum written: ${backup_file}.sha256"
 
     # Retain only recent backups
     local count
@@ -73,6 +75,13 @@ do_restore() {
     if [ ! -f "$RESTORE_FILE" ]; then
         log "ERROR: backup file not found: ${RESTORE_FILE}"
         exit 1
+    fi
+
+    if [ -f "${RESTORE_FILE}.sha256" ]; then
+        log "Verifying checksum: ${RESTORE_FILE}.sha256"
+        sha256sum -c "${RESTORE_FILE}.sha256"
+    else
+        log "WARNING: checksum file not found for ${RESTORE_FILE}"
     fi
 
     log "WARNING: This will DROP and recreate the database '${PGDB}'."

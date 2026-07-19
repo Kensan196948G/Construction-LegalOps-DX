@@ -215,6 +215,20 @@ async def _resolve_db_user_id(
         role,
         "token" if entra_oid is not None else "derived",
     )
+    from app.services import audit_service
+
+    await audit_service.log(
+        session,
+        actor_id=int(user.id),
+        action="user.jit_provision",
+        target_type="users",
+        target_id=int(user.id),
+        payload={
+            "email": derived_email,
+            "role": role,
+            "oid_source": "token" if entra_oid is not None else "derived",
+        },
+    )
     return int(user.id)
 
 

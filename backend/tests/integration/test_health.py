@@ -36,3 +36,20 @@ async def test_readyz_returns_200_when_db_up(client):
     resp = await client.get("/readyz")
     # Assert
     assert resp.status_code == 200
+
+
+async def test_metrics_exposes_request_db_business_and_queue_metrics(client):
+    """Metrics endpoint includes release-ops gauges without requiring Redis."""
+    await client.get("/health")
+
+    resp = await client.get("/metrics")
+
+    assert resp.status_code == 200
+    text = resp.text
+    assert "http_requests_total" in text
+    assert "db_commit_failures_total" in text
+    assert "legalops_contracts_by_status" in text
+    assert "legalops_legal_reviews_by_status" in text
+    assert "legalops_workflow_steps_by_status" in text
+    assert "legalops_notifications_by_status" in text
+    assert 'celery_queue_length{queue="legalops.default"}' in text

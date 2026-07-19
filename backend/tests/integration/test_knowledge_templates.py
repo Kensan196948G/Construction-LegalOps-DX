@@ -3,9 +3,10 @@
 Covers:
     - GET /knowledge/search         → keyword search over contracts
     - GET /knowledge/similar/{id}   → similar contracts via TF-cosine
-    - POST /knowledge               → 501 (not yet implemented)
-    - GET /templates                → list in-memory templates
+    - POST /knowledge               → persist knowledge article
+    - GET /templates                → list persistent templates with seed fallback
     - GET /templates/{id}           → single template
+    - POST /templates               → create template
     - GET /templates/clauses-library → clause-library items
 """
 
@@ -145,13 +146,35 @@ async def test_list_clause_library_returns_page(client, auth_headers_admin):
     assert isinstance(body["items"], list)
 
 
-async def test_create_template_501(client, auth_headers_admin):
-    """POST /templates → 501 until persistent store is ready."""
+async def test_create_template_201(client, auth_headers_admin):
+    """POST /templates → 201 with the created persistent template."""
     payload = {
-        "code": "TEST-001",
+        "code": "TEST-TMPL-001",
         "name": "テスト用テンプレート",
         "contract_type": "テスト",
         "body": "契約本文",
     }
     r = await client.post("/api/v1/templates", json=payload, headers=auth_headers_admin)
-    assert r.status_code == 501
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["code"] == payload["code"]
+    assert body["name"] == payload["name"]
+    assert body["body"] == payload["body"]
+
+    fetched = await client.get(f"/api/v1/templates/{body['id']}", headers=auth_headers_admin)
+    assert fetched.status_code == 200
+    assert fetched.json()["code"] == payload["code"]
+
+
+async def test_create_template_duplicate_code_returns_409(client, auth_headers_admin):
+    """POST /templates with duplicate code → 409."""
+    payload = {
+        "code": "TEST-TMPL-DUP",
+        "name": "重複コード確認",
+        "contract_type": "テスト",
+        "body": "契約本文",
+    }
+    first = await client.post("/api/v1/templates", json=payload, headers=auth_headers_admin)
+    assert first.status_code == 201, first.text
+    second = await client.post("/api/v1/templates", json=payload, headers=auth_headers_admin)
+    assert second.status_code == 409

@@ -378,7 +378,7 @@ export const MOCK_COMPLIANCE_ITEMS: ComplianceItem[] = [
   { id: "cp3", law: "下請法", item: "第2条の4 — 支払期日（60日ルール）", status: "warning", lastCheck: "2026/05/08", detail: "一部契約で支払期日が75日に設定されており要是正。" },
   { id: "cp4", law: "下請法", item: "第4条 — 書面の交付義務", status: "compliant", lastCheck: "2026/05/08", detail: "3条書面の交付を全契約で確認済み。" },
   { id: "cp5", law: "電子帳簿保存法", item: "第7条 — 電子取引データの保存", status: "compliant", lastCheck: "2026/05/01", detail: "電子データの適切な保存を確認。" },
-  { id: "cp6", law: "電子帳簿保存法", item: "検索要件の充足", status: "warning", lastCheck: "2026/05/01", detail: "取引金額での検索機能が未実装。システム対応が必要。" },
+  { id: "cp6", law: "電子帳簿保存法", item: "検索要件の充足", status: "compliant", lastCheck: "2026/05/01", detail: "取引年月日・取引金額・取引先の検索条件を契約台帳と保存証跡で確認済み。月次監査で継続確認。" },
   { id: "cp7", law: "個人情報保護法", item: "第23条 — 第三者提供の制限", status: "compliant", lastCheck: "2026/04/25", detail: "個人情報の第三者提供は適切な同意のもとで実施。" },
   { id: "cp8", law: "建設業法", item: "第26条 — 主任技術者の配置", status: "non_compliant", lastCheck: "2026/05/12", detail: "東名高速補修工事で主任技術者の配置届が未提出。至急対応要。" },
 ];

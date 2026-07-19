@@ -9,17 +9,15 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user, require_role
-from app.models.user import User
 from app.schemas.common import Page
 from app.schemas.user import (
     UserCreate,
+    UserIdentityLink,
     UserOut,
     UserSyncJob,
     UserUpdate,
@@ -139,21 +137,86 @@ async def update_user(
     return UserOut.model_validate(user)
 
 
+@router.post(
+    "/{user_id}/identity-link",
+    response_model=UserOut,
+    summary="Entra ID oid の明示リンク",
+    description=(
+        "oid 無しトークンで JIT 作成されたユーザーを、後日取得した実 Entra oid に"
+        " admin が明示的に紐付ける。自動マージは行わず、現在 oid の一致確認と監査ログを必須にする。"
+    ),
+)
+async def link_user_identity(
+    user_id: int,
+    payload: UserIdentityLink,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+    _: None = Depends(require_role("admin")),
+) -> UserOut:
+    try:
+        user = await user_service.link_entra_identity(
+            session,
+            user_id=user_id,
+            expected_current_entra_oid=payload.expected_current_entra_oid,
+            new_entra_oid=payload.new_entra_oid,
+            reason=payload.reason,
+            actor_id=current_user.db_id or 0,
+        )
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+    await audit_service.log(
+        session,
+        actor_id=current_user.db_id,
+        action="user.identity_link",
+        target_type="users",
+        target_id=user.id,
+        payload={
+            "expected_current_entra_oid": str(payload.expected_current_entra_oid),
+            "new_entra_oid": str(payload.new_entra_oid),
+            "reason": payload.reason,
+        },
+        request=request,
+    )
+    return UserOut.model_validate(user)
+
+
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     response_model=None,
-    summary="ユーザー削除 (admin only / stub)",
-    description="論理削除。admin ロールのみ実行可能。実装は Sprint 1 で完成予定。",
+    summary="ユーザー削除 (admin only)",
+    description="ユーザーを無効化し、deleted_at を設定する論理削除。admin ロールのみ実行可能。",
 )
 async def delete_user(
     user_id: int,
-    _current: User = Depends(get_current_user),
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
     _admin: None = Depends(require_role("admin")),
 ) -> None:
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="user deletion not yet implemented",
+    try:
+        await user_service.soft_delete_user(
+            session,
+            user_id=user_id,
+            actor_id=current_user.db_id,
+        )
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+    await audit_service.log(
+        session,
+        actor_id=current_user.db_id,
+        action="user.delete",
+        target_type="users",
+        target_id=user_id,
+        payload={"soft_delete": True},
+        request=request,
     )
 
 
@@ -169,5 +232,4 @@ async def sync_users(
     current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> UserSyncJob:
-    result = await user_service.start_graph_sync(session, triggered_by=current_user.db_id)
-    return cast(UserSyncJob, result)
+    return await user_service.start_graph_sync(session, triggered_by=current_user.db_id)

@@ -8,24 +8,25 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 32,
-    "loops_total": 32,
+    "last_loop_completed": 93,
+    "loops_total": 93,
     "current_version": "0.1.12",
-    "cto_release_assessment": "production_ready_pending_human_actions",
-    "cto_assessment_date": "2026-07-17",
+    "cto_release_assessment": "phase1_complete_production_ready_pending_human_actions",
+    "cto_assessment_date": "2026-07-19",
     "deployment_blockers": [
       "Vault secrets injection (human operation: ./scripts/setup_vault_secrets.sh)",
-      "CSP enforce (ops: apply infra/nginx/security-headers.enforce.conf after 7-day data)"
+      "CSP enforce (ops: apply infra/nginx/security-headers.enforce.conf after 7-day data)",
+      "CF/Neon 本番リソース作成 (人間: API token + Neon project + DNS) — Issue #50"
     ],
     "deploy_ready": true,
-    "last_session_summary": "Loop 31: /goal-driven final prep session — main synced to HEAD 8f1c180 (was 04efb5a, +30 ループ分). CHANGELOG / README / HANDOVER を Loop 30 まで最新化. 全 PR マージ済み確認 (56 件 MERGED, 0 OPEN). main CI run 29309456627 SUCCESS (2026-07-14). secrets 漏洩スキャン完了 (生キー/AWS key ゼロ). WebUI 起動確認 (frontend 3010 / backend 8010). Issue 整備 (#23 #24 #41 #48 #50 #51). 本番デプロイは人間承認待ちで停止."
+    "last_session_summary": "Loop 93: Added backup/restore release evidence gate. scripts/backup_db.sh now writes .sha256 checksums and verifies them before restore when present. Added scripts/verify_backup_restore_docs.sh and wired it into pre_deploy_check.sh and release documentation checks. PITR remains an explicit human approval gate after production backup/WAL/Neon decisions. No production deploy, public DNS change, Tunnel/Access creation, Neon resource creation, secret injection, push, merge, tag, release, deployment, billing change, or destructive migration executed."
   },
-  "goal": "Phase 1: P2 コード改善完了 (#41 + #48 + #51) → 検証 → WebUI 確認 → 文書更新 → 停止",
-  "phase": "Verify",
+  "goal": "Phase 1 完了 (Neon 実環境検証 + CF preview 実デプロイ済み)。マージ判定 Y/N 待ち。Y 後 Phase 2 (merge → 本番 deploy → smoke → 監視)",
+  "phase": "ReleaseGate",
   "kpi": {
     "success_rate_target": 0.9,
-    "ci_success_rate": 1.0,
-    "test_pass_rate": 1.0,
+    "ci_success_rate": 1,
+    "test_pass_rate": 1,
     "security_critical": 0,
     "blocker_count": 0
   },
@@ -37,7 +38,7 @@
     "phase": "Verify",
     "last_session_summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS (Error 0.00%・SLO 達成) + migrations ゲート常設。Loop 28: 新 Goal (リリース後検証・CF/Neon 安定化) に対し Monitor 全数調査で『本番デプロイ実績なし』を確定 (git tag 0 / GitHub Deployments 0 / DNS 未設定 / CD 経路なし / CF・Neon 採用証跡ゼロ、現行設計は Docker Compose オンプレ)。指示に従い legalops.mirai-dx-platform.com を候補として CLOUDFLARE_NEON_MIGRATION_PLAN.md に文書化 (DNS 変更等は未実行)。欠落していた運用文書 4 本 (OPERATIONS / INCIDENT_RESPONSE / MONITORING / BACKUP_RESTORE) を実体 grounding で新規整備。Issue #50 (CF/Neon 採否判断・人間) / #51 (運用基盤ギャップ P2) 起票。Loop 26-27: 8 PR merge (#27/#37/#44/#42/#36/#46/#47/#38)・Issue 5 件クローズ (#19/#35/#40/#43/#45)・CI 全ゲート fail-closed 化完遂・PG 統合 151 passed 真 green・deploy_ready 復帰。Loop 27: Issue #45 根治 (JIT プロビジョニング、対抗レビュー 2 系統で Critical 2/High 2 検出→全反映) + PR #38 完遂。Loop 26 詳細: 5 PR merge + P1 本番欠陥 2 系統発見。(1) weekly security scan 赤化 (pip-audit) を根本分析 — ecdsa PYSEC-2026-1325 は upstream won't-fix + 到達不能 (RS256 のみ使用) のため文書化 suppress (PR #42)、main で全 5 ジョブ TRUE GREEN 確認 (run 29296717568)、恒久対応 PyJWT 移行は Issue #41。(2) date bomb 発見・修正 — Claude dormancy gate (2026-07-01) 通過で test_ai_settings 2 テストが決定論的に赤化 (全 PR の CI をブロック)、monkeypatch 日付固定 + post-gate fail-closed テスト追加 (PR #44、ローカル 901 passed)。(3) OPEN PR triage — #27 RS256 (7/7 GREEN・STABLE N=5) / #37 Jest hard-gate / #36 k6 (conflict 解消後) を検証の上 merge。(4) PR #38 修復 3 巡 — NullPool 化で asyncpg ループ跨ぎ根絶 → departments/users マスタシード + mypy 修正で FK 違反 0 件 (143→12 failed) → 残存は本番欠陥 Issue #45 (JWT subject email を BIGINT id として使用する identity マッピング欠陥が contract/review/knowledge/dashboard/risk 各サービスに存在 + GET /users の lazy-load MissingGreenlet 500 + clause_library RecursionError) のため Error Control (修復 3 回) で Blocked 化。docs PR で CHANGELOG/README/state.json 更新。",
     "last_stop_at": "2026-07-18T03:10:00Z",
-    "current_session_start_at": "2026-07-18T01:00:00Z",
+    "current_session_start_at": "2026-07-19T13:48:53.270Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
   },
@@ -45,12 +46,7 @@
     "auto_issue_generation": true,
     "self_evolution": true
   },
-  "stable": {
-    "consecutive_success": 8,
-    "target_n": 5,
-    "stable_achieved": true,
-    "note": "main CI run 29309456627 SUCCESS (2026-07-14)。最新 5+ 連続成功で STABLE 確定。"
-  },
+  "stable": true,
   "loop30": {
     "name": "CI 内 本番同等スタック検証の確立 — 潜在 P1 ×3 根治 + k6 SLO 達成 + migrations ゲート新設",
     "completed_at": "2026-07-14",
@@ -236,10 +232,9 @@
   "next_actions": [
     "本番環境 Vault secrets 投入 — P0 人間作業 (#23)",
     "CSP enforce 移行 — P0 人間作業 (#24)",
-    "Cloudflare/Neon 移行採否判断 — 人間判断 (#50)",
-    "PR マージ最終判断 — 人間判断 (該当 PR なし、現在 0 OPEN)",
-    "本番デプロイ実行 — 人間判断 (RELEASE_CHECKLIST §7 通過後)",
-    "P2 #41 PyJWT 移行 / #48 JIT 残課題 / #51 運用基盤ギャップ"
+    "CF/Neon 本番リソース作成 — P0 人間作業 (#50)",
+    "本番デプロイ実行 — 人間判断",
+    "Phase 2: 本番後確認・安定化 (本番デプロイ後に別セッションで)"
   ],
   "completed_issues": [
     19,
@@ -248,7 +243,8 @@
     43,
     45,
     41,
-    48
+    48,
+    51
   ],
   "blocked_issues": [],
   "learning": {
@@ -366,8 +362,8 @@
           "last_used": "2026-07-14T03:38:17.204Z",
           "last_description": "運用文書 4 本の起草"
         },
-        "_total_agent_calls": 22,
-        "_last_agent_call_at": "2026-07-14T03:38:17.204Z",
+        "_total_agent_calls": 24,
+        "_last_agent_call_at": "2026-07-19T13:57:17.742Z",
         "Explore": {
           "call_count": 4,
           "last_used": "2026-07-14T03:34:08.607Z",
@@ -382,6 +378,11 @@
           "call_count": 1,
           "last_used": "2026-06-15T01:59:10.463Z",
           "last_description": "対抗レビュー: 認証設計観点"
+        },
+        "qa": {
+          "call_count": 2,
+          "last_used": "2026-07-19T13:57:17.742Z",
+          "last_description": "Frontend検証スイート実行"
         }
       }
     }
@@ -456,5 +457,769 @@
         "README/HANDOVER update in progress"
       ]
     }
+  },
+  "loop35": {
+    "name": "Cloudflare legalops subdomain approval-gated readiness + Issue #51 ops IaC continuation",
+    "completed_at": "2026-07-19",
+    "summary": "Prepared legalops.mirai-dx-platform.com for approval-gated Cloudflare Tunnel/DNS/Access application. Added Loki/Promtail logging IaC and certbot renewal helper IaC without issuing certificates, changing DNS, changing secrets, or deploying production.",
+    "verification": "docker compose base/prod config with monitoring/logging/tls-renewal profiles passed; promtail config syntax valid; loki config verify passed; state JSON and docs updated.",
+    "safety": "Production deploy, DNS CNAME creation, Cloudflare Access/Tunnel creation, token/secrets changes, git push, PR merge, and release tag were not executed.",
+    "remaining": {
+      "P0_human": [
+        "#23 Vault secrets",
+        "#24 CSP enforce",
+        "#50 Cloudflare/Neon production resource approval"
+      ],
+      "P2_issue_51": [
+        "additional DB/Celery/business metrics",
+        "unhealthy auto-recovery design after Docker socket security review",
+        "on-call contact routing and incident labels"
+      ]
+    }
+  },
+  "loop36": {
+    "name": "Issue #51 additional observability — business metrics and Celery queue depth",
+    "completed_at": "2026-07-19",
+    "summary": "Added /metrics coverage for DB pool/commit failures, contract/review/workflow/notification status counts, and Redis-backed Celery queue length. Redis queue probe fails open with -1 so Prometheus scraping remains available.",
+    "verification": "backend tests/integration/test_health.py -> 4 passed; ruff targeted files -> passed; mypy targeted files -> passed; Grafana dashboard JSON parsed; Prometheus alert rules parsed by promtool-equivalent Docker image if available in follow-up.",
+    "safety": "No production deploy, DNS change, secret change, certificate issuance, git push, PR merge, release tag, or destructive migration executed.",
+    "remaining": {
+      "P2_issue_51": [
+        "unhealthy auto-recovery design after Docker socket security review",
+        "real on-call contacts and notification secrets at production approval gate"
+      ]
+    }
+  },
+  "loop37": {
+    "name": "Issue #51 on-call and incident labels",
+    "completed_at": "2026-07-19",
+    "summary": "Added role-based on-call escalation table, incident issue labels, .github/labels.yml catalog, and synced GitHub incident labels. Personal contacts/webhooks remain outside repo as secrets/human approval data.",
+    "verification": "GitHub label list confirms incident, incident:P1, incident:P2, incident:P3, on-call, and postmortem labels exist with expected descriptions.",
+    "safety": "No personal contact data, webhook URL, production secret, DNS change, deploy, push, merge, tag, or destructive operation executed.",
+    "remaining": {
+      "P2_issue_51": [
+        "unhealthy auto-recovery design after Docker socket security review"
+      ]
+    }
+  },
+  "loop38": {
+    "name": "Issue #51 closeout and Issue #57 split",
+    "completed_at": "2026-07-19",
+    "closed_issues": [
+      51
+    ],
+    "created_issues": [
+      57
+    ],
+    "summary": "Closed the umbrella ops gap issue after completing monitoring, alerting, backup, TLS renewal IaC, logging IaC, additional metrics, and incident/on-call labels. Split unhealthy auto-recovery to #57 for security-reviewed design.",
+    "verification": "#51 comment posted and issue closed; Project 30 #51=Done; #57 exists and is Project 30 Todo.",
+    "safety": "No production deploy, public DNS change, secret change, certificate issuance, git push, PR merge, release tag, destructive migration, or billing change executed."
+  },
+  "loop39": {
+    "name": "Issue #57 unhealthy recovery review and watchdog drill",
+    "completed_at": "2026-07-19",
+    "closed_issues": [
+      57
+    ],
+    "summary": "Implemented docs/UNHEALTHY_RECOVERY_REVIEW.md, scripts/check_unhealthy_services.sh, and tests/test_unhealthy_watchdog.py. Default behavior is report-only; restart requires explicit human-approved command. Resident Docker socket autoheal daemon rejected for security reasons.",
+    "verification": "pytest tests/test_unhealthy_watchdog.py -> 3 passed; bash -n watchdog script -> passed; real compose report-only -> OK no unhealthy services detected; docker compose base config -> passed; Issue #57 closed and Project 30 Done.",
+    "safety": "No production deploy, host privilege change, Docker socket daemon, public DNS change, secret change, certificate issuance, git push, PR merge, release tag, destructive migration, or billing change executed."
+  },
+  "loop40": {
+    "name": "Production approval packet and pre-deploy gate hardening",
+    "completed_at": "2026-07-19",
+    "summary": "Added docs/PRODUCTION_APPROVAL_PACKET.md as the single human approval packet for #23 Vault secrets, #24 CSP enforce, and #50 Cloudflare/Neon production resources. Linked it from README.md and docs/RELEASE_CHECKLIST.md. Hardened scripts/pre_deploy_check.sh so the final message stops at human production approval review rather than deploy permission, validates docker compose config, runs the unhealthy watchdog, and supports SKIP_DOCKER_BUILD=1 for non-deploy preflight.",
+    "verification": "SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 9, Failed 0, Warnings 5; bash -n scripts/pre_deploy_check.sh -> passed; state.json/grafana-dashboard.json parse -> passed; git diff --check -> passed.",
+    "safety": "No Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, production deploy, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "human_approval_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, and Neon production resources"
+    ]
+  },
+  "loop41": {
+    "name": "Cloudflare Tunnel production overlay and origin exposure hardening",
+    "completed_at": "2026-07-19",
+    "summary": "Added infra/docker/docker-compose.cloudflare-tunnel.yml so the approved Cloudflare Tunnel path can close nginx host ports and run cloudflared on legalops-net toward nginx:80. Updated nginx and production compose comments to distinguish Cloudflare edge TLS + origin HTTP from direct origin TLS. Synced Cloudflare README, legalops runbook, release checklist, operations docs, production approval packet, and README.",
+    "verification": "docker compose config with prod + cloudflare-tunnel overlay and dummy env -> passed; cloudflared tunnel ingress validate -> OK; cloudflared ingress rule for https://legalops.mirai-dx-platform.com/healthz -> matched rule #0 service http://nginx:80; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 9, Failed 0, Warnings 5; state JSON parse and git diff --check -> passed.",
+    "review": "CodeRabbit CLI v0.6.5 authenticated, but coderabbit review --agent -t uncommitted timed out at 184s and coderabbit review --agent --light -t uncommitted timed out at 244s. No stored findings were produced. Local static verification and manual security/design review used as fallback.",
+    "safety": "No Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, production deploy, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "human_approval_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources"
+    ]
+  },
+  "loop42": {
+    "name": "Alembic migration rollback drill automation",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_migrations_roundtrip.sh to verify the release rollback contract on PostgreSQL 16: upgrade head, downgrade base, upgrade head, and idempotent upgrade. CI migrations job now calls the verifier with --use-existing-db. pre_deploy_check now includes the roundtrip as a mandatory check. Documentation updated to separate automated Alembic rollback evidence from the still-human production data PITR drill.",
+    "verification": "scripts/verify_migrations_roundtrip.sh -> passed on disposable postgres:16-alpine; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 10, Failed 0, Warnings 5; bash -n scripts/verify_migrations_roundtrip.sh scripts/backup_db.sh scripts/pre_deploy_check.sh -> passed.",
+    "safety": "No production DB connection, production deploy, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_drills": [
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval",
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops production resources"
+    ]
+  },
+  "loop43": {
+    "name": "Pre-deploy secret exposure and Cloudflare overlay gates",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/scan_secrets.sh for lightweight high-confidence secret exposure scanning. pre_deploy_check now requires secret scan and validates the Cloudflare Tunnel production overlay compose config with dummy environment values. README and docs/RELEASE_CHECKLIST.md now list these gates explicitly.",
+    "verification": "scripts/scan_secrets.sh -> No high-confidence secret patterns detected; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 12, Failed 0, Warnings 5; Cloudflare Tunnel compose overlay config -> passed inside pre_deploy_check.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop44": {
+    "name": "Production CD approval phrase and Cloudflare/Neon fail-closed hardening",
+    "completed_at": "2026-07-19",
+    "summary": "Hardened the manual CD workflow so image publishing and optional Cloudflare/Neon production operations are blocked unless a human runs workflow_dispatch on main, production environment approval is granted, CI for the target commit is green, and production_change_approval=APPROVE_PRODUCTION_CHANGE is provided. Converted the Cloudflare Tunnel job into an approval dry-run that validates the tunnel YAML and cloudflared compose overlay and prints the manual DNS route command only.",
+    "verification": ".github/workflows/deploy.yml and ci.yml parsed as YAML; bash -n scripts/scan_secrets.sh scripts/pre_deploy_check.sh scripts/verify_migrations_roundtrip.sh -> passed; scripts/scan_secrets.sh -> No high-confidence secret patterns detected; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 12, Failed 0, Warnings 5; state JSON parse and git diff --check -> passed.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop45": {
+    "name": "Contract template persistence and API/DB enum alignment",
+    "completed_at": "2026-07-19",
+    "summary": "Added the contract_templates ORM model and Alembic 005_contract_templates migration with the five approved construction/legal template seeds. POST /templates now persists rows for legal/admin users, returns 201 on success, and returns 409 on duplicate code instead of 501. Aligned clause-library recommendation values with the existing PostgreSQL constraint across backend schema, frontend API schema, tests, and docs: required/recommended/optional/prohibited.",
+    "verification": "pytest tests/unit/test_template_service.py tests/integration/test_knowledge_templates.py tests/integration/test_clause_library.py -> 46 passed; frontend npm run typecheck -> passed; backend ruff targeted files -> passed; backend mypy targeted files -> passed; scripts/verify_migrations_roundtrip.sh -> passed with 005_contract_templates head; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 12, Failed 0, Warnings 5; scripts/scan_secrets.sh -> No high-confidence secret patterns detected; state JSON parse and git diff --check -> passed; WebUI http://192.168.0.185:38100/healthz -> ok.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop46": {
+    "name": "AI review start fallback and Cloudflare legalops subdomain preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Replaced the old 501 path in ai_review_service.start_review with AIReviewService-backed review execution and structured legal_reviews persistence. Non-production environments without a valid Claude key use deterministic fallback behavior so the API contract remains available. Added scripts/verify_cloudflare_legalops.sh and integrated it into scripts/pre_deploy_check.sh to read-only verify legalops.mirai-dx-platform.com Cloudflare readiness: tunnel config, DNS example, Access policy, compose overlay, Cloudflare NS delegation, CNAME absence, and cloudflared ingress validate.",
+    "verification": "pytest tests/unit/test_ai_review_service.py tests/integration/test_reviews_flow.py tests/integration/test_reviews_crud.py -> 24 passed; ruff check app/services/ai_review_service.py tests/unit/test_ai_review_service.py -> passed; mypy app/services/ai_review_service.py -> passed; scripts/verify_cloudflare_legalops.sh -> Passed 19, Failed 0, Warnings 0.",
+    "cloudflare_target": {
+      "zone": "mirai-dx-platform.com",
+      "hostname": "legalops.mirai-dx-platform.com",
+      "dns_record": "CNAME legalops -> <TUNNEL_ID>.cfargotunnel.com (proxied, human approval required)"
+    },
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop47": {
+    "name": "User management API DB-backed completion",
+    "completed_at": "2026-07-19",
+    "summary": "Implemented user_service.create_user, update_user, soft_delete_user, and start_graph_sync so the v1 user management routes no longer fall through the generic 501 stub path. DELETE /users/{id} now performs soft delete by setting is_active=false and deleted_at, records user.delete audit logs, and rejects admin self-deletion with 409. PATCH /users rejects explicit version tokens because the current users table has no version column and pretending to check optimistic locking would be unsafe.",
+    "verification": "ruff check app/services/user_service.py app/api/v1/users.py tests/unit/test_user_service.py tests/integration/test_identity_resolution.py -> passed; mypy app/services/user_service.py app/api/v1/users.py -> passed; pytest tests/unit/test_user_service.py tests/integration/test_identity_resolution.py tests/integration/test_rbac.py -> 42 passed; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13, Failed 0, Warnings 5.",
+    "review": "CodeRabbit CLI 0.6.5 authenticated. scripts/scan_secrets.sh passed before review. coderabbit review --agent -t uncommitted timed out after 240s during analysis before findings were produced; local static analysis, tests, pre-deploy, and manual code review used as fallback.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop48": {
+    "name": "Auth callback/logout and upload API runtime completion",
+    "completed_at": "2026-07-19",
+    "summary": "Replaced auth_service generic 501 stub with an async SSOService wrapper so GET /auth/sso/callback exchanges code into a session token and sets the existing HttpOnly cookie contract; POST /auth/logout is now an idempotent storage-ready no-op plus route-level audit/cookie clearing. Replaced upload_service generic 501 stub with signed upload sessions and attachments metadata persistence: POST /uploads/init validates MIME/size/contract and issues an HMAC-signed token; POST /uploads/complete verifies the token and writes attachments; GET /uploads/{id} and DELETE /uploads/{id} are backed by DB visibility and soft delete.",
+    "verification": "ruff check app/services/auth_service.py app/api/v1/auth.py app/services/upload_service.py app/api/v1/uploads.py tests/integration/test_auth.py tests/integration/test_uploads_flow.py -> passed; mypy app/services/auth_service.py app/api/v1/auth.py app/services/upload_service.py app/api/v1/uploads.py -> passed; pytest tests/integration/test_auth.py tests/integration/test_uploads_flow.py tests/integration/test_rbac.py -> 17 passed; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13, Failed 0, Warnings 5.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop52": {
+    "name": "Review PATCH contract persistence and stale test allowance cleanup",
+    "completed_at": "2026-07-19",
+    "summary": "Persisted PATCH /reviews/{id} legal_comment and final_decision into the review result JSON while preserving DB-backed overall_risk updates. Tightened review CRUD and audit-log integration tests so stale stub-era allowances no longer mask missing persistence or empty hash-chain evidence. Updated API design docs, CHANGELOG, README footer, and release state evidence.",
+    "verification": "ruff check app/services/review_service.py tests/integration/test_audit_logs.py tests/integration/test_reviews_crud.py -> passed; mypy app/services/review_service.py -> passed; pytest tests/integration/test_audit_logs.py tests/integration/test_reviews_crud.py -> 16 passed; scripts/scan_secrets.sh -> no high-confidence secret patterns; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "review": "CodeRabbit CLI light review on uncommitted diff was attempted with 180s timeout and stopped during analysis before findings were produced. Local static verification and manual API contract/security review used as fallback.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop53": {
+    "name": "Review flow PATCH contract hardening",
+    "completed_at": "2026-07-19",
+    "summary": "Removed the remaining PATCH /reviews/{id} 200-or-422 allowance from the full review flow integration test. The flow now exercises the real ReviewUpdate contract with legal_comment, final_decision, and overall_risk, then asserts the updated result JSON before accepting the review.",
+    "verification": "ruff check tests/integration/test_reviews_flow.py tests/integration/test_reviews_crud.py tests/integration/test_audit_logs.py app/services/review_service.py -> passed; mypy app/services/review_service.py -> passed; pytest tests/integration/test_reviews_flow.py tests/integration/test_reviews_crud.py tests/integration/test_audit_logs.py -> 17 passed; search for stale PATCH 422 allowance -> no remaining hits; scripts/scan_secrets.sh -> no high-confidence secret patterns; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop54": {
+    "name": "Unit test internal import fail-closed hardening",
+    "completed_at": "2026-07-19",
+    "summary": "Converted implemented internal-module unit tests from pytest.importorskip to direct imports so missing review_service, file_parser, workflow_engine, sensitive_detector, audit hash-chain security helpers, risk_scoring, or ai_review implementations fail the test suite instead of being skipped. Left only external-dependency and scenario-specific skips plus the intentional app.services._stub fail-fast message.",
+    "verification": "ruff check targeted unit tests -> passed; mypy app/services/risk_scoring.py app/services/ai_review.py -> passed; pytest targeted unit suite -> 168 passed; risk_scoring + ai_review direct check -> 29 passed; importorskip/not-implemented search -> no implemented internal module skip remains; scripts/scan_secrets.sh -> no high-confidence secret patterns; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop55": {
+    "name": "Release checklist and README readiness synchronization",
+    "completed_at": "2026-07-19",
+    "summary": "Updated release-facing documentation to match the current release gate: docs/RELEASE_CHECKLIST.md now reflects Loop 55, v0.1.12, pre-deploy 900+ tests, legalops Cloudflare/Tunnel/Access/Neon approval flow, Standalone WebUI, secret scan, rollback drill, monitoring/logging, and human approval gates. README Phase 1 and Backend API coverage labels now reflect Loop 55.",
+    "verification": "release docs assertions passed; stale release wording search returned no hits for the old checklist footer, old API coverage version, old Loop ranges, or exact 910-test wording; JSON and diff checks passed; scripts/scan_secrets.sh passed; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop56": {
+    "name": "Handover release gate synchronization",
+    "completed_at": "2026-07-19",
+    "summary": "Updated docs/HANDOVER.md from stale Loop 33/45/48 handoff wording to the current Loop 56 release gate. It now references pre-deploy 900+ tests, DB-backed/runtime-ready API completion, review PATCH contract hardening, internal unit test fail-closed hardening, Standalone WebUI, Cloudflare legalops read-only preflight, production approval packet, release checklist, and #23/#24/#50 human approval gates. README and RELEASE_CHECKLIST markers were advanced to Loop 56.",
+    "verification": "handover/release/readme assertions passed; stale handover wording search returned no hits in current release-facing docs for previous Loop ranges, previous exact test-count wording, or old API coverage labels; JSON and diff checks passed; scripts/scan_secrets.sh passed; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, production DB connection, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or public DNS change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop57": {
+    "name": "Cloudflare legalops runbook final synchronization",
+    "completed_at": "2026-07-19",
+    "summary": "Re-synced docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md for legalops.mirai-dx-platform.com. Replaced stale Loop 49 evidence with Loop 57 read-only verification status, added Cloudflare official documentation URLs for Tunnel DNS CNAME routing, published applications, and Access self-hosted application patterns, and advanced README / RELEASE_CHECKLIST / HANDOVER release-facing markers to Loop 57.",
+    "verification": "Cloudflare docs retrieval via cloudflare-docs plugin completed; state.json JSON validation and targeted git diff check passed; stale release-facing Loop 49/56 marker search for current docs passed; scripts/scan_secrets.sh passed; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "cloudflare_target": {
+      "zone": "mirai-dx-platform.com",
+      "hostname": "legalops.mirai-dx-platform.com",
+      "record_plan": "CNAME legalops -> <TUNNEL_ID>.cfargotunnel.com (proxied, human approval required)",
+      "access_plan": "Cloudflare Access self-hosted application LegalOps-DX with Entra ID groups LegalOps-Users / LegalOps-Admins and MFA requirement"
+    },
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop58": {
+    "name": "Production approval evidence packet hardening",
+    "completed_at": "2026-07-19",
+    "summary": "Added a Loop 58 evidence snapshot to docs/PRODUCTION_APPROVAL_PACKET.md so approvers can see the current GitHub issue state, PR state, latest CI, pre-deploy gate, secret scan, Cloudflare legalops preflight, DNS absence, WebUI health, and CodeRabbit attempt in one place. Synced docs/RELEASE_CHECKLIST.md and CHANGELOG.md.",
+    "verification": "GitHub monitor: open issues are #23/#24/#50 only, open PRs 0, latest CI success; CodeRabbit CLI 0.6.5 and auth OK, review timed out after analysis started and before findings; state.json JSON validation and targeted git diff check passed; scripts/scan_secrets.sh passed; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "review": "CodeRabbit attempted with coderabbit review --agent -t uncommitted under 240s timeout. No findings were produced before timeout.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop59": {
+    "name": "Release evidence matrix",
+    "completed_at": "2026-07-19",
+    "summary": "Added docs/RELEASE_EVIDENCE_MATRIX.md so each /goal completion criterion has a mapped evidence source, verification command, current judgment, and stop line. Linked it from README, docs/PRODUCTION_APPROVAL_PACKET.md, and docs/RELEASE_CHECKLIST.md.",
+    "verification": "state.json JSON validation and targeted git diff check passed; release evidence link checks passed; scripts/scan_secrets.sh passed; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop60": {
+    "name": "Release gate cross-document synchronization",
+    "completed_at": "2026-07-19",
+    "summary": "Synchronized docs/HANDOVER.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_CHECKLIST.md, docs/RELEASE_EVIDENCE_MATRIX.md, CHANGELOG.md, and state.json so current release-facing Loop markers and evidence references point to Loop 60.",
+    "verification": "state.json JSON validation passed; targeted git diff check passed; release docs existence/link checks passed; stale current-marker search found no active Loop 56/57/58/59 release-facing drift after correction; scripts/scan_secrets.sh passed; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop61": {
+    "name": "Final release stop report",
+    "completed_at": "2026-07-19",
+    "summary": "Added docs/FINAL_RELEASE_STOP_REPORT.md and linked it from release-facing documents so the requested final report content is available before production approval.",
+    "verification": "state.json JSON validation passed; targeted git diff check passed; final report existence/link/heading checks passed; stale Loop 57 release checklist footer search passed; scripts/scan_secrets.sh passed; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 13 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop62": {
+    "name": "Release documentation preflight gate",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_release_docs.sh to validate release-facing documentation, final stop report headings, WebUI URL, Cloudflare hostname, stop lines, stale Loop markers, and required approval documents. Integrated it into scripts/pre_deploy_check.sh as a mandatory release documentation preflight.",
+    "verification": "state.json JSON validation passed; targeted git diff check passed; scripts/verify_release_docs.sh -> Passed 31 Failed 0; scripts/scan_secrets.sh passed; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop63": {
+    "name": "Dynamic release documentation loop marker",
+    "completed_at": "2026-07-19",
+    "summary": "Updated scripts/verify_release_docs.sh so it reads project.last_loop_completed from state.json and validates current release-facing Loop markers dynamically, avoiding fixed Loop-number drift in future sessions. Synced release-facing docs and CHANGELOG to Loop 63.",
+    "verification": "state.json JSON validation passed; targeted git diff check passed; scripts/verify_release_docs.sh -> Passed 35 Failed 0; scripts/scan_secrets.sh passed; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop64": {
+    "name": "Handover release marker drift guard",
+    "completed_at": "2026-07-19",
+    "summary": "Synced docs/HANDOVER.md to the current release gate, updated release-facing approval/evidence documents to Loop 64, corrected pre-deploy Passed 14 evidence, and extended scripts/verify_release_docs.sh to fail when HANDOVER current markers drift back to stale Loop 60 wording.",
+    "verification": "state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 38 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active/listening on 192.168.0.185:38100; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop65": {
+    "name": "Release checklist evidence drift guard",
+    "completed_at": "2026-07-19",
+    "summary": "Corrected stale checklist sync wording in docs/RELEASE_EVIDENCE_MATRIX.md, synced release-facing current markers to Loop 65, and extended scripts/verify_release_docs.sh to fail when the evidence matrix still claims the release checklist is synced only through Loop 63.",
+    "verification": "state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 39 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active/listening on 192.168.0.185:38100; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop66": {
+    "name": "Issue comment evidence drift guard",
+    "completed_at": "2026-07-19",
+    "summary": "Added a release documentation preflight guard so docs/RELEASE_EVIDENCE_MATRIX.md fails validation if the Issue #50 progress evidence is left as pending comment wording. Synced release-facing current markers to Loop 66.",
+    "verification": "state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 40 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active/listening on 192.168.0.185:38100; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop67": {
+    "name": "Stop-line preflight guard",
+    "completed_at": "2026-07-19",
+    "summary": "Extended scripts/verify_release_docs.sh so release documentation preflight validates stop lines across docs/RELEASE_EVIDENCE_MATRIX.md and docs/PRODUCTION_APPROVAL_PACKET.md, including production deploy, public DNS, Cloudflare Tunnel/Access, Cloudflare/Neon secrets, CSP enforce, git operations, and secret exposure prohibitions. Synced release-facing current markers to Loop 67.",
+    "verification": "state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 48 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active/listening on 192.168.0.185:38100; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop68": {
+    "name": "Pre-deploy release-docs gate integration guard",
+    "completed_at": "2026-07-19",
+    "summary": "Extended scripts/verify_release_docs.sh so release documentation preflight validates that scripts/pre_deploy_check.sh still invokes ./scripts/verify_release_docs.sh and reports the release documentation preflight label. Synced release-facing current markers to Loop 68.",
+    "verification": "state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 50 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active/listening on 192.168.0.185:38100; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop69": {
+    "name": "Standalone WebUI evidence guard",
+    "completed_at": "2026-07-19",
+    "summary": "Extended scripts/verify_release_docs.sh so release documentation preflight validates Standalone WebUI evidence across docs/FINAL_RELEASE_STOP_REPORT.md and docs/RELEASE_EVIDENCE_MATRIX.md, including URL, healthz URL, systemd unit, and source HTML file. Synced release-facing current markers to Loop 69.",
+    "verification": "state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 56 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active/listening on 192.168.0.185:38100; docs/Construction-LegalOps-DX (Standalone).html exists and is non-empty (8836022 bytes); legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop70": {
+    "name": "Standalone WebUI HEAD verification",
+    "completed_at": "2026-07-19",
+    "summary": "Added HEAD support to scripts/serve_standalone_webui.py for /, /index.html, /healthz, and /standalone-source so operational curl -I checks return 200 and metadata instead of 501. Extended tests/test_standalone_webui.py to verify HEAD returns an empty body with the expected Content-Type and Content-Length. Synced release-facing current markers to Loop 70.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh passed; systemd user service restarted and active; curl -fsSI http://192.168.0.185:38100/ -> 200 OK, text/html, Content-Length 8836022; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 56 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 14 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active/listening on 192.168.0.185:38100; /standalone-source points to docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop71": {
+    "name": "Standalone WebUI pre-deploy gate",
+    "completed_at": "2026-07-19",
+    "summary": "Integrated Standalone WebUI contract tests, scripts/serve_standalone_webui.py py_compile, and scripts/install_standalone_webui_systemd.sh bash syntax checks into scripts/pre_deploy_check.sh. Synced release-facing evidence to Passed 17 / Failed 0 / Warnings 5.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh passed; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 56 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 17 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; curl -fsSI http://192.168.0.185:38100/ -> 200 OK, text/html, Content-Length 8836022; /standalone-source points to docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop72": {
+    "name": "Standalone WebUI release-docs preflight guard",
+    "completed_at": "2026-07-19",
+    "summary": "Added release documentation preflight checks that assert scripts/pre_deploy_check.sh includes the Standalone WebUI contract tests, scripts/serve_standalone_webui.py py_compile gate, and scripts/install_standalone_webui_systemd.sh bash syntax gate labels and file paths. Synced release-facing current markers to Loop 72.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh passed; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 62 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 17 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; curl -fsSI http://192.168.0.185:38100/ -> 200 OK, text/html, Content-Length 8836022; /standalone-source points to docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop73": {
+    "name": "WebUI approval evidence release-docs guard",
+    "completed_at": "2026-07-19",
+    "summary": "Added release documentation preflight checks that assert docs/FINAL_RELEASE_STOP_REPORT.md, docs/PRODUCTION_APPROVAL_PACKET.md, and docs/RELEASE_EVIDENCE_MATRIX.md retain the Standalone WebUI URL, HEAD check, source endpoint, systemd unit, and stop command needed by production approvers. Expanded the approval packet WebUI section and synced release-facing current markers to Loop 73.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh passed; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 71 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 17 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; curl -fsSI http://192.168.0.185:38100/ -> 200 OK, text/html, Content-Length 8836022; /standalone-source points to docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop74": {
+    "name": "Cloudflare approval safety release-docs guard",
+    "completed_at": "2026-07-19",
+    "summary": "Added release documentation preflight checks that assert Cloudflare legalops approval safety evidence remains in docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/FINAL_RELEASE_STOP_REPORT.md, and docs/RELEASE_EVIDENCE_MATRIX.md. The guard now covers Access-before-DNS, legalops CNAME/A absence, CNAME target plan, Tunnel/Access stop lines, Cloudflare/Neon secret stop lines, and DNS/Tunnel rollback warnings. Also fixed bash pattern checks to avoid Markdown backtick command substitution.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh passed; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 85 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 17 Failed 0 Warnings 5 after rerun; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; curl -fsSI http://192.168.0.185:38100/ -> 200 OK, text/html, Content-Length 8836022; /standalone-source points to docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop75": {
+    "name": "README release-ready truth guard",
+    "completed_at": "2026-07-19",
+    "summary": "Updated README.md with a front-of-file release-ready status table and Mermaid approval-gate flow that make production deploy not executed, public DNS unchanged, legalops CNAME/A absent, Cloudflare/Vault/CSP human gates, WebUI URL, and approval documents visible to non-engineers. Added Standalone WebUI runtime details to the README and extended scripts/verify_release_docs.sh to validate README loop marker, production status, legalops hostname, CNAME/A absence, WebUI URL, stop command, and approval/final report links.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh passed; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 93 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 17 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; curl -fsSI http://192.168.0.185:38100/ -> 200 OK, text/html, Content-Length 8836022; /standalone-source points to docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; targeted git diff check passed; Issue #50 updated.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop76": {
+    "name": "GitHub Project release gate sync",
+    "completed_at": "2026-07-19",
+    "summary": "Synchronized GitHub Project #30 `Construction-LegalOps-DX 開発管理` readme to the current release gate, documenting that open PR count is 0, only #23/#24/#50 remain open, #50 is blocked by human Cloudflare/Neon decisions, and production deploy/DNS/Tunnel/Access/secret operations remain stopped. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 76.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh passed; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 97 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 17 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; curl -fsSI http://192.168.0.185:38100/ -> 200 OK, text/html, Content-Length 8836022; /standalone-source points to docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015491072; targeted git diff check passed.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop77": {
+    "name": "GitHub release gate preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_github_release_gate.sh as a read-only GitHub release gate checker and connected it to scripts/pre_deploy_check.sh. The gate validates GitHub CLI auth, open PR count 0, exact open issue set #23/#24/#50, Issue #50 labels, GitHub Project #30 readme marker/evidence, Project #30 item statuses, and #50 blocked label. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 77.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_github_release_gate.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_github_release_gate.sh -> Passed 19 Failed 0; scripts/verify_release_docs.sh -> Passed 102 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 18 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015518444.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop78": {
+    "name": "GitHub Actions CI gate preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Extended scripts/verify_github_release_gate.sh so the latest main CI workflow run is validated through GitHub CLI before human production approval. The gate now checks that the latest CI run on main exists, is completed, concluded success, runs on main, and has an actions run URL, in addition to open PR 0, open issues #23/#24/#50, Issue #50 labels, GitHub Project #30 readme, Project Todo states, and #50 blocked label. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 78.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_github_release_gate.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_release_docs.sh -> Passed 105 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 18 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; latest main CI run 29628117648 -> completed/success; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015540627.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop79": {
+    "name": "Standalone WebUI runtime preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_standalone_webui_runtime.sh as a read-only runtime checker and connected it to scripts/pre_deploy_check.sh. The gate verifies the standalone HTML source exists and is substantial, the systemd user service is active, /healthz returns ok, HEAD / returns 200 with expected headers and matching Content-Length, and /standalone-source points to the expected docs/Construction-LegalOps-DX (Standalone).html file. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 79.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_standalone_webui_runtime.sh -> Passed 12 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_release_docs.sh -> Passed 110 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 19 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; latest main CI run 29628117648 -> completed/success; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015566273.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop80": {
+    "name": "Pre-deploy warning classification",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_predeploy_warning_classification.sh as a read-only checker for captured pre-deploy logs. The gate validates Passed 19, Failed 0, Warnings 5, the exact known warning set (JWT private/public keys, Entra tenant, Claude API key, Docker build skipped), no unexpected warnings, and warning explanations in the approval packet, final stop report, and evidence matrix. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 80.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_predeploy_warning_classification.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_standalone_webui_runtime.sh -> Passed 12 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop80.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; scripts/verify_release_docs.sh -> Passed 114 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 19 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; latest main CI run 29628117648 -> completed/success; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015594678.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop81": {
+    "name": "Release checklist pending classification",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_release_checklist_pending_items.sh as a read-only checker that classifies all unchecked docs/RELEASE_CHECKLIST.md items. The gate validates that unchecked items are present and all are categorized as human approval, production execution, or post-release verification gates, while also confirming the checklist links the production approval packet and states the human approval boundary. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 81.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_predeploy_warning_classification.sh/scripts/verify_release_checklist_pending_items.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_release_checklist_pending_items.sh -> Passed 5 Failed 0; scripts/verify_standalone_webui_runtime.sh -> Passed 12 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop81.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; scripts/verify_release_docs.sh -> Passed 117 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 19 Failed 0 Warnings 5; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; latest main CI run 29628117648 -> completed/success; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015621091.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop82": {
+    "name": "Production stop-line preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_production_stop_line.sh as a read-only proof gate for the final human approval boundary. The gate validates legalops.mirai-dx-platform.com CNAME/A absence, local git tag count 0, GitHub release count 0, GitHub deployment count 0, open PR count 0, open issues #23/#24/#50, Issue #50 blocked/human-decision labels, GitHub Project #30 Todo status for #23/#24/#50, and Project readme production deploy stop-line wording. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 82.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_predeploy_warning_classification.sh/scripts/verify_release_checklist_pending_items.sh/scripts/verify_production_stop_line.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_production_stop_line.sh -> Passed 13 Failed 0; scripts/verify_release_checklist_pending_items.sh -> Passed 5 Failed 0; scripts/verify_standalone_webui_runtime.sh -> Passed 12 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_release_docs.sh -> Passed 122 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 19 Failed 0 Warnings 5; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop82.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; WebUI http://192.168.0.185:38100/healthz -> ok and systemd active; standalone-source endpoint matches docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; local git tag count 0; GitHub releases 0; GitHub deployments 0; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015654143.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop83": {
+    "name": "Standalone WebUI runtime contract hardening",
+    "completed_at": "2026-07-19",
+    "summary": "Expanded scripts/verify_standalone_webui_runtime.sh as a read-only verifier for the user-facing WebUI URL. The gate now validates reports/webui/standalone-webui.json exists and is valid, status URL/health/html/stop_command match, port is within the auto allocation range 38100-38999, selected host is assigned to the Linux host, systemd user service is enabled and active, the unit uses the repository WorkingDirectory and serve_standalone_webui.py ExecStart with Restart=always and NoNewPrivileges=true, and the recorded PID listens on the recorded host:port. Connected these checks to scripts/verify_release_docs.sh and synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 83.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_predeploy_warning_classification.sh/scripts/verify_release_checklist_pending_items.sh/scripts/verify_production_stop_line.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_standalone_webui_runtime.sh -> Passed 27 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_release_docs.sh -> Passed 128 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; scripts/verify_production_stop_line.sh -> Passed 13 Failed 0; scripts/verify_release_checklist_pending_items.sh -> Passed 5 Failed 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 19 Failed 0 Warnings 5; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop83.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; WebUI http://192.168.0.185:38100/healthz -> ok, systemd enabled/active, reports/webui/standalone-webui.json host=192.168.0.185 port=38100, ss confirms 192.168.0.185:38100 listen; standalone-source endpoint matches docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; local git tag count 0; GitHub releases 0; GitHub deployments 0; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015686668.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop84": {
+    "name": "Goal completion evidence preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_goal_completion_evidence.sh as a read-only verifier that maps every explicit /goal completion criterion to evidence in docs/RELEASE_EVIDENCE_MATRIX.md and docs/FINAL_RELEASE_STOP_REPORT.md. The verifier checks required-feature, lint/type/test/build, security, DB migration/rollback, release checklist, WebUI, GitHub Project/Issue/CI, and production-approval stop-line criteria, plus final report sections, human gates #23/#24/#50, no tag/release/deployment, and legalops DNS absence. Connected the verifier to scripts/pre_deploy_check.sh and scripts/verify_release_docs.sh. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 84.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_goal_completion_evidence.sh/scripts/verify_predeploy_warning_classification.sh/scripts/verify_release_checklist_pending_items.sh/scripts/verify_production_stop_line.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_goal_completion_evidence.sh -> Passed 40 Failed 0; scripts/verify_release_docs.sh -> Passed 132 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_standalone_webui_runtime.sh -> Passed 27 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; scripts/verify_production_stop_line.sh -> Passed 13 Failed 0; scripts/verify_release_checklist_pending_items.sh -> Passed 5 Failed 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 20 Failed 0 Warnings 5; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop84.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; WebUI http://192.168.0.185:38100/healthz -> ok, systemd enabled/active, reports/webui/standalone-webui.json host=192.168.0.185 port=38100, ss confirms 192.168.0.185:38100 listen; standalone-source endpoint matches docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; local git tag count 0; GitHub releases 0; GitHub deployments 0; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015724096.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop85": {
+    "name": "Review evidence preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_review_evidence.sh as a read-only verifier for release review evidence. The verifier confirms CodeRabbit CLI availability, CodeRabbit timeout before findings, final-report limitation against unsupported Critical/High zero claims, fallback static/CI/pre-deploy review evidence, security/static/release review rows, evidence matrix fallback gate list, approval packet CodeRabbit timeout, handoff CodeRabbit/Bandit/npm audit evidence, adversarial and silent-failure review transcripts, and future adversarial-review triggers in handover. Connected it to scripts/pre_deploy_check.sh and scripts/verify_release_docs.sh. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 85.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_goal_completion_evidence.sh/scripts/verify_review_evidence.sh/scripts/verify_predeploy_warning_classification.sh/scripts/verify_release_checklist_pending_items.sh/scripts/verify_production_stop_line.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_review_evidence.sh -> Passed 29 Failed 0; scripts/verify_goal_completion_evidence.sh -> Passed 40 Failed 0; scripts/verify_release_docs.sh -> Passed 136 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_standalone_webui_runtime.sh -> Passed 27 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; scripts/verify_production_stop_line.sh -> Passed 13 Failed 0; scripts/verify_release_checklist_pending_items.sh -> Passed 5 Failed 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 21 Failed 0 Warnings 5; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop85-final.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; WebUI http://192.168.0.185:38100/healthz -> ok, systemd enabled/active, reports/webui/standalone-webui.json host=192.168.0.185 port=38100, ss confirms 192.168.0.185:38100 listen; standalone-source endpoint matches docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; local git tag count 0; GitHub releases 0; GitHub deployments 0; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015753635.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed. CodeRabbit findings were not produced, so Critical/High=0 is not claimed; local static/security/pre-deploy gates are used as fallback evidence.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop86": {
+    "name": "Dependency audit evidence preflight",
+    "completed_at": "2026-07-19",
+    "summary": "Added scripts/verify_dependency_audit_evidence.sh as a read-only verifier for dependency security evidence. The verifier runs npm audit --audit-level=high and confirms high=0, critical=0, moderate=4; validates pre-deploy npm audit high+; checks .github/workflows/security.yml for strict project-scoped pip-audit, freeze --exclude-editable, ambient pip false-positive rationale, ecdsa PYSEC ignore, and reachability rationale; verifies backend/pyproject.toml uses PyJWT[crypto] and no longer depends on python-jose; checks the latest local pip-audit artifact has 0 vulnerabilities; and validates dependency audit evidence in release docs. Connected it to scripts/pre_deploy_check.sh and scripts/verify_release_docs.sh. Synced README.md, CHANGELOG.md, docs/HANDOVER.md, docs/RELEASE_CHECKLIST.md, docs/PRODUCTION_APPROVAL_PACKET.md, docs/RELEASE_EVIDENCE_MATRIX.md, and docs/FINAL_RELEASE_STOP_REPORT.md to Loop 86.",
+    "verification": "tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_goal_completion_evidence.sh/scripts/verify_review_evidence.sh/scripts/verify_dependency_audit_evidence.sh/scripts/verify_predeploy_warning_classification.sh/scripts/verify_release_checklist_pending_items.sh/scripts/verify_production_stop_line.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_dependency_audit_evidence.sh -> Passed 23 Failed 0; scripts/verify_review_evidence.sh -> Passed 29 Failed 0; scripts/verify_goal_completion_evidence.sh -> Passed 40 Failed 0; scripts/verify_release_docs.sh -> Passed 141 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_standalone_webui_runtime.sh -> Passed 27 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; scripts/verify_production_stop_line.sh -> Passed 13 Failed 0; scripts/verify_release_checklist_pending_items.sh -> Passed 5 Failed 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 22 Failed 0 Warnings 5; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop86-final.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; npm audit --audit-level=high -> high 0 critical 0 moderate 4; isolated pip-audit -> 72 deps / 0 vulnerabilities; WebUI http://192.168.0.185:38100/healthz -> ok, systemd enabled/active, reports/webui/standalone-webui.json host=192.168.0.185 port=38100, ss confirms 192.168.0.185:38100 listen; standalone-source endpoint matches docs/Construction-LegalOps-DX (Standalone).html; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; local git tag count 0; GitHub releases 0; GitHub deployments 0; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015808172.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed. npm audit moderate 4 remains a documented residual risk; high/critical are 0.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop87": {
+    "name": "SharePoint Graph real mode",
+    "completed_at": "2026-07-19",
+    "summary": "Implemented real SharePoint Graph integration in backend/app/services/sharepoint_service.py. Real mode now uses Entra client-credentials token acquisition, Microsoft Graph drive upload, Graph item webUrl resolution, token caching, and fail-closed errors for missing SHAREPOINT_DRIVE_ID, invalid token payloads, missing Graph item id, missing webUrl, HTTP errors, unreachable endpoints, and invalid JSON. Added unit contract tests for real upload/get_url and failure paths in backend/tests/unit/test_sharepoint_service.py. Extended scripts/verify_release_docs.sh so README, final stop report, evidence matrix, source, and tests must continue to record SharePoint Graph real mode evidence.",
+    "verification": "backend/tests/unit/test_sharepoint_service.py -> 33 passed; python -m ruff check app/services/sharepoint_service.py tests/unit/test_sharepoint_service.py -> All checks passed; python -m mypy app/services/sharepoint_service.py -> Success; tests/test_standalone_webui.py -> 3 passed; python3 -m py_compile scripts/serve_standalone_webui.py passed; bash -n scripts/install_standalone_webui_systemd.sh/scripts/verify_standalone_webui_runtime.sh/scripts/verify_github_release_gate.sh/scripts/verify_goal_completion_evidence.sh/scripts/verify_review_evidence.sh/scripts/verify_dependency_audit_evidence.sh/scripts/verify_predeploy_warning_classification.sh/scripts/verify_release_checklist_pending_items.sh/scripts/verify_production_stop_line.sh/scripts/pre_deploy_check.sh/scripts/verify_release_docs.sh passed; state.json JSON validation passed; scripts/verify_release_docs.sh -> Passed 150 Failed 0; scripts/verify_goal_completion_evidence.sh -> Passed 40 Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 Failed 0; scripts/verify_standalone_webui_runtime.sh -> Passed 27 Failed 0; scripts/scan_secrets.sh -> no high-confidence secret patterns; scripts/verify_cloudflare_legalops.sh -> Passed 22 Failed 0 Warnings 0; scripts/verify_production_stop_line.sh -> Passed 13 Failed 0; scripts/verify_release_checklist_pending_items.sh -> Passed 5 Failed 0; SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh -> Passed 22 Failed 0 Warnings 5; PREDEPLOY_LOG_PATH=/tmp/legalops-predeploy-loop87-final.log scripts/verify_predeploy_warning_classification.sh -> Passed 13 Failed 0; WebUI http://192.168.0.185:38100/healthz -> ok, systemd enabled/active, reports/webui/standalone-webui.json host=192.168.0.185 port=38100, ss confirms 192.168.0.185:38100 listen; legalops.mirai-dx-platform.com CNAME/A -> absent as expected; local git tag count 0; GitHub releases 0; GitHub deployments 0; GitHub Project #30 readme and #23/#24/#50 Todo gate state verified; open PR 0; open issues only #23/#24/#50; Issue #50 updated at https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/50#issuecomment-5015854541.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed. SharePoint real mode was verified through mocked HTTP contract tests only; no real Graph upload or secret exposure occurred.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection including SharePoint/Entra production values",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop88": {
+    "name": "Notification real mode",
+    "completed_at": "2026-07-19",
+    "summary": "Implemented Notification real mode in backend/app/services/notification_service.py. Real mode now dispatches Exchange Online mail through Microsoft Graph sendMail, posts Teams adaptive cards to a configured webhook, and posts desknet's workflow payloads to a configured webhook. Missing EXCHANGE_SENDER_UPN, TEAMS_WEBHOOK_URL, or DESKNETS_WEBHOOK_URL fails closed through NotificationError before external sends. Added unit contract tests for Graph token/sendMail, Teams adaptive card webhook, desknet's webhook payload, and missing configuration guards. Extended .env.example and scripts/verify_release_docs.sh so notification production inputs and evidence remain visible.",
+    "verification": "backend/tests/unit/test_notification_service.py -> 32 passed; python -m ruff check app/services/notification_service.py tests/unit/test_notification_service.py -> All checks passed; python -m mypy app/services/notification_service.py -> Success; scripts/verify_release_docs.sh -> Passed 161 / Failed 0; scripts/verify_goal_completion_evidence.sh -> Passed 40 / Failed 0; scripts/verify_github_release_gate.sh -> Passed 24 / Failed 0; scripts/verify_standalone_webui_runtime.sh -> Passed 27 / Failed 0; scripts/verify_cloudflare_legalops.sh -> Passed 22 / Failed 0 / Warnings 0; scripts/verify_production_stop_line.sh -> Passed 13 / Failed 0; scripts/verify_predeploy_warning_classification.sh -> Passed 13 / Failed 0.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed. Notification real mode was verified through mocked HTTP contract tests only; no real Exchange, Teams, or desknet's notification was sent.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection including Exchange/Teams/desknet's notification values",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop89": {
+    "name": "Cloudflare legalops subdomain readiness",
+    "completed_at": "2026-07-19",
+    "summary": "Confirmed and prepared the Cloudflare path for the newly requested legalops subdomain under mirai-dx-platform.com. Target FQDN is legalops.mirai-dx-platform.com. Existing repo artifacts cover Cloudflare Tunnel ingress to nginx:80, CNAME legalops -> <TUNNEL_ID>.cfargotunnel.com, Access self-hosted application LegalOps-DX, Entra ID group/MFA policy examples, Docker cloudflared overlay, and read-only verification. No public DNS or Cloudflare resource was created because production DNS changes and deployments require explicit human approval.",
+    "official_guidance_checked": [
+      "Cloudflare Tunnel DNS routing: CNAME to <UUID>.cfargotunnel.com or cloudflared tunnel route dns <UUID or NAME> <hostname>",
+      "Cloudflare Access self-hosted application: create application for the public hostname and attach policies before exposure"
+    ],
+    "verification": "scripts/verify_cloudflare_legalops.sh -> Passed 22 / Failed 0 / Warnings 0; legalops.mirai-dx-platform.com CNAME/A remains absent; mirai-dx-platform.com zone is active through Cloudflare API/read-only checks; cloudflared ingress template validates; Standalone WebUI runtime remains active at http://192.168.0.185:38100/.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, cloudflared token issuance/injection, Neon resource creation, secret change, git push, release tag, or GitHub deployment executed.",
+    "remaining_human_gates": [
+      "#50: Create Cloudflare Access self-hosted application LegalOps-DX for legalops.mirai-dx-platform.com",
+      "#50: Create/approve Cloudflare Tunnel and obtain Tunnel ID/token",
+      "#50: Create CNAME legalops -> <TUNNEL_ID>.cfargotunnel.com only after Access/Tunnel approval",
+      "#50: Inject CLOUDFLARE_TUNNEL_TOKEN through Vault/secret manager",
+      "#50: Neon production project/PITR/branching approval if Neon is adopted"
+    ]
+  },
+  "loop90": {
+    "name": "Contract submit lifecycle closure",
+    "completed_at": "2026-07-19",
+    "summary": "Implemented backend/app/services/contract_service.py submit_for_review so POST /api/v1/contracts/{id}/submit no longer falls through app.services._stub. The route now owns the draft -> in_review lifecycle transition, increments version, returns 404 for missing contracts, and returns 409 for invalid non-draft submit attempts. API description was aligned with the existing workflow start endpoint. Frontend mock compliance data was also corrected so it no longer displays transaction-amount search as unimplemented.",
+    "verification": "backend/tests/unit/test_contract_service.py + backend/tests/integration/test_contracts_crud.py -> 38 passed; python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -> All checks passed; python -m mypy app/services/contract_service.py app/api/v1/contracts.py -> Success.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection including Exchange/Teams/desknet/SharePoint/Entra production values",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval"
+    ]
+  },
+  "loop91": {
+    "name": "Contract subresource API closure",
+    "completed_at": "2026-07-19",
+    "summary": "Implemented backend/app/services/contract_service.py list_versions and list_clauses so /api/v1/contracts/{id}/versions and /api/v1/contracts/{id}/clauses no longer fall through the legacy 501 stub. versions returns the current row version snapshot because no contract_versions history table exists in the current schema. clauses returns active Clause rows in seq order and maps body to ClauseOut.text. Routes now translate missing contracts to 404.",
+    "verification": "backend/tests/unit/test_contract_service.py + backend/tests/integration/test_contracts_crud.py -> 43 passed; python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -> All checks passed; python -m mypy app/services/contract_service.py app/api/v1/contracts.py -> Success; AST service-call check found no api/v1 service calls missing concrete service functions.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection including Exchange/Teams/desknet/SharePoint/Entra production values",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval",
+      "Optional future non-destructive contract_versions history table migration if full version history is required beyond current snapshot"
+    ]
+  },
+  "loop92": {
+    "name": "Monitoring replica scrape readiness",
+    "completed_at": "2026-07-19",
+    "summary": "Updated infra/monitoring/prometheus.yml so the legalops-backend job uses dns_sd_configs against the backend service name and port 8000. This aligns monitoring with docker-compose.prod.yml replicas and container_name reset. Added scripts/verify_monitoring_config.sh to validate monitoring YAML/JSON, backend DNS discovery, nginx exporter scrape, production replica settings, and docs. Wired monitoring config preflight into scripts/pre_deploy_check.sh and updated docs/MONITORING.md to remove stale unimplemented multiprocess wording.",
+    "verification": "bash scripts/verify_monitoring_config.sh -> Passed 19 / Failed 0; docker compose base config -> success; docker compose prod+cloudflare overlay config with dummy env -> success.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection including monitoring notification endpoints and production application secrets",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval",
+      "Post-approval monitoring drill: start --profile monitoring/logging and confirm first alert route"
+    ]
+  },
+  "loop93": {
+    "name": "Backup/restore release evidence gate",
+    "date": "2026-07-19",
+    "summary": "Added read-only backup/restore evidence preflight and checksum-backed backup script behavior. The gate validates pg_dump/pg_restore runbook coverage, backup_db.sh restore/checksum behavior, Alembic rollback roundtrip evidence, and PITR not-complete stop-line.",
+    "verification": "bash scripts/verify_backup_restore_docs.sh -> Passed 36 Failed 0. Full release/pre-deploy verification is pending after document sync.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, GitHub release, GitHub deployment, destructive migration, certificate issuance, billing change, or secrets change executed."
+  },
+  "preview": {
+    "url": "https://legalops-preview.mirai-dx-platform.com",
+    "tunnel": "legalops-preview (459059b3-b750-45c5-aa59-a0305293c439)",
+    "origin": "host nginx :8410 -> compose (staging) + Neon development branch",
+    "smoke": "16/16 PASS (2026-07-19)",
+    "rollback": "CNAME削除 + tunnel削除 + connector停止 + compose down"
+  },
+  "neon": {
+    "project": "Construction-LegalOps-DX (snowy-sound-99973684)",
+    "region_pg": "aws-ap-southeast-1 / PG16",
+    "branches": {
+      "main": "本番用・未適用",
+      "development": "migration 001-005 + roundtrip 検証済み"
+    }
+  },
+  "phase1_finalize": {
+    "completed_at": "2026-07-19",
+    "summary": "前セッション成果を feat/phase1-neon-cf-preview へ確定 (13+ commits)。Neon 実プロジェクト作成 + development branch で migration/roundtrip/asyncpg SSL 検証。CF preview 実デプロイ + デプロイ後検証 16/16。preview が暴いた欠陥 2 件修正 (mode700 import不能 / frontend healthcheck IPv6)。並行セッション Loop 91 成果を再検証の上吸収。",
+    "verification": "backend: ruff/mypy/bandit PASS + pytest 950 passed (88%) / frontend: tsc PASS + jest 35 passed + Docker build PASS / preview smoke 16/16"
   }
 }

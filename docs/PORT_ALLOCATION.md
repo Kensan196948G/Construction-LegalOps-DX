@@ -29,14 +29,28 @@
 > **重要原則**: 専用化するのは **ホスト公開ポート（`HOST:CONTAINER` の左側）のみ**。
 > コンテナ内部ポートと `legalops-net` ブリッジ上のサービス間通信は**不変**（衝突しない）。
 
-| サービス              | ホスト公開ポート | コンテナ内部ポート | 環境変数         | 備考                  |
-| --------------------- | ---------------- | ------------------ | ---------------- | --------------------- |
-| 🖥️ Frontend (Next.js) | **3010**         | 3000               | `FRONTEND_PORT`  | WebUI。稼働中         |
-| ⚙️ Backend (FastAPI)  | **8010**         | 8000               | `BACKEND_PORT`   | REST API              |
-| 🐘 PostgreSQL 16      | **5442**         | 5432               | `POSTGRES_PORT`  | ホスト直結デバッグ用  |
-| 🔴 Redis 7            | **6392**         | 6379               | `REDIS_PORT`     | cache / Celery broker |
-| 🌐 Nginx (HTTP)       | **8410**         | 80                 | `NGINX_PORT`     | リバースプロキシ      |
-| 🔐 Nginx (HTTPS)      | **8453**         | 443                | `NGINX_TLS_PORT` | TLS termination       |
+| サービス                         | ホスト公開ポート | コンテナ内部ポート | 環境変数         | 備考                                      |
+| -------------------------------- | ---------------- | ------------------ | ---------------- | ----------------------------------------- |
+| 🖥️ Frontend (Next.js)            | **3010**         | 3000               | `FRONTEND_PORT`  | 本番想定 WebUI                            |
+| 🖼️ Standalone WebUI (検証用HTML) | **38100-38999**  | なし               | 自動選択         | SSH先Linux / systemd。status JSON を正とする |
+| ⚙️ Backend (FastAPI)             | **8010**         | 8000               | `BACKEND_PORT`   | REST API                                  |
+| 🐘 PostgreSQL 16                 | **5442**         | 5432               | `POSTGRES_PORT`  | ホスト直結デバッグ用                      |
+| 🔴 Redis 7                       | **6392**         | 6379               | `REDIS_PORT`     | cache / Celery broker                     |
+| 🌐 Nginx (HTTP)                  | **8410**         | 80                 | `NGINX_PORT`     | リバースプロキシ                          |
+| 🔐 Nginx (HTTPS)                 | **8453**         | 443                | `NGINX_TLS_PORT` | TLS termination                           |
+| 📊 Prometheus                    | **9090**         | 9090               | `PROMETHEUS_PORT`| `--profile monitoring`                    |
+| 🚨 Alertmanager                  | **9093**         | 9093               | `ALERTMANAGER_PORT` | `--profile monitoring`                 |
+| 📈 Grafana                       | **3000**         | 3000               | `GRAFANA_PORT`   | `--profile monitoring`。共存時は変更推奨 |
+| 📝 Loki                          | **3100**         | 3100               | `LOKI_PORT`      | `--profile logging`                       |
+
+> 🖼️ Standalone WebUI の現在URL、PID、停止コマンドは
+> `reports/webui/standalone-webui.json` を参照する。起動は
+> SSH先Linux上で `bash scripts/install_standalone_webui_systemd.sh --user install`。
+> systemd unit 名は `construction-legalops-standalone-webui.service`。
+> Windows 端末から SSH 越しに操作する場合は
+> `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Invoke-StandaloneWebUILinux.ps1 -HostName <linux-host> -RemoteRepo /path/to/Construction-LegalOps-DX -Action status`。
+> 変更前確認は同コマンドに `-DryRun` を付ける。
+> HTTP health は `-Action health` で確認する。
 
 ### 内部通信（不変・専用化しない）
 
@@ -107,6 +121,6 @@ tr '\0' ' ' < /proc/$pid/cmdline # → 起動コマンド
 | `3000`, `3001`, `3003`                                  | 他プロジェクト frontend | —                                   |
 | `5432`–`5436`                                           | 各種 PostgreSQL         | —                                   |
 | `6379`, `6380`                                          | 各種 Redis              | —                                   |
-| **`8010` / `3010` / `5442` / `6392` / `8410` / `8453`** | **本プロジェクト専用**  | Construction-LegalOps-DX            |
+| **`8010` / `3010` / `5442` / `6392` / `8410` / `8453` / `9090` / `9093` / `3100`** | **本プロジェクト専用**  | Construction-LegalOps-DX            |
 
 > 新しいポートを追加する場合は、必ず本表に追記し、上記「設定の反映先」をすべて同期すること。

@@ -1,17 +1,15 @@
 """Tests for sensitive-data detection / masking.
 
-The masking helpers live in ``app.core.security`` (``mask_sensitive``). A
-dedicated detector module (``app.services.sensitive_detector``) is planned
-for Loop 3 with a proper *My Number* checksum validator; that part is
-``importorskip``'d.
+The masking helpers live in ``app.core.security`` (``mask_sensitive``), while
+category-specific detection and My Number checksum validation live in
+``app.services.sensitive_detector``.
 """
 
 from __future__ import annotations
 
-import pytest
-
-security = pytest.importorskip("app.core.security")
-
+from app.core import security
+from app.services import sensitive_detector as detector
+from app.services.sensitive_detector import _validate_my_number
 
 # ---------------------------------------------------------------------------
 # Masking (already implemented)
@@ -63,27 +61,12 @@ def test_mask_handles_empty_and_non_string():
 # ---------------------------------------------------------------------------
 
 
-detector = pytest.importorskip(
-    "app.services.sensitive_detector",
-    reason="sensitive detector with check-digit is implemented in Loop 3",
-)
-
-
-def _resolve_my_number_validator():
-    for name in ("is_valid_my_number", "validate_my_number", "_validate_my_number"):
-        fn = getattr(detector, name, None)
-        if fn is not None:
-            return fn
-    pytest.skip("My Number validator not exposed")
-
-
 def test_my_number_checkdigit_valid_passes():
     """Arrange: valid My Number with checkdigit. Act: detect. Assert: bool."""
     # Arrange — well-known checksum example (Loop 3 may swap value)
-    fn = _resolve_my_number_validator()
     candidate = "123456789018"
     # Act
-    is_valid = fn(candidate)
+    is_valid = _validate_my_number(candidate)
     # Assert
     assert isinstance(is_valid, bool)
 
@@ -91,10 +74,9 @@ def test_my_number_checkdigit_valid_passes():
 def test_my_number_random_12_digits_likely_invalid():
     """Arrange: 12 identical digits. Act: validate. Assert: returns bool."""
     # Arrange
-    fn = _resolve_my_number_validator()
     candidate = "111111111111"
     # Act / Assert
-    assert isinstance(fn(candidate), bool)
+    assert isinstance(_validate_my_number(candidate), bool)
 
 
 def test_detector_does_not_flag_other_digit_runs():

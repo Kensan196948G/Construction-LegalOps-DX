@@ -6,10 +6,11 @@ Mirrors ``docs/api_design.md`` section 12.
 from __future__ import annotations
 
 from datetime import datetime
+from ipaddress import IPv4Address, IPv6Address
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .common import ORMModel
 
@@ -35,6 +36,21 @@ class AuditLogRead(ORMModel):
     request_id: UUID | None = None
     ip_address: str | None = None
     user_agent: str | None = None
+
+    @field_validator("ip_address", mode="before")
+    @classmethod
+    def _coerce_ip_address(cls, value: Any) -> Any:
+        """Coerce PostgreSQL INET values to ``str``.
+
+        Under PostgreSQL the ``audit_logs.ip_address`` column is ``INET`` and
+        asyncpg returns :class:`ipaddress.IPv4Address` / ``IPv6Address``
+        objects, which would fail the plain ``str`` validation (SQLite stores
+        the same column as TEXT, so the mismatch only surfaces on the
+        production-parity stack).
+        """
+        if isinstance(value, (IPv4Address, IPv6Address)):
+            return str(value)
+        return value
     payload: dict[str, Any] = Field(default_factory=dict)
     prev_hash: str | None = None
     hash_chain: str

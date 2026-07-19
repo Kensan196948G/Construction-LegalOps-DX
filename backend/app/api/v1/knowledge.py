@@ -1,10 +1,9 @@
-"""ナレッジ検索エンドポイント (stub)。
+"""ナレッジ検索エンドポイント。
 
-- GET `/knowledge/search` : 過去レビューや判例ナレッジを全文・ベクトル検索する (stub)
-- GET `/knowledge/similar/{contract_id}` : 類似契約を検索する (stub)
+- GET `/knowledge` : ナレッジ記事一覧
+- GET `/knowledge/search` : ナレッジ記事・契約メタデータを横断検索する
+- GET `/knowledge/similar/{contract_id}` : 類似契約を検索する
 - POST `/knowledge` : ナレッジ記事追加 (legal/admin)
-
-Loop 5 で OpenSearch / pgvector の本格実装に切り替える想定。
 """
 
 from __future__ import annotations
@@ -46,10 +45,10 @@ async def list_articles(
 @router.get(
     "/search",
     response_model=Page[KnowledgeSearchResult],
-    summary="ナレッジ検索 (stub)",
+    summary="ナレッジ検索",
     description=(
-        "クエリ q とタグでナレッジ記事・過去契約・判例コメントを横断検索する stub。"
-        " 本実装は Loop 5 で OpenSearch / pgvector を統合予定。"
+        "クエリ q、タグ、契約種別でナレッジ記事と契約メタデータを横断検索する。"
+        "現行実装は DB-backed のテキスト検索とスコアリングを使う。"
     ),
 )
 async def search_knowledge(
@@ -76,10 +75,10 @@ async def search_knowledge(
 @router.get(
     "/similar/{contract_id}",
     response_model=list[SimilarContractOut],
-    summary="類似契約検索 (stub)",
+    summary="類似契約検索",
     description=(
-        "対象契約に類似する過去契約を embedding 類似度で取得する stub。"
-        "Loop 5 にて pgvector で実装。"
+        "対象契約に類似する過去契約を、DBから取得した契約本文・メタデータの"
+        "TF-cosine類似度で返す。"
     ),
 )
 async def find_similar_contracts(

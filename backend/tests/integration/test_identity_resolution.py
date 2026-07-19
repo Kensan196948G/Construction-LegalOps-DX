@@ -62,6 +62,14 @@ async def _user_rows(engine: Any, email: str) -> list[User]:
         await session.close()
 
 
+async def _user_by_id(engine: Any, user_id: int) -> User:
+    session = _session_for(engine)
+    try:
+        return (await session.execute(select(User).where(User.id == user_id))).scalar_one()
+    finally:
+        await session.close()
+
+
 @pytest.mark.asyncio
 async def test_first_request_provisions_single_user_row(client: Any, test_engine: Any) -> None:
     """1st request creates exactly one users row; 2nd reuses it."""
@@ -226,3 +234,137 @@ async def test_deactivated_user_is_rejected(client: Any, test_engine: Any) -> No
 
     blocked = await client.get(CONTRACTS, headers=headers)
     assert blocked.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_admin_explicit_identity_link_allows_later_real_oid(
+    client: Any, test_engine: Any
+) -> None:
+    """Admin-only explicit link is the safe path from derived oid to real oid."""
+    import uuid as _uuid
+
+    email = "jit-link-8@example.com"
+    real_oid = str(_uuid.uuid4())
+
+    first = await client.get(CONTRACTS, headers=_headers("drafter", email))
+    assert first.status_code == 200
+    rows = await _user_rows(test_engine, email)
+    assert len(rows) == 1
+    derived_oid = str(rows[0].entra_oid)
+
+    linked = await client.post(
+        f"{USERS}/{rows[0].id}/identity-link",
+        headers=_headers("admin", "admin-linker@example.com"),
+        json={
+            "expected_current_entra_oid": derived_oid,
+            "new_entra_oid": real_oid,
+            "reason": "Operator verified Entra oid during JIT identity migration.",
+        },
+    )
+    assert linked.status_code == 200, linked.text
+    assert linked.json()["id"] == rows[0].id
+    assert linked.json()["entra_oid"] == real_oid
+
+    # The real oid token now resolves to the existing row instead of creating
+    # a second row or failing the same-email/different-oid guard.
+    after = await client.get(CONTRACTS, headers=_headers("drafter", email, oid=real_oid))
+    assert after.status_code == 200
+    rows_after = await _user_rows(test_engine, email)
+    assert len(rows_after) == 1
+    assert str(rows_after[0].entra_oid) == real_oid
+
+    persisted = await _user_by_id(test_engine, rows[0].id)
+    assert persisted.attributes["identity_link_policy"] == "admin_explicit_oid_rebind_v1"
+    assert persisted.attributes["identity_link_history"][-1]["from_entra_oid"] == derived_oid
+    assert persisted.attributes["identity_link_history"][-1]["to_entra_oid"] == real_oid
+
+
+@pytest.mark.asyncio
+async def test_identity_link_rejects_stale_source_oid(client: Any, test_engine: Any) -> None:
+    """The admin must prove the current oid to avoid stale-console mistakes."""
+    import uuid as _uuid
+
+    email = "jit-link-stale-9@example.com"
+    first = await client.get(CONTRACTS, headers=_headers("drafter", email))
+    assert first.status_code == 200
+    rows = await _user_rows(test_engine, email)
+    assert len(rows) == 1
+
+    stale = await client.post(
+        f"{USERS}/{rows[0].id}/identity-link",
+        headers=_headers("admin", "admin-linker-stale@example.com"),
+        json={
+            "expected_current_entra_oid": str(_uuid.uuid4()),
+            "new_entra_oid": str(_uuid.uuid4()),
+            "reason": "Operator attempted a stale identity link update.",
+        },
+    )
+    assert stale.status_code == 409
+    unchanged = await _user_by_id(test_engine, rows[0].id)
+    assert str(unchanged.entra_oid) == str(rows[0].entra_oid)
+
+
+@pytest.mark.asyncio
+async def test_identity_link_rejects_oid_already_bound_to_another_user(
+    client: Any, test_engine: Any
+) -> None:
+    """A target Entra oid can never be linked to two user rows."""
+    import uuid as _uuid
+
+    source_email = "jit-link-source-10@example.com"
+    target_email = "jit-link-target-10@example.com"
+    target_oid = str(_uuid.uuid4())
+
+    source = await client.get(CONTRACTS, headers=_headers("drafter", source_email))
+    assert source.status_code == 200
+    target = await client.get(CONTRACTS, headers=_headers("drafter", target_email, oid=target_oid))
+    assert target.status_code == 200
+
+    source_rows = await _user_rows(test_engine, source_email)
+    assert len(source_rows) == 1
+    conflict = await client.post(
+        f"{USERS}/{source_rows[0].id}/identity-link",
+        headers=_headers("admin", "admin-linker-conflict@example.com"),
+        json={
+            "expected_current_entra_oid": str(source_rows[0].entra_oid),
+            "new_entra_oid": target_oid,
+            "reason": "Operator attempted to link an oid that is already bound.",
+        },
+    )
+    assert conflict.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_admin_soft_deletes_user(client: Any, test_engine: Any) -> None:
+    """DELETE /users/{id} deactivates and soft-deletes the target row."""
+    email = "jit-delete-target-11@example.com"
+
+    first = await client.get(CONTRACTS, headers=_headers("drafter", email))
+    assert first.status_code == 200
+    rows = await _user_rows(test_engine, email)
+    assert len(rows) == 1
+
+    deleted = await client.delete(
+        f"{USERS}/{rows[0].id}",
+        headers=_headers("admin", "admin-delete@example.com"),
+    )
+    assert deleted.status_code == 204, deleted.text
+
+    persisted = await _user_by_id(test_engine, rows[0].id)
+    assert persisted.is_active is False
+    assert persisted.deleted_at is not None
+
+
+@pytest.mark.asyncio
+async def test_admin_cannot_soft_delete_self(client: Any, test_engine: Any) -> None:
+    """Self-deletion is fail-closed to avoid locking out the last admin."""
+    email = "admin-self-delete-12@example.com"
+    headers = _headers("admin", email)
+
+    provision = await client.get(USERS, headers=headers)
+    assert provision.status_code == 200
+    rows = await _user_rows(test_engine, email)
+    assert len(rows) == 1
+
+    deleted = await client.delete(f"{USERS}/{rows[0].id}", headers=headers)
+    assert deleted.status_code == 409

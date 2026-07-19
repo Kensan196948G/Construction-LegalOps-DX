@@ -122,18 +122,25 @@ async def test_get_review_not_found(client, auth_headers_admin):
 # ---------------------------------------------------------------------------
 
 
-async def test_patch_review_summary(client, auth_headers_legal, monkeypatch):
-    """PATCH /reviews/{id} with summary updates the field."""
+async def test_patch_review_overall_risk(client, auth_headers_legal, monkeypatch):
+    """PATCH /reviews/{id} persists DB fields and legal decision metadata."""
     cid = await _create_contract(client, auth_headers_legal)
     rid = await _start_review(client, cid, auth_headers_legal, monkeypatch)
 
     r = await client.patch(
         f"/api/v1/reviews/{rid}",
-        json={"summary": "更新されたサマリー"},
+        json={
+            "overall_risk": "low",
+            "legal_comment": "人間確認済み",
+            "final_decision": "accept",
+        },
         headers=auth_headers_legal,
     )
-    # PATCH may return 200 (updated) or 422 (field not patchable in stub) — both acceptable
-    assert r.status_code in (200, 422)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["overall_risk"] == "low"
+    assert body["result"]["legal_comment"] == "人間確認済み"
+    assert body["result"]["final_decision"] == "accept"
 
 
 async def test_patch_review_not_found(client, auth_headers_legal):

@@ -37,6 +37,7 @@ class UploadInitRequest(BaseModel):
 class UploadInitResponse(BaseModel):
     """Response of ``POST /uploads/init``."""
 
+    upload_id: str
     upload_url: str
     upload_token: str
     storage: AttachmentStorage = AttachmentStorage.SHAREPOINT

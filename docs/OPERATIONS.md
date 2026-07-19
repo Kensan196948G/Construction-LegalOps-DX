@@ -7,7 +7,7 @@
 | 項目 | 内容 |
 |---|---|
 | 👥 対象読者 | インフラ担当者・運用担当者・オンコール対応者 |
-| 🏗️ 前提 | **本番未リリース**。Docker Compose によるオンプレ (社内サーバー) 構成。Kubernetes / クラウドマネージドサービスは不使用 |
+| 🏗️ 前提 | **本番未リリース**。Docker Compose によるオンプレ構成。Cloudflare/Neon 移行の IaC コード完成（`infra/cloudflare/`）。監視基盤（Prometheus/Alertmanager/Grafana）設定完成（`--profile monitoring`） |
 | 📄 関連文書 | `docs/PORT_ALLOCATION.md` / `docs/RELEASE_CHECKLIST.md` / `docs/INCIDENT_RESPONSE.md` / `docs/MONITORING.md` / `docs/BACKUP_RESTORE.md` |
 
 ---
@@ -77,7 +77,7 @@ prod overlay が変えること (`infra/docker/docker-compose.prod.yml` の実�
 | 項目 | base (dev) | prod overlay |
 |---|---|---|
 | 🔐 秘匿値 | デフォルト値あり (`legalops_dev` 等) | `${VAR:?required in production}` で**未設定なら起動失敗 (fail-fast)** |
-| 🌐 公開ポート | 各サービスをホスト公開 | **nginx の 80/443 のみ**。postgres / redis / backend / frontend は internal |
+| 🌐 公開ポート | 各サービスをホスト公開 | 直接公開時は **nginx の 80/443 のみ**。Cloudflare Tunnel 採用時は `docker-compose.cloudflare-tunnel.yml` overlay で nginx host ports を閉じ、cloudflared が `nginx:80` に接続。postgres / redis / backend / frontend は internal |
 | 📊 リソース | 制限なし | 全サービスに memory / cpus の limits・reservations |
 | 🔁 冗長化 | 各 1 コンテナ | backend / celery-worker / frontend は `replicas: 2` |
 | 🛡️ 堅牢化 | — | backend / frontend / celery-worker は `read_only: true` + tmpfs |
@@ -133,6 +133,22 @@ curl -s http://localhost:8010/readyz     # {"status":"ready","db":"ok"} — DB �
 curl -s http://localhost:8410/healthz    # "ok" (nginx 自身が返す)
 ```
 
+### 2.6 🐳 unhealthy 検知と復旧ドリル
+
+Docker Compose の healthcheck は `unhealthy` を検知するが、`restart: unless-stopped` は
+プロセス終了時のみ効くため、`unhealthy` だけでは自動再起動しない。
+
+```bash
+# report-only。unhealthy があれば exit 1 で一覧表示する
+./scripts/check_unhealthy_services.sh
+
+# Incident Commander / Infra Lead 承認後に単一 service を restart
+./scripts/check_unhealthy_services.sh --restart backend
+```
+
+CTO 判断: Docker socket を持つ常駐 autoheal コンテナは host root 相当の攻撃面を増やすため、
+現時点では採用しない。詳細は `docs/UNHEALTHY_RECOVERY_REVIEW.md` を参照。
+
 ---
 
 ## 📌 3. 環境変数 / Secrets の投入手順
@@ -173,7 +189,10 @@ VAULT_MODE=azure AZURE_KEY_VAULT_NAME=<vault名> KEY_DIR=/tmp/legalops-keys ./sc
 
 - nginx は `/etc/nginx/certs/{fullchain.pem,privkey.pem}` を named volume `legalops-nginx-certs` から読み込む (read-only マウント)
 - staging: self-signed / production: Let's Encrypt (`docs/RELEASE_CHECKLIST.md` §2)
-- ⚠️ **未整備**: certbot / acme.sh による自動更新は未整備 (`docker-compose.prod.yml` 冒頭の TODO(Ops) に明記。Issue 未起票 — 起票推奨)
+- ✅ **IaC 完成**: certbot renewal helper は `--profile tls-renewal` で起動可能。
+  `CERTBOT_DOMAINS` / `CERTBOT_EMAIL` を本番値で指定し、HTTP-01 challenge 用の
+  `certbot-www` volume を nginx の `/.well-known/acme-challenge/` と共有する。
+- ⚠️ 実際の証明書発行・更新開始は DNS / Cloudflare Tunnel 採否 / 本番公開方式の人間承認後に実行する。
 - ⚠️ **未整備**: 本番の HTTP→HTTPS 恒久リダイレクトは `infra/nginx/default.conf` 内で**コメントアウト状態** (`# return 301 https://...`)。本番切替時にアンコメントが必要
 
 ---
@@ -236,7 +255,9 @@ docker compose -f infra/docker/docker-compose.yml --profile worker logs -f celer
 ```
 
 - 本番は `json-file` ドライバ + rotation (**20MB × 5 世代 / サービス**) — それ以前のログは消える
-- ⚠️ **未整備**: ログ集約基盤 (Loki / OTel 等) は未構築 (`docker-compose.prod.yml` 冒頭コメントに「将来 OTel/Loki に切替予定」と明記。Issue 未起票 — 起票推奨)
+- ✅ **IaC 完成**: Loki / Promtail は `--profile logging` で起動可能。
+  `infra/monitoring/loki-config.yml` / `promtail-config.yml` で Docker container logs を収集する。
+- ⚠️ Promtail は Docker socket を read-only mount するため、本番ホスト権限レビュー後に有効化する。
 
 ---
 
@@ -274,7 +295,7 @@ gh workflow run security.yml
 
 ```bash
 # 1. デプロイ前検証 (lint / test / SAST / Docker build を一括チェック)
-./scripts/pre_deploy_check.sh        # exit 0 = デプロイ可 / exit 1 = ブロック
+./scripts/pre_deploy_check.sh        # exit 0 = 人間承認レビューへ進行可 / exit 1 = 本番承認ブロック
 
 # 2. 最新 main を取得
 git pull origin main
@@ -308,14 +329,14 @@ curl -s https://<host>/api/v1/readyz   # deep check: db / redis / claude_api
 
 - [ ] 🔐 `security.yml` の週次スキャン結果確認 (`gh run list --workflow=security.yml --limit 1`) — CRITICAL/HIGH 検出時は `docs/INCIDENT_RESPONSE.md` のエスカレーション基準に従う
 - [ ] ⚡ `load-test.yml` の週次 smoke 結果確認 (k6 SLO threshold 通過)
-- [ ] 💾 バックアップ取得と世代確認 (`docs/BACKUP_RESTORE.md` — ⚠️ 自動化未整備のため当面は手動)
+- [ ] 💾 バックアップ取得と世代確認 (`docs/BACKUP_RESTORE.md` — スクリプト整備済み。本番スケジュールと退避先は承認待ち)
 - [ ] 📋 open Issue の P1 (CI / セキュリティ / データ影響) 残数確認: `gh issue list --state open`
 
 ### 6.3 🗓️ 月次 / リリース前
 
-- [ ] 🔑 TLS 証明書の有効期限確認 (⚠️ 自動更新未整備 — §3.3)
+- [ ] 🔑 TLS 証明書の有効期限確認 (`--profile tls-renewal` の certbot-renew IaC あり。実発行と自動更新開始は公開方式承認後)
 - [ ] 🔄 Secrets ローテーション計画の確認 (90 日毎 — `docs/RELEASE_CHECKLIST.md` §1)
-- [ ] 🧪 リストア検証 (`docs/BACKUP_RESTORE.md` §5)
+- [ ] 🧪 リストア検証 (`docs/BACKUP_RESTORE.md` §5) と Alembic rollback drill (`scripts/verify_migrations_roundtrip.sh`)
 - [ ] 📄 `docs/RELEASE_CHECKLIST.md` の未完了項目レビュー
 
 ---
@@ -326,8 +347,11 @@ curl -s https://<host>/api/v1/readyz   # deep check: db / redis / claude_api
 |---|---|---|
 | 🔐 本番 Vault secrets 投入 | ⏳ 未実施 | ✅ Issue #23 |
 | 🛡️ CSP Report-Only → enforce 移行 | ⏳ 未実施 | ✅ Issue #24 |
-| 🔑 TLS 証明書自動更新 (certbot / acme.sh) | ❌ 未整備 (compose TODO のみ) | ⚠️ Issue 未起票 — 起票推奨 |
-| 📝 ログ集約基盤 (Loki / OTel) | ❌ 未構築 (json-file rotation のみ) | ⚠️ Issue 未起票 — 起票推奨 |
-| 📊 監視基盤 (Prometheus / Grafana) | ❌ 未構築 (`docs/MONITORING.md` 参照) | ⚠️ Issue 未起票 — 起票推奨 |
-| 💾 自動バックアップ | ❌ 未整備 (`docs/BACKUP_RESTORE.md` 参照) | ⚠️ Issue 未起票 — 起票推奨 |
+| 🧪 Alembic rollback drill | ✅ 自動化済み | `scripts/verify_migrations_roundtrip.sh` / CI migrations job |
+| 🔑 TLS 証明書自動更新 (certbot) | ✅ IaC 完成 (`--profile tls-renewal`) | 本番公開方式承認後に発行・更新開始 |
+| 📝 ログ集約基盤 (Loki / Promtail) | ✅ IaC 完成 (`--profile logging`) | Docker socket 権限レビュー後に起動 |
+| 📊 監視基盤 (Prometheus / Grafana) | ✅ IaC 完成 (`docs/MONITORING.md` 参照) | 本番通知先投入と発報ドリル待ち |
+| 💾 自動バックアップ | ✅ スクリプト整備済み (`docs/BACKUP_RESTORE.md` 参照) | RPO/RTO と退避先の人間承認待ち |
+| 📢 On-call / incident labels | ✅ 役割表・label catalog 整備済み | 実名連絡先と通知先 secret は本番承認時に投入 |
+| 🐳 unhealthy 復旧 | ✅ 手動承認型 watchdog 整備済み | 常駐 autoheal は不採用。`docs/UNHEALTHY_RECOVERY_REVIEW.md` |
 | 🚀 CD (自動デプロイ) | ❌ 意図的に無し (手動デプロイ運用) | 方針 (`CLAUDE.md` §18) |

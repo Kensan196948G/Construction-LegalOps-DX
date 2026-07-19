@@ -1,8 +1,7 @@
-"""Knowledge-base Pydantic schemas (stub).
+"""Knowledge-base Pydantic schemas.
 
-Mirrors ``docs/api_design.md`` section 14. The semantic / vector search
-integration lands later in Loop 5; the schemas here cover the API
-contract so the frontend can wire against stable shapes.
+Mirrors ``docs/api_design.md`` section 11. The service is DB-backed today;
+future vector indexes can reuse these stable response shapes.
 """
 
 from __future__ import annotations

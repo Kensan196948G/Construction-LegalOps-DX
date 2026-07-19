@@ -442,6 +442,114 @@ class TestSoftDeleteContract:
 
 
 # ===========================================================================
+# submit_for_review
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+class TestSubmitForReview:
+    async def test_raises_lookup_error_when_not_found(self) -> None:
+        session = _make_session()
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        with pytest.raises(LookupError, match="not found"):
+            await contract_service.submit_for_review(session, contract_id=999, actor=actor)
+
+    async def test_raises_value_error_when_not_draft(self) -> None:
+        session = _make_session()
+        contract = _make_contract(id=1, status="in_review")
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = contract
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        with pytest.raises(ValueError, match="cannot be submitted"):
+            await contract_service.submit_for_review(session, contract_id=1, actor=actor)
+
+    async def test_moves_draft_contract_to_in_review(self) -> None:
+        session = _make_session()
+        contract = _make_contract(id=1, status="draft", version=3)
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = contract
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        result = await contract_service.submit_for_review(session, contract_id=1, actor=actor)
+
+        assert result is contract
+        assert contract.status == "in_review"
+        assert contract.version == 4
+        session.flush.assert_awaited_once()
+        session.refresh.assert_awaited_once_with(contract)
+
+
+# ===========================================================================
+# list_versions / list_clauses
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+class TestContractReadSubresources:
+    async def test_list_versions_returns_current_snapshot(self) -> None:
+        session = _make_session()
+        contract = _make_contract(id=7, status="in_review", version=5)
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = contract
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        items, total = await contract_service.list_versions(
+            session, contract_id=7, viewer=actor
+        )
+
+        assert total == 1
+        assert len(items) == 1
+        assert items[0].contract_id == 7
+        assert items[0].version == 5
+        assert items[0].status == "in_review"
+
+    async def test_list_versions_raises_lookup_error_when_missing(self) -> None:
+        session = _make_session()
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        with pytest.raises(LookupError, match="not found"):
+            await contract_service.list_versions(session, contract_id=404, viewer=actor)
+
+    async def test_list_clauses_returns_seq_ordered_clause_out(self) -> None:
+        session = _make_session()
+        contract = _make_contract(id=3)
+        contract_result = MagicMock()
+        contract_result.scalar_one_or_none.return_value = contract
+
+        clause = MagicMock()
+        clause.id = 10
+        clause.contract_id = 3
+        clause.seq = 1
+        clause.title = "第1条"
+        clause.body = "本文"
+        clause.ai_findings = {"category": "支払"}
+        clause.risk_level = "medium"
+        clause_result = MagicMock()
+        clause_result.scalars.return_value.all.return_value = [clause]
+        session.execute = AsyncMock(side_effect=[contract_result, clause_result])
+
+        actor = _make_actor()
+        items = await contract_service.list_clauses(session, contract_id=3, viewer=actor)
+
+        assert len(items) == 1
+        assert items[0].id == 10
+        assert items[0].text == "本文"
+        assert items[0].category == "支払"
+        assert items[0].risk_level == "medium"
+
+
+# ===========================================================================
 # list_contracts
 # ===========================================================================
 
@@ -552,7 +660,7 @@ class TestStubFallback:
         """Accessing an unimplemented function via __getattr__ returns a 501 coroutine."""
         from fastapi import HTTPException
 
-        func = contract_service.submit_for_review  # via __getattr__ → _stub
+        func = contract_service.legacy_unimplemented_operation  # via __getattr__ → _stub
         with pytest.raises(HTTPException) as exc_info:
             await func()
         assert exc_info.value.status_code == 501

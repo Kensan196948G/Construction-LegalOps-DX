@@ -4,19 +4,22 @@
   - ``list_users(session, *, q, role, department_id, is_active, page, size)``
     → tuple[list[UserOut], int]
 
-``get_user_by_id``, ``get_user_by_sub``, ``create_or_update_user`` are
-currently delegated to the _stub (returns HTTP 501), so we verify the stub
-delegation behaviour rather than full business logic.
+Legacy helpers such as ``get_user_by_id`` and ``get_user_by_sub`` remain
+delegated to the _stub (returns HTTP 501), so we verify the stub delegation
+behaviour while covering the v1 API-backed create/update/delete/sync helpers.
 
 Target coverage: >= 90 % of user_service.py
 """
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
+from app.schemas.user import UserCreate, UserUpdate
 from app.services import user_service
 
 # ---------------------------------------------------------------------------
@@ -27,6 +30,7 @@ from app.services import user_service
 def _make_session() -> AsyncMock:
     """Return a minimal async-compatible SQLAlchemy session mock."""
     session = AsyncMock()
+    session.add = MagicMock()
     return session
 
 
@@ -54,6 +58,20 @@ def _make_user_row(
     user.created_at = None
     user.updated_at = None
     user.deleted_at = None
+    return user
+
+
+def _make_user_entity(
+    *,
+    id: int = 1,
+    email: str = "alice@example.com",
+    role: str = "reviewer",
+    is_active: bool = True,
+) -> MagicMock:
+    """Build a mutable ORM-like user entity for service mutation tests."""
+    user = _make_user_row(id=id, email=email, role=role, is_active=is_active)
+    user.created_at = datetime.now(UTC)
+    user.updated_at = datetime.now(UTC)
     return user
 
 
@@ -303,6 +321,110 @@ async def test_list_users_all_filters_combined() -> None:
     # Assert
     assert isinstance(total, int)
     assert isinstance(items, list)
+
+
+# ---------------------------------------------------------------------------
+# create_user / update_user / soft_delete_user / start_graph_sync
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_user_persists_user_and_refreshes() -> None:
+    """Arrange: UserCreate. Act: create_user. Assert: ORM row added/refreshed."""
+    session = _make_session()
+    created = _make_user_entity(id=10, email="created@example.com", role="admin")
+
+    with patch.object(user_service, "User", return_value=created) as user_cls:
+        payload = UserCreate(
+            entra_oid=uuid4(),
+            email="created@example.com",
+            display_name="Created User",
+            role="admin",
+        )
+        result = await user_service.create_user(session, data=payload)
+
+    assert result is created
+    user_cls.assert_called_once()
+    session.add.assert_called_once_with(created)
+    session.flush.assert_awaited_once()
+    session.refresh.assert_awaited_once_with(created)
+
+
+@pytest.mark.asyncio
+async def test_update_user_changes_fields() -> None:
+    """Arrange: existing user. Act: update_user. Assert: patched fields."""
+    session = _make_session()
+    existing = _make_user_entity(id=20, email="patch@example.com", role="viewer")
+
+    with patch.object(user_service, "get_user", AsyncMock(return_value=existing)):
+        result = await user_service.update_user(
+            session,
+            user_id=20,
+            data=UserUpdate(display_name="Patched User", role="admin", is_active=False),
+        )
+
+    assert result is existing
+    assert existing.display_name == "Patched User"
+    assert existing.role == "admin"
+    assert existing.is_active is False
+    session.flush.assert_awaited_once()
+    session.refresh.assert_awaited_once_with(existing)
+
+
+@pytest.mark.asyncio
+async def test_update_user_rejects_unavailable_version_lock() -> None:
+    """Arrange: version provided. Act: update_user. Assert: explicit 409 cause."""
+    session = _make_session()
+    existing = _make_user_entity(id=21)
+
+    with (
+        patch.object(user_service, "get_user", AsyncMock(return_value=existing)),
+        pytest.raises(ValueError, match="optimistic locking"),
+    ):
+        await user_service.update_user(
+            session,
+            user_id=21,
+            data=UserUpdate(display_name="Blocked", version=1),
+        )
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_user_deactivates_and_marks_deleted_at() -> None:
+    """Arrange: user row. Act: soft_delete_user. Assert: inactive + deleted_at."""
+    session = _make_session()
+    existing = _make_user_entity(id=30, is_active=True)
+
+    with patch.object(user_service, "get_user", AsyncMock(return_value=existing)):
+        await user_service.soft_delete_user(session, user_id=30, actor_id=99)
+
+    assert existing.is_active is False
+    assert existing.deleted_at is not None
+    session.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_soft_delete_user_rejects_self_delete() -> None:
+    """Arrange: actor deletes own row. Act/Assert: rejected."""
+    session = _make_session()
+    existing = _make_user_entity(id=30, is_active=True)
+
+    with (
+        patch.object(user_service, "get_user", AsyncMock(return_value=existing)),
+        pytest.raises(ValueError, match="own account"),
+    ):
+        await user_service.soft_delete_user(session, user_id=30, actor_id=30)
+
+
+@pytest.mark.asyncio
+async def test_start_graph_sync_returns_queued_job_without_external_call() -> None:
+    """Arrange: admin trigger. Act: start_graph_sync. Assert: queued job."""
+    session = _make_session()
+
+    result = await user_service.start_graph_sync(session, triggered_by=7)
+
+    assert result.status == "queued"
+    assert result.triggered_by == 7
+    assert result.job_id.startswith("graph-sync-")
 
 
 # ---------------------------------------------------------------------------

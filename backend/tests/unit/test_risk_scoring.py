@@ -17,10 +17,8 @@ from __future__ import annotations
 
 import pytest
 
-risk_scoring = pytest.importorskip(
-    "app.services.risk_scoring",
-    reason="risk_scoring service not implemented yet",
-)
+from app.models.enums import RiskLevel
+from app.services import risk_scoring
 
 
 def _score(issues=(), contract_type="請負", amount_jpy=None, duration_months=None) -> int:
@@ -205,8 +203,6 @@ def test_extract_code_from_dict_with_issue_code_key():
 
 def test_classify_returns_all_four_risk_levels():
     """Arrange: scores hitting all four thresholds. Act. Assert (line 218 _classify)."""
-    from app.models.enums import RiskLevel
-
     # LOW: score <= 29
     _s_low, lvl_low = risk_scoring.compute_risk_score([], "秘密保持")  # base=5
     assert lvl_low == RiskLevel.LOW
