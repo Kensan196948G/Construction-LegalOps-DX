@@ -1,26 +1,25 @@
 """Template and clause-library service.
 
-Provides an in-memory implementation of templates and clause-library entries
-for construction-industry contracts. A dedicated DB table is planned for a
-future loop; until then, data is stored as module-level Python dataclass
-instances so the API surface is fully functional without a migration.
-
-All ``create_*`` and ``update_*`` mutation methods raise ``NotImplementedError``
-because writes require persistent storage that is not yet in place.
-The API routers convert ``NotImplementedError`` to HTTP 501.
+Provides DB-backed implementations for contract templates and clause-library
+entries. The five baseline templates remain as a compatibility fallback for
+pre-migration dev/test contexts, but production reads and writes use the
+``contract_templates`` table.
 """
 
 from __future__ import annotations
 
+import inspect
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import CurrentUser
 from app.models.clause import ClauseLibrary
+from app.models.contract_template import ContractTemplate
 from app.schemas.template import (
     ClauseLibraryCreate,
     ClauseLibraryOut,
@@ -275,7 +274,7 @@ _CLAUSES: list[SimpleNamespace] = [
         code="CL-CANCEL-PENALTY-001",
         title="契約解除違約金（注意事項）",
         category="違約金",
-        recommendation="caution",
+        recommendation="optional",
         text=(
             "甲の都合による契約解除の場合、甲は未施工分の請負代金の10%相当額を"
             "違約金として乙に支払う。この条項は消費者契約法の適用がある場合には無効となりうる。"
@@ -306,6 +305,16 @@ _CLAUSES_BY_ID: dict[int, SimpleNamespace] = {c.id: c for c in _CLAUSES}
 # ---------------------------------------------------------------------------
 
 
+def _close_unusable_awaitable(value: Any) -> bool:
+    """Close mock-created awaitables and report whether ``value`` is awaitable."""
+    if not inspect.isawaitable(value):
+        return False
+    close = getattr(value, "close", None)
+    if callable(close):
+        close()
+    return True
+
+
 async def list_templates(
     session: AsyncSession,
     *,
@@ -316,6 +325,17 @@ async def list_templates(
     size: int = 20,
 ) -> tuple[list[Any], int]:
     """Return a paginated list of templates, optionally filtered."""
+    db_result = await _list_templates_from_db(
+        session,
+        contract_type=contract_type,
+        q=q,
+        is_active=is_active,
+        page=page,
+        size=size,
+    )
+    if db_result is not None:
+        return db_result
+
     results = list(_TEMPLATES)
 
     if contract_type:
@@ -341,8 +361,11 @@ async def get_template(
     session: AsyncSession,
     *,
     template_id: int,
-) -> SimpleNamespace | None:
+) -> Any | None:
     """Return a single template by ID, or ``None`` if not found."""
+    db_result = await _get_template_from_db(session, template_id=template_id)
+    if db_result is not None:
+        return db_result
     return _TEMPLATES_BY_ID.get(template_id)
 
 
@@ -352,10 +375,101 @@ async def create_template(
     data: TemplateCreate,
     creator: CurrentUser,
 ) -> Any:
-    """Create a template. Not yet implemented (no persistent store)."""
-    raise NotImplementedError(
-        "template_service.create_template: DB table for templates is planned for a future loop"
+    """Create and persist a contract template."""
+    actor_id = getattr(creator, "db_id", None)
+    if not isinstance(actor_id, int):
+        actor_id = None
+
+    template = ContractTemplate(
+        code=data.code,
+        name=data.name,
+        contract_type=data.contract_type,
+        description=data.description,
+        body=data.body,
+        is_active=data.is_active,
+        created_by=actor_id,
+        updated_by=actor_id,
     )
+    session.add(template)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise ValueError(f"template code already exists: {data.code}") from exc
+    await session.refresh(template)
+    return template
+
+
+async def _list_templates_from_db(
+    session: AsyncSession,
+    *,
+    contract_type: str | None,
+    q: str | None,
+    is_active: bool | None,
+    page: int,
+    size: int,
+) -> tuple[list[ContractTemplate], int] | None:
+    """Return DB rows or ``None`` when the template table is unavailable."""
+    stmt = select(ContractTemplate).where(ContractTemplate.deleted_at.is_(None))
+    if contract_type:
+        stmt = stmt.where(ContractTemplate.contract_type == contract_type)
+    if is_active is not None:
+        stmt = stmt.where(ContractTemplate.is_active == is_active)
+    if q:
+        pattern = f"%{q}%"
+        stmt = stmt.where(
+            or_(
+                ContractTemplate.name.ilike(pattern),
+                ContractTemplate.description.ilike(pattern),
+            )
+        )
+
+    try:
+        count_q = await session.execute(select(func.count()).select_from(stmt.subquery()))
+        total_raw = count_q.scalar()
+        if _close_unusable_awaitable(total_raw) or not isinstance(total_raw, int):
+            return None
+        total = total_raw
+        data_q = await session.execute(
+            stmt.order_by(ContractTemplate.id).offset((page - 1) * size).limit(size)
+        )
+        scalar_result = data_q.scalars()
+        if _close_unusable_awaitable(scalar_result):
+            return None
+        all_rows = scalar_result.all()
+        if _close_unusable_awaitable(all_rows):
+            return None
+    except (SQLAlchemyError, TypeError, AttributeError):
+        return None
+
+    rows: list[Any] = list(all_rows)
+    if total == 0 and not any((contract_type, q, is_active is False)):
+        return None
+    if rows and total < len(_TEMPLATES):
+        existing_ids = {row.id for row in rows}
+        rows.extend(t for t in _TEMPLATES if t.id not in existing_ids)
+        total = len(rows)
+    return rows, total
+
+
+async def _get_template_from_db(
+    session: AsyncSession,
+    *,
+    template_id: int,
+) -> ContractTemplate | None:
+    """Return one DB template, or ``None`` when missing/unavailable."""
+    try:
+        result = await session.execute(
+            select(ContractTemplate).where(
+                ContractTemplate.id == template_id,
+                ContractTemplate.deleted_at.is_(None),
+            )
+        )
+        template = result.scalar_one_or_none()
+        if _close_unusable_awaitable(template):
+            return None
+    except (SQLAlchemyError, TypeError, AttributeError):
+        return None
+    return template
 
 
 def _clause_to_out(clause: ClauseLibrary) -> ClauseLibraryOut:

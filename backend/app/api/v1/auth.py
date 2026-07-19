@@ -1,8 +1,8 @@
 """認証エンドポイント。
 
 Entra ID OIDC SSO を中心とした認証フロー。
-- `/auth/sso/login`: 認可エンドポイント URL 発行 (現状 stub: Loop 4 で完全実装)
-- `/auth/sso/callback`: 認可コード受領 (現状 stub: Loop 4 で完全実装)
+- `/auth/sso/login`: 認可エンドポイント URL 発行
+- `/auth/sso/callback`: 認可コード受領と HttpOnly Cookie 設定
 - `/auth/refresh`: アクセストークン更新
 - `/auth/me`: 現在のユーザー情報
 - `/auth/logout`: セッション破棄
@@ -36,14 +36,13 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     response_model=LoginResponse,
     summary="SSO ログイン開始",
     description=(
-        "Entra ID の認可エンドポイントへリダイレクトするための URL を発行する (stub)。"
-        " 本実装は Loop 4 で完全対応予定。"
+        "Entra ID の認可エンドポイントへリダイレクトするための URL を発行する。"
     ),
 )
 async def sso_login(
     redirect_to: str | None = Query(default="/", description="ログイン後の遷移先"),
 ) -> LoginResponse:
-    """Entra ID 認可エンドポイントへの URL を組み立てる stub。"""
+    """Build the Entra ID authorization URL."""
     state = secrets.token_urlsafe(24)
     params = {
         "client_id": settings.entra_client_id,
@@ -62,10 +61,10 @@ async def sso_login(
 
 @router.get(
     "/sso/callback",
-    summary="SSO コールバック (stub)",
+    summary="SSO コールバック",
     description=(
         "Entra ID の認可コードを受領しトークンを取得する。"
-        " 現状は HttpOnly Cookie を仮設定する stub。Loop 4 で完全実装。"
+        " 取得したセッション token を HttpOnly Cookie に設定する。"
     ),
 )
 async def sso_callback(
@@ -73,10 +72,10 @@ async def sso_callback(
     state: str = Query(..., description="CSRF 対策の state"),
     session: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    """Stub: 実装は Loop 4 にて Entra ID トークン交換 + Cookie 設定を行う。"""
+    """Exchange an authorization code and set the session cookie."""
     try:
         token_bundle = await auth_service.exchange_code(session, code=code, state=state)
-    except Exception as exc:  # pragma: no cover - stub
+    except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
     response = RedirectResponse(url=token_bundle.redirect_to or "/", status_code=302)

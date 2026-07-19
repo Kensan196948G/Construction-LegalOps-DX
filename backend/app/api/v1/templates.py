@@ -80,8 +80,8 @@ async def create_template(
         template = await template_service.create_template(
             session, data=payload, creator=current_user
         )
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     await audit_service.log(
         session,
         actor_id=current_user.db_id,
@@ -97,11 +97,15 @@ async def create_template(
     "/clauses-library",
     response_model=Page[ClauseLibraryOut],
     summary="条項ライブラリ検索",
-    description="カテゴリ・推奨度 (must/should/avoid)・タグ・全文検索で条項を取得。",
+    description=(
+        "カテゴリ・推奨度 (required/recommended/optional/prohibited)・タグ・全文検索で条項を取得。"
+    ),
 )
 async def list_clauses_library(
     category: str | None = Query(default=None),
-    recommendation: str | None = Query(default=None, description="must/should/avoid"),
+    recommendation: str | None = Query(
+        default=None, description="required/recommended/optional/prohibited"
+    ),
     tag: str | None = Query(default=None),
     q: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),

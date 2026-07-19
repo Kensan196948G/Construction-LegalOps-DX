@@ -13,15 +13,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Import guard – skip whole module gracefully if service not yet present
-# ---------------------------------------------------------------------------
-review_service = pytest.importorskip(
-    "app.services.review_service",
-    reason="review_service implemented in Loop 3+",
-)
-
-from app.models.enums import ReviewStatus  # noqa: E402
+from app.models.enums import ReviewStatus
+from app.services import review_service
 
 # ---------------------------------------------------------------------------
 # Helpers

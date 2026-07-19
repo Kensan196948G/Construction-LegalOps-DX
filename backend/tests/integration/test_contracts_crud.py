@@ -90,3 +90,53 @@ async def test_list_contracts_respects_pagination(client, auth_headers_legal):
     assert r.status_code == 200
     body = r.json()
     assert "items" in body or isinstance(body, list)
+
+
+async def test_submit_contract_moves_draft_to_review(client, auth_headers_legal):
+    """POST /contracts/{id}/submit must not fall through to the legacy 501 stub."""
+    r_create = await client.post(
+        "/api/v1/contracts",
+        json={
+            "title": "提出テスト契約",
+            "contract_type": "ukeoi",
+            "counterparty": "提出テスト建設",
+            "amount": 4_000_000,
+            "department_id": 1,
+        },
+        headers=auth_headers_legal,
+    )
+    assert r_create.status_code in (200, 201), r_create.text
+    contract = r_create.json()
+
+    r_submit = await client.post(
+        f"/api/v1/contracts/{contract['id']}/submit",
+        headers=auth_headers_legal,
+    )
+
+    assert r_submit.status_code == 200, r_submit.text
+    submitted = r_submit.json()
+    assert submitted["id"] == contract["id"]
+    assert submitted["status"] == "in_review"
+    assert submitted["version"] == contract["version"] + 1
+
+
+async def test_submit_contract_rejects_second_submit(client, auth_headers_legal):
+    """Submitting a non-draft contract returns conflict instead of silently succeeding."""
+    r_create = await client.post(
+        "/api/v1/contracts",
+        json={
+            "title": "二重提出テスト契約",
+            "contract_type": "ukeoi",
+            "counterparty": "二重提出テスト建設",
+            "department_id": 1,
+        },
+        headers=auth_headers_legal,
+    )
+    assert r_create.status_code in (200, 201), r_create.text
+    cid = r_create.json()["id"]
+
+    first = await client.post(f"/api/v1/contracts/{cid}/submit", headers=auth_headers_legal)
+    assert first.status_code == 200, first.text
+
+    second = await client.post(f"/api/v1/contracts/{cid}/submit", headers=auth_headers_legal)
+    assert second.status_code == 409

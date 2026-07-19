@@ -442,6 +442,51 @@ class TestSoftDeleteContract:
 
 
 # ===========================================================================
+# submit_for_review
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+class TestSubmitForReview:
+    async def test_raises_lookup_error_when_not_found(self) -> None:
+        session = _make_session()
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        with pytest.raises(LookupError, match="not found"):
+            await contract_service.submit_for_review(session, contract_id=999, actor=actor)
+
+    async def test_raises_value_error_when_not_draft(self) -> None:
+        session = _make_session()
+        contract = _make_contract(id=1, status="in_review")
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = contract
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        with pytest.raises(ValueError, match="cannot be submitted"):
+            await contract_service.submit_for_review(session, contract_id=1, actor=actor)
+
+    async def test_moves_draft_contract_to_in_review(self) -> None:
+        session = _make_session()
+        contract = _make_contract(id=1, status="draft", version=3)
+        result_mock = MagicMock()
+        result_mock.scalar_one_or_none.return_value = contract
+        session.execute = AsyncMock(return_value=result_mock)
+
+        actor = _make_actor()
+        result = await contract_service.submit_for_review(session, contract_id=1, actor=actor)
+
+        assert result is contract
+        assert contract.status == "in_review"
+        assert contract.version == 4
+        session.flush.assert_awaited_once()
+        session.refresh.assert_awaited_once_with(contract)
+
+
+# ===========================================================================
 # list_contracts
 # ===========================================================================
 
@@ -552,7 +597,7 @@ class TestStubFallback:
         """Accessing an unimplemented function via __getattr__ returns a 501 coroutine."""
         from fastapi import HTTPException
 
-        func = contract_service.submit_for_review  # via __getattr__ → _stub
+        func = contract_service.legacy_unimplemented_operation  # via __getattr__ → _stub
         with pytest.raises(HTTPException) as exc_info:
             await func()
         assert exc_info.value.status_code == 501

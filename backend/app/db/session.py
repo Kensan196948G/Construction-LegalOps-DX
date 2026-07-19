@@ -22,25 +22,21 @@ logger = logging.getLogger(__name__)
 _COMMIT_FAILURES: Final[Counter] = Counter(
     "db_commit_failures_total",
     "Total number of failed DB commits (commit-after-response window).",
-    registry=None,
 )
 
 _DB_POOL_SIZE: Final[Gauge] = Gauge(
     "db_pool_size",
     "Configured size of the asyncpg connection pool.",
-    registry=None,
 )
 
 _DB_POOL_AVAILABLE: Final[Gauge] = Gauge(
     "db_pool_available",
     "Number of idle connections available in the asyncpg pool.",
-    registry=None,
 )
 
 _DB_CONNECTION_ERRORS: Final[Counter] = Counter(
     "db_connection_errors_total",
     "Total number of database connection errors.",
-    registry=None,
 )
 
 

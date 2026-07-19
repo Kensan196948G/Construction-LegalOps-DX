@@ -15,7 +15,9 @@ Target: sharepoint_service.py coverage >= 60%
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -249,3 +251,104 @@ class TestSharePointError:
         msg = "upload failed: permission denied"
         err = SharePointError(msg)
         assert str(err) == msg
+
+
+# ---------------------------------------------------------------------------
+# 7. Real mode — Microsoft Graph contract
+# ---------------------------------------------------------------------------
+
+
+class _FakeResponse:
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self._payload = payload
+
+    def __enter__(self) -> _FakeResponse:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return json.dumps(self._payload).encode("utf-8")
+
+
+class TestRealGraphMode:
+    @pytest.mark.asyncio
+    async def test_real_upload_uses_graph_drive_content_endpoint(self, tmp_path: Path) -> None:
+        svc = SharePointService(mode="real", stub_root=tmp_path / "r", drive_id="drive-001")
+        requests = []
+
+        def fake_urlopen(req: Any, timeout: float) -> _FakeResponse:
+            requests.append((req, timeout))
+            if len(requests) == 1:
+                return _FakeResponse({"access_token": "graph-token"})
+            return _FakeResponse({"id": "item-001", "webUrl": "https://sp/item-001"})
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            item_id = await svc.upload(b"contract-bytes", "案件/契約書.pdf")
+
+        assert item_id == "item-001"
+        assert len(requests) == 2
+        token_req = requests[0][0]
+        upload_req = requests[1][0]
+        assert token_req.get_method() == "POST"
+        assert "oauth2/v2.0/token" in token_req.full_url
+        assert upload_req.get_method() == "PUT"
+        assert "/drives/drive-001/root:/" in upload_req.full_url
+        assert "%E5%A5%91%E7%B4%84%E6%9B%B8.pdf:/content" in upload_req.full_url
+        assert upload_req.data == b"contract-bytes"
+        assert upload_req.headers["Authorization"] == "Bearer graph-token"
+
+    @pytest.mark.asyncio
+    async def test_real_get_url_returns_graph_web_url(self, tmp_path: Path) -> None:
+        svc = SharePointService(mode="real", stub_root=tmp_path / "r", drive_id="drive-001")
+
+        def fake_urlopen(req: Any, timeout: float) -> _FakeResponse:
+            if "oauth2/v2.0/token" in req.full_url:
+                return _FakeResponse({"access_token": "graph-token"})
+            assert req.get_method() == "GET"
+            assert "/drives/drive-001/items/item-001" in req.full_url
+            assert req.headers["Authorization"] == "Bearer graph-token"
+            return _FakeResponse({"webUrl": "https://contoso.sharepoint.com/doc"})
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            url = await svc.get_url("item-001")
+
+        assert url == "https://contoso.sharepoint.com/doc"
+
+    @pytest.mark.asyncio
+    async def test_real_mode_requires_drive_id(self, tmp_path: Path) -> None:
+        svc = SharePointService(mode="real", stub_root=tmp_path / "r", drive_id="")
+
+        with pytest.raises(SharePointError, match="SHAREPOINT_DRIVE_ID"):
+            await svc.upload(b"x", "doc.pdf")
+
+    @pytest.mark.asyncio
+    async def test_real_upload_fails_closed_on_missing_item_id(self, tmp_path: Path) -> None:
+        svc = SharePointService(mode="real", stub_root=tmp_path / "r", drive_id="drive-001")
+
+        def fake_urlopen(req: Any, timeout: float) -> _FakeResponse:
+            if "oauth2/v2.0/token" in req.full_url:
+                return _FakeResponse({"access_token": "graph-token"})
+            return _FakeResponse({"webUrl": "https://contoso.sharepoint.com/doc"})
+
+        with (
+            patch("urllib.request.urlopen", side_effect=fake_urlopen),
+            pytest.raises(SharePointError, match="missing item id"),
+        ):
+            await svc.upload(b"x", "doc.pdf")
+
+    @pytest.mark.asyncio
+    async def test_real_get_url_fails_closed_on_missing_web_url(self, tmp_path: Path) -> None:
+        svc = SharePointService(mode="real", stub_root=tmp_path / "r", drive_id="drive-001")
+
+        def fake_urlopen(req: Any, timeout: float) -> _FakeResponse:
+            if "oauth2/v2.0/token" in req.full_url:
+                return _FakeResponse({"access_token": "graph-token"})
+            return _FakeResponse({"id": "item-001"})
+
+        with (
+            patch("urllib.request.urlopen", side_effect=fake_urlopen),
+            pytest.raises(SharePointError, match="missing webUrl"),
+        ):
+            await svc.get_url("item-001")

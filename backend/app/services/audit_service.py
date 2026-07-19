@@ -17,18 +17,23 @@ For Loop 2 / tests, the in-process list is used.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import hmac
+import io
 import json
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 import structlog
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.models.audit_log import AuditLog
 from app.models.enums import AuditAction
 from app.schemas.audit_log import AuditVerifyResponse
 
@@ -270,11 +275,102 @@ def _json_default(o: Any) -> Any:
     raise TypeError(f"object of type {type(o).__name__} is not JSON serializable")
 
 
+def _json_safe(value: Any) -> Any:
+    return json.loads(json.dumps(value, ensure_ascii=False, default=_json_default))
+
+
 # ---------------------------------------------------------------------------
 # Module-level convenience wrappers (bridge to AuditService singleton)
 # ---------------------------------------------------------------------------
 
+def _is_db_session(session: Any) -> bool:
+    return isinstance(session, AsyncSession)
+
+
+async def _persist_record_to_db(record: AuditRecord, session: Any) -> None:
+    if not _is_db_session(session):
+        return
+    request_id = record.metadata.get("request_id")
+    if isinstance(request_id, str):
+        try:
+            request_id = UUID(request_id)
+        except ValueError:
+            request_id = None
+    row = AuditLog(
+        occurred_at=record.timestamp,
+        actor_id=_coerce_int_id(record.user_id),
+        actor_role=record.metadata.get("actor_role"),
+        action=record.action,
+        target_type=record.target_type,
+        target_id=_coerce_int_id(record.target_id),
+        request_id=request_id if isinstance(request_id, UUID) else None,
+        ip_address=record.metadata.get("ip_address"),
+        user_agent=record.metadata.get("user_agent"),
+        payload={
+            "before": _json_safe(record.before),
+            "after": _json_safe(record.after),
+            "metadata": _json_safe(record.metadata),
+            "record_id": str(record.id),
+            "timestamp": record.timestamp.isoformat(),
+        },
+        previous_hash=None if record.prev_hash == GENESIS_HASH else record.prev_hash,
+        hash_chain=record.event_hash,
+    )
+    session.add(row)
+    await session.flush()
+
+
+def _db_row_to_record(row: AuditLog) -> AuditRecord:
+    payload = row.payload or {}
+    record_id_raw = payload.get("record_id")
+    try:
+        record_id = UUID(str(record_id_raw)) if record_id_raw else uuid4()
+    except ValueError:
+        record_id = uuid4()
+    metadata = payload.get("metadata")
+    timestamp = row.occurred_at
+    timestamp_raw = payload.get("timestamp")
+    if isinstance(timestamp_raw, str):
+        try:
+            timestamp = datetime.fromisoformat(timestamp_raw)
+        except ValueError:
+            timestamp = row.occurred_at
+    return AuditRecord(
+        id=record_id,
+        timestamp=timestamp,
+        action=row.action,
+        target_type=row.target_type,
+        target_id=str(row.target_id) if row.target_id is not None else None,
+        user_id=row.actor_id,
+        before=payload.get("before"),
+        after=payload.get("after"),
+        prev_hash=row.previous_hash or GENESIS_HASH,
+        event_hash=row.hash_chain,
+        metadata=metadata if isinstance(metadata, dict) else {},
+    )
+
+
+async def _fetch_records_from_db(
+    from_date: datetime | None,
+    to_date: datetime | None,
+    session: Any,
+) -> list[AuditRecord]:
+    if not _is_db_session(session):
+        return []
+    stmt = select(AuditLog).order_by(AuditLog.id.asc())
+    if from_date is not None:
+        stmt = stmt.where(AuditLog.occurred_at >= from_date)
+    if to_date is not None:
+        stmt = stmt.where(AuditLog.occurred_at <= to_date)
+    rows = (await session.execute(stmt)).scalars().all()
+    return [_db_row_to_record(row) for row in rows]
+
+
 _svc: AuditService = AuditService()
+_db_svc: AuditService = AuditService(
+    persister=_persist_record_to_db,
+    fetcher=_fetch_records_from_db,
+)
 
 
 async def log(
@@ -287,7 +383,19 @@ async def log(
     request: Any = None,
     payload: dict[str, Any] | None = None,
 ) -> None:
-    await _svc.log(
+    metadata: dict[str, Any] = {}
+    if request is not None:
+        request_id = getattr(getattr(request, "state", None), "request_id", None)
+        if request_id is not None:
+            metadata["request_id"] = request_id
+        client = getattr(request, "client", None)
+        if client is not None and getattr(client, "host", None):
+            metadata["ip_address"] = client.host
+        user_agent = getattr(request, "headers", {}).get("user-agent")
+        if user_agent:
+            metadata["user_agent"] = user_agent
+    service = _db_svc if _is_db_session(session) else _svc
+    await service.log(
         action=action,
         target_type=target_type,
         target_id=str(target_id) if target_id is not None else None,
@@ -295,6 +403,7 @@ async def log(
         before=None,
         after=payload,
         session=session,
+        metadata=metadata,
     )
 
 
@@ -338,6 +447,25 @@ def _record_to_dict(idx: int, rec: AuditRecord) -> dict[str, Any]:
     }
 
 
+def _db_row_to_dict(row: AuditLog) -> dict[str, Any]:
+    return {
+        "id": row.id,
+        "occurred_at": row.occurred_at,
+        "actor_id": row.actor_id,
+        "actor": None,
+        "actor_role": row.actor_role,
+        "action": row.action,
+        "target_type": row.target_type,
+        "target_id": row.target_id,
+        "request_id": row.request_id,
+        "ip_address": row.ip_address,
+        "user_agent": row.user_agent,
+        "payload": row.payload or {},
+        "prev_hash": row.previous_hash or GENESIS_HASH,
+        "hash_chain": row.hash_chain,
+    }
+
+
 async def list_logs(
     session: Any,
     *,
@@ -350,6 +478,33 @@ async def list_logs(
     page: int = 1,
     size: int = 50,
 ) -> tuple[list[Any], int]:
+    if _is_db_session(session):
+        stmt = select(AuditLog).order_by(AuditLog.id.asc())
+        if target_type is not None:
+            stmt = stmt.where(AuditLog.target_type == target_type)
+        if target_id is not None:
+            stmt = stmt.where(AuditLog.target_id == _coerce_int_id(target_id))
+        if action is not None:
+            stmt = stmt.where(AuditLog.action == action)
+        if actor_id is not None:
+            stmt = stmt.where(AuditLog.actor_id == _coerce_int_id(actor_id))
+        if date_from is not None:
+            stmt = stmt.where(AuditLog.occurred_at >= date_from)
+        if date_to is not None:
+            stmt = stmt.where(AuditLog.occurred_at <= date_to)
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = int((await session.execute(count_stmt)).scalar_one())
+        rows = (
+            (
+                await session.execute(
+                    stmt.offset((page - 1) * size).limit(size)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [_db_row_to_dict(row) for row in rows], total
+
     records = _svc._records
     filtered = [
         r
@@ -373,7 +528,8 @@ async def verify_chain(
     date_from: datetime | None = None,
     date_to: datetime | None = None,
 ) -> AuditVerifyResponse:
-    result = await _svc.verify_chain(from_date=date_from, to_date=date_to, session=session)
+    service = _db_svc if _is_db_session(session) else _svc
+    result = await service.verify_chain(from_date=date_from, to_date=date_to, session=session)
     return AuditVerifyResponse(
         verified=result.ok,
         total=result.total,
@@ -383,8 +539,46 @@ async def verify_chain(
     )
 
 
-def export_csv(
-    session: Any,
+async def _export_csv_from_db(
+    session: AsyncSession,
+    *,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    target_type: str | None = None,
+) -> AsyncIterator[str]:
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        ["id", "occurred_at", "action", "target_type", "target_id", "prev_hash", "hash_chain"]
+    )
+    yield output.getvalue()
+    stmt = select(AuditLog).order_by(AuditLog.id.asc())
+    if target_type is not None:
+        stmt = stmt.where(AuditLog.target_type == target_type)
+    if date_from is not None:
+        stmt = stmt.where(AuditLog.occurred_at >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(AuditLog.occurred_at <= date_to)
+    rows = (await session.execute(stmt)).scalars().all()
+    for row in rows:
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(
+            [
+                row.id,
+                row.occurred_at.isoformat(),
+                row.action,
+                row.target_type,
+                row.target_id or "",
+                row.previous_hash or GENESIS_HASH,
+                row.hash_chain,
+            ]
+        )
+        yield output.getvalue()
+    return
+
+
+def _export_csv_from_memory(
     *,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
@@ -404,6 +598,27 @@ def export_csv(
             f"{rec.target_type},{rec.target_id or ''},"
             f"{rec.prev_hash},{rec.event_hash}\n"
         )
+
+
+def export_csv(
+    session: Any,
+    *,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    target_type: str | None = None,
+) -> Iterator[str] | AsyncIterator[str]:
+    if _is_db_session(session):
+        return _export_csv_from_db(
+            session,
+            date_from=date_from,
+            date_to=date_to,
+            target_type=target_type,
+        )
+    return _export_csv_from_memory(
+        date_from=date_from,
+        date_to=date_to,
+        target_type=target_type,
+    )
 
 
 async def list_for_target(

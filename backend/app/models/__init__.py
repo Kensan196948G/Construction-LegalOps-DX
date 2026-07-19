@@ -12,6 +12,7 @@ from .audit_log import AuditLog
 from .clause import Clause, ClauseLibrary
 from .comment import Comment
 from .contract import Contract
+from .contract_template import ContractTemplate
 from .department import Department
 from .enums import (
     AttachmentStorage,
@@ -56,6 +57,7 @@ __all__ = [
     "Confidentiality",
     "Contract",
     "ContractStatus",
+    "ContractTemplate",
     "ContractType",
     "Department",
     "KnowledgeArticle",

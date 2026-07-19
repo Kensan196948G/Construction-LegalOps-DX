@@ -1,8 +1,8 @@
-"""Similar-contract search service (stub).
+"""Similar-contract search service.
 
-Loop 2 ships a keyword-overlap matcher so the API can already return
-"類似過去案件 5 件" lists during demos. Loop 5+ will swap in PostgreSQL
-``pg_trgm`` and/or pgvector embeddings.
+Uses a lightweight TF-cosine matcher over a caller-supplied corpus. The
+production API feeds the corpus from the contracts table; a future vector
+index can replace this scorer without changing the public API shape.
 
 The corpus is supplied by the caller (no DB dependency) which keeps the
 module pure and unit-testable.
@@ -79,9 +79,8 @@ _STOP_WORDS: Final[frozenset[str]] = frozenset(
 def _tokenize(text: str) -> list[str]:
     """Naive bi-gram tokenizer + Latin word splitter.
 
-    Real production deployment will plug in ``sudachipy``; for Loop 2 the
-    bi-gram approach is good enough to surface near-duplicates without
-    pulling a dictionary dependency.
+    The bi-gram approach keeps the release candidate dependency-light while
+    still surfacing near-duplicates in Japanese contract text.
     """
     cleaned = _NOISE_RE.sub(" ", text)
     tokens: list[str] = []

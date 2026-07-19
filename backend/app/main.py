@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
+    REGISTRY,
     CollectorRegistry,
     Counter,
     Histogram,
@@ -39,6 +40,7 @@ from app.core.logging import (
 from app.db.session import dispose_engine, get_db, update_pool_metrics
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sensitive_masking import SensitiveMaskingMiddleware
+from app.observability.operational_metrics import update_operational_metrics
 
 # Router import is intentionally lazy at module level to avoid pulling
 # the entire API layer into worker processes that don't need it.
@@ -258,10 +260,16 @@ def create_app() -> FastAPI:
         return {"status": "ok", "version": app.version}
 
     @app.get("/metrics", include_in_schema=False)
-    async def metrics() -> Response:
+    async def metrics(session: AsyncSession = Depends(get_db)) -> Response:
         """Prometheus scrape endpoint."""
+        try:
+            update_pool_metrics()
+            await update_operational_metrics(session)
+        except Exception:
+            logger.debug("operational_metrics_refresh_failed", exc_info=True)
+        payload = generate_latest(_REGISTRY) + generate_latest(REGISTRY)
         return Response(
-            content=generate_latest(_REGISTRY),
+            content=payload,
             media_type=CONTENT_TYPE_LATEST,
         )
 
@@ -273,7 +281,7 @@ def create_app() -> FastAPI:
     except ImportError as exc:
         logger.warning(
             "api_router_unavailable",
-            detail="app.api.v1.api_router not yet implemented",
+            detail="api_router import failed; API v1 routes unavailable",
             error=str(exc),
         )
     else:

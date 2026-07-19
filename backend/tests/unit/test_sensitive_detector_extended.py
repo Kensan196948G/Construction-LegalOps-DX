@@ -17,14 +17,7 @@ Test categories (20 tests):
 
 from __future__ import annotations
 
-import pytest
-
-we = pytest.importorskip(
-    "app.services.sensitive_detector",
-    reason="sensitive_detector implemented in Loop 3",
-)
-
-from app.services.sensitive_detector import (  # noqa: E402
+from app.services.sensitive_detector import (
     Detection,
     DetectionCategory,
     SensitiveDetector,

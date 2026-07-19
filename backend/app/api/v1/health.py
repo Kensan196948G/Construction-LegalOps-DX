@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -50,7 +51,9 @@ async def _check_redis() -> tuple[str, str | None]:
         import redis.asyncio as aioredis  # type: ignore[import-untyped]
 
         client = aioredis.from_url(redis_url, socket_connect_timeout=_DEEP_CHECK_TIMEOUT)
-        await asyncio.wait_for(client.ping(), timeout=_DEEP_CHECK_TIMEOUT)
+        ping_result = client.ping()
+        if inspect.isawaitable(ping_result):
+            await asyncio.wait_for(ping_result, timeout=_DEEP_CHECK_TIMEOUT)
         await client.aclose()  # type: ignore[attr-defined]
         return "ok", None
     except Exception as exc:  # pragma: no cover

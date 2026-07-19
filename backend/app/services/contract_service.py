@@ -1,4 +1,4 @@
-"""Contract service — CRUD implementation with stub fallback for unimplemented ops."""
+"""Contract service — CRUD implementation with stub fallback for legacy ops."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import CurrentUser
 from app.models.contract import Contract
+from app.models.enums import ContractStatus
 from app.schemas.contract import ContractCreate, ContractOut, ContractUpdate
 from app.services._stub import make_stub
 
@@ -103,6 +104,33 @@ async def soft_delete_contract(
         raise LookupError(f"Contract {contract_id} not found")
     contract.deleted_at = datetime.now(tz=UTC)
     await session.flush()
+
+
+async def submit_for_review(
+    session: AsyncSession,
+    *,
+    contract_id: int,
+    actor: CurrentUser,
+) -> Contract:
+    """Move a draft contract into review.
+
+    Workflow instances are started by ``workflow_service.start_workflow`` via
+    ``POST /contracts/{id}/workflows``. This endpoint owns the contract
+    lifecycle transition and audit boundary for the submit action.
+    """
+
+    contract = await get_contract(session, contract_id=contract_id, viewer=actor)
+    if contract is None:
+        raise LookupError(f"Contract {contract_id} not found")
+    if contract.status != ContractStatus.DRAFT.value:
+        raise ValueError(
+            f"Contract {contract_id} cannot be submitted from status {contract.status}"
+        )
+    contract.status = ContractStatus.IN_REVIEW.value
+    contract.version += 1
+    await session.flush()
+    await session.refresh(contract)
+    return contract
 
 
 async def list_contracts(

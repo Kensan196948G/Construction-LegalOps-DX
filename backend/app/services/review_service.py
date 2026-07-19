@@ -128,9 +128,15 @@ async def update_review(
         raise LookupError(f"review {review_id} not found")
 
     update_data = data.model_dump(exclude_unset=True)
+    result_payload = dict(review.result or {})
     for field, value in update_data.items():
+        if field in {"final_decision", "legal_comment"}:
+            if value is not None:
+                result_payload[field] = value
+            continue
         if hasattr(review, field):
             setattr(review, field, value)
+    review.result = result_payload
     review.updated_at = datetime.now(UTC)
     await session.flush()
     return _to_dict(review)

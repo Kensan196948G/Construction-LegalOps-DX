@@ -201,7 +201,10 @@ async def delete_contract(
     "/{contract_id}/submit",
     response_model=ContractOut,
     summary="契約レビュー提出",
-    description="status を draft → in_review に遷移し、ワークフローを起動する。",
+    description=(
+        "status を draft → in_review に遷移する。"
+        "承認ワークフローは /contracts/{id}/workflows で開始する。"
+    ),
 )
 async def submit_contract(
     contract_id: int,

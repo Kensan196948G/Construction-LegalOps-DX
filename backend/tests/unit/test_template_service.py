@@ -4,9 +4,9 @@ Covers:
 - list_templates: contract_type/q/is_active filters, pagination
 - get_template: found / not found
 - list_clauses: ORM-based query with AsyncMock session
+- create_template: ORM insert / flush / refresh
 - create_clause: ORM insert / flush / refresh
 - update_clause: not found / partial update
-- create_template: raises NotImplementedError
 """
 
 from __future__ import annotations
@@ -205,18 +205,67 @@ class TestCreateTemplate:
     """Tests for template_service.create_template()."""
 
     @pytest.mark.asyncio
-    async def test_create_template_raises_not_implemented(self) -> None:
-        """create_template() must raise NotImplementedError (no persistent store)."""
+    async def test_create_template_calls_add_flush_refresh(self) -> None:
+        """create_template() persists a template and returns the refreshed row."""
         session = _make_session()
         creator = _make_user()
+        created_at = datetime(2026, 4, 1, tzinfo=UTC)
+
+        async def fake_refresh(obj: object) -> None:
+            obj.id = 50  # type: ignore[attr-defined]
+            obj.code = "TMPL-NEW-001"  # type: ignore[attr-defined]
+            obj.name = "新規テンプレート"  # type: ignore[attr-defined]
+            obj.contract_type = "請負"  # type: ignore[attr-defined]
+            obj.description = None  # type: ignore[attr-defined]
+            obj.body = "本文"  # type: ignore[attr-defined]
+            obj.is_active = True  # type: ignore[attr-defined]
+            obj.version = 1  # type: ignore[attr-defined]
+            obj.created_at = created_at  # type: ignore[attr-defined]
+            obj.updated_at = created_at  # type: ignore[attr-defined]
+
+        session.refresh = fake_refresh
         data = TemplateCreate(
             code="TMPL-NEW-001",
             name="新規テンプレート",
             contract_type="請負",
             body="本文",
         )
-        with pytest.raises(NotImplementedError):
-            await template_service.create_template(session, data=data, creator=creator)
+        result = await template_service.create_template(session, data=data, creator=creator)
+
+        assert session.add.called
+        assert result.id == 50
+        assert result.code == "TMPL-NEW-001"
+        assert result.name == "新規テンプレート"
+
+    @pytest.mark.asyncio
+    async def test_create_template_stores_payload_fields(self) -> None:
+        """create_template() stores the request payload on the ORM model."""
+        session = _make_session()
+        creator = _make_user()
+        captured = None
+
+        def capture_add(obj: object) -> None:
+            nonlocal captured
+            captured = obj
+
+        session.add = capture_add
+        session.refresh = AsyncMock(return_value=None)
+        data = TemplateCreate(
+            code="TMPL-BODY-001",
+            name="本文確認",
+            contract_type="委託",
+            description="説明",
+            body="テンプレート本文",
+            is_active=False,
+        )
+
+        await template_service.create_template(session, data=data, creator=creator)
+
+        assert captured is not None
+        assert captured.code == "TMPL-BODY-001"
+        assert captured.description == "説明"
+        assert captured.body == "テンプレート本文"
+        assert captured.is_active is False
 
 
 # ---------------------------------------------------------------------------
@@ -366,7 +415,7 @@ class TestCreateClause:
             obj.code = "CL-BODY-001"  # type: ignore[attr-defined]
             obj.title = "body/text マッピング確認"  # type: ignore[attr-defined]
             obj.category = "免責"  # type: ignore[attr-defined]
-            obj.recommendation = "caution"  # type: ignore[attr-defined]
+            obj.recommendation = "optional"  # type: ignore[attr-defined]
             obj.body = "免責条項テキスト"  # type: ignore[attr-defined]
             obj.tags = []  # type: ignore[attr-defined]
             obj.created_at = created_at  # type: ignore[attr-defined]
@@ -379,7 +428,7 @@ class TestCreateClause:
             code="CL-BODY-001",
             title="body/text マッピング確認",
             category="免責",
-            recommendation="caution",
+            recommendation="optional",
             text="免責条項テキスト",
         )
 

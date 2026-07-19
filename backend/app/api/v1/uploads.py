@@ -1,17 +1,13 @@
 """アップロードエンドポイント (SharePoint 連携)。
 
-- POST `/uploads/init` : 署名 URL 発行 (stub: SharePoint upload session を発行)
+- POST `/uploads/init` : 署名付き upload token 発行
 - POST `/uploads/complete` : アップロード完了報告とメタデータ登録
 - GET `/uploads/{id}` : メタデータ取得
 - GET `/uploads/{id}/download` : ダウンロード URL リダイレクト
 - DELETE `/uploads/{id}` : 論理削除 (admin / 起案者・未署名段階)
-
-Loop 5 で Microsoft Graph API による署名 URL 発行・チャンク UL を完全実装する。
 """
 
 from __future__ import annotations
-
-from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -33,10 +29,10 @@ router = APIRouter(prefix="/uploads", tags=["uploads"])
 @router.post(
     "/init",
     response_model=UploadInitResponse,
-    summary="アップロード署名 URL 発行 (stub)",
+    summary="アップロード署名 token 発行",
     description=(
-        "SharePoint upload session を発行し、フロントが直接 PUT 可能な署名 URL を返す stub。"
-        " Loop 5 で Microsoft Graph 連携を完全実装。"
+        "ファイルメタデータを検証し、完了報告に使う署名付き upload token を返す。"
+        "本番 SharePoint/Graph 実アップロードは承認済み secret 投入後に外部経路で実施する。"
     ),
 )
 async def init_upload(
@@ -44,7 +40,7 @@ async def init_upload(
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> UploadInitResponse:
     if payload.size_bytes > 100 * 1024 * 1024:
         raise HTTPException(
@@ -56,9 +52,16 @@ async def init_upload(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"unsupported mime type: {payload.mime_type}",
         )
-    response = await upload_service.create_upload_session(
-        session, requester=current_user, payload=payload
-    )
+    try:
+        response = await upload_service.create_upload_session(
+            session, requester=current_user, payload=payload
+        )
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="contract not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except PermissionError:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
     await audit_service.log(
         session,
         actor_id=current_user.db_id,
@@ -68,7 +71,7 @@ async def init_upload(
         payload={"filename": payload.filename, "size": payload.size_bytes},
         request=request,
     )
-    return cast(UploadInitResponse, response)
+    return response
 
 
 @router.post(
@@ -83,7 +86,7 @@ async def complete_upload(
     request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
-    _: None = Depends(require_role("site", "legal", "admin")),
+    _: None = Depends(require_role("drafter", "reviewer", "admin")),
 ) -> UploadOut:
     try:
         upload = await upload_service.complete_upload(session, actor=current_user, payload=payload)

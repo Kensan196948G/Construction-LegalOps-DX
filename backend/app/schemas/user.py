@@ -52,6 +52,20 @@ class UserUpdate(BaseModel):
     version: int | None = None
 
 
+class UserIdentityLink(BaseModel):
+    """Admin-only explicit Entra oid linking request.
+
+    Used when a user was first JIT-provisioned from an opaque subject and
+    later receives a real Entra ``oid`` claim. The caller must prove which
+    row is being changed by sending the current oid observed from
+    ``GET /users/{id}``.
+    """
+
+    expected_current_entra_oid: UUID
+    new_entra_oid: UUID
+    reason: Annotated[str, Field(min_length=8, max_length=512)]
+
+
 class UserRead(UserBase, TimestampsMixin):
     """User read schema returned by ``GET /users`` and ``/users/{id}``."""
 
@@ -100,6 +114,7 @@ __all__ = [
     "DepartmentBrief",
     "UserBase",
     "UserCreate",
+    "UserIdentityLink",
     "UserMe",
     "UserOut",
     "UserRead",
