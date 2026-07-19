@@ -7,12 +7,12 @@
 | 項目 | 内容 |
 |---|---|
 | 👥 対象読者 | インフラ担当者・障害対応でリストアを実施する運用担当者 |
-| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。**自動バックアップスクリプト整備済み** (`scripts/backup_db.sh`)。Neon 移行後は Neon branching による PITR と併用 |
+| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。**自動バックアップスクリプト整備済み** (`scripts/backup_db.sh`)。Alembic rollback は `scripts/verify_migrations_roundtrip.sh` で一時 PostgreSQL 検証可能。Neon 移行後は Neon branching による PITR と併用 |
 | 📄 関連文書 | `docs/INCIDENT_RESPONSE.md` (リストア判断・エスカレーション) / `docs/RELEASE_CHECKLIST.md` §3 (本番 DB 要件) / `docs/database_design.md` |
 
 > 🚨 **RPO / RTO は未定義** (本番未リリースのため業務側と未合意)。
 > リリース前に業務影響に基づき RPO (許容データ損失時間) / RTO (許容復旧時間) を合意し、
-> バックアップ頻度と本書の手順をそれに合わせて見直すこと (Issue 未起票 — 起票推奨)。
+> バックアップ頻度と本書の手順をそれに合わせて見直すこと (`docs/RELEASE_CHECKLIST.md` §3)。
 
 ---
 
@@ -42,7 +42,7 @@ graph LR
 |---|---|---|---|
 | 🐘 **PostgreSQL** | volume `legalops-pgdata` | ✅ **必須 (正本)** | 契約・ユーザー・監査ログ等の業務データの単一の真実。監査ログは法定保存 (建設業法 5 年 / 電帳法 7 年 — `docs/RELEASE_CHECKLIST.md` §5) |
 | 🔴 **Redis** | volume `legalops-redisdata` | ❌ **対象外** | 用途はキャッシュ + Celery broker/result backend (`docker-compose.yml` の定義)。消失しても業務データは失われず再生成可能。`appendonly yes` は再起動耐性のためでありバックアップ根拠ではない。滞留中の Celery ジョブは失われ得るが、正本 (PG) から再投入可能 |
-| 🔐 **Vault / Azure Key Vault secrets** | 外部 (HashiCorp Vault or Azure Key Vault) | ✅ 必要 — **ただし Vault 製品側の機能で** | `scripts/setup_vault_secrets.sh` で投入する JWT 鍵・Entra ID・API キー等の正本は Vault 側。本プロジェクトの pg_dump ではカバーされない。Vault snapshot / Key Vault の冗長化設定を利用 (⚠️ 手順未整備 — §6) |
+| 🔐 **Vault / Azure Key Vault secrets** | 外部 (HashiCorp Vault or Azure Key Vault) | ✅ 必要 — **ただし Vault 製品側の機能で** | `scripts/setup_vault_secrets.sh` で投入する JWT 鍵・Entra ID・API キー等の正本は Vault 側。本プロジェクトの pg_dump ではカバーされない。Vault snapshot / Key Vault の冗長化設定を利用 (⚠️ 手順未整備 — §8) |
 | 📁 **添付ファイル (契約書 PDF 等)** | **SharePoint / DirectCloud** | ❌ 本システムでは対象外 | 実装上ファイル実体は外部保管: `backend/app/models/attachment.py` に「File bytes live in SharePoint / DirectCloud; this row is the indexed metadata」と明記。DB には `sharepoint_item_id` / `checksum_sha256` 等のメタデータのみ保持 (メタデータは PG バックアップに含まれる)。実体の保全は SharePoint 側 (Microsoft 365) の保持ポリシーに依存 |
 | 🔑 **TLS 証明書** | volume `legalops-nginx-certs` | 🟡 推奨 (再発行可) | Let's Encrypt なら再発行可能だが、復旧短縮のため取得しておくとよい |
 | 📄 **設定・コード** | Git リポジトリ (GitHub) | ✅ Git が正本 | compose / nginx conf / alembic マイグレーションはすべてリポジトリ管理。`.env` (秘匿値) だけは Git 外 → Vault 管理 (Issue #23) |
@@ -152,7 +152,7 @@ docker compose -f infra/docker/docker-compose.yml exec -T postgres \
 
 ## 📌 5. リストア検証手順
 
-リストア後 (および §6.2 の定期検証時) は以下を**すべて**確認する。
+リストア後 (および §7.2 の定期検証時) は以下を**すべて**確認する。
 
 ```bash
 # 1. マイグレーションリビジョンがバックアップ時点と一致すること
@@ -179,47 +179,71 @@ docker compose -f infra/docker/docker-compose.yml exec postgres \
 
 ---
 
-## 📌 6. 自動バックアップ — 未整備であることの明記
+## 📌 6. Migration rollback drill
 
-> ❌ **現状、自動バックアップは存在しない** (リポジトリ内に cron 定義・バックアップスクリプトなし。
-> `docs/RELEASE_CHECKLIST.md` §3 に「自動バックアップ (pg_dump + WAL アーカイブ) を日次で取得」が
-> **未チェックの要件**として残っている。Issue 未起票 — 起票推奨)。
-> **リリースまでに §3 の手動手順しか存在しない状態を解消すること。**
+Alembic migration の前進・後退・再前進は、一時 PostgreSQL 16 上で次のスクリプトにより検証する。
+本番 DB には接続せず、既定では disposable container を起動する。
 
-### 6.1 🔧 導入時の cron 例 (提案 — 実装は未着手)
+```bash
+scripts/verify_migrations_roundtrip.sh
+```
+
+CI の PostgreSQL service やステージング DB を使う場合のみ、明示的に DB URL を渡す。
+
+```bash
+DB_URL=postgresql+asyncpg://<user>:<password>@<host>:5432/<db> \
+  scripts/verify_migrations_roundtrip.sh --use-existing-db
+```
+
+検証内容:
+
+1. `alembic upgrade head`
+2. `alembic current` が head であること
+3. `alembic downgrade base`
+4. `alembic upgrade head`
+5. 2 回目の `alembic upgrade head` が no-op として成功すること
+
+> ⚠️ 本番データの PITR 実演は、本番 backup / WAL / Neon branching の承認後に別途実施する。
+
+## 📌 7. 自動バックアップ
+
+> ✅ `scripts/backup_db.sh` を整備済み。手動実行、30 日世代管理、`--restore` による復元に対応する。
+> 本番 cron / systemd timer 登録、退避先、暗号化、通知先は RPO/RTO 合意と secret 投入後に人間承認で確定する。
+
+### 6.1 🔧 導入時の cron 例
 
 ホスト側 (Docker ホスト) の crontab に登録する想定例:
 
 ```cron
-# 毎日 02:00 JST に pg_dump を取得し 7 日より古い世代を削除 (提案値 — RPO 合意後に確定)
-0 2 * * * cd /path/to/Construction-LegalOps-DX && \
-  docker compose -f infra/docker/docker-compose.yml exec -T postgres \
-  pg_dump -U legalops -d legalops -Fc > /backup/legalops/backup_$(date +\%Y\%m\%d).dump && \
-  find /backup/legalops -name 'backup_*.dump' -mtime +7 -delete
+# 毎日 03:00 JST に pg_dump を取得し 30 日より古い世代を削除 (提案値 — RPO 合意後に確定)
+0 3 * * * cd /path/to/Construction-LegalOps-DX && \
+  BACKUP_DIR=/backup/legalops BACKUP_RETENTION_DAYS=30 ./scripts/backup_db.sh >> /var/log/legalops-backup.log 2>&1
 ```
 
 導入時に併せて整備すべきもの:
 
-- [ ] 💾 バックアップ失敗時の通知 (現状アラート機構なし — `docs/MONITORING.md` §7)
+- [ ] 💾 バックアップ失敗時の通知 (Alertmanager receiver secret 投入後に本番化)
 - [ ] 📤 ホスト外退避の自動化 (§3.2)
 - [ ] 🔐 保管時暗号化
 - [ ] 📆 WAL アーカイブ + PITR (`docs/RELEASE_CHECKLIST.md` §3 要件。pg_dump のみでは断面復旧しかできない)
 
-### 6.2 🧪 定期リストア検証 (未実施)
+### 6.2 🧪 定期リストア検証
 
-- ⚠️ **リストアテストは未実施** (`docs/RELEASE_CHECKLIST.md` §3 の PITR リストアテストも未チェック)
-- 本番投入前に 1 回、以後は四半期毎 (提案) にステージング相当環境で §4 → §5 を通しで実施すること
+- ✅ **Alembic rollback drill は一時 PostgreSQL で検証可能** (`scripts/verify_migrations_roundtrip.sh`)
+- ⚠️ **本番データ PITR 実演は未実施** (`docs/RELEASE_CHECKLIST.md` §3 の backup / WAL / Neon 承認後に実施)
+- 本番投入前に 1 回、以後は四半期毎 (提案) にステージング相当環境で §4 → §5 と §6 を通しで実施すること
 
 ---
 
-## 📌 7. 未整備事項サマリー (正直な現状)
+## 📌 8. 未整備事項サマリー (正直な現状)
 
 | 項目 | 状態 | 追跡 |
 |---|---|---|
-| 💾 自動バックアップ (日次 pg_dump) | ❌ 未整備 (手動手順のみ。§6.1 は提案) | ⚠️ Issue 未起票 — 起票推奨 |
-| 📆 WAL アーカイブ / PITR | ❌ 未整備 (RELEASE_CHECKLIST §3 の未チェック要件) | ⚠️ Issue 未起票 — 起票推奨 |
-| 🧪 リストア検証の実績 | ❌ 未実施 (本番投入前に 1 回必須) | ⚠️ Issue 未起票 — 起票推奨 |
-| 🎯 RPO / RTO | ❌ 未定義 — **リリース後ではなくリリース前に業務合意が必要** | ⚠️ Issue 未起票 — 起票推奨 |
-| 📤 バックアップ退避先 (別筐体/別リージョン) | ⏳ 未確定 | ⚠️ Issue 未起票 — 起票推奨 |
-| 🔐 Vault secrets のバックアップ手順 | ⏳ Vault 製品側機能に依存 — 手順未文書化 (投入自体も Issue #23 で未完) | ✅ 投入: Issue #23 / 手順: 未起票 |
+| 💾 自動バックアップ (日次 pg_dump) | ✅ スクリプト整備済み (`scripts/backup_db.sh`) | 本番 cron/systemd timer は承認待ち |
+| 📆 WAL アーカイブ / PITR | ⏳ 未整備 (RELEASE_CHECKLIST §3 の未チェック要件) | `docs/RELEASE_CHECKLIST.md` §3 |
+| 🧪 Alembic rollback drill | ✅ スクリプト整備済み (`scripts/verify_migrations_roundtrip.sh`)。CI migration job で実行 | `.github/workflows/ci.yml` |
+| 🧪 本番データ PITR 実演 | ⏳ 未実施 (本番 backup / WAL / Neon 承認後に 1 回必須) | `docs/RELEASE_CHECKLIST.md` §3 |
+| 🎯 RPO / RTO | ⏳ 未定義 — **リリース後ではなくリリース前に業務合意が必要** | `docs/RELEASE_CHECKLIST.md` §3 |
+| 📤 バックアップ退避先 (別筐体/別リージョン) | ⏳ 未確定 | 本番承認ゲート |
+| 🔐 Vault secrets のバックアップ手順 | ⏳ Vault 製品側機能に依存 — 投入自体も未実施 | ✅ 投入: Issue #23 |
 | 📊 バックアップ所要時間・サイズ実測 | ⏳ **リリース後に計測して記入** | — |

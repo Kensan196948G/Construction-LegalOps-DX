@@ -235,7 +235,34 @@ CREATE INDEX ix_library_recom    ON clause_library(recommendation) WHERE deleted
 CREATE INDEX ix_library_tags     ON clause_library USING gin (tags);
 ```
 
-### 4.7 risk_items (リスク項目)
+### 4.7 contract_templates (契約ひな形)
+
+```sql
+CREATE TABLE contract_templates (
+    id              BIGSERIAL PRIMARY KEY,
+    code            VARCHAR(64) NOT NULL UNIQUE,
+    name            VARCHAR(256) NOT NULL,
+    contract_type   VARCHAR(64) NOT NULL,
+    description     TEXT,
+    body            TEXT NOT NULL,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    version         INTEGER NOT NULL DEFAULT 1,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by      BIGINT REFERENCES users(id),
+    updated_by      BIGINT REFERENCES users(id),
+    deleted_at      TIMESTAMPTZ
+);
+
+CREATE INDEX ix_contract_templates_contract_type
+    ON contract_templates(contract_type) WHERE deleted_at IS NULL;
+CREATE INDEX ix_contract_templates_active
+    ON contract_templates(is_active) WHERE deleted_at IS NULL;
+```
+
+> ✅ Alembic `005_contract_templates` で追加。初期 5 件の建設・法務向けテンプレートを seed し、`POST /templates` は `legal` / `admin` のみ作成可能。
+
+### 4.8 risk_items (リスク項目)
 
 ```sql
 CREATE TABLE risk_items (
@@ -266,7 +293,7 @@ CREATE INDEX ix_risk_severity ON risk_items(severity)    WHERE deleted_at IS NUL
 CREATE INDEX ix_risk_status   ON risk_items(status)      WHERE deleted_at IS NULL;
 ```
 
-### 4.8 workflows (ワークフロー定義)
+### 4.9 workflows (ワークフロー定義)
 
 ```sql
 CREATE TABLE workflows (
@@ -284,7 +311,7 @@ CREATE TABLE workflows (
 );
 ```
 
-### 4.9 workflow_steps (ワークフロー実行ステップ)
+### 4.10 workflow_steps (ワークフロー実行ステップ)
 
 ```sql
 CREATE TABLE workflow_steps (
@@ -313,7 +340,7 @@ CREATE INDEX ix_wfsteps_assignee ON workflow_steps(assignee_id) WHERE deleted_at
 CREATE INDEX ix_wfsteps_status   ON workflow_steps(status)      WHERE deleted_at IS NULL;
 ```
 
-### 4.10 comments (コメント)
+### 4.11 comments (コメント)
 
 ```sql
 CREATE TABLE comments (
@@ -337,7 +364,7 @@ CREATE INDEX ix_comments_clause   ON comments(clause_id)   WHERE deleted_at IS N
 CREATE INDEX ix_comments_author   ON comments(author_id)   WHERE deleted_at IS NULL;
 ```
 
-### 4.11 attachments (添付ファイル)
+### 4.12 attachments (添付ファイル)
 
 ```sql
 CREATE TABLE attachments (

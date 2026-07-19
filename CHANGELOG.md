@@ -7,12 +7,491 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (2026-07-19 Loop 88: Notification real mode)
+
+- **通知 real mode を外部送信契約へ対応**:
+  `backend/app/services/notification_service.py` に Exchange Graph sendMail、
+  Teams webhook、desknet's webhook の real mode を追加し、送信者 / webhook URL 不足時は
+  `NotificationError` で fail-closed にした。
+- **通知送信契約テストを追加**:
+  `backend/tests/unit/test_notification_service.py` に Graph token + sendMail、Teams adaptive card、
+  desknet's webhook、設定不足 fail-closed の unit contract を追加し、32 passed / ruff clean /
+  mypy success を確認した。
+- **環境変数とrelease docs gateを同期**:
+  `.env.example` に `NOTIFY_MODE` / `EXCHANGE_SENDER_UPN` / `TEAMS_WEBHOOK_URL` /
+  `DESKNETS_WEBHOOK_URL` を追加し、`scripts/verify_release_docs.sh` が通知 real mode の
+  README / evidence / final report / source / test 証跡を監視するようにした。
+
+### Changed (2026-07-19 Loop 87: SharePoint Graph real mode)
+
+- **SharePoint real mode を Microsoft Graph 対応に更新**:
+  `backend/app/services/sharepoint_service.py` の real path を Entra client-credentials、
+  Graph drive upload、Graph item `webUrl` 解決に対応させ、`SHAREPOINT_DRIVE_ID` 不足、
+  token / upload / get_url の不正応答を `SharePointError` で fail-closed にした。
+- **SharePoint Graph 契約テストを追加**:
+  `backend/tests/unit/test_sharepoint_service.py` に real upload / get_url / drive id不足 /
+  Graph不正応答の unit contract を追加し、33 passed / ruff clean / mypy success を確認した。
+- **release docs gateへ接続**:
+  `scripts/verify_release_docs.sh` が SharePoint Graph real mode の README / evidence /
+  final report / source / test 証跡を監視するようにした。
+
+### Changed (2026-07-19 Loop 86: Dependency audit evidence preflight)
+
+- **依存関係監査証跡をread-only gate化**:
+  `scripts/verify_dependency_audit_evidence.sh` を追加し、npm audit high/critical 0、
+  moderate 4 の既知残リスク、CI の strict project-scoped pip-audit、ambient pip 誤検知回避、
+  ecdsa ignore の到達不能根拠、PyJWT 移行、pip-audit 72 deps / 0 vulnerabilities を
+  検証するようにした。
+- **pre-deploy gateへ接続**:
+  `scripts/pre_deploy_check.sh` から dependency audit evidence preflight を呼び出し、
+  pre-deploy の mandatory checks を Passed 22 / Failed 0 / Warnings 5 へ更新した。
+- **release docs gateへ接続**:
+  `scripts/verify_release_docs.sh` から dependency audit evidence verifier の存在と
+  pre-deploy 接続を監視し、依存関係監査証跡の drift を検出するようにした。
+
+### Changed (2026-07-19 Loop 85: Review evidence preflight)
+
+- **Review証跡の境界をread-only gate化**:
+  `scripts/verify_review_evidence.sh` を追加し、CodeRabbit CLI/auth、findings前timeout、
+  CodeRabbit findingsが得られていないため Critical/High 0件とは断言しない制限、
+  代替静的検証、security review、過去のadversarial/silent-failure review証跡を
+  検証するようにした。
+- **pre-deploy gateへ接続**:
+  `scripts/pre_deploy_check.sh` から review evidence preflight を呼び出し、
+  pre-deploy の mandatory checks を Passed 21 / Failed 0 / Warnings 5 へ更新した。
+- **release docs gateへ接続**:
+  `scripts/verify_release_docs.sh` から review evidence verifier の存在と
+  pre-deploy 接続を監視し、レビュー証跡の過剰主張や欠落を検出するようにした。
+
+### Changed (2026-07-19 Loop 84: Goal completion evidence preflight)
+
+- **/goal完了条件の証拠マップをread-only gate化**:
+  `scripts/verify_goal_completion_evidence.sh` を追加し、必須機能、lint/type/test/build、
+  security、DB migration/rollback、release checklist、WebUI、GitHub Project/Issue/CI、
+  本番承認待ち stop-line の各完了条件が `docs/RELEASE_EVIDENCE_MATRIX.md` と
+  `docs/FINAL_RELEASE_STOP_REPORT.md` に証拠付きで対応していることを検証するようにした。
+- **pre-deploy gateへ接続**:
+  `scripts/pre_deploy_check.sh` から goal completion evidence preflight を呼び出し、
+  pre-deploy の mandatory checks を Passed 20 / Failed 0 / Warnings 5 へ更新した。
+- **release docs gateへ接続**:
+  `scripts/verify_release_docs.sh` から goal evidence verifier の存在と
+  pre-deploy 接続を監視し、`/goal` 証跡の drift を検出するようにした。
+
+### Changed (2026-07-19 Loop 83: Standalone WebUI runtime contract hardening)
+
+- **Standalone WebUI runtime preflightを拡張**:
+  `scripts/verify_standalone_webui_runtime.sh` が status JSON、systemd enabled/active、
+  unit の `ExecStart` / `WorkingDirectory` / `Restart=always` / `NoNewPrivileges`、
+  `38100-38999` の自動port範囲、Linux host上の選択IP、`ss` によるlisten実体を
+  read-onlyで検証するようにした。
+- **release docs gateへ接続**:
+  `scripts/verify_release_docs.sh` に WebUI status JSON / auto port / selected host /
+  listen / systemd ExecStart の検証観点を追加し、WebUI提示要件のdriftを検出するようにした。
+- **承認者向け証跡をLoop 83へ同期**:
+  README / approval packet / evidence matrix / final stop report / release checklist /
+  handover に Standalone WebUI runtime preflight の拡張証跡を追加した。
+
+### Changed (2026-07-19 Loop 82: Production stop-line preflight)
+
+- **Production stop-line証跡をread-only gateへ追加**:
+  `scripts/verify_production_stop_line.sh` を追加し、`legalops.mirai-dx-platform.com`
+  の CNAME / A 未作成、Git tag 0、GitHub Release 0、GitHub Deployments 0、
+  open PR 0、open issues #23/#24/#50、Issue #50 の blocked / human-decision labels、
+  GitHub Project #30 の Todo 状態を検証するようにした。
+- **release docs gateへ接続**:
+  `scripts/verify_release_docs.sh` から production stop-line の検証観点を監視し、
+  本番未実行の証跡が drift した場合に release docs preflight を失敗させるようにした。
+- **承認者向け証跡をLoop 82へ同期**:
+  README / approval packet / evidence matrix / final stop report / release checklist /
+  handover に production stop-line preflight の証跡を追加した。
+
+### Changed (2026-07-19 Loop 81: Release checklist pending classification)
+
+- **Release checklistの未チェック項目分類を追加**:
+  `scripts/verify_release_checklist_pending_items.sh` を追加し、`docs/RELEASE_CHECKLIST.md`
+  の未チェック73件が人間承認 / 本番実行 / リリース後確認に分類されることを
+  read-only で検証するようにした。
+- **docs gateへ接続**:
+  `scripts/verify_release_docs.sh` から checklist分類スクリプトの検証観点を監視し、
+  未分類の未チェック項目が混入した場合にrelease docs preflightを失敗させるようにした。
+- **承認者向け証跡をLoop 81へ同期**:
+  README / approval packet / evidence matrix / final stop report / handover に
+  checklist pending classification の証跡を追加した。
+
+### Changed (2026-07-19 Loop 80: Pre-deploy warning classification)
+
+- **Pre-deploy warning分類を承認前ゲートへ追加**:
+  `scripts/verify_predeploy_warning_classification.sh` を追加し、pre-deploy log の
+  Passed / Failed / Warnings 数、既知warning 5件、本番secret / SSO / AI key / Docker build skip
+  の分類、未知warning 0 を read-only で検証するようにした。
+- **警告の説明責任をdocs gateへ接続**:
+  `scripts/verify_release_docs.sh` から warning分類スクリプトの検証観点を監視し、
+  Approval Packet / Final Stop Report / Evidence Matrix にwarning分類の証跡を追加した。
+- **古いpre-deploy証跡を修正**:
+  `docs/FINAL_RELEASE_STOP_REPORT.md` の pre-deploy 結果を
+  Passed 19 / Failed 0 / Warnings 5 へ更新した。
+
+### Changed (2026-07-19 Loop 79: Standalone WebUI runtime preflight)
+
+- **Standalone WebUIの実起動証跡をpre-deployへ追加**:
+  `scripts/verify_standalone_webui_runtime.sh` を追加し、systemd user service active、
+  `/healthz` ok、`HEAD /` 200、Content-Length と standalone HTML実体サイズの一致、
+  security headers、`/standalone-source` のHTML実体パス一致を read-only で検証するようにした。
+- **WebUI runtime gateを承認前ゲートへ接続**:
+  `scripts/pre_deploy_check.sh` から WebUI runtime preflight を呼び出し、
+  `scripts/verify_release_docs.sh` で pre-deployへの接続とruntime検証観点を監視するようにした。
+- **承認者向け文書をLoop 79へ同期**:
+  README / release checklist / approval packet / evidence matrix / final stop report / handover に
+  WebUI runtime preflight の証跡を追加した。
+
+### Changed (2026-07-19 Loop 78: GitHub Actions CI gate preflight)
+
+- **最新CI成功をGitHub Release Gateへ追加**:
+  `scripts/verify_github_release_gate.sh` が `gh run list` で main ブランチの最新 `CI`
+  workflow run を読み取り、`completed` / `success` / `main` / run URL ありを
+  本番承認前ゲートとして検証するようにした。
+- **承認者向け証跡をCI状態まで拡張**:
+  README / release checklist / approval packet / evidence matrix / final stop report / handover に
+  latest main CI success を追加し、GitHub Project / Issue / CI の外部状態を同じpreflightで監視するようにした。
+
+### Changed (2026-07-19 Loop 77: GitHub release gate preflight)
+
+- **GitHub Release Gateをpre-deployへ追加**:
+  `scripts/verify_github_release_gate.sh` を追加し、open PR 0、open issues #23/#24/#50、
+  Issue #50 の `blocked` / `human-decision` / `infra` labels、Project #30 readme、
+  Project item status (#23/#24/#50 Todo) を read-only で検証するようにした。
+- **本番承認前ゲートを強化**:
+  `scripts/pre_deploy_check.sh` から GitHub release gate preflight を呼び出し、
+  `scripts/verify_release_docs.sh` で pre-deploy への接続と検証観点を監視するようにした。
+- **承認者向け文書をLoop 77へ同期**:
+  README / release checklist / approval packet / evidence matrix / final stop report / handover に
+  GitHub release gate の証跡を追加した。
+
+### Changed (2026-07-19 Loop 76: GitHub Project release gate sync)
+
+- **GitHub Project #30 を現行Release Gateへ同期**:
+  `Construction-LegalOps-DX 開発管理` Project readme を更新し、open PR 0、
+  open issues #23/#24/#50、pre-deploy / release docs / secret scan /
+  Cloudflare legalops / WebUI / production stop line を可視化した。
+- **Project証跡をrelease docsへ反映**:
+  `docs/RELEASE_EVIDENCE_MATRIX.md` と `docs/PRODUCTION_APPROVAL_PACKET.md` に
+  Project #30 readme同期済み、#23/#24/#50 がTodoの人間ゲートであることを追加した。
+
+### Changed (2026-07-19 Loop 75: README release-ready truth guard)
+
+- **READMEを承認者向け入口として再同期**:
+  冒頭に現在のリリース直前状態表を追加し、本番 deploy 未実行、公開 DNS 未変更、
+  `legalops.mirai-dx-platform.com` CNAME/A 未作成、Cloudflare / Vault / CSP 人間承認待ち、
+  WebUI URL、承認パケット / 最終停止報告リンクを明示した。
+- **READMEのWebUI運用証跡を強化**:
+  Standalone WebUI 節に `http://192.168.0.185:38100/`、`/healthz`、`HEAD /`、
+  `/standalone-source`、systemd unit、停止コマンドを追加した。
+- **README preflight guardを追加**:
+  `scripts/verify_release_docs.sh` が README の Loop marker、WebUI URL、Cloudflare legalops hostname、
+  CNAME/A 未作成、production approval packet / final stop report links を検証するようにした。
+
+### Changed (2026-07-19 Loop 74: Cloudflare approval safety guard)
+
+- **Cloudflare `legalops` 承認前安全線を release docs preflight で強制**:
+  `scripts/verify_release_docs.sh` が Runbook / Approval Packet / Final Stop Report /
+  Evidence Matrix の Access-before-DNS、CNAME/A 未作成、Tunnel / Access / secret stop line、
+  Cloudflare rollback 手順を検証するようにした。
+- **bash 検証ガードのMarkdown記号耐性を修正**:
+  backtick を含むパターンを避け、bash が Markdown のコード記法をコマンド置換として
+  解釈しない安定した部分一致へ置き換えた。
+
+### Changed (2026-07-19 Loop 73: WebUI approval evidence guard)
+
+- **WebUI 承認前証跡を release docs preflight で強制**:
+  `scripts/verify_release_docs.sh` が Final Stop Report、Approval Packet、Evidence Matrix の
+  WebUI URL、HEAD 確認、source endpoint、systemd 停止コマンドを検証するようにした。
+- **Approval Packet の WebUI 確認欄を拡張**:
+  承認者が `http://192.168.0.185:38100/`、`/healthz`、`HEAD /`、systemd active、
+  `/standalone-source`、停止方法を同じ資料で確認できるようにした。
+
+### Changed (2026-07-19 Loop 72: Standalone WebUI release-docs guard)
+
+- **Release docs preflight の Standalone WebUI 監視を強化**:
+  `scripts/verify_release_docs.sh` が `scripts/pre_deploy_check.sh` 内の
+  Standalone WebUI 契約テスト、`serve_standalone_webui.py` 構文チェック、
+  `install_standalone_webui_systemd.sh` 構文チェックのラベルとパスを検証するようにした。
+- **承認前停止証跡を同期**:
+  本番 deploy / 公開 DNS / Cloudflare Tunnel / Access / secret 投入は未実行のまま、
+  `legalops.mirai-dx-platform.com` と WebUI systemd の承認前検証証跡を Loop 72 に更新した。
+
+### Changed (2026-07-19 Loop 71: Standalone WebUI pre-deploy gate)
+
+- **Standalone WebUI を pre-deploy gate に統合**:
+  `scripts/pre_deploy_check.sh` に `tests/test_standalone_webui.py`、
+  `scripts/serve_standalone_webui.py` の py_compile、
+  `scripts/install_standalone_webui_systemd.sh` の bash 構文チェックを追加した。
+- **Pre-deploy 件数を同期**:
+  Standalone WebUI 3 チェック追加により、`SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh`
+  の必須通過数を Passed 17 / Failed 0 / Warnings 5 に同期した。
+
+### Changed (2026-07-19 Loop 70: Standalone WebUI HEAD verification)
+
+- **Standalone WebUI の HEAD 対応**:
+  `scripts/serve_standalone_webui.py` が `HEAD /`、`HEAD /index.html`、
+  `HEAD /healthz`、`HEAD /standalone-source` を本文なしで返すようにした。
+  監視・運用確認の `curl -I` で 501 にならない。
+- **Standalone WebUI テスト強化**:
+  `tests/test_standalone_webui.py` に HEAD 応答の `200`、空body、
+  `Content-Type`、`Content-Length` 検証を追加した。
+
+### Changed (2026-07-19 Loop 69: Standalone WebUI evidence guard)
+
+- **Standalone WebUI 証跡の自動検証を拡張**:
+  `scripts/verify_release_docs.sh` が final stop report と evidence matrix の
+  WebUI URL、`/healthz`、`construction-legalops-standalone-webui.service`、
+  `docs/Construction-LegalOps-DX (Standalone).html` を検証するようにした。
+- **Release-facing docs を Loop 69 に同期**:
+  handover / checklist / approval packet / evidence matrix / final stop report の
+  current marker を Loop 69 に更新した。
+
+### Changed (2026-07-19 Loop 68: pre-deploy release-docs gate integration guard)
+
+- **Pre-deploy gate 統合の自己検証を追加**:
+  `scripts/verify_release_docs.sh` が `scripts/pre_deploy_check.sh` 内の
+  `./scripts/verify_release_docs.sh` 呼び出しと `release documentation preflight`
+  ラベルを検証し、リリース文書 preflight が pre-deploy から外れた場合に検出できるようにした。
+- **Release-facing docs を Loop 68 に同期**:
+  handover / checklist / approval packet / evidence matrix / final stop report の
+  current marker を Loop 68 に更新した。
+
+### Changed (2026-07-19 Loop 67: stop-line preflight guard)
+
+- **Stop Line の自動検証を拡張**:
+  `scripts/verify_release_docs.sh` が final stop report だけでなく
+  `docs/RELEASE_EVIDENCE_MATRIX.md` の本番 release/deploy、Cloudflare Tunnel/Access、
+  Cloudflare/Neon secret、CSP enforce、Git 操作の停止線も検証するようにした。
+- **Approval packet の禁止事項を自動検証**:
+  `docs/PRODUCTION_APPROVAL_PACKET.md` が自動本番 deploy、公開 DNS 自動変更、
+  secret/token/接続文字列の README/Issue/log 露出を禁止していることを preflight で確認する。
+
+### Changed (2026-07-19 Loop 66: issue comment evidence drift guard)
+
+- **Issue comment 証跡の pending 表記を検出**:
+  `scripts/verify_release_docs.sh` が `docs/RELEASE_EVIDENCE_MATRIX.md` の
+  `コメント予定` 表記を検出して失敗するようにし、Issue #50 更新後の証跡表が
+  「予定」のまま残らないようにした。
+- **Release-facing docs を Loop 66 に同期**:
+  handover / checklist / approval packet / evidence matrix / final stop report の
+  current marker を Loop 66 に更新した。
+
+### Changed (2026-07-19 Loop 65: release checklist evidence drift guard)
+
+- **Release Evidence Matrix の同期表記を補正**:
+  `docs/RELEASE_EVIDENCE_MATRIX.md` に残っていた「release checklist は Loop 63 まで同期」
+  という古い現在証跡を Loop 65 に更新し、Issue #50 の報告状態も現行ループに合わせた。
+- **Release docs preflight の検出範囲を拡張**:
+  `scripts/verify_release_docs.sh` が evidence matrix 内の古い checklist-sync 表記を検出し、
+  承認判断に使う証跡表が古い状態を正としないようにした。
+
+### Changed (2026-07-19 Loop 64: handover release marker drift guard)
+
+- **HANDOVER の現行 Loop drift を解消**:
+  `docs/HANDOVER.md` に残っていた Loop 60 の現在状態表記を Loop 64 に同期し、
+  release docs preflight が HANDOVER の current marker と stale Loop 60 表記も検出するようにした。
+- **Release evidence の検証値を同期**:
+  release evidence matrix / approval packet / final stop report / release checklist の pre-deploy 件数と
+  current marker を Loop 64 に更新し、`scripts/pre_deploy_check.sh` の Passed 14 と整合させた。
+
+### Changed (2026-07-19 Loop 63: dynamic release docs loop marker)
+
+- **Release docs preflight の Loop 固定を解消**:
+  `scripts/verify_release_docs.sh` が `state.json` の `project.last_loop_completed` を読み取り、
+  release checklist / approval packet / evidence matrix / final stop report の current marker と照合するよう変更。
+  次ループ以降にスクリプト本体の固定 Loop 番号を書き換える必要をなくした。
+
+### Added (2026-07-19 Loop 62: release docs preflight)
+
+- **Release docs preflight 追加**:
+  `scripts/verify_release_docs.sh` を追加し、final stop report / approval packet / evidence matrix /
+  release checklist / handover / Standalone HTML の存在、重要見出し、WebUI URL、Stop Line、
+  stale Loop 表記を read-only で検証できるようにした。
+- **Pre-deploy gate統合**:
+  `scripts/pre_deploy_check.sh` に release documentation preflight を組み込み、
+  本番承認前の文書証跡が CI 相当の自動ゲートで確認されるようにした。
+
+### Added (2026-07-19 Loop 61: final release stop report)
+
+- **Final Release Stop Report 追加**:
+  本番リリース直前で停止するための最終報告書 `docs/FINAL_RELEASE_STOP_REPORT.md` を追加。
+  変更内容、レビュー、テスト結果、WebUI確認方法、残課題、リスク、本番デプロイ手順、
+  ロールバック手順、Stop Line を一枚に集約。
+- **Release docs 同期**:
+  README、HANDOVER、PRODUCTION_APPROVAL_PACKET、RELEASE_EVIDENCE_MATRIX、RELEASE_CHECKLIST から
+  final stop report へリンクし、release checklist フッターの古い Loop 57 表記を Loop 61 に修正。
+
+### Changed (2026-07-19 Loop 60: release gate cross-document synchronization)
+
+- **Handover / approval / evidence の横断同期**:
+  `docs/HANDOVER.md` の古い Loop 56/57 表記を Loop 60 に更新し、
+  `docs/RELEASE_EVIDENCE_MATRIX.md` を現行承認判断の正本に追加。
+- **Evidence matrix 現行化**:
+  `docs/PRODUCTION_APPROVAL_PACKET.md`、`docs/RELEASE_CHECKLIST.md`、`docs/RELEASE_EVIDENCE_MATRIX.md`
+  の Loop 表記と #50 進捗証跡を Loop 60 に同期。
+
+### Added (2026-07-19 Loop 59: release evidence matrix)
+
+- **Release Evidence Matrix 追加**:
+  `/goal` の完了条件と現在証拠を対応付ける `docs/RELEASE_EVIDENCE_MATRIX.md` を追加。
+  必須機能、lint/type/test/build、security、migration rollback、release checklist、WebUI、GitHub 状態、
+  本番承認待ち状態を一枚で監査できるようにした。
+- **承認文書の参照整理**:
+  README、production approval packet、release checklist から evidence matrix へリンクし、
+  人間承認ゲートと CTO が実行してはいけない stop line を明確化。
+
+### Changed (2026-07-19 Loop 58: production approval evidence packet)
+
+- **承認パケットの証跡強化**:
+  `docs/PRODUCTION_APPROVAL_PACKET.md` に Loop 58 時点の GitHub Issue / CI / pre-deploy /
+  secret scan / Cloudflare legalops preflight / DNS 未作成 / WebUI / CodeRabbit 実施状況を集約。
+  本番 secret 未投入と Docker build skip の warnings は人間承認ゲートとして明示した。
+- **Review 証跡**:
+  CodeRabbit CLI 0.6.5 と認証状態は確認済み。`coderabbit review --agent -t uncommitted` は解析開始後、
+  findings 出力前に 240 秒でタイムアウトしたため、ローカル静的検証を代替証跡として記録。
+
+### Changed (2026-07-19 Loop 57: Cloudflare legalops runbook final sync)
+
+- **Cloudflare `legalops.mirai-dx-platform.com` 対応を承認待ち状態へ再同期**:
+  `docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md` の古い Loop 49 記述を Loop 57 の read-only 検証状態に更新し、
+  Cloudflare Tunnel DNS / Published applications / Access self-hosted application の公式ドキュメント URL を参照として追記。
+- **Release docs 同期**:
+  README、release checklist、handover の最終同期表記を Loop 57 に進め、
+  Cloudflare 本番適用は DNS / Tunnel / Access / secret / Neon の人間承認後のみであることを維持。
+
+### Changed (2026-07-19 Loop 56: handover release gate synchronization)
+
+- **HANDOVER を現行リリースゲートへ同期**:
+  `docs/HANDOVER.md` の古い Loop 33/45/48、906/910 tests、未完扱いの運用・Cloudflare記述を更新し、
+  Loop 56 時点の pre-deploy gate、Standalone WebUI、Cloudflare `legalops` read-only preflight、
+  fail-closed test gate、人間承認ゲート (#23/#24/#50) に同期。
+- **README / RELEASE_CHECKLIST の Loop 表記を統一**:
+  README と release checklist の最終整備表記を Loop 56 に進め、承認判断資料の参照関係を明確化。
+
+### Changed (2026-07-19 Loop 55: release checklist and README readiness sync)
+
+- **リリースチェックリストを現行リリースゲートへ同期**:
+  `docs/RELEASE_CHECKLIST.md` の古い Loop 5 / v0.1.8 / 906 tests 表記を撤去し、
+  Loop 55 時点の pre-deploy gate、Cloudflare `legalops`、Standalone WebUI、
+  secret scan、rollback drill、人間承認ゲート (#23/#24/#50) を反映。
+- **README のリリース指標を現行化**:
+  Phase 1 範囲を Loop 31〜55 に更新し、Backend API カバレッジ見出しを
+  `v0.1.12 / Loop 55` に同期。テスト数は pre-deploy の実表示に合わせて `900+` とした。
+
+### Changed (2026-07-19 Loop 54: unit test import fail-closed hardening)
+
+- **自前モジュール import skip の撤去**:
+  `review_service` / `file_parser` / `workflow_engine` / `sensitive_detector` /
+  `audit_hash_chain` / `risk_scoring` / `ai_review` の unit tests から、実装済み内部モジュールを
+  `pytest.importorskip` で隠す経路を撤去。内部モジュールが import できない場合は skip ではなくテスト失敗として扱う。
+- **リスク・AI・監査・個人情報検知テストの fail-closed 化**:
+  risk scoring 24件、AI review stub、workflow engine、file parser、sensitive detector、audit hash chain、
+  review service の対象 unit tests を実実装に直接接続し、168件の対象テストを skip なしで確認。
+
+### Changed (2026-07-19 Loop 53: review flow PATCH contract hardening)
+
+- **レビューE2E相当フローの古い422許容を撤去**:
+  `tests/integration/test_reviews_flow.py` の `PATCH /reviews/{id}` 検証を、実仕様の
+  `legal_comment` / `final_decision` / `overall_risk` 更新に合わせ、`200` と保存済み `result` JSON を必須確認する形に強化。
+- **契約ズレ再発防止**:
+  review CRUD 単体フローだけでなく、契約作成 → AIレビュー開始 → 取得 → PATCH → accept の一連フローでも
+  人間判断メタデータ永続化を検証する。
+
+### Changed (2026-07-19 Loop 52: review PATCH contract persistence)
+
+- **レビュー更新 API の契約整合**:
+  `PATCH /reviews/{id}` が `overall_risk` だけでなく、OpenAPI/route description が示す
+  `legal_comment` と `final_decision` も `legal_reviews.result` JSON に保存してレスポンスへ返すよう修正。
+- **レビュー・監査テストの古い許容を解消**:
+  監査ログ hash chain テストから空配列なら通る古いコメントを除去し、実データ件数を確認。
+  review CRUD integration は `PATCH` が 200 で人間判断メタデータを永続化することを検証。
+- **API設計書同期**:
+  `docs/api_design.md` に `PATCH /reviews/{id}` の保存先・状態遷移境界を明記。
+- **レビュー証跡**:
+  CodeRabbit light review は uncommitted 差分で実行したが、180秒で結果生成前に timeout。
+  ruff / mypy / integration tests / secret scan / pre-deploy gate / WebUI・DNS read-only 確認を代替証跡とした。
+
+### Changed (2026-07-19 Loop 51: knowledge API contract wording alignment)
+
+- **Knowledge API の OpenAPI / docs 表記を実装に同期**:
+  `GET /knowledge/search` と `GET /knowledge/similar/{contract_id}` は既に DB-backed 検索として動作しているため、
+  router summary / description、knowledge schema docstring、similarity search service docstring から古い stub / Loop 5 予定表記を除去。
+- **API設計書・README同期**:
+  `docs/api_design.md` の Knowledge 節を実エンドポイント構成（list/search/similar/get/create）へ更新し、
+  README footer を Loop 51 時点へ更新。
+
+### Added (2026-07-19 Loop 50: notification API DB-backed completion)
+
+- **通知センター API の DB-backed 化**:
+  `notification_service.list_for_user` / `mark_read` / `mark_all_read` を
+  `notifications` テーブルへ接続し、本人スコープ、`read_at` 更新、`email -> mail` channel alias、
+  status/channel filter、pagination を実装。所有者以外の既読化は `403 Forbidden` で fail-closed。
+- **通知テスト拡充**:
+  notification service unit tests と `tests/integration/test_notifications_flow.py` を追加し、
+  一覧・既読・全既読・他人アクセス拒否・不正filter 400を検証。
+- **未実装誤表示の解消**:
+  `app/main.py` の API router import 失敗ログから古い `not yet implemented` 表記を除去し、
+  実際の import failure として記録するよう修正。
+
+### Added (2026-07-19 Loop 49: Cloudflare legalops DNS readiness)
+
+- **Cloudflare `legalops` サブドメイン確認をAPI対応へ拡張**:
+  `scripts/verify_cloudflare_legalops.sh` に Cloudflare API read-only 確認を追加し、
+  `mirai-dx-platform.com` zone が active であること、`legalops.mirai-dx-platform.com` の DNS record が
+  Cloudflare API 上も 0 件であることを確認できるようにした。preflight は 22/22 PASS。
+- **Cloudflare Runbook更新**:
+  `docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md` と `infra/cloudflare/README.md` に、
+  Zone ID、Cloudflare NS、WebUI preview URL、systemd user service、DNS 未作成状態を反映。
+
+### Added (2026-07-19 Loop 48: auth/upload API runtime completion)
+
+- **認証 API の 501 経路解消**:
+  `auth_service.exchange_code` / `revoke_session` を実装し、`GET /auth/sso/callback` と `POST /auth/logout` が
+  汎用 stub に落ちず、SSOService wrapper + HttpOnly cookie / idempotent logout として動作するよう修正。
+- **アップロード API の DB-backed 化**:
+  `upload_service` を署名付き upload token + `attachments` メタデータ永続化へ置換。
+  `POST /uploads/init` → `POST /uploads/complete` → `GET /uploads/{id}` → `DELETE /uploads/{id}` のフローを実装し、
+  受理 MIME / 100MB 上限 / token署名検証 / soft delete を追加。
+
+### Added (2026-07-19 Loop 47: user management API completion)
+
+- **ユーザー管理 API の DB-backed 化**:
+  `POST /users`, `PATCH /users/{id}`, `DELETE /users/{id}`, `POST /users/sync` を 501/stub 経路から外し、
+  作成・部分更新・論理削除・Microsoft Graph 同期ジョブ受付を実装。削除は `is_active=false` + `deleted_at` の soft delete とし、
+  admin 自身の自己削除は `409 Conflict` で拒否、`user.delete` 監査ログを記録。
+- **ユーザー管理テスト拡充**:
+  user service 単体テストと JIT identity integration に admin soft delete / self-delete fail-closed を追加。
+
+### Added (2026-07-19 Loop 46: AI review start + Cloudflare legalops preflight)
+
+- **AI レビュー開始 API の 501 解消**: `POST /contracts/{id}/reviews` が旧スタブ実装の 501 ではなく、
+  `AIReviewService` 経由で構造化レビュー結果を `legal_reviews` に保存するよう修正。実本番 Claude key がない環境では
+  決定論的 fallback を使い、API 契約を維持する。
+- **Cloudflare `legalops` サブドメイン preflight**:
+  `scripts/verify_cloudflare_legalops.sh` を追加し、`legalops.mirai-dx-platform.com` の Tunnel/DNS/Access/compose 設定、
+  Cloudflare NS、CNAME 未作成状態、`cloudflared tunnel ingress validate` を read-only で検証。`pre_deploy_check.sh` に必須 gate として組み込み。
+
+### Added (2026-07-19 Loop 45: contract template persistence)
+
+- **契約ひな形 DB 永続化**: `contract_templates` ORM + Alembic `005_contract_templates` を追加し、既存 5 件の建設・法務向けテンプレートを seed。
+  `POST /templates` は 501 ではなく `201 Created` を返し、`legal` / `admin` 権限で作成、`code` 重複時は `409 Conflict`。
+- **API/DB 整合修正**: 条項ライブラリの `recommendation` を DB 制約と同じ `required/recommended/optional/prohibited` に統一し、backend schema と frontend API schema を更新。
+
+### Changed (2026-07-19 Loop 44: CD approval gate hardening)
+
+- **本番 CD fail-closed 強化**: `.github/workflows/deploy.yml` は `workflow_dispatch` / main / CI green / GitHub `production` environment 承認に加え、
+  `production_change_approval=APPROVE_PRODUCTION_CHANGE` が無い限り GHCR publish と Cloudflare/Neon production gate を開始しない。
+- **Cloudflare Tunnel dry-run 化**: Tunnel job は YAML と compose overlay の検証、および人間向け DNS route command 表示のみを行い、DNS/Tunnel/Access の実作成は行わない。
+
 ### Added (2026-07-18 Loop 33: Phase 1 最終整備 — CF/Neon IaC + 監視基盤完成)
 
 - **Cloudflare/Neon IaC 整備 (Issue #50)**:
   `infra/cloudflare/wrangler.toml` (Pages 設定)、`access-policy.yml` (Access ポリシー定義)、
   `neon-config.md` (Neon 接続設定・マイグレーション手順)、`README.md` 更新。
-  CD 経路に CF/Neon デプロイジョブ 3 件追加（fail-safe skip 設計）。
+  CD 経路に CF/Neon デプロイジョブ 3 件追加（当初 skip 設計。Loop 44 で approval phrase + fail-closed へ強化済み）。
 - **JIT プロビジョニング残課題 2 件 (Issue #48)**:
   commit-after-response 窓の可観測性向上（`db_commit_failures_total` Counter + ログ警告）、
   JIT プロビジョニングを audit chain に統合（`audit_service.log` で `user.jit_provision` 記録）。

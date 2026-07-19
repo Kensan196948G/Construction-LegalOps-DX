@@ -7,12 +7,12 @@
 | 項目 | 内容 |
 |---|---|
 | 👥 対象読者 | 障害一次対応者 (運用担当)・インフラ担当者・開発担当者 |
-| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。**CD (自動デプロイ) は存在せず、復旧・ロールバックはすべて手動** |
+| 🏗️ 前提 | **本番未リリース**。Docker Compose オンプレ構成。CD workflow は存在するが、GitHub Environment `production` 承認・main ref・CI green が前提。実際の本番適用判断は人間が行う |
 | 📄 関連文書 | `docs/OPERATIONS.md` (起動/停止/ログ) / `docs/MONITORING.md` (エンドポイント仕様) / `docs/BACKUP_RESTORE.md` (リストア) |
 
-> ⚠️ **未整備**: アラート自動通知 (Slack / メール / PagerDuty 等) は未構築のため、現状の障害検知は
-> **利用者からの申告・日次チェック (`docs/OPERATIONS.md` §6)・healthcheck の目視確認**に依存する
-> (Issue 未起票 — 起票推奨)。
+> ✅ Alertmanager / Prometheus / Grafana の IaC と incident label catalog は整備済み。
+> Slack / メール等の**実通知先 secret と実名連絡先は本番承認時に投入**する。
+> 個人電話番号・個人メール・Webhook URL は本リポジトリに保存しない。
 
 ---
 
@@ -90,7 +90,7 @@ curl -s http://localhost:8010/metrics | grep 'http_requests_total' | grep 'statu
 
 | 切り分け結果 | 次アクション |
 |---|---|
-| `/healthz` 自体が応答しない | backend コンテナ停止/クラッシュ → `docker compose ps` / `logs` → 再起動 |
+| `/healthz` 自体が応答しない | backend コンテナ停止/クラッシュ → `docker compose ps` / `logs` → `scripts/check_unhealthy_services.sh` で確認後、承認を得て再起動 |
 | `/healthz` OK・`/readyz` 503 | DB 障害 → §3.2 |
 | `/readyz` OK・特定 API のみ 5xx | アプリバグの可能性 → ログの traceback 確認 → 直近デプロイ起因ならロールバック §4 |
 | 直近デプロイ直後から発生 | ロールバック §4 を優先 |
@@ -192,7 +192,8 @@ docker compose -f infra/docker/docker-compose.yml logs --no-log-prefix backend |
 
 ## 📌 4. ロールバック手順
 
-> 🚨 **前提: CD が無いため、ロールバックは「git revert → 手動再ビルド → 手動再デプロイ」である。**
+> 🚨 **前提: 本番ロールバックは人間承認で実行する。**
+> GHCR イメージ発行 / Cloudflare / Neon 用 CD workflow はあるが、緊急時も `git revert → CI → production environment 承認 → 適用` を基本とする。
 > `CLAUDE.md` の禁止事項により **force push / 履歴改変は禁止** — 必ず `git revert` で戻す。
 
 ### 4.1 ⏪ アプリケーションのロールバック
@@ -208,9 +209,9 @@ git revert -m 1 <merge-sha>        # マージコミット
 # 3. PR 経由で main へ反映 (main 直接 push 禁止のため)
 #    緊急時も branch → PR → CI 通過 → merge の順を守る
 
-# 4. 本番サーバーで再ビルド・再デプロイ (手動)
-git pull origin main
-docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml --profile worker build
+# 4. GHCR 利用時は CD workflow で旧/修正タグの image publish を承認後、
+#    本番サーバーで pull + 再起動 (手動)
+docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml pull
 docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml --profile worker up -d
 ```
 
@@ -237,20 +238,45 @@ curl -s  http://localhost:8010/metrics | grep 'status="5'     # 5xx が増えて
 
 障害の原因となった操作 (画面/API) を実際に再実行して正常化を確認する。
 
+### 4.4 🐳 unhealthy 復旧ドリル
+
+`unhealthy` の復旧は、ログ保存と人間承認を挟んでから行う。
+
+```bash
+./scripts/check_unhealthy_services.sh
+docker compose -f infra/docker/docker-compose.yml logs --tail=200 <service>
+./scripts/check_unhealthy_services.sh --restart <service>
+```
+
+常駐 autoheal daemon は Docker socket 権限の blast radius が大きいため採用しない。
+設計判断は `docs/UNHEALTHY_RECOVERY_REVIEW.md` を参照。
+
 ---
 
 ## 📌 5. エスカレーション基準
 
-| 条件 | エスカレーション先 | 期限 |
-|---|---|---|
-| 🔴 P1 判定 (全停止 / データ破損・漏洩疑い / セキュリティ) | プロジェクト責任者 + インフラリード (+ セキュリティ事案は法務リード) | 即時 |
-| 🟠 P2 が初動 1 時間で復旧見込み立たず | 開発担当 (アプリ起因) / インフラリード (基盤起因) | 1 時間 |
-| 🔁 同一原因の障害が 2 回再発 | 開発担当 — 恒久対策を Issue 化 (場当たり修復の繰り返し禁止 — `CLAUDE.md` Error Control) | 再発時点 |
-| 🔐 週次 security scan (`security.yml`) で CRITICAL 検出 | セキュリティ担当 + プロジェクト責任者 | 検出当日 |
-| 💾 リストアが必要になった | インフラリード (単独判断でのリストア実行禁止) | 即時 |
+### 5.1 📞 On-call 連絡網テンプレート
 
-> ⚠️ **未整備**: 具体的な連絡先一覧・オンコール当番表・連絡手段 (電話/Slack) は未整備
-> (本番未リリースのため体制未確定。**リリース前に必ず整備し本表を実名で更新すること**。Issue 未起票 — 起票推奨)。
+> 🔐 実名・電話番号・Webhook URL は secret / 社内連絡網側で管理し、GitHub や README へ直接記載しない。
+> 本表は**役割と責任の正本**として使う。
+
+| 役割 | 一次責任 | 通知経路 | 代替経路 | 備考 |
+|---|---|---|---|---|
+| 👤 Incident Commander | プロジェクト責任者 | Alertmanager receiver `legalops-p1` | 社内電話網 | P1 の指揮・外部説明判断 |
+| ⚙️ Infra Lead | インフラ担当 | Alertmanager receiver `legalops-infra` | 社内チャット | DB / Redis / Cloudflare / host 障害 |
+| 💻 App Lead | 開発担当 | Alertmanager receiver `legalops-app` | GitHub Issue mention | API / UI / worker 障害 |
+| 🔒 Security Lead | セキュリティ担当 | Alertmanager receiver `legalops-security` | 社内電話網 | secrets / 不正アクセス / 脆弱性 |
+| ⚖️ Legal Lead | 法務責任者 | 社内承認フロー | Incident Commander 経由 | データ漏洩疑い・対外通知 |
+
+### 5.2 🚦 エスカレーション条件
+
+| 条件 | エスカレーション先 | 期限 | GitHub labels |
+|---|---|---|---|
+| 🔴 P1 判定 (全停止 / データ破損・漏洩疑い / セキュリティ) | Incident Commander + Infra Lead (+ セキュリティ事案は Security Lead / Legal Lead) | 即時 | `incident`, `incident:P1`, `on-call` |
+| 🟠 P2 が初動 1 時間で復旧見込み立たず | App Lead (アプリ起因) / Infra Lead (基盤起因) | 1 時間 | `incident`, `incident:P2`, `on-call` |
+| 🔁 同一原因の障害が 2 回再発 | App Lead — 恒久対策を Issue 化 (場当たり修復の繰り返し禁止 — `CLAUDE.md` Error Control) | 再発時点 | `incident`, `postmortem` |
+| 🔐 週次 security scan (`security.yml`) で CRITICAL 検出 | Security Lead + Incident Commander | 検出当日 | `incident:P1`, `security` |
+| 💾 リストアが必要になった | Infra Lead + Incident Commander (単独判断でのリストア実行禁止) | 即時 | `incident:P1`, `on-call` |
 
 ---
 
@@ -263,6 +289,7 @@ P1/P2 の全件、P3 は再発性があるものについて、復旧後 1 営�
 ```bash
 gh issue create \
   --title "incident: <概要> (P1|P2|P3)" \
+  --label "incident,incident:P1,on-call" \
   --body "$(cat <<'EOF'
 ## 📊 概要
 - 検知日時 / 復旧日時 / 影響時間:
@@ -285,15 +312,18 @@ EOF
 )"
 ```
 
+重大度に応じて `incident:P1` は `incident:P2` / `incident:P3` に置き換える。
+label catalog は `.github/labels.yml` に定義済み。
+
 ### 6.2 📝 ポストモーテムの原則
 
 - ✅ **非難しない (blameless)** — 個人ではなく仕組みの欠陥に焦点を当てる
-- 🔍 「なぜ検知が遅れたか」を必ず問う → `docs/MONITORING.md` の未整備項目 (アラート等) の解消につなげる
+- 🔍 「なぜ検知が遅れたか」を必ず問う → `docs/MONITORING.md` の監視ギャップ / 閾値調整の改善につなげる
 - 🧪 再発防止策は**テストまたは自動チェックに落とす** (受入れ基準をテストへ — `CLAUDE.md` 設計原則)
 - 📊 P1 は再発防止策完了まで Issue を close しない
 - 📚 障害パターンは `state.json` の `learning.failure_patterns` にも記録する (ClaudeOS 運用)
 
 ### 6.3 📄 記録の保管
 
-- ポストモーテムの正本は GitHub Issue (ラベル `incident` を付与 — ⚠️ ラベル自体は未作成のため初回に作成する)
+- ポストモーテムの正本は GitHub Issue (ラベル `incident` / `postmortem` を付与)
 - 監査要件 (`docs/audit_log_policy.md`) に関わる事案は Audit-Agent の証跡確認対象に含める

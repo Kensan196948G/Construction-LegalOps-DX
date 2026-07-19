@@ -2,7 +2,7 @@
 
 > **ステータス: ✅ IaC コード完成・本番適用は人間待ち** — DNS 変更・課金プラン変更・Secrets 投入・デプロイは一切実行していません（いずれも人間の承認・実行事項）。
 >
-> 作成: 2026-07-14 CTO セッション ／ 最終更新: 2026-07-18 (Loop 33 — IaC コード完成)
+> 作成: 2026-07-14 CTO セッション ／ 最終更新: 2026-07-19 (`legalops.mirai-dx-platform.com` Cloudflare Runbook 反映)
 
 ---
 
@@ -27,6 +27,7 @@
 | 🌐 本番 URL 候補 | **`https://legalops.mirai-dx-platform.com`** |
 | 根拠 | Cloudflare 管理下の `mirai-dx-platform.com` 配下でプロダクト名 (LegalOps) を表すサブドメイン。既存設定・設計書・環境変数からの特定は不能だったため、指示に基づく候補提示 |
 | ⚠️ 制約 | **DNS レコードの作成・変更は本計画では実行しない**（人間が Cloudflare ダッシュボードで実施） |
+| 📘 手順 | `docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md` に DNS / Tunnel / Access / rollback を具体化 |
 
 ---
 
@@ -103,11 +104,12 @@ flowchart LR
 ## 📌 5. 実行チェックリスト（承認後）
 
 - [ ] 人間: Cloudflare ゾーン `mirai-dx-platform.com` の管理権限確認・API token 発行（最小権限: Zone.DNS, Access, Tunnel）
-- [ ] 人間: `legalops.mirai-dx-platform.com` の CNAME（Tunnel 向け）作成
+- [ ] 人間: Cloudflare Access self-hosted application `LegalOps-DX` を `legalops.mirai-dx-platform.com` に作成
+- [ ] 人間: Tunnel 作成後、`legalops.mirai-dx-platform.com` の CNAME（`<TUNNEL_ID>.cfargotunnel.com`）作成
 - [ ] 人間: Neon プロジェクト作成・接続文字列を Vault へ投入
-- [ ] CTO: cloudflared 設定を `infra/cloudflare/` としてコード化（PR）
-- [ ] CTO: `DB_URL` の SSL 対応と Neon 接続検証（ステージング）
-- [ ] CTO: CD パイプライン新設（現行 CI は検証のみ。デプロイジョブは承認済み経路として新規設計 → PR レビュー必須）
+- [x] CTO: cloudflared 設定を `infra/cloudflare/` としてコード化（本番適用は #50 承認待ち）
+- [x] CTO: `DB_URL` の SSL 対応と Neon 接続設定をコード化（実 Neon 接続検証は #50 承認後）
+- [x] CTO: CD パイプライン新設（手動起動 + production environment + `APPROVE_PRODUCTION_CHANGE` 入力で fail-closed。本番実行は人間承認後）
 - [ ] 両者: RELEASE_CHECKLIST §7 に沿った本番リリース判定
 
 ---

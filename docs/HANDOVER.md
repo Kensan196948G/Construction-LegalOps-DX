@@ -1,20 +1,20 @@
 # HANDOVER — Construction-LegalOps-DX
 
-次セッション (Loop 34 以降、または本番リリース準備チーム) への引き継ぎ書です。
+次セッション (Loop 90 以降、または本番リリース準備チーム) への引き継ぎ書です。
 
-- 作成日: **2026-05-16** (Loop 5 完了時)
-- 最終更新: **2026-07-18** (Loop 33 / Phase 1 最終整備 完了時点で更新)
+- 作成日: **2026-05-16** (Loop 5 初版)
+- 最終更新: **2026-07-19** (Loop 90: Contract submit implementation + Cloudflare legalops readiness + Notification real mode)
 - 対象プロジェクト: Construction-LegalOps-DX
 - リリース期限: **2026-11-16** (登録日 2026-05-16 から 6 ヶ月、絶対厳守)
-- 現在ステータス: **v0.1.12** — 全 PR マージ済み / 906 tests passed / 0 failed / Phase 1 完了
+- 現在ステータス: **v0.1.12** — pre-deploy gate 900+ tests / frontend E2E 51 passed / Phase 1 完了 / 本番承認待ち
 - **本番デプロイ**: **未実行・人間承認待ち**（PR マージ・タグ作成・DNS 変更・本番デプロイは CTO/Supervisor 範囲外）
 
-> 📌 Loop 33 完了時点: Phase 1 のコード作業は完了。CF/Neon IaC コード完成、監視基盤（Prometheus/Alertmanager/Grafana）完成、JIT プロビジョニング audit chain 統合・可観測性向上完了。
-> 本書は「未解決事項 / 人間判断待ち / 残課題」と「Loop 1-5 までの設計履歴」を保持する。
+> 📌 Loop 90 時点: Phase 1 のコード作業は完了し、AI review / templates / users / auth callback / uploads / notifications / knowledge / reviews は DB-backed または runtime-ready の契約に同期済み。SharePoint Graph real mode は Entra client-credentials、Microsoft Graph drive upload、webUrl 解決、設定不足/不正応答 fail-closed に対応済み。Notification real mode は Exchange Graph sendMail、Teams webhook、desknet's webhook、設定不足 fail-closed に対応済み。`PATCH /reviews/{id}` は人間判断メタデータを `result` JSON に永続化し、review flow でも 422 許容を撤去済み。実装済み内部モジュール unit tests は `pytest.importorskip` を撤去し fail-closed 化済み。CF/Neon IaC、`legalops.mirai-dx-platform.com` の Cloudflare read-only preflight、Cloudflare公式根拠付きRunbook、release evidence matrix、final stop report、release docs preflight、goal completion evidence preflight、review evidence preflight、dependency audit evidence preflight、Standalone WebUI systemd (`http://192.168.0.185:38100/`) は確認済み。`scripts/verify_dependency_audit_evidence.sh` により npm audit high/critical 0、moderate 4 の既知残リスク、CI の strict project-scoped pip-audit、ecdsa ignore の到達不能根拠、PyJWT 移行、今回の pip-audit 72 deps / 0 vulnerabilities をread-onlyで検証する。`scripts/verify_review_evidence.sh` により CodeRabbit CLI/auth、findings前timeout、代替静的検証、security review、Critical/High 0件と断言しない制限をread-onlyで検証する。`scripts/verify_goal_completion_evidence.sh` により `/goal` 完了条件と evidence matrix / final stop report / stop-line の対応をread-onlyで検証する。`scripts/verify_standalone_webui_runtime.sh` により status JSON、systemd enabled/active、`38100-38999` のauto port範囲、Linux host上の選択IP、listen実体、health ok、HEAD 200、Content-Length一致、source endpoint一致をread-onlyで検証する。`scripts/verify_predeploy_warning_classification.sh` により pre-deploy warning は本番secret / SSO / AI key / Docker build skip の既知5件のみで、未知warning 0であることを検証する。`scripts/verify_release_checklist_pending_items.sh` により release checklist の未チェック73件は人間承認 / 本番実行 / リリース後確認に限定されていることを検証する。`scripts/verify_production_stop_line.sh` により legalops DNS未作成、Git tag 0、GitHub Release 0、GitHub Deployments 0、Project #30 Todo状態をread-onlyで検証する。GitHub Project #30 `Construction-LegalOps-DX 開発管理` のreadmeもLoop 90のrelease gateへ同期済みで、#23/#24/#50をTodoの人間ゲートとして可視化する。`scripts/verify_github_release_gate.sh` により open PR 0、open issues #23/#24/#50、latest main CI completed/success、Project #30 Todo状態、#50 blocked label をread-onlyで検証する。release docs preflight は README / release docs / pre-deploy gate の現在状態表を監視する。CD workflow は `workflow_dispatch` + `production` environment + `APPROVE_PRODUCTION_CHANGE` 明示入力で fail-closed。Linux host の Next.js build は `ulimit -v 20000000` により直接実行で WebAssembly OOM になるため、Docker Node 20 build と Playwright Docker E2E を標準検証経路とする。
+> 本書は「人間判断待ち / 残課題 / 過去設計履歴」を保持する。現行の承認判断は [`docs/PRODUCTION_APPROVAL_PACKET.md`](./PRODUCTION_APPROVAL_PACKET.md)、[`docs/RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md)、[`docs/RELEASE_EVIDENCE_MATRIX.md`](./RELEASE_EVIDENCE_MATRIX.md)、[`docs/FINAL_RELEASE_STOP_REPORT.md`](./FINAL_RELEASE_STOP_REPORT.md) を正とする。
 
 ---
 
-## 1. これまでに完了した範囲 (Loop 1〜5 サマリ)
+## 1. これまでに完了した範囲 (Loop 1〜82 サマリ)
 
 ### Loop 1: Foundation (プロジェクト基盤構築)
 
@@ -101,9 +101,10 @@
    - 143 PG integration DDL エラーは PR #38 で解消
    - Issue #32 (--maxfail=1 flaky) も PR #34 で解消
 
-6. **alembic マイグレーションのリストアテスト** ⏳ **ステージング 1 回実施推奨**
-   - 本番 PITR リストアを 1 回ステージング環境で実施し、所要時間を計測
-   - Loop 30 で **migrations CI ゲート** を新設 (PR #54): alembic URL 解決欠陥修正 + CI で `alembic upgrade head` を常時実行
+6. **alembic マイグレーション rollback drill** ✅ **一時 PostgreSQL 検証を自動化 (Loop 42)**
+   - `scripts/verify_migrations_roundtrip.sh`: `upgrade head -> downgrade base -> upgrade head -> idempotent upgrade`
+   - CI migrations job は PostgreSQL 16 service に対して roundtrip verifier を実行
+   - 本番データ PITR リストアは backup / WAL / Neon 承認後に 1 回ステージング相当で実施
 
 7. **AI 監査ログのパーティショニング** ⏳ **未着手 (P2 推奨)**
    - `audit_logs` テーブルが月次大量レコード化する見込み。月次パーティショニングを検討
@@ -114,43 +115,51 @@
 
 ### P2 (リリース後対応可)
 
-9. **運用基盤ギャップ** ✅ **完了 (Loop 33, Issue #51)**
+9. **運用基盤ギャップ** ⚠️ **リリース前必須分は完了、P2 残あり (Loop 33-35, Issue #51)**
    - Prometheus / Alertmanager / Grafana dashboard / DB プールメトリクス / backup_db.sh — 完了
-   - 未整備: Loki/OTel ログ集約 / TLS 自動更新 (P2 継続、運用開始後に整備)
+   - Loki / Promtail ログ集約 IaC (`--profile logging`) — 完了
+   - certbot renewal helper IaC (`--profile tls-renewal`) — 完了。実発行はDNS/公開方式の人間承認後。
+   - 追加メトリクス拡張 (DB pool / Celery queue / business status counts) — 完了
+   - On-call 役割表 / incident label catalog / GitHub labels — 完了。実名連絡先と通知先 secret は本番承認時に投入。
+   - unhealthy 復旧方式レビュー — 完了。手動承認型 watchdog を採用し、常駐 autoheal は security 理由で不採用。
 
 10. **python-jose → PyJWT 移行** ✅ **完了 (Loop 32, Issue #41)**
-    - ecdsa / rsa 純 Python 暗号依存を除去。全回帰 906 passed。
+    - ecdsa / rsa 純 Python 暗号依存を除去。pre-deploy gate は 900+ tests で継続確認。
 
-11. **JIT プロビジョニング残課題** ✅ **完了 (Loop 32+33, Issue #48)**
-    - 6 件の残課題のうち 5 件完了: reviewer_id 記録 / oid claim 伝搬 / user_id 型注釈修正 / commit 窓可観測性 / audit chain 統合
-    - 未了 1 件: identity linking ポリシー（設計判断要・人間判断）
+11. **JIT プロビジョニング残課題** ✅ **完了 (Loop 32-34, Issue #48)**
+    - 6 件の残課題を解消: reviewer_id 記録 / oid claim 伝搬 / user_id 型注釈修正 / commit 窓可観測性 / audit chain 統合 / identity linking ポリシー
+    - identity linking は `POST /users/{id}/identity-link` として admin 明示操作のみ許可。通常ログイン時の自動マージは禁止を継続。
 
-12. **Cloudflare / Neon 移行** ✅ **IaC コード完成 (Loop 33, Issue #50)**
-    - `infra/cloudflare/`: wrangler.toml / access-policy.yml / neon-config.md / tunnel-config.example.yml
-    - CD 経路: deploy.yml に CF/Neon デプロイジョブ 3 件追加（fail-safe skip 設計）
-    - **本番適用は人間による API token 発行・リソース作成後**
+12. **Cloudflare / Neon 移行** ✅ **IaC コード完成 + legalops サブドメイン手順化 (Issue #50)**
+    - `infra/cloudflare/`: wrangler.toml / access-policy.yml / neon-config.md / tunnel-config.example.yml / dns-records.legalops.example.json
+    - `infra/docker/docker-compose.cloudflare-tunnel.yml`: cloudflared connector overlay（承認後に `CLOUDFLARE_TUNNEL_TOKEN` を Vault / secret manager から注入）
+    - `docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md`: `legalops.mirai-dx-platform.com` の DNS / Tunnel / Access / rollback 手順
+    - `scripts/verify_cloudflare_legalops.sh`: DNS を変更せず、Tunnel/DNS/Access/compose/NS/CNAME 未作成状態を検証する read-only preflight
+    - CD 経路: deploy.yml に CF/Neon デプロイジョブ 3 件追加（`workflow_dispatch` + `production` environment + `APPROVE_PRODUCTION_CHANGE` + secrets 未設定時 fail-closed）
+    - **本番適用は人間による Cloudflare API token 発行・Access/Tunnel/DNS 作成承認後**
 
 ---
 
-## 3. 推奨次アクション (Loop 34 以降の優先順)
+## 3. 推奨次アクション (Loop 90 以降の優先順)
 
 ### Sprint 1 (リリース 2026-08-16 〜 2026-10-16) — ✅ **Loop 32-33 で完了**
 
 1. ✅ P2 #41 python-jose → PyJWT 移行 — 完了
-2. ✅ P2 #48 JIT プロビジョニング残課題 — 5/6 完了、1 件 identity linking ポリシーは設計判断要
-3. ✅ P2 #51 運用基盤ギャップ #1-3 — Prometheus / アラート / 自動バックアップ 完了
+2. ✅ P2 #48 JIT プロビジョニング残課題 — 6/6 完了
+3. ✅ P2 #51 運用基盤ギャップ #1-6, #8 — Prometheus / アラート / 自動バックアップ / TLS renewal IaC / Loki-Promtail IaC / 追加メトリクス / on-call labels 完了。#7 は #57 へ分割
+4. ✅ P2 #57 unhealthy コンテナ自動復旧方式レビュー — 手動承認型 watchdog / drill 手順で完了
 
 ### Sprint 2 (リリース 60 日前: 〜 2026-09-16)
 
 4. **P0 #24 CSP Report-Only でレポート収集開始** — 期間 7〜30 日
 5. **P0 #23 本番 Vault 構築と secrets 投入 (人間作業)** — 工数 5 日
-6. **alembic PITR リストアテスト** — ステージングで 1 回実演
+6. **本番データ PITR リストアドリル** — backup / WAL / Neon 承認後にステージング相当で 1 回実演
 
 ### Sprint 3 (リリース 30 日前: 〜 2026-10-17)
 
 7. **P0 #24 CSP enforce 移行 (人間作業)** — canary 展開で 7 日かけて 100% 化
-8. **TLS 証明書 (Let's Encrypt) 本番導入** — `docs/RELEASE_CHECKLIST.md` §2
-9. **Issue #50 Cloudflare/Neon 本番リソース作成** — 人間が API token / Neon プロジェクトを作成後に CTO が適用
+8. **TLS 方針の最終承認** — Cloudflare Tunnel 採用時は edge TLS + origin HTTP、直接公開 / origin TLS 採用時のみ Let's Encrypt を `docs/RELEASE_CHECKLIST.md` §2 に従い導入
+9. **Issue #50 Cloudflare/Neon 本番リソース作成** — 人間が API token / Access application / Tunnel / DNS CNAME / cloudflared token / Neon プロジェクトを承認・作成後に CTO が検証
 
 ### Sprint 4 (リリース 7 日前: 〜 2026-11-09)
 
@@ -186,8 +195,11 @@
 - [`docs/legal_playbook.md`](./legal_playbook.md) — 法務オペレーションプレイブック
 - [`docs/security_policy.md`](./security_policy.md) — セキュリティポリシー
 - [`docs/audit_log_policy.md`](./audit_log_policy.md) — 監査ログ運用
+- [`docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md`](./CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md) — `legalops.mirai-dx-platform.com` Cloudflare 適用手順
+- [`docs/RELEASE_EVIDENCE_MATRIX.md`](./RELEASE_EVIDENCE_MATRIX.md) — `/goal` 完了条件と検証証拠の対応表
+- [`docs/FINAL_RELEASE_STOP_REPORT.md`](./FINAL_RELEASE_STOP_REPORT.md) — 本番直前停止時の最終報告
 
 ---
 
-> 本引き継ぎ書は Loop 5 完了時 (2026-05-16) の状態を記録したものです。
-> 次セッションは本ドキュメントを起点に `state.json` を確認し、`docs/RELEASE_CHECKLIST.md` の優先順で作業を進めてください。
+> 本引き継ぎ書の初版は Loop 5 完了時 (2026-05-16) に作成されました。
+> Loop 90 (2026-07-19) 時点で現行リリースゲートへ同期済みです。次セッションは `state.json`、`docs/PRODUCTION_APPROVAL_PACKET.md`、`docs/RELEASE_CHECKLIST.md`、`docs/RELEASE_EVIDENCE_MATRIX.md`、`docs/FINAL_RELEASE_STOP_REPORT.md`、`scripts/verify_dependency_audit_evidence.sh`、`scripts/verify_review_evidence.sh`、`scripts/verify_goal_completion_evidence.sh`、`scripts/verify_github_release_gate.sh`、`scripts/verify_standalone_webui_runtime.sh`、`scripts/verify_predeploy_warning_classification.sh`、`scripts/verify_release_checklist_pending_items.sh`、`scripts/verify_production_stop_line.sh` を確認し、#23 / #24 / #50 の人間承認ゲートを越えない範囲で Verify / Release 準備を継続してください。

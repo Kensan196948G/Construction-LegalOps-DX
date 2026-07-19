@@ -21,15 +21,22 @@ graph TD
         SEC[🔐 security.yml<br>週次 deep scan]
         K6[⚡ load-test.yml<br>週次 k6 smoke]
     end
-    subgraph 未整備["❌ 未整備 (構築時は §5)"]
+    subgraph integrated2["✅ IaC 完成 (--profile monitoring)"]
         PROM[📊 Prometheus scrape]
         GRAF[📈 Grafana dashboard]
         ALERT[🚨 Alertmanager 通知]
-        LOKI[📝 ログ集約 Loki/OTel]
+    end
+    subgraph integrated3["✅ IaC 完成 (--profile logging)"]
+        LOKI[📝 Loki / Promtail<br>Docker log stream 集約]
+    end
+    subgraph pending["⚠️ 本番承認・ドリル待ち"]
+        SLO[📏 業務SLO / 追加メトリクス]
+        AUTO[🔁 unhealthy 自動復旧]
     end
     EP -.->|/metrics を scrape| PROM
     PROM -.-> GRAF
     PROM -.-> ALERT
+    LOKI -.-> GRAF
 ```
 
 ---
@@ -71,40 +78,49 @@ backend (FastAPI) が公開する監視用エンドポイント。実装箇所�
 | celery-beat | `pgrep -f 'celery.*beat'` (プロセス存在のみ) | 30s |
 
 > ⚠️ healthcheck が fail してもコンテナは**自動再起動されない** (restart: unless-stopped はプロセス終了時のみ)。
-> `unhealthy` の検知 → 対応は現状**手動** (`docs/OPERATIONS.md` §6 日次チェック)。
+> `unhealthy` の検知 → `scripts/check_unhealthy_services.sh` の report-only と人間承認後 restart で対応する。
 
 ---
 
 ## 📌 3. Prometheus メトリクス (実装確認済み)
 
-`backend/app/main.py` は**専用の `CollectorRegistry`** を使い (グローバルレジストリ非使用)、
-`RequestContextMiddleware` (pure-ASGI) が全 HTTP リクエストを計測して `GET /metrics` で公開する。
+`backend/app/main.py` は HTTP 指標用の専用 `CollectorRegistry` と default registry の運用指標を結合し、
+`RequestContextMiddleware` (pure-ASGI) と `app.observability.operational_metrics` が `GET /metrics` で公開する。
 
 | メトリクス | 型 | ラベル | 内容 |
 |---|---|---|---|
 | 📈 `http_requests_total` | Counter | `method` / `path` / `status` | 処理した HTTP リクエスト総数 |
 | ⏱ `http_request_duration_seconds` | Histogram | `method` / `path` | リクエストレイテンシ (秒)。Histogram 既定バケット |
+| 🧩 `db_pool_size` / `db_pool_available` | Gauge | なし | asyncpg pool の設定サイズ / idle 接続数 |
+| 🚨 `db_commit_failures_total` / `db_connection_errors_total` | Counter | なし | commit-after-response 窓と DB 接続障害の検知 |
+| 📄 `legalops_contracts_by_status` | Gauge | `status` | 契約件数を status 別に集計 |
+| 🧑‍⚖️ `legalops_legal_reviews_by_status` | Gauge | `status` | 法務レビュー件数を status 別に集計 |
+| 🔁 `legalops_workflow_steps_by_status` | Gauge | `status` | ワークフローステップ件数を status 別に集計 |
+| 📢 `legalops_notifications_by_status` | Gauge | `status` | 通知件数を status 別に集計 |
+| 🧵 `celery_queue_length` | Gauge | `queue` | Redis-backed Celery queue 長。Redis 不通時は `-1` |
 
 実装上の特性 (運用で効いてくるポイント):
 
 - ✅ `path` ラベルは **route テンプレート** (例: `/api/v1/contracts/{id}`) を優先使用 — ID によるカーディナリティ爆発を回避
 - ✅ メトリクス記録の失敗はリクエストを壊さない (例外は debug ログに落とすのみ)
 - ⚠️ レジストリは**プロセス単位**。本番 overlay では backend が `replicas: 2` のため、**各レプリカの `/metrics` を個別に scrape して集計する必要がある** (multiprocess 集約は未実装)
-- ⚠️ DB プール・Celery キュー長・ビジネスメトリクス (契約件数等) は**未計装** (Issue 未起票 — 起票推奨)
+- ✅ DB プール・Celery キュー長・ビジネスメトリクス (契約/レビュー/ワークフロー/通知 status 別件数) は実装済み
+- ⚠️ Celery queue 長は Redis から `LLEN` で取得する。Redis 不通時は `/metrics` 自体を落とさず `celery_queue_length=-1` を出す
 
 確認コマンド (dev):
 
 ```bash
 curl -s http://localhost:8010/metrics | grep -E '^http_requests_total'
 curl -s http://localhost:8010/metrics | grep -E '^http_request_duration_seconds_(count|sum)'
+curl -s http://localhost:8010/metrics | grep -E '^(db_pool_|legalops_|celery_queue_length)'
 ```
 
 ---
 
 ## 📌 4. 推奨アラート閾値
 
-> 🚨 **アラート機構は未整備** (Prometheus / Alertmanager 未構築のため発報手段が存在しない)。
-> 以下は監視基盤構築時に設定すべき**推奨値 (提案)** であり、稼働実績に基づく値ではない。
+> 🚨 **アラート設定は IaC 完成済み** (`infra/monitoring/alert.rules.yml` / `alertmanager.yml`)。
+> 以下は初期推奨値であり、稼働実績に基づく値ではない。
 > 実測に基づく閾値は**リリース後に計測して記入**すること。
 
 | # | 対象 | 推奨条件 (案) | 重大度 | 根拠 |
@@ -121,19 +137,24 @@ curl -s http://localhost:8010/metrics | grep -E '^http_request_duration_seconds_
 
 ---
 
-## 📌 5. 監視基盤 (Prometheus / Grafana) — 未構築であることの明記
+## 📌 5. 監視基盤 (Prometheus / Grafana) — IaC 完成・起動待ち
 
-> ❌ **現状、Prometheus・Grafana・Alertmanager はリポジトリに存在しない**
-> (compose に監視サービスの定義なし。Issue 未起票 — 起票推奨)。
-> backend 側の計装 (§3) は完了しているため、scrape する側を追加すれば接続できる。
+> ✅ **Prometheus・Grafana・Alertmanager はリポジトリに存在する**。
+> `infra/docker/docker-compose.yml` の `monitoring` profile と `infra/monitoring/` 配下の設定で起動できる。
+> 本番リリース前に通知先 secret / URL を投入し、ステージングで発報ドリルを 1 回実施すること。
 
 ### 5.1 🔧 構築時の接続方法 (指針)
 
-1. `infra/docker/docker-compose.yml` に `prometheus` / `grafana` サービスを追加し、**`legalops-net` ネットワークに参加**させる
-2. Prometheus の scrape 対象は Docker 内部名で指定する — backend はコンテナ内部ポート **8000**:
+1. `monitoring` profile で監視サービスを起動する:
+
+   ```bash
+   docker compose -f infra/docker/docker-compose.yml --profile monitoring up -d prometheus alertmanager grafana
+   ```
+
+2. Prometheus の scrape 対象は Docker 内部名で指定済み — backend はコンテナ内部ポート **8000**:
 
    ```yaml
-   # prometheus.yml (例 — リポジトリには未存在。構築時に infra/ 配下へ追加すること)
+   # infra/monitoring/prometheus.yml
    scrape_configs:
      - job_name: legalops-backend
        metrics_path: /metrics
@@ -141,7 +162,7 @@ curl -s http://localhost:8010/metrics | grep -E '^http_request_duration_seconds_
          - targets: ["backend:8000"]
    ```
 
-3. ⚠️ 本番 overlay では backend が `replicas: 2` かつ `container_name` 解除のため、静的 targets ではなく
+3. ⚠️ 本番 overlay では backend が `replicas: 2` かつ `container_name` 解除のため、必要に応じて
    `dns_sd_configs` (compose のサービス名 DNS ラウンドロビン) 等で全レプリカを発見する構成にする
 4. ホスト公開ポートを追加する場合は `docs/PORT_ALLOCATION.md` の割当表に**必ず追記**する (共存ホストのため衝突注意)
 5. `/metrics` は認証なしで公開されているため、監視基盤構築時に **nginx で外部からの `/metrics` アクセスを遮断**する
@@ -149,9 +170,15 @@ curl -s http://localhost:8010/metrics | grep -E '^http_request_duration_seconds_
 
 ### 5.2 📝 ログ集約
 
-- 本番は `json-file` ドライバ (20MB × 5 世代) のみ。**集約基盤 (Loki / OTel) は未構築**
-  (`infra/docker/docker-compose.prod.yml` 冒頭コメントに「将来 OTel/Loki に切替予定」と明記済み)
-- backend は structlog の JSON を stdout に出すため (`docs/OPERATIONS.md` §4.1)、集約基盤導入時はそのまま取り込める
+- Loki / Promtail の IaC は完成済み。`infra/monitoring/loki-config.yml` と
+  `infra/monitoring/promtail-config.yml` を `--profile logging` で起動できる。
+- backend は structlog の JSON を stdout に出すため (`docs/OPERATIONS.md` §4.1)、
+  Promtail が Docker log stream を Loki へ転送する。
+- 本番では Docker socket read-only mount を使うため、運用承認とホスト権限レビュー後に起動する。
+
+```bash
+docker compose -f infra/docker/docker-compose.yml --profile logging up -d loki promtail
+```
 
 ---
 
@@ -187,9 +214,9 @@ curl -s http://localhost:8010/metrics | grep -E '^http_request_duration_seconds_
 
 | 項目 | 状態 | 追跡 |
 |---|---|---|
-| 📊 Prometheus / Grafana / Alertmanager | ❌ 未構築 (backend 計装のみ完了) | ⚠️ Issue 未起票 — 起票推奨 |
-| 🚨 アラート自動通知 (Slack / メール等) | ❌ 未整備 (閾値も §4 の提案値のみ) | ⚠️ Issue 未起票 — 起票推奨 |
-| 📝 ログ集約基盤 (Loki / OTel) | ❌ 未構築 (json-file rotation のみ) | ⚠️ Issue 未起票 — 起票推奨 |
+| 📊 Prometheus / Grafana / Alertmanager | ✅ IaC 完成 (`--profile monitoring`) | 本番通知先投入と発報ドリル待ち |
+| 🚨 アラート自動通知 (Slack / メール等) | ⏳ Alertmanager 設定あり。通知先 secret は本番投入待ち | リリース前に通知先と当番表を確定 |
+| 📝 ログ集約基盤 (Loki / Promtail) | ✅ IaC 完成 (`--profile logging`) | 本番ホスト権限レビューと起動ドリル待ち |
 | 📈 実測ベースの SLO / 閾値 | ⏳ 本番未リリースのため実測値なし — **リリース後に計測して記入** | — |
-| 🔢 追加メトリクス (DB プール / Celery キュー / ビジネス指標) | ❌ 未計装 (http_requests_total / http_request_duration_seconds のみ) | ⚠️ Issue 未起票 — 起票推奨 |
-| 🐳 unhealthy コンテナの自動復旧 | ❌ なし (手動対応) | ⚠️ Issue 未起票 — 起票推奨 |
+| 🔢 追加メトリクス (DB プール / Celery キュー / ビジネス指標) | ✅ 実装済み | `/metrics` contract test で露出確認済み。実測SLOはリリース後に調整 |
+| 🐳 unhealthy コンテナの復旧 | ✅ 手動承認型 watchdog 整備済み | `docs/UNHEALTHY_RECOVERY_REVIEW.md` / `scripts/check_unhealthy_services.sh`。常駐 autoheal は security 理由で不採用 |
