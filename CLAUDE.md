@@ -1328,3 +1328,21 @@ launcher finalize（goal-rotation.js）がポインタ前進 → supervisor が�
 | 🧯 blocked 解除 | `goal_rotation.blocked = false`（on_retry_exhausted=block 採用時のみ発生） |
 
 参照: `.claude/goal/README.md`（ローテーション仕様・命名規則・字数制約）
+
+---
+
+## 📌 33. デプロイ対応表（グローバル CLAUDE.md §27.4 の正本 / 2026-07-19 確定）
+
+| 環境 | URL | 実体 | 状態 |
+|---|---|---|---|
+| 🧪 preview（非本番） | `https://legalops-preview.mirai-dx-platform.com` | named tunnel `legalops-preview` (459059b3-…) → host nginx :8410 → compose stack + Neon `development` branch | ✅ 稼働（ユーザー承認済み・一時運用・Phase 2 完了後に削除可） |
+| 🚀 production（計画） | `https://legalops.mirai-dx-platform.com` | Tunnel + Access + compose prod overlay + Neon `main` branch | ⏳ 未作成（マージ `Y` 後の Phase 2 + #23/#24 人間ゲート） |
+
+| Neon | 値 |
+|---|---|
+| 🗄️ Project | `Construction-LegalOps-DX` (`snowy-sound-99973684`) / aws-ap-southeast-1 / PG16 |
+| 🌿 `development` branch | migration 001→005 適用済み・preview が接続 |
+| 🌿 `main` branch | 本番用・スキーマ未適用（Phase 2 で適用） |
+
+- 接続文字列・token は表示・保存・commit 禁止（Neon API から都度取得）
+- zone は 3 zone 中 `mirai-dx-platform.com` を本プロジェクトの正とする（2026-07-19 ユーザー選択）

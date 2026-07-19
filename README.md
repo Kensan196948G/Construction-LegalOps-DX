@@ -15,7 +15,7 @@
 
 ---
 
-## 🚦 現在のリリース直前状態 (2026-07-19 / Loop 91)
+## 🚦 現在のリリース直前状態 (2026-07-19 / Loop 93)
 
 | 項目 | 現在状態 | 補足 |
 |---|---|---|
@@ -37,6 +37,8 @@
 | 📣 Notification real mode | 実装・検証済み | Exchange Graph sendMail / Teams webhook / desknet's webhook を mock contract で検証。unit 32 passed |
 | 📤 Contract submit | 実装・検証済み | `POST /contracts/{id}/submit` は draft → in_review に遷移。unit/integration contract 38 passed、ruff/mypy clean |
 | 📑 Contract subresources | 実装・検証済み | `/contracts/{id}/versions` と `/contracts/{id}/clauses` は DB-backed / current snapshot で 501 stub 回避。unit/integration contract 43 passed |
+| 📊 Monitoring config | 実装・検証済み | Prometheus は Docker DNS discovery で backend replicas を scrape。monitoring config preflight 19 passed |
+| 💾 Backup / Restore | 検証済み | `backup_db.sh` は `.sha256` 記録/復元前検証に対応。backup/restore evidence preflight 36 passed、PITR drill は承認後ゲートとして維持 |
 | 📋 最終判断資料 | 整備済み | [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) / [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md) |
 
 ```mermaid
@@ -811,20 +813,20 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 > | 📈 負荷テスト         | k6 smoke/load/soak（`infra/k6/`・SLO p95<500ms・週次 + 手動 CI）                     |
 > | 🏥 /readyz            | Deep check (DB critical + Redis/Claude degraded)                                     |
 > | 🔐 RS256              | 鍵ローテーション対応（kid ヘッダ + JWT_PUBLIC_KEYS 退役鍵検証）main マージ済み       |
-> | ☁️ Cloudflare/Neon     | IaC コード完成（`legalops.mirai-dx-platform.com` 新規サブドメイン DNS案 / Access / Tunnel / Tunnel compose overlay / Neon config / read-only preflight / Runbook公式根拠）— 本番適用は人間待ち |
-> | 📊 監視基盤           | Prometheus + Alertmanager + Grafana + Loki/Promtail + 追加メトリクス                 |
+> | ☁️ Cloudflare/Neon     | **preview 実デプロイ済み**: `https://legalops-preview.mirai-dx-platform.com`（named tunnel + Neon `development` branch、デプロイ後検証 16/16 PASS）。Neon プロジェクト `Construction-LegalOps-DX` 作成済み（PG16 / migration 001→005 + roundtrip 検証済み）。本番 `legalops.mirai-dx-platform.com` は Y 承認後 Phase 2 |
+> | 📊 監視基盤           | Prometheus + Alertmanager + Grafana + Loki/Promtail + 追加メトリクス + backend replica DNS discovery |
 > | 📢 Incident運用       | On-call役割表 + GitHub incident labels + unhealthy watchdog 整備済み                |
 > | 🗄️ Migration rollback | 一時 PostgreSQL 16 で Alembic roundtrip 検証済み（upgrade/downgrade/idempotent）      |
-> | 🔍 Pre-deploy gate    | ruff/mypy/pytest/migration/typecheck/eslint/Bandit/npm audit/dependency audit evidence/secret scan/compose/Standalone WebUI runtime/Cloudflare legalops/release docs/goal evidence/review evidence/GitHub release gate/latest CI/warning classification/checklist pending classification/production stop-line |
+> | 🔍 Pre-deploy gate    | ruff/mypy/pytest/migration/typecheck/eslint/Bandit/npm audit/dependency audit evidence/secret scan/compose/monitoring config/Standalone WebUI runtime/Cloudflare legalops/release docs/goal evidence/review evidence/GitHub release gate/latest CI/warning classification/checklist pending classification/production stop-line |
 > | 🔧 JIT プロビジョニング | 完了（audit chain 統合 + commit 窓可観測性）                                        |
 >
-> 🖥️ 検証用 WebUI: `http://192.168.0.185:38100/` (`/healthz` = `ok`, systemd active)
-> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) / CF/Neon 本番リソース作成(P0) — コードブロッカー 0 / 本番 deploy 未実行 / 公開 DNS 未変更
+> 🖥️ 検証用 WebUI: `http://192.168.0.185:38100/` (`/healthz` = `ok`, systemd active) ／ 🌐 preview: `https://legalops-preview.mirai-dx-platform.com`
+> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) / CF 本番リソース（本番 Tunnel/Access/`legalops` CNAME）(P0) — コードブロッカー 0 / 本番 deploy 未実行 / 本番 DNS 未変更（preview 用 `legalops-preview` CNAME のみユーザー承認の上作成済み）
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md) ／ 承認パケット: [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) ／ 証拠表: [`docs/RELEASE_EVIDENCE_MATRIX.md`](./docs/RELEASE_EVIDENCE_MATRIX.md) ／ 最終停止報告: [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md)
 
 ---
 
-## 🔌 Backend API カバレッジ（v0.1.12 / Loop 91）
+## 🔌 Backend API カバレッジ（v0.1.12 / Loop 93）
 
 | エンドポイント            | ステータス     | テスト数        |
 | ------------------------- | -------------- | --------------- |

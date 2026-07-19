@@ -8,8 +8,8 @@
     "duration_months": 6,
     "phase_mode": "development",
     "status": "code_complete_deployment_ready",
-    "last_loop_completed": 91,
-    "loops_total": 91,
+    "last_loop_completed": 93,
+    "loops_total": 93,
     "current_version": "0.1.12",
     "cto_release_assessment": "phase1_complete_production_ready_pending_human_actions",
     "cto_assessment_date": "2026-07-19",
@@ -19,9 +19,9 @@
       "CF/Neon 本番リソース作成 (人間: API token + Neon project + DNS) — Issue #50"
     ],
     "deploy_ready": true,
-    "last_session_summary": "Loop 91: Closed remaining contract_service legacy 501 fallback paths for public contract subresource APIs. GET /contracts/{id}/versions now returns the current version snapshot from the authoritative contract row, and GET /contracts/{id}/clauses returns DB-backed clauses in seq order. Added unit and integration tests, updated release documentation gates, and aligned API design docs. No production deploy, public DNS change, Tunnel/Access creation, secret injection, push, merge, or tag executed."
+    "last_session_summary": "Loop 93: Added backup/restore release evidence gate. scripts/backup_db.sh now writes .sha256 checksums and verifies them before restore when present. Added scripts/verify_backup_restore_docs.sh and wired it into pre_deploy_check.sh and release documentation checks. PITR remains an explicit human approval gate after production backup/WAL/Neon decisions. No production deploy, public DNS change, Tunnel/Access creation, Neon resource creation, secret injection, push, merge, tag, release, deployment, billing change, or destructive migration executed."
   },
-  "goal": "Phase 1 完了. 本番デプロイ・Vault secrets 投入・CSP enforce・CF/Neon リソース作成は人間待ち",
+  "goal": "Phase 1 完了 (Neon 実環境検証 + CF preview 実デプロイ済み)。マージ判定 Y/N 待ち。Y 後 Phase 2 (merge → 本番 deploy → smoke → 監視)",
   "phase": "ReleaseGate",
   "kpi": {
     "success_rate_target": 0.9,
@@ -46,12 +46,7 @@
     "auto_issue_generation": true,
     "self_evolution": true
   },
-  "stable": {
-    "consecutive_success": 8,
-    "target_n": 5,
-    "stable_achieved": true,
-    "note": "main CI run 29309456627 SUCCESS (2026-07-14)。最新 5+ 連続成功で STABLE 確定。"
-  },
+  "stable": true,
   "loop30": {
     "name": "CI 内 本番同等スタック検証の確立 — 潜在 P1 ×3 根治 + k6 SLO 達成 + migrations ゲート新設",
     "completed_at": "2026-07-14",
@@ -1185,5 +1180,46 @@
       "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval",
       "Optional future non-destructive contract_versions history table migration if full version history is required beyond current snapshot"
     ]
+  },
+  "loop92": {
+    "name": "Monitoring replica scrape readiness",
+    "completed_at": "2026-07-19",
+    "summary": "Updated infra/monitoring/prometheus.yml so the legalops-backend job uses dns_sd_configs against the backend service name and port 8000. This aligns monitoring with docker-compose.prod.yml replicas and container_name reset. Added scripts/verify_monitoring_config.sh to validate monitoring YAML/JSON, backend DNS discovery, nginx exporter scrape, production replica settings, and docs. Wired monitoring config preflight into scripts/pre_deploy_check.sh and updated docs/MONITORING.md to remove stale unimplemented multiprocess wording.",
+    "verification": "bash scripts/verify_monitoring_config.sh -> Passed 19 / Failed 0; docker compose base config -> success; docker compose prod+cloudflare overlay config with dummy env -> success.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, destructive migration, certificate issuance, billing change, or secrets change executed.",
+    "remaining_human_gates": [
+      "#23 Vault secrets injection including monitoring notification endpoints and production application secrets",
+      "#24 CSP Report-Only to enforce",
+      "#50 Cloudflare legalops subdomain, Tunnel/Access, cloudflared token, and Neon production resources",
+      "Production data PITR / Neon branching restore drill after backup/WAL/Neon approval",
+      "Post-approval monitoring drill: start --profile monitoring/logging and confirm first alert route"
+    ]
+  },
+  "loop93": {
+    "name": "Backup/restore release evidence gate",
+    "date": "2026-07-19",
+    "summary": "Added read-only backup/restore evidence preflight and checksum-backed backup script behavior. The gate validates pg_dump/pg_restore runbook coverage, backup_db.sh restore/checksum behavior, Alembic rollback roundtrip evidence, and PITR not-complete stop-line.",
+    "verification": "bash scripts/verify_backup_restore_docs.sh -> Passed 36 Failed 0. Full release/pre-deploy verification is pending after document sync.",
+    "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, GitHub release, GitHub deployment, destructive migration, certificate issuance, billing change, or secrets change executed."
+  },
+  "preview": {
+    "url": "https://legalops-preview.mirai-dx-platform.com",
+    "tunnel": "legalops-preview (459059b3-b750-45c5-aa59-a0305293c439)",
+    "origin": "host nginx :8410 -> compose (staging) + Neon development branch",
+    "smoke": "16/16 PASS (2026-07-19)",
+    "rollback": "CNAME削除 + tunnel削除 + connector停止 + compose down"
+  },
+  "neon": {
+    "project": "Construction-LegalOps-DX (snowy-sound-99973684)",
+    "region_pg": "aws-ap-southeast-1 / PG16",
+    "branches": {
+      "main": "本番用・未適用",
+      "development": "migration 001-005 + roundtrip 検証済み"
+    }
+  },
+  "phase1_finalize": {
+    "completed_at": "2026-07-19",
+    "summary": "前セッション成果を feat/phase1-neon-cf-preview へ確定 (13+ commits)。Neon 実プロジェクト作成 + development branch で migration/roundtrip/asyncpg SSL 検証。CF preview 実デプロイ + デプロイ後検証 16/16。preview が暴いた欠陥 2 件修正 (mode700 import不能 / frontend healthcheck IPv6)。並行セッション Loop 91 成果を再検証の上吸収。",
+    "verification": "backend: ruff/mypy/bandit PASS + pytest 950 passed (88%) / frontend: tsc PASS + jest 35 passed + Docker build PASS / preview smoke 16/16"
   }
 }

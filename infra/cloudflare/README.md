@@ -17,15 +17,18 @@
 
 ## 🚀 適用手順（人間 + CTO 協働、Issue #50 解除後）
 
-### 現在の確認結果（2026-07-19）
+### 現在の確認結果（2026-07-19 preview デプロイ後更新）
 
 | 項目 | 結果 |
 |---|---|
 | Cloudflare zone | `mirai-dx-platform.com` は `active` |
 | Zone nameservers | `kareem.ns.cloudflare.com`, `nia.ns.cloudflare.com` |
-| `legalops` DNS record | Cloudflare API / public resolver ともに未作成 |
-| WebUI preview | `http://192.168.0.185:38100/` |
+| `legalops` DNS record（本番） | 未作成（Y 承認後 Phase 2） |
+| 🧪 preview | **`https://legalops-preview.mirai-dx-platform.com` 稼働中** — named tunnel `legalops-preview` (459059b3-…) → host nginx :8410 → compose (staging) + Neon `development`。CNAME はユーザー承認 (2026-07-19) の上作成。削除で完全 rollback 可 |
+| 🗄️ Neon | プロジェクト `Construction-LegalOps-DX` (`snowy-sound-99973684`, PG16, ap-southeast-1) 作成済み。詳細は `neon-config.md` |
+| WebUI preview (LAN) | `http://192.168.0.185:38100/` |
 | systemd service | `construction-legalops-standalone-webui.service` |
+| ⚠️ 注意 | 現行 API token は Tunnel/Access の write 権限なし。Tunnel 作成は `~/.cloudflared/cert.pem` (origin cert) 経由。Access 適用はユーザー手動領域（§27.1）で未適用 — preview は認証アプリ側 401 fail-closed のみで保護 |
 
 `./scripts/verify_cloudflare_legalops.sh` は Cloudflare API token がある場合に Zone / DNS record の read-only 確認も実施します。
 

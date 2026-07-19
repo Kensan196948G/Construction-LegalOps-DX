@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (2026-07-19 Phase 1 確定: Neon 実環境検証 + Cloudflare preview 実デプロイ)
+
+- **🗄️ Neon 実プロジェクト作成と migration 検証** (グローバル CLAUDE.md §27.2 包括承認範囲):
+  `Construction-LegalOps-DX` (aws-ap-southeast-1 / PG16) を作成し、`development` branch で
+  alembic 001→005 適用 + roundtrip (downgrade base → re-upgrade) + SQLAlchemy asyncpg
+  `?ssl=require` 接続を検証した (17 tables / pg_trgm / uuid-ossp)。本番用 `main` branch は未適用。
+- **🌐 Cloudflare 非本番 preview 実デプロイ**: named tunnel `legalops-preview` +
+  DNS CNAME `legalops-preview.mirai-dx-platform.com` (ユーザー承認済み・可逆) で
+  docker compose (staging 相当・Neon development DB) を公開し、デプロイ後検証 16/16 PASS
+  (health / 主要画面 / 401 fail-closed / JWT→JIT provisioning / Neon read・write /
+  CSP・nosniff ヘッダ / server tokens 秘匿 / JS bundle secret 露出なし)。
+- **📝 監査証跡の実書込確認**: preview 経由の認証リクエストで Neon `users` JIT 行 +
+  `audit_logs` (`user.jit_provision`) の永続化を確認した。
+
+### Fixed (2026-07-19 Phase 1 確定: preview デプロイが暴いた本番系欠陥 2 件)
+
+- **🐛 mode 700 ファイルの non-root コンテナ import 不能**: 前セッションが umask 077 で
+  作成した 61 ファイル (auth_service.py / observability/ 等) が root 所有 mode 700 のまま
+  Docker COPY され、uid 10001 の backend が `ModuleNotFoundError` で crash-loop する欠陥を
+  検出・修正 (ローカル pytest では検出不能な欠陥クラス)。
+- **🐛 frontend healthcheck の IPv6 解決不全**: コンテナ内 `localhost` が `::1` に解決される
+  一方 Next.js standalone は IPv4 のみ listen するため busybox wget が常に失敗し、
+  frontend 恒久 unhealthy → `depends_on: service_healthy` の nginx が起動不能となる構造欠陥を
+  `127.0.0.1` 固定で根治。
+- **🔧 nginx 443 vhost の証明書必須起動**: Tunnel 構成 (edge TLS) では証明書未配置で
+  nginx が起動不能。preview では self-signed placeholder を named volume に生成して解決
+  (本番手順は Runbook に記載)。
+
+### Changed (2026-07-19 Loop 91 吸収: contracts subresource API)
+
+- **contracts versions/clauses API の legacy 501 stub 撤去** (並行セッション Loop 91 成果を
+  検証の上吸収): `GET /contracts/{id}/versions` は現行 row のバージョンスナップショット、
+  `GET /contracts/{id}/clauses` は seq 順の DB-backed clauses を返却し、missing contract は
+  404 へ変換。unit + integration 43 passed / ruff / mypy を本セッションで再検証済み。
+
 ### Changed (2026-07-19 Loop 88: Notification real mode)
 
 - **通知 real mode を外部送信契約へ対応**:
