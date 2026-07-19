@@ -6,7 +6,8 @@ tunnel: <TUNNEL_ID>
 credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
 
 ingress:
-  # 本番候補ドメイン → compose 内 nginx (TLS は Cloudflare 終端)
+  # legalops.mirai-dx-platform.com → compose 内 nginx (TLS は Cloudflare 終端)
+  # DNS: CNAME legalops -> <TUNNEL_ID>.cfargotunnel.com (proxied)
   - hostname: legalops.mirai-dx-platform.com
     service: http://nginx:80
     originRequest:

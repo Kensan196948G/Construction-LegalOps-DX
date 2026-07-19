@@ -17,7 +17,7 @@
 #   ENTRA_TENANT_ID  = Microsoft Entra ID テナント ID
 #   ENTRA_CLIENT_ID  = アプリ登録 クライアント ID
 #   ENTRA_CLIENT_SECRET = アプリ登録 クライアントシークレット
-#   ANTHROPIC_API_KEY = Claude API キー
+#   CLAUDE_API_KEY = Claude API キー
 #   POSTGRES_PASSWORD = PostgreSQL 本番パスワード
 #   REDIS_PASSWORD   = Redis 本番パスワード
 #
@@ -65,9 +65,9 @@ setup_hashicorp() {
   echo "ℹ️  Set ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET manually:"
   echo "   vault kv put secret/legalops/entra tenant_id=<> client_id=<> client_secret=<>"
 
-  # Anthropic
-  echo "ℹ️  Set ANTHROPIC_API_KEY manually:"
-  echo "   vault kv put secret/legalops/anthropic api_key=<>"
+  # Claude API
+  echo "ℹ️  Set CLAUDE_API_KEY manually:"
+  echo "   vault kv put secret/legalops/claude api_key=<>"
 
   echo "✅ HashiCorp Vault setup complete (partial). Complete manual steps above."
 }
@@ -113,7 +113,7 @@ setup_azure() {
   echo "   az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME --name entra-tenant-id --value <>"
   echo "   az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME --name entra-client-id --value <>"
   echo "   az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME --name entra-client-secret --value <>"
-  echo "   az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME --name anthropic-api-key --value <>"
+  echo "   az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME --name claude-api-key --value <>"
 }
 
 # ---------------------------------------------------------------------------

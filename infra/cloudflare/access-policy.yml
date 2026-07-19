@@ -16,10 +16,13 @@ applications:
       - name: "Allow LegalOps Users"
         decision: allow
         include:
-          # 全 Entra ID ユーザー（社内 SSO 済み）を許可
-          - everyone:
+          # 本番は専用 Entra ID グループに限定する。全社許可は採用しない。
+          - group:
               identity_provider: azure_ad
-        require: []
+              name: "LegalOps-Users"
+        require:
+          - authentication_method:
+              value: "mfa"
         exclude: []
       - name: "Admin Panel — Legal Lead+ Only"
         decision: allow
@@ -27,8 +30,23 @@ applications:
           - group:
               identity_provider: azure_ad
               name: "LegalOps-Admins"
+        require:
+          - authentication_method:
+              value: "mfa"
+        exclude: []
         # /settings /admin パスのみに適用（Access の path-based routing で制御）
         path: "/settings*"
+      - name: "Admin API — Legal Lead+ Only"
+        decision: allow
+        include:
+          - group:
+              identity_provider: azure_ad
+              name: "LegalOps-Admins"
+        require:
+          - authentication_method:
+              value: "mfa"
+        exclude: []
+        path: "/api/v1/admin*"
 
 # ============================================================
 # 適用手順:

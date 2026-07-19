@@ -4,11 +4,13 @@ name: CD (image publish + CF/Neon deploy)
 # 承認済み CI/CD 経路 (Issue #50 / Loop 29 / Phase 1 最終整備)
 #
 # - 手動トリガー (workflow_dispatch) のみ。push では一切起動しない。
+# - GitHub Environment "production" の承認に加え、
+#   production_change_approval=APPROVE_PRODUCTION_CHANGE の入力を必須にする。
 # - GITHUB_TOKEN (packages:write) だけで動く範囲 = GHCR への
 #   コンテナイメージ発行に限定。
 # - Cloudflare Pages / Tunnel / Neon の後続ステップは、人間が
-#   GitHub Secrets を登録した後に有効化される（未設定時は skip）。
-# - 全 CF/Neon ステップは fail-safe: secrets 未設定時はスキップ。
+#   GitHub Secrets を登録し、workflow_dispatch input を true にした時だけ実行。
+# - input=true なのに secrets が未設定の場合は fail-closed で停止する。
 # ============================================================
 
 on:
@@ -22,12 +24,16 @@ on:
         description: "latest タグも併せて更新するか"
         type: boolean
         default: false
+      production_change_approval:
+        description: "本番変更を許可する場合のみ APPROVE_PRODUCTION_CHANGE と入力"
+        required: true
+        default: ""
       deploy_cf_tunnel:
-        description: "Cloudflare Tunnel 設定を更新するか"
+        description: "Cloudflare Tunnel 設定の承認用 dry-run を実行するか"
         type: boolean
         default: false
       deploy_neon_migration:
-        description: "Neon DB マイグレーションを実行するか"
+        description: "Neon DB マイグレーションを実行するか (本番DB変更)"
         type: boolean
         default: false
       deploy_cf_pages:
@@ -42,6 +48,7 @@ concurrency:
 permissions:
   contents: read
   packages: write
+  actions: read
 
 env:
   REGISTRY: ghcr.io
@@ -49,12 +56,65 @@ env:
 
 jobs:
   # ----------------------------------------------------------
+  # 本番操作ガード:
+  # - workflow_dispatch であっても main 以外の ref からは停止
+  # - 対象 commit の CI workflow 成功を GitHub API で確認
+  # - GitHub Environment "production" の承認ゲートを必須化
+  # - 明示フレーズ未入力時は GHCR 発行も Cloudflare/Neon 操作も開始しない
+  # ----------------------------------------------------------
+  production-guard:
+    name: Production guard (main + CI green + approval phrase)
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      guarded_sha: ${{ steps.guard.outputs.guarded_sha }}
+    steps:
+      - name: Require main ref
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "CD is restricted to refs/heads/main. Current ref: $GITHUB_REF"
+          exit 1
+
+      - name: Require explicit production change approval phrase
+        env:
+          APPROVAL: ${{ inputs.production_change_approval }}
+        run: |
+          set -euo pipefail
+          if [ "$APPROVAL" != "APPROVE_PRODUCTION_CHANGE" ]; then
+            echo "::error::Type APPROVE_PRODUCTION_CHANGE in production_change_approval to allow GHCR publish or optional production deploy gates."
+            exit 1
+          fi
+
+      - name: Verify CI success for this commit
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          status="$(gh run list \
+            --repo "$REPO" \
+            --workflow ci.yml \
+            --commit "$SHA" \
+            --limit 1 \
+            --json status,conclusion \
+            --jq '.[0] | "\(.status):\(.conclusion)"')"
+          if [ "$status" != "completed:success" ]; then
+            echo "CI for $SHA is not completed:success (actual: ${status:-none})."
+            exit 1
+          fi
+          echo "guarded_sha=$SHA" >> "$GITHUB_OUTPUT"
+
+  # ----------------------------------------------------------
   # 前提確認: 対象 ref の CI が green であることを人間が確認済みの
   # 前提だが、fail-closed のため最低限のビルド検証をここでも行う
   # ----------------------------------------------------------
   publish:
     name: Build & push images (GHCR)
     runs-on: ubuntu-latest
+    needs: production-guard
+    environment: production
     strategy:
       matrix:
         include:
@@ -128,7 +188,7 @@ jobs:
             echo "| backend | \`${REGISTRY}/${REPO,,}/backend:${TAG}\` |"
             echo "| frontend | \`${REGISTRY}/${REPO,,}/frontend:${TAG}\` |"
             echo ""
-            echo "デプロイ先ホストでの適用 (docs/OPERATIONS.md 参照):"
+            echo "人間承認後のデプロイ先ホスト適用例 (docs/OPERATIONS.md 参照):"
             echo '```bash'
             echo "docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml pull"
             echo "docker compose -f infra/docker/docker-compose.yml -f infra/docker/docker-compose.prod.yml up -d"
@@ -136,17 +196,28 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ----------------------------------------------------------
-  # Cloudflare Tunnel 設定更新 (Phase 1: 既存 nginx への ingress)
-  # CLOUDFLARE_API_TOKEN 未設定時は skip
+  # Cloudflare Tunnel 設定確認 (Phase 1: 既存 nginx への ingress)
+  # deploy_cf_tunnel=true なのに CLOUDFLARE_API_TOKEN 未設定時は fail-closed
   # ----------------------------------------------------------
   deploy-cf-tunnel:
-    name: Deploy Cloudflare Tunnel config
+    name: Cloudflare Tunnel approval dry-run
     runs-on: ubuntu-latest
     needs: publish
-    if: inputs.deploy_cf_tunnel && vars.CLOUDFLARE_API_TOKEN != ''
+    environment: production
+    if: inputs.deploy_cf_tunnel
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Require Cloudflare secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is required when deploy_cf_tunnel=true."
+            exit 1
+          fi
 
       - name: Validate tunnel config
         run: |
@@ -154,28 +225,56 @@ jobs:
           python3 -c "import yaml; yaml.safe_load(open('infra/cloudflare/tunnel-config.example.yml'))"
           echo "Tunnel config is valid YAML."
 
-      - name: Deploy tunnel config (dry-run)
+      - name: Validate Cloudflare Tunnel compose overlay
+        env:
+          POSTGRES_PASSWORD: dummy
+          JWT_SECRET: dummy
+          JWT_PRIVATE_KEY: dummy
+          JWT_PUBLIC_KEY: dummy
+          CLAUDE_API_KEY: dummy
+          CLOUDFLARE_TUNNEL_TOKEN: dummy
+        run: |
+          docker compose \
+            -f infra/docker/docker-compose.yml \
+            -f infra/docker/docker-compose.prod.yml \
+            -f infra/docker/docker-compose.cloudflare-tunnel.yml \
+            --profile worker \
+            config >/tmp/legalops-cf-compose.yml
+
+      - name: Print human apply command (dry-run only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          echo "Tunnel config validated. Apply manually:"
+          echo "Tunnel config and compose overlay validated. Apply DNS route manually after #50 approval:"
           echo "  cloudflared tunnel route dns <TUNNEL_ID> legalops.mirai-dx-platform.com"
 
   # ----------------------------------------------------------
   # Neon DB マイグレーション (Phase 2: DB 移行時)
-  # NEON_DATABASE_URL 未設定時は skip
+  # 実 DB 変更。production environment 承認 + 明示フレーズ + secret が揃う場合のみ実行。
+  # deploy_neon_migration=true なのに NEON_DATABASE_URL 未設定時は fail-closed
   # ----------------------------------------------------------
   deploy-neon-migration:
     name: Run Neon DB migration
     runs-on: ubuntu-latest
     needs: publish
-    if: inputs.deploy_neon_migration && vars.NEON_DATABASE_URL != ''
+    environment: production
+    if: inputs.deploy_neon_migration
     defaults:
       run:
         working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Require Neon secrets
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NEON_DATABASE_URL:-}" ]; then
+            echo "::error::NEON_DATABASE_URL is required when deploy_neon_migration=true."
+            exit 1
+          fi
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -191,26 +290,44 @@ jobs:
         env:
           DB_URL: ${{ secrets.NEON_DATABASE_URL }}
           APP_ENV: production
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY || 'ci-placeholder' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-placeholder' }}
         run: |
           alembic upgrade head
           alembic current | grep "(head)"
 
   # ----------------------------------------------------------
   # Cloudflare Pages デプロイ (Phase 3: フロントエンド移行時)
-  # CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID 未設定時は skip
+  # deploy_cf_pages=true なのに Cloudflare secrets 未設定時は fail-closed
   # ----------------------------------------------------------
   deploy-cf-pages:
     name: Deploy to Cloudflare Pages
     runs-on: ubuntu-latest
     needs: publish
-    if: inputs.deploy_cf_pages && vars.CLOUDFLARE_API_TOKEN != '' && vars.CLOUDFLARE_ACCOUNT_ID != ''
+    environment: production
+    if: inputs.deploy_cf_pages
     defaults:
       run:
         working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Require Cloudflare secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          missing=0
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is required when deploy_cf_pages=true."
+            missing=1
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is required when deploy_cf_pages=true."
+            missing=1
+          fi
+          exit "$missing"
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4

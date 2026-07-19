@@ -1,0 +1,18 @@
+{
+  "zone": "mirai-dx-platform.com",
+  "records": [
+    {
+      "type": "CNAME",
+      "name": "legalops",
+      "content": "<TUNNEL_ID>.cfargotunnel.com",
+      "ttl": 1,
+      "proxied": true,
+      "comment": "Construction-LegalOps-DX production candidate. Create only after Cloudflare Access and Tunnel are approved."
+    }
+  ],
+  "validation": {
+    "expected_hostname": "legalops.mirai-dx-platform.com",
+    "expected_health_url": "https://legalops.mirai-dx-platform.com/healthz",
+    "rollback": "Delete or disable the legalops CNAME, then stop the Tunnel connector."
+  }
+}

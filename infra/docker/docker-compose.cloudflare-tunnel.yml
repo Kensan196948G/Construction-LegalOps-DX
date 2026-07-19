@@ -1,0 +1,58 @@
+# ============================================================
+# Construction-LegalOps-DX docker-compose Cloudflare Tunnel overlay
+#
+# Usage after human approval (#50):
+#   docker compose \
+#     -f infra/docker/docker-compose.yml \
+#     -f infra/docker/docker-compose.prod.yml \
+#     -f infra/docker/docker-compose.cloudflare-tunnel.yml \
+#     --profile worker \
+#     --profile cloudflare-tunnel up -d
+#
+# Safety:
+#   - This file does not create Cloudflare DNS, Access, Tunnel, or Neon resources.
+#   - CLOUDFLARE_TUNNEL_TOKEN must be injected from Vault / secret manager.
+#   - nginx host ports are closed; cloudflared reaches nginx:80 on legalops-net.
+# ============================================================
+name: construction-legalops-dx
+
+services:
+  nginx:
+    ports: !reset []
+    expose:
+      - "80"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: legalops-cloudflared
+    restart: unless-stopped
+    command:
+      - "tunnel"
+      - "--no-autoupdate"
+      - "run"
+      - "--token"
+      - "${CLOUDFLARE_TUNNEL_TOKEN:?required after human approval}"
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks:
+      - legalops-net
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
+        reservations:
+          memory: 32m
+          cpus: "0.05"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    profiles: ["cloudflare-tunnel"]

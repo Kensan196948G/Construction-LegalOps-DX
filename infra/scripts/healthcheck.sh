@@ -3,7 +3,7 @@
 # Construction-LegalOps-DX: 全サービス疎通確認
 # 利用方法:
 #   bash infra/scripts/healthcheck.sh          # localhost に対して実行
-#   BASE=https://legalops.example.com bash infra/scripts/healthcheck.sh
+#   BASE=https://legalops.mirai-dx-platform.com bash infra/scripts/healthcheck.sh
 # ============================================================
 set -euo pipefail
 
