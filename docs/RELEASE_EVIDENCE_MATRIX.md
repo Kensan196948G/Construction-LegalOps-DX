@@ -1,6 +1,6 @@
 # 📊 Release Evidence Matrix — Construction-LegalOps-DX
 
-> **最終更新: 2026-07-19 / Loop 93**
+> **最終更新: 2026-07-20 / Loop 107**
 > 本書は `/goal` の完了条件を、現在の証拠・検証コマンド・未解決ゲートへ対応付ける CTO 監査表です。  
 > 本番 deploy / 公開 DNS 変更 / secret 投入 / PR merge / release tag は、本書の対象外ではなく **人間承認後の実行項目** として扱います。
 > 最終報告は [`docs/FINAL_RELEASE_STOP_REPORT.md`](./FINAL_RELEASE_STOP_REPORT.md) を正とする。
@@ -14,9 +14,10 @@
 | コード完成度 | ✅ Release candidate | Backend / Frontend / DB-backed API / auth / audit / monitoring / docs は実装・検証済み |
 | 本番直前状態 | ✅ 承認待ち | #23 / #24 / #50 の人間ゲートのみ open |
 | 本番 deploy | 🚫 未実行 | 安全制約により CTO/Supervisor は deploy ready 判定まで |
-| 公開 DNS | 🚫 未変更 | `legalops.mirai-dx-platform.com` CNAME / A は未作成。`legalops` 新規サブドメイン要件は Runbook / IaC に反映済み |
+| 公開 DNS | 🚫 未変更 | `legalops.mirai-dx-platform.com` CNAME / A は未作成。`legalops` 新規サブドメイン要件は Runbook / IaC / approval-gated helper に反映済み |
 | Secrets | 🚫 未投入 | Vault / Key Vault 本番 secret 投入は #23 人間作業 |
 | リリースタグ | 🚫 未作成 | 明示承認なしの tag 作成は禁止 |
+| ローカル作業ツリー | ⚠️ 未コミット差分あり | `scripts/verify_local_workspace_state.sh` → Passed 51 / Failed 0。`feat/phase1-neon-cf-preview` 上にLoop 94〜107同期差分あり。push / rebase / merge は未実行 |
 
 ---
 
@@ -25,12 +26,12 @@
 | `/goal` 要求 | 現在証拠 | 判定 |
 |---|---|---|
 | 必須機能が実装済み | `README.md` の Phase 1 指標、`docs/HANDOVER.md` §1、DB-backed API 群、SharePoint Graph real mode、Notification real mode、frontend E2E 51 passed | ✅ |
-| Lint / 型チェック / テスト / ビルドが成功 | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` → Passed 24 / Failed 0 / Warnings 5。goal evidence / review evidence / dependency audit evidence / backup-restore evidence gate を含む | ✅ Mandatory checks 通過 |
+| Lint / 型チェック / テスト / ビルドが成功 | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` → Passed 25 / Failed 0 / Warnings 5。goal evidence / review evidence / dependency audit evidence / backup-restore evidence / local workspace state gate を含む | ✅ Mandatory checks 通過 |
 | 重大または高危険度の脆弱性なし | Bandit / npm audit high/critical 0 / dependency audit evidence / secret scan が pre-deploy gate で成功。npm moderate 4 は既知残リスク。`scripts/scan_secrets.sh` は high-confidence secret なし | ✅ |
 | DB migration と rollback 手順を検証 | `scripts/verify_migrations_roundtrip.sh` が pre-deploy gate 内で成功。`scripts/verify_backup_restore_docs.sh` → Passed 36 / Failed 0。PITR は本番 backup / WAL / Neon 承認後 | ✅ / ⏳ |
-| リリース前チェックリストが完成 | `docs/RELEASE_CHECKLIST.md` は Loop 93 まで同期。未チェック73件は `scripts/verify_release_checklist_pending_items.sh` で人間承認 / 本番実行 / リリース後確認項目として分類済み | ✅ / ⏳ |
+| リリース前チェックリストが完成 | `docs/RELEASE_CHECKLIST.md` は Loop 107 まで同期。未チェック73件は `scripts/verify_release_checklist_pending_items.sh` で人間承認 / 本番実行 / リリース後確認項目として分類済み | ✅ / ⏳ |
 | WebUI を提示できる | `http://192.168.0.185:38100/`、`/healthz` → `ok`、systemd user service enabled/active、`192.168.0.185:38100` listen、`scripts/verify_standalone_webui_runtime.sh` → Passed 27 / Failed 0 | ✅ |
-| GitHub Projects / Issue / CI / 進捗が最新 | GitHub Project #30 readme を Loop 93 に同期済み。`scripts/verify_github_release_gate.sh` → Passed 24 / Failed 0。`scripts/verify_production_stop_line.sh` → Passed 13 / Failed 0。open issues は #23 / #24 / #50 の P0 人間ゲートのみ、open PR 0、#50 は blocked label、最新 main CI は completed/success | ✅ |
+| GitHub Projects / Issue / CI / 進捗が最新 | GitHub Project #30 readme は Loop 106 に同期済み。Loop 107 の upload URL guard はローカル検証後にProject同期予定。`scripts/verify_github_release_gate.sh` → Passed 29 / Failed 0。`scripts/verify_production_stop_line.sh` → Passed 13 / Failed 0。open issues は #23 / #24 / #50 の P0 人間ゲートのみ、PR #58 は merged、open PR 0、#50 は blocked label、最新 main CI は completed/success | ✅ / ⏳ |
 | 本番 deploy だけを残した承認待ち | deploy そのものに加え、secret / CSP enforce / Cloudflare DNS-Tunnel-Access / Neon は人間承認ゲート。`scripts/verify_production_stop_line.sh` → Passed 13 / Failed 0 | ✅ / ⏳ |
 
 ---
@@ -39,17 +40,23 @@
 
 | 検証 | コマンド | 結果 |
 |---|---|---|
-| Pre-deploy gate | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` | ✅ Passed 24 / Failed 0 / Warnings 5 |
+| Pre-deploy gate | `SKIP_DOCKER_BUILD=1 ./scripts/pre_deploy_check.sh` | ✅ Passed 25 / Failed 0 / Warnings 5 |
 | Secret scan | `./scripts/scan_secrets.sh` | ✅ high-confidence secret なし |
-| Cloudflare legalops preflight | `./scripts/verify_cloudflare_legalops.sh` | ✅ Passed 22 / Failed 0 / Warnings 0 |
+| Cloudflare legalops preflight | `./scripts/verify_cloudflare_legalops.sh` | ✅ Passed 37 / Failed 0 / Warnings 0。`legalops.mirai-dx-platform.com` は新規サブドメインとして未作成、承認フレーズ必須 helper `scripts/apply_cloudflare_legalops_after_approval.sh` も検証 |
 | JSON / diff | `python3 -m json.tool state.json` + `git diff --check` | ✅ |
-| Release docs | `./scripts/verify_release_docs.sh` | ✅ Passed 191 / Failed 0 |
+| Release docs | `./scripts/verify_release_docs.sh` | ✅ Passed 284 / Failed 0 |
+| File parser OCR guard | `cd backend && python -m pytest tests/unit/test_file_parser.py -q && python -m ruff check app/services/file_parser.py tests/unit/test_file_parser.py && python -m mypy app/services/file_parser.py` | ✅ 22 passed / ruff clean / mypy success。画像PDFは実OCRバックエンド承認・設定まで placeholder OCR を返さず fail-closed |
+| Upload URL guard | `cd backend && python -m pytest tests/integration/test_uploads_flow.py -q && python -m ruff check app/services/upload_service.py app/schemas/upload.py tests/integration/test_uploads_flow.py && python -m mypy app/services/upload_service.py app/schemas/upload.py` | ✅ 2 passed / ruff clean / mypy success。init は `upload_url=null`、downloadはSharePoint URL 解決失敗時に `sharepoint-stub://` へ逃がさず 502 で fail-closed。成功時監査 payload は `external_url_resolved=true` / `external_write=false` |
 | SharePoint Graph real mode | `cd backend && python -m pytest tests/unit/test_sharepoint_service.py -q && python -m ruff check app/services/sharepoint_service.py tests/unit/test_sharepoint_service.py && python -m mypy app/services/sharepoint_service.py` | ✅ 33 passed / ruff clean / mypy success |
 | Notification real mode | `cd backend && python -m pytest tests/unit/test_notification_service.py -q && python -m ruff check app/services/notification_service.py tests/unit/test_notification_service.py && python -m mypy app/services/notification_service.py` | ✅ 32 passed / ruff clean / mypy success |
+| Template creation UI | `cd frontend && npm run typecheck` + `next lint --file components/templates/create-template-button.tsx` + `scripts/verify_release_docs.sh` | ✅ 未実装 alert を撤去し、dialog form + `useCreateTemplate` + `router.refresh()` で `/templates` 作成APIへ接続 |
 | Contract submit | `cd backend && python -m pytest tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -q && python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py && python -m mypy app/services/contract_service.py app/api/v1/contracts.py` | ✅ 38 passed / ruff clean / mypy success |
 | Contract subresources | `cd backend && python -m pytest tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py -q && python -m ruff check app/services/contract_service.py app/api/v1/contracts.py tests/unit/test_contract_service.py tests/integration/test_contracts_crud.py && python -m mypy app/services/contract_service.py app/api/v1/contracts.py` | ✅ 43 passed / versions current snapshot / clauses DB rows / ruff clean / mypy success |
+| Compliance run | `cd backend && python -m pytest tests/unit/test_compliance_service.py tests/integration/test_risks_compliance.py tests/integration/test_rbac_extended.py -q && python -m ruff check app/services/compliance_service.py app/api/v1/compliance.py app/schemas/compliance.py tests/unit/test_compliance_service.py tests/integration/test_risks_compliance.py tests/integration/test_rbac_extended.py && python -m mypy app/services/compliance_service.py app/api/v1/compliance.py app/schemas/compliance.py` + `cd frontend && npm run typecheck && npm run lint -- --file lib/api/schemas.ts --file lib/api/endpoints.ts --file hooks/use-compliance.ts --file app/(authenticated)/compliance/page.tsx` | ✅ backend 72 passed / ruff clean / mypy success。frontend API schema/route は backend と整合し、typecheck / targeted lint clean |
+| User sync queued audit | `cd backend && python -m pytest tests/unit/test_user_service.py tests/integration/test_audit_logs.py -q && python -m ruff check app/api/v1/users.py app/services/user_service.py tests/unit/test_user_service.py tests/integration/test_audit_logs.py && python -m mypy app/api/v1/users.py app/services/user_service.py` + `cd frontend && npm run typecheck && npm run lint -- --file lib/api/schemas.ts --file lib/api/endpoints.ts --file hooks/use-users.ts` | ✅ backend 25 passed / ruff clean / mypy success。frontend users sync schema/hook は backend job response と整合 |
 | Monitoring config | `bash scripts/verify_monitoring_config.sh` | ✅ Passed 19 / Failed 0。Prometheus backend DNS discovery、YAML/JSON parse、Grafana dashboard、monitoring docs整合 |
 | Backup / restore evidence | `bash scripts/verify_backup_restore_docs.sh` | ✅ Passed 36 / Failed 0。pg_dump / pg_restore 手順、backup_db.sh checksum、Alembic rollback、PITR未実演停止線を検証 |
+| Local workspace state | `bash scripts/verify_local_workspace_state.sh` | ✅ Passed 50 / Failed 0。branch / origin/main divergence / dirty files / release docs開示の一致をread-only検証 |
 | Goal completion evidence | `./scripts/verify_goal_completion_evidence.sh` | ✅ Passed 40 / Failed 0。`/goal` 完了条件を証拠表・最終報告・停止線へ対応付け |
 | Review evidence | `./scripts/verify_review_evidence.sh` | ✅ Passed 29 / Failed 0。CodeRabbit timeout、代替静的検証、security review、Critical/High limitationを検証 |
 | Dependency audit evidence | `./scripts/verify_dependency_audit_evidence.sh` | ✅ Passed 23 / Failed 0。npm audit high/critical 0、moderate 4 は既知残リスク。pip-audit は隔離venv方式で72 deps / 0 vulnerabilities |
@@ -63,8 +70,8 @@
 | WebUI status/listen | `reports/webui/standalone-webui.json` + `ss -ltnp` | ✅ `host=192.168.0.185` / `port=38100` / `192.168.0.185:38100` listen |
 | WebUI source endpoint | `curl -fsS http://192.168.0.185:38100/standalone-source` | ✅ `docs/Construction-LegalOps-DX (Standalone).html` |
 | DNS read-only | `dig +short CNAME legalops.mirai-dx-platform.com` / `dig +short A ...` | ✅ 未作成 |
-| GitHub release gate | `./scripts/verify_github_release_gate.sh` | ✅ Passed 24 / Failed 0。open PR 0、open issues #23/#24/#50、latest main CI success、Project #30 #23/#24/#50 Todo、#50 blocked label |
-| GitHub state | `gh issue list`, `gh pr list`, `gh run list` | ✅ open issues #23/#24/#50、open PR 0、latest CI success |
+| GitHub release gate | `./scripts/verify_github_release_gate.sh` | ✅ Passed 29 / Failed 0。PR #58 merged、open PR 0、open issues #23/#24/#50、latest main CI success、Project #30 #23/#24/#50 Todo、#50 blocked label |
+| GitHub state | `gh issue list`, `gh pr list`, `gh run list` | ✅ open issues #23/#24/#50、open PR 0、PR #58 merged、latest main CI success |
 | GitHub Project #30 | `gh project list`, `gh project item-list 30`, `gh project edit 30 --readme ...` | ✅ Project readme 同期済み、#23/#24/#50 は Todo、人間ゲートとして可視化 |
 
 ---

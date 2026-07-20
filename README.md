@@ -15,18 +15,19 @@
 
 ---
 
-## 🚦 現在のリリース直前状態 (2026-07-19 / Loop 93)
+## 🚦 現在のリリース直前状態 (2026-07-20 / Loop 107)
 
 | 項目 | 現在状態 | 補足 |
 |---|---|---|
 | ✅ コード完成度 | Release candidate | Phase 1 のフロントエンド / バックエンド / DB / 監査 / 監視 / 運用文書は実装・検証済み |
 | 🛑 本番リリース / deploy | 未実行 | CTO/Supervisor は **本番直前の承認待ち** で停止 |
 | 🌐 公開 DNS | 未変更 | `legalops.mirai-dx-platform.com` CNAME / A は未作成 |
-| ☁️ Cloudflare | 承認待ち | `legalops` 新規サブドメイン要件を反映済み。Access / Tunnel / DNS CNAME / cloudflared token は #50 の人間作業 |
+| ☁️ Cloudflare | 承認待ち | `legalops.mirai-dx-platform.com` 新規サブドメイン要件を反映済み。Cloudflare zone は active、`legalops` CNAME / A は未作成。Access / Tunnel / DNS CNAME / cloudflared token は #50 の人間作業 |
 | 🔐 Secrets | 未投入 | Vault / Key Vault 本番 secret 投入は #23 の人間作業 |
 | 🛡️ CSP | Report-Only | enforce 切替は #24 の人間承認後 |
 | 🖥️ 検証用 WebUI | 起動・検証済み | `http://192.168.0.185:38100/` / `construction-legalops-standalone-webui.service` / runtime preflightでHTML実体・status JSON・自動port範囲・listen実体を検証 |
-| 📊 GitHub / CI | 同期・検証済み | Project #30 / #23 / #24 / #50 / open PR 0 / 最新CI成功を GitHub release gate preflightで検証 |
+| 📊 GitHub / CI | 同期・検証済み | Project #30 / #23 / #24 / #50 / PR #58 merged / open PR 0 / 最新main CI成功を GitHub release gate preflightで検証 |
+| 🧭 Local workspace | 承認待ち・検証済み | `verify_local_workspace_state.sh` → 51 passed。ローカルbranchは `feat/phase1-neon-cf-preview`、未コミットLoop 94〜107差分あり、push / rebase / merge は未実行 |
 | ⚠️ Pre-deploy warnings | 既知・分類済み | 本番secret / SSO / AI key / Docker build skip の5件のみ。未知warning 0 |
 | 📋 Release checklist | 分類済み | 未チェック73件は人間承認 / 本番実行 / リリース後確認項目として分類済み |
 | 🛑 Stop-line証跡 | 検証済み | Git tag 0 / GitHub Release 0 / GitHub Deployments 0 / legalops DNS未作成 |
@@ -35,10 +36,16 @@
 | 🧬 Dependency audit | 検証済み | npm high/critical 0、moderate 4 は既知残リスク、pip-audit 72 deps / 0 vulnerabilities |
 | 📎 SharePoint Graph | 実装・検証済み | SharePoint Graph real mode は Entra client-credentials + Microsoft Graph drive upload / webUrl 解決に対応。unit contract 33 passed |
 | 📣 Notification real mode | 実装・検証済み | Exchange Graph sendMail / Teams webhook / desknet's webhook を mock contract で検証。unit 32 passed |
+| 🧾 Template creation UI | 実装・検証済み | 未実装 alert を撤去し、`CreateTemplateButton` を dialog form + `useCreateTemplate` + `router.refresh()` で `/templates` 作成APIへ接続 |
 | 📤 Contract submit | 実装・検証済み | `POST /contracts/{id}/submit` は draft → in_review に遷移。unit/integration contract 38 passed、ruff/mypy clean |
 | 📑 Contract subresources | 実装・検証済み | `/contracts/{id}/versions` と `/contracts/{id}/clauses` は DB-backed / current snapshot で 501 stub 回避。unit/integration contract 43 passed |
+| ⚖️ Compliance run | 実装・検証済み | `POST /compliance/checks/{contract_id}/run` は false queued を避け、ComplianceChecker を即時実行して `status=done` を返す。backend 72 passed、frontend typecheck/lint clean |
+| 👥 User sync | 実装・検証済み | `POST /users/sync` は Graph credentials / worker 承認前に外部通信せず `queued` を返し、`user.sync` 監査 payload に `external_write=false` を記録。backend 25 passed、frontend typecheck/lint clean |
+| 📄 File parser / OCR guard | 実装・検証済み | 画像PDFは実OCRバックエンド承認・設定まで placeholder OCR を返さず fail-closed。`tests/unit/test_file_parser.py` 22 passed、ruff clean、mypy success |
+| 📥 Upload URL guard | 実装・検証済み | `POST /uploads/init` は承認済みdirect-upload URL未設定時に `upload_url=null` を返し、`sharepoint-stub://` 疑似URLを利用者へ提示しない。downloadもURL解決失敗時は 502 fail-closed、成功時監査 payload は `external_url_resolved=true` / `external_write=false`。upload integration 2 passed、ruff clean、mypy success |
 | 📊 Monitoring config | 実装・検証済み | Prometheus は Docker DNS discovery で backend replicas を scrape。monitoring config preflight 19 passed |
 | 💾 Backup / Restore | 検証済み | `backup_db.sh` は `.sha256` 記録/復元前検証に対応。backup/restore evidence preflight 36 passed、PITR drill は承認後ゲートとして維持 |
+| 🧾 Local disclosure gate | 検証済み | release docs / pre-deployがローカル作業ツリー状態と実git状態の一致を検証 |
 | 📋 最終判断資料 | 整備済み | [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) / [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md) |
 
 ```mermaid
@@ -807,6 +814,8 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 > | 📣 Notification real  | Notification real mode 実装済み（Exchange Graph sendMail / Teams webhook / desknet's webhook / fail-closed tests 32 passed） |
 > | 📤 Contract submit    | `POST /contracts/{id}/submit` は legacy 501 stub を撤去し draft → in_review 遷移を実装（unit/integration 38 passed / ruff / mypy） |
 > | 📑 Contract subresources | `/contracts/{id}/versions` current snapshot と `/contracts/{id}/clauses` DB-backed seq order を実装（unit/integration 43 passed / ruff / mypy） |
+> | ⚖️ Compliance run     | `POST /compliance/checks/{contract_id}/run` は ComplianceChecker 即時実行 + `status=done`、frontend API schema/route も backend と整合（backend 72 passed / frontend typecheck + lint） |
+> | 👥 User sync          | `POST /users/sync` は外部 Graph 呼び出しなしで queued job を返し、`user.sync` audit log + `external_write=false` を検証（backend 25 passed / frontend typecheck + lint） |
 > | 🔐 SSO callback/logout | SSOService wrapper + HttpOnly cookie / idempotent logout                            |
 > | ⚡ E2E                | Playwright 51 passed（Docker公式イメージ・knowledge詳細含む・CI HARD gate）          |
 > | 🧪 Jest               | 35 passed / CI HARD gate                                                             |
@@ -826,7 +835,7 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-## 🔌 Backend API カバレッジ（v0.1.12 / Loop 93）
+## 🔌 Backend API カバレッジ（v0.1.12 / Loop 105）
 
 | エンドポイント            | ステータス     | テスト数        |
 | ------------------------- | -------------- | --------------- |
@@ -835,9 +844,10 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 | `/api/v1/workflows`       | ✅ 実装+テスト | 8件             |
 | `/api/v1/risks`           | ✅ 実装+テスト | 5件             |
 | `/api/v1/compliance`      | ✅ 実装+テスト | 6件             |
+| `/api/v1/users`           | ✅ 実装+テスト | Graph sync queued + audit |
 | `/api/v1/knowledge`       | ✅ 実装+テスト | 6件 (DB バック) |
 | `/api/v1/templates`       | ✅ 実装+テスト | 7件 (DB バック) |
 | `/api/v1/clauses-library` | ✅ 実装+テスト | 8件 (DB バック) |
-| `/api/v1/audit-logs`      | ✅ 実装+テスト | 3件             |
+| `/api/v1/audit-logs`      | ✅ 実装+テスト | 4件             |
 | `/api/v1/dashboard`       | ✅ 実装+テスト | 3件             |
 | `/api/v1/health`          | ✅ 実装+テスト | 3件             |

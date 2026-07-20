@@ -189,8 +189,8 @@ oid 無しトークンで JIT 作成されたユーザーを、後日取得し�
 ### 4.6 `POST /users/sync`
 
 - 認可: `admin`
-- 動作: Microsoft Graph からユーザー / グループを同期するジョブを受付。Secrets 未投入環境では外部通信せず `queued` を返す。
-- レスポンス: 202 (ジョブ ID 返却)
+- 動作: Microsoft Graph からユーザー / グループを同期するジョブを受付。Secrets / worker 承認前は外部通信せず `queued` を返し、`user.sync` として監査ログへ記録する。監査 payload は `job_id`、`status`、`external_write=false` を保持する。
+- レスポンス: 202 (`job_id`, `status`, `triggered_by`, `queued_at`, `note`)
 
 ---
 
@@ -494,11 +494,11 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 - 認可: `viewer` 以上
 - 用途: 適用可能なチェックリスト
 
-### 9.2 `POST /contracts/{id}/compliance-runs`
+### 9.2 `POST /compliance/checks/{contract_id}/run`
 
-- 認可: `reviewer` / `admin`
-- 動作: チェックリスト適用
-- レスポンス: 202
+- 認可: `legal` / `admin`
+- 動作: チェックリスト適用。外部 worker 未承認の現フェーズでは、`GET /compliance/checks/{contract_id}` と同じ ComplianceChecker を即時実行し、job-shaped response を `status=done` で返す。
+- レスポンス: 202 (`job_id`, `contract_id`, `accepted_at`, `status`, `disclaimer`)
 
 ---
 
@@ -645,7 +645,7 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 ```json
 {
   "upload_id": "opaque-upload-id",
-  "upload_url": "sharepoint-stub://uploads/opaque-upload-id",
+  "upload_url": null,
   "upload_token": "signed-token",
   "storage": "sharepoint",
   "expires_in": 3600
@@ -656,6 +656,8 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
   - 最大サイズ 100 MB
   - 受理 MIME: `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
   - 受理 NG 時は `415 Unsupported Media Type`
+  - 承認済み SharePoint/Graph direct-upload URL がない場合、`upload_url` は `null` とし、`sharepoint-stub://` などの疑似外部 URL は返さない
+  - 画像PDFは実OCRバックエンドが承認・設定されるまで解析を fail-closed とし、placeholder OCR テキストを契約レビューやAIレビューへ流さない
 
 ### 13.2 `POST /uploads/complete`
 
@@ -678,6 +680,19 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 
 - 認可: `admin` / アップロード者
 - 動作: `deleted_at` を設定する論理削除
+
+### 13.3 `GET /uploads/{id}/download`
+
+- 認可: アップロード者 / `reviewer` / `approver` / `auditor` / `admin`
+- 動作: SharePoint item ID から Microsoft Graph / SharePoint の閲覧 URL を解決し、302 redirect する
+- 失敗時:
+  - 添付が存在しない場合は `404`
+  - 権限がない場合は `403`
+  - SharePoint URL を解決できない場合は `502 sharepoint url unavailable`
+- 制約:
+  - URL 解決失敗時に `sharepoint-stub://` などの疑似 URL へフォールバックしない
+  - 本番 secret / Graph 設定未投入時は失敗を明示し、利用者に疑似ダウンロード経路を提示しない
+  - 成功時の監査 payload は `external_url_resolved=true` / `external_write=false` を保持し、URL文字列そのものは監査ログへ残さない
 
 ---
 

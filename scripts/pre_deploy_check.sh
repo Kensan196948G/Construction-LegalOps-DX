@@ -115,7 +115,17 @@ if [ -f "./scripts/verify_backup_restore_docs.sh" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Security
+# 7. Local workspace disclosure
+# ---------------------------------------------------------------------------
+echo ""
+echo "🧭 Local Workspace"
+
+if [ -f "./scripts/verify_local_workspace_state.sh" ]; then
+  bash ./scripts/verify_local_workspace_state.sh >/dev/null && check "local workspace state preflight" 0 || check "local workspace state preflight" 1
+fi
+
+# ---------------------------------------------------------------------------
+# 8. Security
 # ---------------------------------------------------------------------------
 echo ""
 echo "🔒 Security"
@@ -154,7 +164,7 @@ if [ -x "./scripts/verify_github_release_gate.sh" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 8. Environment
+# 9. Environment
 # ---------------------------------------------------------------------------
 echo ""
 echo "🔧 Environment"
@@ -165,7 +175,7 @@ echo "🔧 Environment"
 [ -n "${CLAUDE_API_KEY:-}" ] && check "CLAUDE_API_KEY is set" 0 || warn "CLAUDE_API_KEY not set (AI review disabled)"
 
 # ---------------------------------------------------------------------------
-# 9. Docker images
+# 10. Docker images
 # ---------------------------------------------------------------------------
 echo ""
 echo "🐳 Docker"

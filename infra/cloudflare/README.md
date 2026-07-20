@@ -17,13 +17,14 @@
 
 ## 🚀 適用手順（人間 + CTO 協働、Issue #50 解除後）
 
-### 現在の確認結果（2026-07-19 preview デプロイ後更新）
+### 現在の確認結果（2026-07-20 Loop 106 / legalops 本番サブドメイン承認前）
 
 | 項目 | 結果 |
 |---|---|
 | Cloudflare zone | `mirai-dx-platform.com` は `active` |
 | Zone nameservers | `kareem.ns.cloudflare.com`, `nia.ns.cloudflare.com` |
-| `legalops` DNS record（本番） | 未作成（Y 承認後 Phase 2） |
+| `legalops` DNS record（本番） | 未作成（新規サブドメインとして人間承認後のみ CNAME 作成） |
+| `legalops` 要件 | 新規サブドメイン。親ドメイン `mirai-dx-platform.com` は取得済み |
 | 🧪 preview | **`https://legalops-preview.mirai-dx-platform.com` 稼働中** — named tunnel `legalops-preview` (459059b3-…) → host nginx :8410 → compose (staging) + Neon `development`。CNAME はユーザー承認 (2026-07-19) の上作成。削除で完全 rollback 可 |
 | 🗄️ Neon | プロジェクト `Construction-LegalOps-DX` (`snowy-sound-99973684`, PG16, ap-southeast-1) 作成済み。詳細は `neon-config.md` |
 | WebUI preview (LAN) | `http://192.168.0.185:38100/` |
@@ -51,6 +52,17 @@
 ```bash
 # DNS 作成（公開 DNS 変更のため、人間承認後のみ）
 cloudflared tunnel route dns <TUNNEL_ID_OR_NAME> legalops.mirai-dx-platform.com
+
+# 誤実行防止 helper（dry-run）
+LEGALOPS_CLOUDFLARE_APPROVAL=APPROVE_LEGALOPS_CLOUDFLARE \
+TUNNEL_ID_OR_NAME=<TUNNEL_ID_OR_NAME> \
+./scripts/apply_cloudflare_legalops_after_approval.sh
+
+# 誤実行防止 helper（公開 DNS 作成。人間の最終承認後のみ）
+LEGALOPS_CLOUDFLARE_APPROVAL=APPROVE_LEGALOPS_CLOUDFLARE \
+EXECUTE=1 \
+TUNNEL_ID_OR_NAME=<TUNNEL_ID_OR_NAME> \
+./scripts/apply_cloudflare_legalops_after_approval.sh
 
 # cloudflared を compose overlay で起動（Tunnel token は Vault / secret manager から注入）
 docker compose \

@@ -39,7 +39,7 @@ else
   fail "Pre-deploy log missing or empty: ${LOG_PATH}"
 fi
 
-contains_file "${LOG_PATH}" "✅ Passed:   24" && pass "Pre-deploy passed count is 24" || fail "Pre-deploy passed count is not 24"
+contains_file "${LOG_PATH}" "✅ Passed:   25" && pass "Pre-deploy passed count is 25" || fail "Pre-deploy passed count is not 25"
 contains_file "${LOG_PATH}" "❌ Failed:   0" && pass "Pre-deploy failed count is 0" || fail "Pre-deploy failed count is not 0"
 contains_file "${LOG_PATH}" "⚠️  Warnings: 5" && pass "Pre-deploy warning count is 5" || fail "Pre-deploy warning count is not 5"
 

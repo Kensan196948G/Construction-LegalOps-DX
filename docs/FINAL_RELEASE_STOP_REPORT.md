@@ -1,6 +1,6 @@
 # 🚦 Final Release Stop Report — Construction-LegalOps-DX
 
-> **最終更新: 2026-07-19 / Loop 93**
+> **最終更新: 2026-07-20 / Loop 107**
 > 本書は、本番リリース直前で CTO/Supervisor が停止するための最終報告書です。  
 > 本番 deploy / 公開 DNS 変更 / secret 投入 / PR merge / release tag は実行していません。
 
@@ -14,8 +14,10 @@
 | コード系 blocker | 0 |
 | 人間承認 gate | #23 / #24 / #50 / PITR drill |
 | GitHub Project / CI | #30 readme 同期済み / #23 #24 #50 Todo / 最新 main CI success / GitHub release gate preflight通過 |
+| Local workspace | `feat/phase1-neon-cf-preview` に未コミットLoop 94〜107差分あり / push・rebase・merge未実行 |
+| Local workspace state | `scripts/verify_local_workspace_state.sh` → Passed 50 / Failed 0。実git状態とrelease docs開示の一致を検証 |
 | 本番 deploy | 未実行 |
-| 公開 DNS | 未変更 |
+| 公開 DNS | 未変更（`legalops.mirai-dx-platform.com` CNAME / A は未作成） |
 | GitHub Release / tag / deployments | 未作成 / 0 |
 | WebUI | 提示可能 / runtime preflight通過 |
 | Warnings | 既知5件のみ / 未知warning 0 |
@@ -31,6 +33,10 @@
 | Backend | FastAPI、DB-backed API、auth / users / uploads / notifications / knowledge / templates / reviews / audit |
 | Contract Submit | `POST /contracts/{id}/submit` の legacy 501 stub を撤去し、draft → in_review 遷移、二重提出 409、version increment を unit / integration で検証 |
 | Contract subresources | `/contracts/{id}/versions` は current version snapshot、`/contracts/{id}/clauses` は DB-backed seq 昇順として実装し、legacy 501 stub 回帰を防止 |
+| Compliance run | `POST /compliance/checks/{contract_id}/run` は ComplianceChecker を即時実行し、false queued を避けて `status=done` を返す。frontend API schema / route も backend と整合 |
+| User sync | `POST /users/sync` は Graph credentials / worker 承認前に外部通信せず `queued` を返し、`user.sync` 監査 payload に `external_write=false` を記録。frontend users sync schema / hook も backend job response と整合 |
+| File parser / OCR guard | 画像PDFは実OCRバックエンド承認・設定まで placeholder OCR を返さず fail-closed。法務レビューへ根拠不明のOCR風テキストが流入しないことを unit / ruff / mypy で検証 |
+| Upload URL guard | `POST /uploads/init` は承認済みdirect-upload URL未設定時に `upload_url=null` を返し、`sharepoint-stub://` 疑似URLを利用者へ提示しない。downloadはSharePoint URL 解決失敗時に `502 sharepoint url unavailable` で fail-closed。成功時監査 payload は `external_url_resolved=true` / `external_write=false` |
 | SharePoint Integration | SharePoint Graph real mode を実装。Entra client-credentials、Graph drive upload、webUrl 解決、設定不足/不正応答 fail-closed を unit contract で検証 |
 | Notification Integration | Notification real mode を実装。Exchange Graph sendMail、Teams webhook、desknet's webhook、設定不足 fail-closed を unit contract で検証 |
 | DB | Alembic migrations、roundtrip verifier、rollback 手順 |
@@ -41,7 +47,7 @@
 | Monitoring config | Prometheus backend scrape を Docker DNS discovery (`dns_sd_configs`) に更新し、backend replica ごとの `/metrics` scrape を構成として検証 |
 | Backup / Restore Evidence | `scripts/verify_backup_restore_docs.sh` を追加し、pre-deploy gateへ接続。PITRが未実演であることを完了扱いにしない guard を追加 |
 | Docs | README、Release checklist、Approval packet、Evidence matrix、Runbooks |
-| GitHub Gate | open PR 0、open issues #23/#24/#50、latest main CI success、Project #30 Todo状態を read-only verifier で確認 |
+| GitHub Gate | PR #58 merged、open PR 0、open issues #23/#24/#50、latest main CI success、Project #30 Todo状態を read-only verifier で確認 |
 | WebUI Runtime | status JSON、systemd enabled/active、auto port範囲、listen実体、health ok、HEAD 200、Content-Length一致、source endpoint一致を read-only verifier で確認 |
 | Warning Classification | 本番secret / SSO / AI key / Docker build skip の既知warningのみを read-only verifier で確認 |
 | Checklist Classification | 未チェック項目が人間承認 / 本番実行 / リリース後確認に限定されていることを read-only verifier で確認 |
@@ -67,7 +73,7 @@
 
 | 検証 | 結果 |
 |---|---|
-| Pre-deploy gate | Passed 24 / Failed 0 / Warnings 5 |
+| Pre-deploy gate | Passed 25 / Failed 0 / Warnings 5 |
 | Backend tests | pytest 900+ tests |
 | Migration rollback | Alembic roundtrip verifier 成功 |
 | Frontend E2E | Playwright 51 passed |
@@ -76,12 +82,17 @@
 | Dependency audit | Passed 23 / Failed 0。npm audit high/critical 0、moderate 4 は既知残リスク。pip-audit は隔離venv方式で72 deps / 0 vulnerabilities |
 | SharePoint Graph real mode | `backend/tests/unit/test_sharepoint_service.py` → 33 passed。token取得 / drive upload / webUrl 解決 / drive id不足 / Graph不正応答 fail-closed |
 | Notification real mode | `backend/tests/unit/test_notification_service.py` → 32 passed。Exchange Graph sendMail / Teams webhook / desknet's webhook / 設定不足 fail-closed |
+| Template creation UI | 未実装 alert を撤去し、`CreateTemplateButton` を dialog form + `useCreateTemplate` + `router.refresh()` で `/templates` 作成APIへ接続。typecheck / targeted ESLint / release docs verifier 通過 |
 | Contract submit | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 38 passed。ruff clean / mypy success |
 | Contract subresources | `backend/tests/unit/test_contract_service.py` + `backend/tests/integration/test_contracts_crud.py` → 43 passed。versions current snapshot / clauses DB rows / ruff clean / mypy success |
+| Compliance run | `backend/tests/unit/test_compliance_service.py` + `backend/tests/integration/test_risks_compliance.py` + `backend/tests/integration/test_rbac_extended.py` → 72 passed。frontend typecheck / targeted lint clean |
+| User sync queued audit | `backend/tests/unit/test_user_service.py` + `backend/tests/integration/test_audit_logs.py` → 25 passed。ruff clean / mypy success。frontend typecheck / targeted lint clean |
+| File parser OCR guard | `backend/tests/unit/test_file_parser.py` → 22 passed。`app/services/file_parser.py` / `tests/unit/test_file_parser.py` ruff clean、`app/services/file_parser.py` mypy success |
+| Upload URL guard | `backend/tests/integration/test_uploads_flow.py` → 2 passed。init `upload_url=null`、redirect成功監査 payload、502 fail-closed、`app/services/upload_service.py` / `app/schemas/upload.py` / `tests/integration/test_uploads_flow.py` ruff clean、`app/services/upload_service.py` / `app/schemas/upload.py` mypy success |
 | Monitoring config | `bash scripts/verify_monitoring_config.sh` → Passed 19 / Failed 0。Prometheus YAML / alert rules / Alertmanager / Grafana JSON / backend DNS discovery / docs 整合を検証 |
 | Backup / restore evidence | `bash scripts/verify_backup_restore_docs.sh` → Passed 36 / Failed 0。pg_dump / pg_restore 手順、backup_db.sh checksum、Alembic rollback、PITR未実演停止線を検証 |
-| Cloudflare legalops preflight | Passed 22 / Failed 0 / Warnings 0 |
-| Release docs preflight | Passed 191 / Failed 0 |
+| Cloudflare legalops preflight | Passed 37 / Failed 0 / Warnings 0。`legalops.mirai-dx-platform.com` 新規サブドメインは未作成のまま、承認フレーズ必須 helper `scripts/apply_cloudflare_legalops_after_approval.sh` も検証 |
+| Release docs preflight | Passed 284 / Failed 0 |
 | Goal completion evidence | Passed 40 / Failed 0 |
 | Review evidence | Passed 29 / Failed 0 |
 | Standalone WebUI runtime | Passed 27 / Failed 0 |

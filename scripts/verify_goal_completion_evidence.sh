@@ -66,12 +66,12 @@ contains_file "${EVIDENCE}" "WebUI を提示できる" && pass "Goal criterion c
 contains_file "${EVIDENCE}" "GitHub Projects / Issue / CI / 進捗が最新" && pass "Goal criterion covered: GitHub Project/Issue/CI" || fail "Missing GitHub Project/Issue/CI criterion"
 contains_file "${EVIDENCE}" "本番 deploy だけを残した承認待ち" && pass "Goal criterion covered: approval-pending stop line" || fail "Missing approval-pending criterion"
 
-contains_file "${EVIDENCE}" "Passed 24 / Failed 0 / Warnings 5" && pass "Evidence matrix records pre-deploy gate result" || fail "Evidence matrix missing pre-deploy result"
+contains_file "${EVIDENCE}" "Passed 25 / Failed 0 / Warnings 5" && pass "Evidence matrix records pre-deploy gate result" || fail "Evidence matrix missing pre-deploy result"
 contains_file "${EVIDENCE}" "Passed 27 / Failed 0" && pass "Evidence matrix records Standalone WebUI runtime result" || fail "Evidence matrix missing Standalone WebUI runtime result"
-contains_file "${EVIDENCE}" "Passed 191 / Failed 0" && pass "Evidence matrix records release docs preflight result" || fail "Evidence matrix missing release docs preflight result"
-contains_file "${EVIDENCE}" "Passed 24 / Failed 0" && pass "Evidence matrix records GitHub release gate result" || fail "Evidence matrix missing GitHub release gate result"
+contains_file "${EVIDENCE}" "Passed 281 / Failed 0" && pass "Evidence matrix records release docs preflight result" || fail "Evidence matrix missing release docs preflight result"
+contains_file "${EVIDENCE}" "Passed 29 / Failed 0" && pass "Evidence matrix records GitHub release gate result" || fail "Evidence matrix missing GitHub release gate result"
 contains_file "${EVIDENCE}" "Passed 13 / Failed 0" && pass "Evidence matrix records warning/stop-line classification results" || fail "Evidence matrix missing Passed 13 / Failed 0 evidence"
-contains_file "${EVIDENCE}" "Passed 22 / Failed 0 / Warnings 0" && pass "Evidence matrix records Cloudflare preflight result" || fail "Evidence matrix missing Cloudflare preflight result"
+contains_file "${EVIDENCE}" "Passed 37 / Failed 0 / Warnings 0" && pass "Evidence matrix records Cloudflare preflight result" || fail "Evidence matrix missing Cloudflare preflight result"
 
 contains_file "${REPORT}" "## 🧩 2. 変更内容サマリ" && pass "Final report includes change summary" || fail "Final report missing change summary"
 contains_file "${REPORT}" "## 🧪 3. 実行したレビュー" && pass "Final report includes review summary" || fail "Final report missing review summary"
