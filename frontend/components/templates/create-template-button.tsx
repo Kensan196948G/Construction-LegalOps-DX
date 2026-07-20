@@ -140,9 +140,9 @@ export function CreateTemplateButton({ children }: { children: ReactNode }) {
           </div>
 
           <div className="space-y-2">
-            <Label>契約種別</Label>
+            <Label htmlFor="template-contract-type">契約種別</Label>
             <Select value={contractType} onValueChange={setContractType}>
-              <SelectTrigger>
+              <SelectTrigger id="template-contract-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

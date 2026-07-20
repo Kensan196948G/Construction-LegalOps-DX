@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -144,7 +144,7 @@ async def start_graph_sync(
     _ = session
     queued_at = datetime.now(UTC)
     return UserSyncJob(
-        job_id=f"graph-sync-{queued_at.strftime('%Y%m%d%H%M%S')}",
+        job_id=f"graph-sync-{queued_at.strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}",
         status="queued",
         triggered_by=triggered_by,
         queued_at=queued_at,

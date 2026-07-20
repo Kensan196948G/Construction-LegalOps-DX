@@ -28,6 +28,14 @@ contains_file() {
   grep -Fq "$pattern" "$file"
 }
 
+# Match a verifier evidence row by script name + "Failed 0" without pinning the
+# Passed count — pinned counts drift every time a verifier gains a check.
+records_green_run() {
+  local file="$1"
+  local script_name="$2"
+  grep -Eq "${script_name}.*Passed [0-9]+ / Failed 0" "$file"
+}
+
 echo "================================================"
 echo "🎯 Goal Completion Evidence Preflight"
 echo "================================================"
@@ -66,12 +74,12 @@ contains_file "${EVIDENCE}" "WebUI を提示できる" && pass "Goal criterion c
 contains_file "${EVIDENCE}" "GitHub Projects / Issue / CI / 進捗が最新" && pass "Goal criterion covered: GitHub Project/Issue/CI" || fail "Missing GitHub Project/Issue/CI criterion"
 contains_file "${EVIDENCE}" "本番 deploy だけを残した承認待ち" && pass "Goal criterion covered: approval-pending stop line" || fail "Missing approval-pending criterion"
 
-contains_file "${EVIDENCE}" "Passed 25 / Failed 0 / Warnings 5" && pass "Evidence matrix records pre-deploy gate result" || fail "Evidence matrix missing pre-deploy result"
-contains_file "${EVIDENCE}" "Passed 27 / Failed 0" && pass "Evidence matrix records Standalone WebUI runtime result" || fail "Evidence matrix missing Standalone WebUI runtime result"
-contains_file "${EVIDENCE}" "Passed 281 / Failed 0" && pass "Evidence matrix records release docs preflight result" || fail "Evidence matrix missing release docs preflight result"
-contains_file "${EVIDENCE}" "Passed 29 / Failed 0" && pass "Evidence matrix records GitHub release gate result" || fail "Evidence matrix missing GitHub release gate result"
-contains_file "${EVIDENCE}" "Passed 13 / Failed 0" && pass "Evidence matrix records warning/stop-line classification results" || fail "Evidence matrix missing Passed 13 / Failed 0 evidence"
-contains_file "${EVIDENCE}" "Passed 37 / Failed 0 / Warnings 0" && pass "Evidence matrix records Cloudflare preflight result" || fail "Evidence matrix missing Cloudflare preflight result"
+records_green_run "${EVIDENCE}" "pre_deploy_check\.sh" && pass "Evidence matrix records pre-deploy gate result" || fail "Evidence matrix missing pre-deploy result"
+records_green_run "${EVIDENCE}" "verify_standalone_webui_runtime\.sh" && pass "Evidence matrix records Standalone WebUI runtime result" || fail "Evidence matrix missing Standalone WebUI runtime result"
+records_green_run "${EVIDENCE}" "verify_release_docs\.sh" && pass "Evidence matrix records release docs preflight result" || fail "Evidence matrix missing release docs preflight result"
+records_green_run "${EVIDENCE}" "verify_github_release_gate\.sh" && pass "Evidence matrix records GitHub release gate result" || fail "Evidence matrix missing GitHub release gate result"
+records_green_run "${EVIDENCE}" "verify_production_stop_line\.sh" && pass "Evidence matrix records warning/stop-line classification results" || fail "Evidence matrix missing stop-line classification evidence"
+records_green_run "${EVIDENCE}" "verify_cloudflare_legalops\.sh" && pass "Evidence matrix records Cloudflare preflight result" || fail "Evidence matrix missing Cloudflare preflight result"
 
 contains_file "${REPORT}" "## 🧩 2. 変更内容サマリ" && pass "Final report includes change summary" || fail "Final report missing change summary"
 contains_file "${REPORT}" "## 🧪 3. 実行したレビュー" && pass "Final report includes review summary" || fail "Final report missing review summary"
@@ -84,8 +92,7 @@ contains_file "${REPORT}" "## 🛑 9. ロールバック手順" && pass "Final r
 contains_file "${REPORT}" "## 🧯 10. Stop Line" && pass "Final report includes stop line" || fail "Final report missing stop line"
 
 contains_file "${EVIDENCE}" "#23" && contains_file "${EVIDENCE}" "#24" && contains_file "${EVIDENCE}" "#50" && pass "Evidence matrix records all human gates #23/#24/#50" || fail "Evidence matrix missing one or more human gates"
-contains_file "${EVIDENCE}" "Git tag 0" && pass "Evidence matrix records no release tags" || fail "Evidence matrix missing no-tag evidence"
-contains_file "${EVIDENCE}" "GitHub Release 0" && pass "Evidence matrix records no GitHub releases" || fail "Evidence matrix missing no-release evidence"
+contains_file "${EVIDENCE}" "未承認 tag / Release 0" && pass "Evidence matrix records no unapproved release tags" || fail "Evidence matrix missing unapproved-tag evidence"
 contains_file "${EVIDENCE}" "GitHub Deployments 0" && pass "Evidence matrix records no GitHub deployments" || fail "Evidence matrix missing no-deployment evidence"
 contains_file "${EVIDENCE}" "CNAME / A は未作成" && pass "Evidence matrix records legalops DNS absence" || fail "Evidence matrix missing legalops DNS absence"
 

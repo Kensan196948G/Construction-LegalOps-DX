@@ -145,6 +145,16 @@ async def download_upload(
     except PermissionError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
     except SharePointError:
+        # Failed downloads are audit-relevant too: record before surfacing 502.
+        await audit_service.log(
+            session,
+            actor_id=current_user.db_id,
+            action="upload.download",
+            target_type="uploads",
+            target_id=upload_id,
+            payload={"external_url_resolved": False, "external_write": False},
+            request=request,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="sharepoint url unavailable",

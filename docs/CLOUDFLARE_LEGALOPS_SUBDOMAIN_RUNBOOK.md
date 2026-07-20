@@ -1,6 +1,6 @@
 # ☁️ Cloudflare Runbook — `legalops.mirai-dx-platform.com`
 
-> **状態: 承認待ち / 未適用 (2026-07-20 Loop 106)**
+> **状態: 承認待ち / 未適用 (2026-07-20 Loop 107 + PR #59)**
 > 本書は Cloudflare 側の実作業を安全に進めるための手順書です。`legalops` サブドメインの新規作成要件と、取得済みドメイン `mirai-dx-platform.com` の利用要件は反映済みです。DNS 作成、Access 作成、Tunnel 作成、本番デプロイはこのセッションでは実行していません。
 
 ---

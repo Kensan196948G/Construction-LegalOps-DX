@@ -37,7 +37,7 @@
     "same_error_limit": 2,
     "phase": "Verify",
     "last_session_summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS (Error 0.00%・SLO 達成) + migrations ゲート常設。Loop 28: 新 Goal (リリース後検証・CF/Neon 安定化) に対し Monitor 全数調査で『本番デプロイ実績なし』を確定 (git tag 0 / GitHub Deployments 0 / DNS 未設定 / CD 経路なし / CF・Neon 採用証跡ゼロ、現行設計は Docker Compose オンプレ)。指示に従い legalops.mirai-dx-platform.com を候補として CLOUDFLARE_NEON_MIGRATION_PLAN.md に文書化 (DNS 変更等は未実行)。欠落していた運用文書 4 本 (OPERATIONS / INCIDENT_RESPONSE / MONITORING / BACKUP_RESTORE) を実体 grounding で新規整備。Issue #50 (CF/Neon 採否判断・人間) / #51 (運用基盤ギャップ P2) 起票。Loop 26-27: 8 PR merge (#27/#37/#44/#42/#36/#46/#47/#38)・Issue 5 件クローズ (#19/#35/#40/#43/#45)・CI 全ゲート fail-closed 化完遂・PG 統合 151 passed 真 green・deploy_ready 復帰。Loop 27: Issue #45 根治 (JIT プロビジョニング、対抗レビュー 2 系統で Critical 2/High 2 検出→全反映) + PR #38 完遂。Loop 26 詳細: 5 PR merge + P1 本番欠陥 2 系統発見。(1) weekly security scan 赤化 (pip-audit) を根本分析 — ecdsa PYSEC-2026-1325 は upstream won't-fix + 到達不能 (RS256 のみ使用) のため文書化 suppress (PR #42)、main で全 5 ジョブ TRUE GREEN 確認 (run 29296717568)、恒久対応 PyJWT 移行は Issue #41。(2) date bomb 発見・修正 — Claude dormancy gate (2026-07-01) 通過で test_ai_settings 2 テストが決定論的に赤化 (全 PR の CI をブロック)、monkeypatch 日付固定 + post-gate fail-closed テスト追加 (PR #44、ローカル 901 passed)。(3) OPEN PR triage — #27 RS256 (7/7 GREEN・STABLE N=5) / #37 Jest hard-gate / #36 k6 (conflict 解消後) を検証の上 merge。(4) PR #38 修復 3 巡 — NullPool 化で asyncpg ループ跨ぎ根絶 → departments/users マスタシード + mypy 修正で FK 違反 0 件 (143→12 failed) → 残存は本番欠陥 Issue #45 (JWT subject email を BIGINT id として使用する identity マッピング欠陥が contract/review/knowledge/dashboard/risk 各サービスに存在 + GET /users の lazy-load MissingGreenlet 500 + clause_library RecursionError) のため Error Control (修復 3 回) で Blocked 化。docs PR で CHANGELOG/README/state.json 更新。",
-    "last_stop_at": "2026-07-20T03:46:00.679Z",
+    "last_stop_at": "2026-07-20T04:39:49.323Z",
     "current_session_start_at": "2026-07-20T03:47:30.850Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
@@ -250,6 +250,91 @@
   "learning": {
     "failure_patterns": [
       {
+        "at": "2026-07-20T04:39:49.355Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
+        "at": "2026-07-20T04:39:39.721Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
+        "at": "2026-07-20T04:39:30.097Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
+        "at": "2026-07-20T04:14:12.174Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
+        "at": "2026-07-20T04:03:24.691Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
+        "at": "2026-07-20T04:00:35.924Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
+        "at": "2026-07-20T03:58:04.332Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
+        "at": "2026-07-20T03:57:57.617Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
         "at": "2026-07-20T03:46:00.693Z",
         "reasons": [
           "verify_subagent_missing",
@@ -368,6 +453,10 @@
       {
         "at": "2026-06-04T01:09:03.812Z",
         "summary": "Loop 19: weekly security.yml GREEN 化（PR #26 merged @36c361a, v0.1.9）。Trivy install.sh 404 回避（main版・version引数省略）+ backend Dockerfile apt upgrade(gnutls/krb5→deb12u7/deb12u5) + frontend Dockerfile apk u"
+      },
+      {
+        "at": "2026-07-20T04:35:00.000Z",
+        "summary": "PR #59 CodeRabbit 対応: (1) 検証スクリプトの数値/状態ピン留めはドリフト源 — 数値は『script名+Failed 0』regex、workspace 検証は時点非依存 fail-closed 検査+現況開示へ再設計 (2) checklist_codes は backend 未伝播 + axios の checklist_codes[]= 直列化で二重に無効だった — paramsSerializer indexes:null を axios client 全体へ適用 (3) fail-closed ガード追加時は MagicMock settings に is_production=False 明示が必須"
       }
     ],
     "usage_history": {
@@ -377,12 +466,12 @@
           "last_used": "2026-07-14T03:38:17.204Z",
           "last_description": "運用文書 4 本の起草"
         },
-        "_total_agent_calls": 25,
-        "_last_agent_call_at": "2026-07-20T03:41:14.763Z",
+        "_total_agent_calls": 26,
+        "_last_agent_call_at": "2026-07-20T04:13:58.462Z",
         "Explore": {
-          "call_count": 5,
-          "last_used": "2026-07-20T03:41:14.763Z",
-          "last_description": "未コミット44変更のトリアージ"
+          "call_count": 6,
+          "last_used": "2026-07-20T04:13:58.462Z",
+          "last_description": "CodeRabbit 17指摘の妥当性検証"
         },
         "pr-review-toolkit_silent-failure-hunter": {
           "call_count": 1,
@@ -494,6 +583,398 @@
         "scripts/serve_standalone_webui.py"
       ],
       "truncated": false
+    },
+    {
+      "at": "2026-07-20T03:57:57.583Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T03:57:57.616Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-07-20T03:58:04.296Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T03:58:04.332Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-07-20T04:00:35.896Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T04:00:35.924Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-07-20T04:03:24.658Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T04:03:24.691Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-07-20T04:14:12.144Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T04:14:12.174Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-07-20T04:39:30.066Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T04:39:30.097Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-07-20T04:39:39.669Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T04:39:39.721Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-07-20T04:39:49.323Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-07-20T04:39:49.355Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 82 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/005_contract_templates.py",
+        "backend/app/api/v1/auth.py",
+        "backend/app/api/v1/compliance.py",
+        "backend/app/api/v1/contracts.py",
+        "backend/app/api/v1/health.py",
+        "backend/app/api/v1/knowledge.py",
+        "backend/app/api/v1/notifications.py",
+        "backend/app/api/v1/templates.py",
+        "backend/app/api/v1/uploads.py",
+        "backend/app/api/v1/users.py",
+        "backend/app/core/config.py",
+        "backend/app/deps.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/contract_template.py",
+        "backend/app/observability/__init__.py",
+        "backend/app/observability/operational_metrics.py",
+        "backend/app/schemas/audit_log.py",
+        "backend/app/schemas/compliance.py",
+        "backend/app/schemas/knowledge.py",
+        "backend/app/schemas/template.py",
+        "backend/app/schemas/upload.py",
+        "backend/app/schemas/user.py",
+        "backend/app/services/ai_review.py",
+        "backend/app/services/ai_review_service.py",
+        "backend/app/services/audit_service.py",
+        "backend/app/services/auth_service.py",
+        "backend/app/services/compliance_service.py",
+        "backend/app/services/contract_service.py",
+        "backend/app/services/file_parser.py",
+        "backend/app/services/notification_service.py"
+      ],
+      "truncated": true
     }
   ],
   "compact": {

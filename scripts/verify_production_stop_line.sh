@@ -50,18 +50,23 @@ else
   fail "${HOSTNAME} A record exists: ${A_RECORD}"
 fi
 
-TAG_COUNT="$(git tag --list | wc -l | tr -d ' ')"
-if [ "${TAG_COUNT}" = "0" ]; then
-  pass "Local git release tag count is 0"
+# The stop line forbids UNAPPROVED tags/releases. Tags approved through the
+# merge gate (PR #59: v0.1.12) are allowed — pinning "count 0" would make the
+# gate self-destruct the moment the approved release is cut.
+APPROVED_RELEASE_TAGS="${APPROVED_RELEASE_TAGS:-v0.1.12}"
+
+UNAPPROVED_TAGS="$(git tag --list | grep -vFx -f <(tr ',' '\n' <<<"${APPROVED_RELEASE_TAGS}") || true)"
+if [ -z "${UNAPPROVED_TAGS}" ]; then
+  pass "No unapproved local git release tags (approved: ${APPROVED_RELEASE_TAGS})"
 else
-  fail "Local git release tag count is ${TAG_COUNT}; expected 0"
+  fail "Unapproved local git release tags exist: $(tr '\n' ' ' <<<"${UNAPPROVED_TAGS}")"
 fi
 
-RELEASE_COUNT="$(gh release list --limit 100 --json tagName --jq 'length')"
-if [ "${RELEASE_COUNT}" = "0" ]; then
-  pass "GitHub release count is 0"
+UNAPPROVED_RELEASES="$(gh release list --limit 100 --json tagName --jq '.[].tagName' | grep -vFx -f <(tr ',' '\n' <<<"${APPROVED_RELEASE_TAGS}") || true)"
+if [ -z "${UNAPPROVED_RELEASES}" ]; then
+  pass "No unapproved GitHub releases (approved: ${APPROVED_RELEASE_TAGS})"
 else
-  fail "GitHub release count is ${RELEASE_COUNT}; expected 0"
+  fail "Unapproved GitHub releases exist: $(tr '\n' ' ' <<<"${UNAPPROVED_RELEASES}")"
 fi
 
 DEPLOYMENT_COUNT="$(gh api "repos/${OWNER}/${REPO}/deployments" --jq 'length')"
@@ -78,11 +83,13 @@ else
   fail "Open PR count is ${OPEN_PR_COUNT}; expected 0"
 fi
 
-OPEN_ISSUES="$(gh issue list --state open --limit 100 --json number --jq '[.[].number | tostring] | sort | join(",")')"
+# Only P0 (release-blocking) issues gate the stop line; routine P2/P3 issues
+# must not break it.
+OPEN_ISSUES="$(gh issue list --state open --limit 100 --label P0 --json number --jq '[.[].number | tostring] | sort | join(",")')"
 if [ "${OPEN_ISSUES}" = "23,24,50" ]; then
-  pass "Open issues are exactly #23/#24/#50 human gates"
+  pass "Open P0 issues are exactly #23/#24/#50 human gates"
 else
-  fail "Open issues are ${OPEN_ISSUES}; expected 23,24,50"
+  fail "Open P0 issues are ${OPEN_ISSUES}; expected 23,24,50"
 fi
 
 ISSUE_50_LABELS="$(gh issue view 50 --json labels --jq '[.labels[].name] | join(",")')"

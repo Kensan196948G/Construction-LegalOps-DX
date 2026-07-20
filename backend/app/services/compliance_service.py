@@ -124,9 +124,12 @@ async def get_result(
     *,
     contract_id: int,
     viewer: Any,
+    checklist_codes: list[str] | None = None,
 ) -> dict[str, Any] | None:
     """Run ComplianceChecker against the stored contract and return the result dict.
 
+    ``checklist_codes`` narrows findings (and overall_status) to the given rule
+    codes; ``None`` or an empty list keeps the historical run-everything view.
     Returns ``None`` when the contract does not exist or is soft-deleted.
     """
     from app.services.compliance_checker import ComplianceChecker, ContractSnapshot
@@ -164,6 +167,10 @@ async def get_result(
 
     checker = ComplianceChecker()
     raw_findings = await checker.check(snapshot)
+
+    if checklist_codes:
+        allowed = set(checklist_codes)
+        raw_findings = [f for f in raw_findings if f.code in allowed]
 
     findings: list[ComplianceFinding] = [
         ComplianceFinding(
@@ -216,7 +223,12 @@ async def start_run(
     if contract is None:
         raise LookupError(f"Contract id={contract_id} not found")
 
-    result = await get_result(session, contract_id=contract_id, viewer=actor)
+    result = await get_result(
+        session,
+        contract_id=contract_id,
+        viewer=actor,
+        checklist_codes=checklist_codes,
+    )
     if result is None:
         raise LookupError(f"Contract id={contract_id} not found")
 

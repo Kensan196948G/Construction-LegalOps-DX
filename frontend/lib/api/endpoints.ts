@@ -352,8 +352,10 @@ export const complianceApi = {
       { params: checklistCodes?.length ? { checklist_codes: checklistCodes } : undefined },
     ),
 
-  getResult: (contractId: number | string) =>
-    getParsed(apiResponse(complianceCheckResultSchema), `/compliance/checks/${contractId}`),
+  getResult: (contractId: number | string, checklistCodes?: string[]) =>
+    getParsed(apiResponse(complianceCheckResultSchema), `/compliance/checks/${contractId}`, {
+      params: checklistCodes?.length ? { checklist_codes: checklistCodes } : undefined,
+    }),
 };
 
 // ===========================================================================

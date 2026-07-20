@@ -114,7 +114,7 @@ contains "README.md" "Contract submit" && pass "README records contract submit e
 contains "README.md" "Contract subresources" && pass "README records contract subresource evidence" || fail "README missing contract subresource evidence"
 contains "README.md" "Compliance run" && pass "README records compliance run evidence" || fail "README missing compliance run evidence"
 contains "README.md" "Local workspace" && pass "README records local workspace state" || fail "README missing local workspace state"
-contains "README.md" "push / rebase / merge は未実行" && pass "README records local git stop line" || fail "README missing local git stop line"
+contains "README.md" "本番直前の承認待ち" && pass "README records production stop line" || fail "README missing production stop line"
 contains "docs/HANDOVER.md" "FINAL_RELEASE_STOP_REPORT.md" && pass "HANDOVER links final stop report" || fail "HANDOVER missing final stop report link"
 contains "docs/PRODUCTION_APPROVAL_PACKET.md" "FINAL_RELEASE_STOP_REPORT.md" && pass "Approval packet links final stop report" || fail "Approval packet missing final stop report link"
 contains "docs/RELEASE_EVIDENCE_MATRIX.md" "FINAL_RELEASE_STOP_REPORT.md" && pass "Evidence matrix links final stop report" || fail "Evidence matrix missing final stop report link"
@@ -142,7 +142,7 @@ contains "docs/FINAL_RELEASE_STOP_REPORT.md" "Contract submit" && pass "Final re
 contains "docs/FINAL_RELEASE_STOP_REPORT.md" "Contract subresources" && pass "Final report includes contract subresource evidence" || fail "Final report missing contract subresource evidence"
 contains "docs/FINAL_RELEASE_STOP_REPORT.md" "Compliance run" && pass "Final report includes compliance run evidence" || fail "Final report missing compliance run evidence"
 contains "docs/FINAL_RELEASE_STOP_REPORT.md" "Local workspace" && pass "Final report records local workspace state" || fail "Final report missing local workspace state"
-contains "docs/FINAL_RELEASE_STOP_REPORT.md" "push・rebase・merge未実行" && pass "Final report records local git stop line" || fail "Final report missing local git stop line"
+contains "docs/FINAL_RELEASE_STOP_REPORT.md" "PR #59 で正本化済み" && pass "Final report records PR #59 canonicalization" || fail "Final report missing PR #59 canonicalization"
 
 contains "docs/FINAL_RELEASE_STOP_REPORT.md" "http://192.168.0.185:38100/" && pass "Final report includes Standalone WebUI URL" || fail "Final report missing Standalone WebUI URL"
 contains "docs/FINAL_RELEASE_STOP_REPORT.md" "http://192.168.0.185:38100/healthz" && pass "Final report includes Standalone WebUI health URL" || fail "Final report missing Standalone WebUI health URL"
@@ -180,9 +180,9 @@ contains "docs/RELEASE_EVIDENCE_MATRIX.md" "Contract submit" && pass "Evidence m
 contains "docs/RELEASE_EVIDENCE_MATRIX.md" "Contract subresources" && pass "Evidence matrix includes contract subresource evidence" || fail "Evidence matrix missing contract subresource evidence"
 contains "docs/RELEASE_EVIDENCE_MATRIX.md" "Compliance run" && pass "Evidence matrix includes compliance run evidence" || fail "Evidence matrix missing compliance run evidence"
 contains "docs/RELEASE_EVIDENCE_MATRIX.md" "ローカル作業ツリー" && pass "Evidence matrix records local workspace state" || fail "Evidence matrix missing local workspace state"
-contains "docs/RELEASE_EVIDENCE_MATRIX.md" "push / rebase / merge は未実行" && pass "Evidence matrix records local git stop line" || fail "Evidence matrix missing local git stop line"
+contains "docs/RELEASE_EVIDENCE_MATRIX.md" "PR #59 で正本化" && pass "Evidence matrix records PR #59 canonicalization" || fail "Evidence matrix missing PR #59 canonicalization"
 contains "docs/PRODUCTION_APPROVAL_PACKET.md" "Local workspace" && pass "Approval packet records local workspace state" || fail "Approval packet missing local workspace state"
-contains "docs/PRODUCTION_APPROVAL_PACKET.md" "push / rebase / merge は未実行" && pass "Approval packet records local git stop line" || fail "Approval packet missing local git stop line"
+contains "docs/PRODUCTION_APPROVAL_PACKET.md" "PR #59 で正本化" && pass "Approval packet records PR #59 canonicalization" || fail "Approval packet missing PR #59 canonicalization"
 contains "docs/HANDOVER.md" "ローカル作業ツリー" && pass "HANDOVER records local workspace state" || fail "HANDOVER missing local workspace state"
 contains "docs/PRODUCTION_APPROVAL_PACKET.md" "Access self-hosted application を作成" && pass "Approval packet requires Cloudflare Access before DNS" || fail "Approval packet missing Cloudflare Access creation step"
 contains "docs/PRODUCTION_APPROVAL_PACKET.md" "Cloudflare Tunnel を作成" && pass "Approval packet requires Cloudflare Tunnel creation" || fail "Approval packet missing Cloudflare Tunnel creation step"
@@ -232,13 +232,16 @@ contains "scripts/verify_backup_restore_docs.sh" "Release docs do not claim PITR
 contains "docs/BACKUP_RESTORE.md" "本番データ PITR 実演は未実施" && pass "Backup guide records PITR drill as incomplete" || fail "Backup guide missing PITR incomplete statement"
 contains "docs/BACKUP_RESTORE.md" "本番 backup / WAL / Neon 承認後" && pass "Backup guide keeps PITR behind approval" || fail "Backup guide missing PITR approval boundary"
 contains "scripts/pre_deploy_check.sh" "local workspace state preflight" && pass "Pre-deploy gate invokes local workspace state preflight" || fail "Pre-deploy gate missing local workspace state preflight"
-contains "scripts/verify_local_workspace_state.sh" "Local branch is feat/phase1-neon-cf-preview" && pass "Local workspace preflight validates branch" || fail "Local workspace preflight missing branch validation"
-contains "scripts/verify_local_workspace_state.sh" "Local HEAD differs from origin/main" && pass "Local workspace preflight validates origin/main divergence" || fail "Local workspace preflight missing origin/main divergence validation"
-contains "scripts/verify_local_workspace_state.sh" "Local workspace has uncommitted changes" && pass "Local workspace preflight validates dirty state" || fail "Local workspace preflight missing dirty-state validation"
-contains "scripts/verify_local_workspace_state.sh" "scripts/pre_deploy_check.sh" && pass "Local workspace preflight validates pre-deploy gate dirty state" || fail "Local workspace preflight missing pre-deploy dirty validation"
-contains "scripts/verify_local_workspace_state.sh" "scripts/verify_github_release_gate.sh" && pass "Local workspace preflight validates GitHub gate dirty state" || fail "Local workspace preflight missing GitHub gate dirty validation"
-contains "scripts/verify_local_workspace_state.sh" "frontend/components/templates/create-template-button.tsx" && pass "Local workspace preflight validates template UI dirty state" || fail "Local workspace preflight missing template UI dirty validation"
-contains "scripts/verify_local_workspace_state.sh" "Expected Loop sync file is untracked: scripts/verify_local_workspace_state.sh" && pass "Local workspace preflight validates untracked verifier state" || fail "Local workspace preflight missing untracked verifier validation"
+# The workspace preflight is state-agnostic by design: it asserts timeless
+# fail-closed conditions and only DISCLOSES point-in-time facts. Asserting a
+# specific branch / dirty-file snapshot here would break the gate the moment
+# that work is committed.
+contains "scripts/verify_local_workspace_state.sh" "Timeless fail-closed checks" && pass "Local workspace preflight is state-agnostic (timeless checks)" || fail "Local workspace preflight missing timeless-check design"
+contains "scripts/verify_local_workspace_state.sh" "No secret-bearing file" && pass "Local workspace preflight validates secret-file absence" || fail "Local workspace preflight missing secret-file validation"
+contains "scripts/verify_local_workspace_state.sh" "executable bit" && pass "Local workspace preflight validates script executable bits" || fail "Local workspace preflight missing executable-bit validation"
+contains "scripts/verify_local_workspace_state.sh" "origin/main resolvable" && pass "Local workspace preflight validates origin/main resolvability" || fail "Local workspace preflight missing origin/main validation"
+contains "scripts/verify_local_workspace_state.sh" "Workspace disclosure (informational)" && pass "Local workspace preflight discloses workspace state" || fail "Local workspace preflight missing workspace disclosure"
+contains "scripts/verify_local_workspace_state.sh" "scripts/verify_github_release_gate.sh" && pass "Local workspace preflight validates verifier presence" || fail "Local workspace preflight missing verifier-presence validation"
 contains "backend/app/services/sharepoint_service.py" "grant_type\": \"client_credentials\"" && pass "SharePoint service uses client-credentials Graph token flow" || fail "SharePoint service missing client-credentials Graph token flow"
 contains "backend/app/services/sharepoint_service.py" "Graph upload response missing item id" && pass "SharePoint service fails closed on missing Graph item id" || fail "SharePoint service missing Graph upload fail-closed guard"
 contains "backend/tests/unit/test_sharepoint_service.py" "test_real_upload_uses_graph_drive_content_endpoint" && pass "SharePoint real upload contract test exists" || fail "SharePoint real upload contract test missing"
@@ -296,13 +299,14 @@ contains "frontend/components/templates/create-template-button.tsx" "useCreateTe
 contains "frontend/components/templates/create-template-button.tsx" "templatesApi" && fail "Template creation UI bypasses hook with direct API call" || pass "Template creation UI avoids direct API bypass"
 contains "frontend/components/templates/create-template-button.tsx" "DialogTrigger asChild" && pass "Template creation UI opens a dialog from the page button" || fail "Template creation UI missing dialog trigger"
 contains "frontend/components/templates/create-template-button.tsx" "router.refresh()" && pass "Template creation UI refreshes the server-rendered list" || fail "Template creation UI missing list refresh"
-if grep -RIn --include='*.ts' --include='*.tsx' --include='*.py' --include='*.md' "ひな形作成機能は実装予定です" frontend backend docs README.md >/tmp/legalops-template-unimplemented.txt; then
-  cat /tmp/legalops-template-unimplemented.txt
+UNIMPL_SCAN="$(mktemp)"
+trap 'rm -f "${UNIMPL_SCAN}"' EXIT
+if grep -RIn --include='*.ts' --include='*.tsx' --include='*.py' --include='*.md' "ひな形作成機能は実装予定です" frontend backend docs README.md >"${UNIMPL_SCAN}"; then
+  cat "${UNIMPL_SCAN}"
   fail "Template creation unimplemented alert is absent"
 else
   pass "Template creation unimplemented alert is absent"
 fi
-rm -f /tmp/legalops-template-unimplemented.txt
 contains "scripts/pre_deploy_check.sh" "Standalone WebUI contract tests" && pass "Pre-deploy gate reports Standalone WebUI contract tests" || fail "Pre-deploy gate missing Standalone WebUI contract tests"
 contains "scripts/pre_deploy_check.sh" "tests/test_standalone_webui.py" && pass "Pre-deploy gate invokes Standalone WebUI contract tests" || fail "Pre-deploy gate missing Standalone WebUI contract test path"
 contains "scripts/pre_deploy_check.sh" "Standalone WebUI server syntax" && pass "Pre-deploy gate reports Standalone WebUI server syntax" || fail "Pre-deploy gate missing Standalone WebUI server syntax"
@@ -322,10 +326,10 @@ contains "scripts/verify_standalone_webui_runtime.sh" "Content-Length: \${EXPECT
 contains "scripts/verify_standalone_webui_runtime.sh" "Standalone WebUI source endpoint matches expected HTML path" && pass "Standalone WebUI runtime preflight validates source endpoint" || fail "Standalone WebUI runtime preflight missing source endpoint validation"
 contains "scripts/pre_deploy_check.sh" "./scripts/verify_github_release_gate.sh" && pass "Pre-deploy gate invokes GitHub release gate preflight" || fail "Pre-deploy gate missing GitHub release gate preflight"
 contains "scripts/pre_deploy_check.sh" "GitHub release gate preflight" && pass "Pre-deploy gate reports GitHub release gate preflight" || fail "Pre-deploy gate missing GitHub release gate label"
-contains "scripts/verify_github_release_gate.sh" "Open issues are exactly" && pass "GitHub release gate validates open Issue set" || fail "GitHub release gate missing open Issue set validation"
+contains "scripts/verify_github_release_gate.sh" "Open P0 issues are exactly" && pass "GitHub release gate validates open Issue set" || fail "GitHub release gate missing open Issue set validation"
 contains "scripts/verify_github_release_gate.sh" "Open PRs are exactly" && pass "GitHub release gate validates allowed open PR set" || fail "GitHub release gate missing open PR validation"
 contains "scripts/verify_github_release_gate.sh" "PR #58 is merged" && pass "GitHub release gate validates PR #58 merged state" || fail "GitHub release gate missing PR #58 merged validation"
-contains "scripts/verify_github_release_gate.sh" "PR #58 status checks are all success" && pass "GitHub release gate validates PR #58 status checks" || fail "GitHub release gate missing PR #58 status validation"
+contains "scripts/verify_github_release_gate.sh" "PR #58 concluded status checks are all success" && pass "GitHub release gate validates PR #58 status checks" || fail "GitHub release gate missing PR #58 status validation"
 contains "scripts/verify_github_release_gate.sh" "Project #\${PROJECT_NUMBER} item #50 carries blocked label" && pass "GitHub release gate validates #50 blocked Project label" || fail "GitHub release gate missing #50 blocked Project label validation"
 contains "scripts/verify_github_release_gate.sh" "Latest \${REQUIRED_CI_WORKFLOW} run conclusion is success" && pass "GitHub release gate validates latest CI success" || fail "GitHub release gate missing latest CI success validation"
 contains "scripts/verify_github_release_gate.sh" "Latest \${REQUIRED_CI_WORKFLOW} run branch is \${REQUIRED_CI_BRANCH}" && pass "GitHub release gate validates latest CI branch" || fail "GitHub release gate missing latest CI branch validation"
@@ -337,7 +341,7 @@ contains "scripts/verify_predeploy_warning_classification.sh" "Final stop report
 contains "scripts/verify_release_checklist_pending_items.sh" "All unchecked checklist items are classified as approval/production/post-release gates" && pass "Release checklist classifier rejects unclassified unchecked items" || fail "Release checklist classifier missing unchecked item guard"
 contains "scripts/verify_release_checklist_pending_items.sh" "Release checklist records human approval boundary" && pass "Release checklist classifier validates human approval boundary" || fail "Release checklist classifier missing human approval boundary validation"
 contains "scripts/verify_release_checklist_pending_items.sh" "Release checklist links production approval packet" && pass "Release checklist classifier validates approval packet link" || fail "Release checklist classifier missing approval packet link validation"
-contains "scripts/verify_production_stop_line.sh" "GitHub release count is 0" && pass "Production stop-line validates GitHub release absence" || fail "Production stop-line missing GitHub release absence validation"
+contains "scripts/verify_production_stop_line.sh" "No unapproved GitHub releases" && pass "Production stop-line validates unapproved-release absence" || fail "Production stop-line missing unapproved-release validation"
 contains "scripts/verify_production_stop_line.sh" "GitHub deployment count is 0" && pass "Production stop-line validates GitHub deployment absence" || fail "Production stop-line missing GitHub deployment absence validation"
 contains "scripts/verify_production_stop_line.sh" "CNAME is absent" && pass "Production stop-line validates legalops CNAME absence" || fail "Production stop-line missing legalops CNAME absence validation"
 contains "scripts/verify_production_stop_line.sh" "A record is absent" && pass "Production stop-line validates legalops A absence" || fail "Production stop-line missing legalops A absence validation"

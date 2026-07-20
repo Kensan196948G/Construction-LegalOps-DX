@@ -26,18 +26,18 @@
 
 ### 2.1 共通ヘッダ
 
-| ヘッダ | 用途 |
-|--------|------|
-| `Authorization: Bearer <JWT>` | 認証 |
-| `Idempotency-Key: <uuid>` | 冪等 POST |
-| `X-Request-Id: <uuid>` | リクエスト相関 |
-| `Accept-Language: ja` | 多言語化 |
+| ヘッダ                        | 用途           |
+| ----------------------------- | -------------- |
+| `Authorization: Bearer <JWT>` | 認証           |
+| `Idempotency-Key: <uuid>`     | 冪等 POST      |
+| `X-Request-Id: <uuid>`        | リクエスト相関 |
+| `Accept-Language: ja`         | 多言語化       |
 
 ### 2.2 共通レスポンス構造
 
 ```json
 {
-  "data": { /* オブジェクト or 配列 */ },
+  "data": {/* オブジェクト or 配列 */},
   "meta": {
     "request_id": "8b3a...",
     "page": 1,
@@ -56,29 +56,27 @@
   "status": 422,
   "detail": "title must not be empty",
   "instance": "/api/v1/contracts",
-  "errors": [
-    { "field": "title", "message": "required" }
-  ],
+  "errors": [{ "field": "title", "message": "required" }],
   "request_id": "8b3a..."
 }
 ```
 
 ### 2.4 HTTP ステータス使い分け
 
-| コード | 用途 |
-|--------|------|
-| 200 | 取得・更新成功 |
-| 201 | 新規作成成功 |
-| 202 | 非同期処理受付 (AI レビューなど) |
-| 204 | ボディなし成功 (削除等) |
-| 400 | リクエスト不正 |
-| 401 | 未認証 |
-| 403 | 権限不足 |
-| 404 | 存在しない / アクセス不可 (情報秘匿のため 403 ではなく 404) |
-| 409 | 競合 (楽観ロック失敗、状態遷移違反) |
-| 422 | バリデーション失敗 |
-| 429 | レート制限 |
-| 500 | サーバ内部エラー |
+| コード | 用途                                                        |
+| ------ | ----------------------------------------------------------- |
+| 200    | 取得・更新成功                                              |
+| 201    | 新規作成成功                                                |
+| 202    | 非同期処理受付 (AI レビューなど)                            |
+| 204    | ボディなし成功 (削除等)                                     |
+| 400    | リクエスト不正                                              |
+| 401    | 未認証                                                      |
+| 403    | 権限不足                                                    |
+| 404    | 存在しない / アクセス不可 (情報秘匿のため 403 ではなく 404) |
+| 409    | 競合 (楽観ロック失敗、状態遷移違反)                         |
+| 422    | バリデーション失敗                                          |
+| 429    | レート制限                                                  |
+| 500    | サーバ内部エラー                                            |
 
 ---
 
@@ -411,9 +409,24 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
   "definition": {
     "steps": [
       { "seq": 1, "name": "起案", "step_type": "draft" },
-      { "seq": 2, "name": "法務レビュー", "step_type": "legal_review", "assignee_role": "reviewer" },
-      { "seq": 3, "name": "部長承認", "step_type": "manager_approval", "assignee_role": "approver" },
-      { "seq": 4, "name": "経営承認", "step_type": "exec_approval", "assignee_role": "approver" }
+      {
+        "seq": 2,
+        "name": "法務レビュー",
+        "step_type": "legal_review",
+        "assignee_role": "reviewer"
+      },
+      {
+        "seq": 3,
+        "name": "部長承認",
+        "step_type": "manager_approval",
+        "assignee_role": "approver"
+      },
+      {
+        "seq": 4,
+        "name": "経営承認",
+        "step_type": "exec_approval",
+        "assignee_role": "approver"
+      }
     ]
   }
 }
@@ -477,9 +490,9 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 {
   "data": {
     "matrix": [
-      { "probability": "high",   "impact": "high",   "count": 4 },
-      { "probability": "high",   "impact": "medium", "count": 9 },
-      { "probability": "medium", "impact": "high",   "count": 6 }
+      { "probability": "high", "impact": "high", "count": 4 },
+      { "probability": "high", "impact": "medium", "count": 9 },
+      { "probability": "medium", "impact": "high", "count": 6 }
     ]
   }
 }
@@ -497,8 +510,15 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 ### 9.2 `POST /compliance/checks/{contract_id}/run`
 
 - 認可: `legal` / `admin`
+- クエリ: `checklist_codes` (複数指定可・未指定時は全件)。`?checklist_codes=A&checklist_codes=B` の繰り返し形式で bind する (`checklist_codes[]=` 形式は非対応)
 - 動作: チェックリスト適用。外部 worker 未承認の現フェーズでは、`GET /compliance/checks/{contract_id}` と同じ ComplianceChecker を即時実行し、job-shaped response を `status=done` で返す。
 - レスポンス: 202 (`job_id`, `contract_id`, `accepted_at`, `status`, `disclaimer`)
+
+### 9.3 `GET /compliance/checks/{contract_id}`
+
+- 認可: 特権ロールは全件、それ以外は自身が起案した契約のみ
+- クエリ: `checklist_codes` (複数指定可・未指定時は全件)。指定時は findings と `overall_status` を対象ルールへ絞り込む
+- 動作: ComplianceChecker を実行し、横断統合した最終ビュー (`ComplianceCheckResult`) を返す
 
 ---
 
@@ -596,7 +616,10 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
       "target_type": "contracts",
       "target_id": 1001,
       "request_id": "8b3a...",
-      "payload": { "before": {"status":"draft"}, "after": {"status":"in_review"} },
+      "payload": {
+        "before": { "status": "draft" },
+        "after": { "status": "in_review" }
+      },
       "previous_hash": "0d3a...",
       "hash_chain": "b34c..."
     }
@@ -673,16 +696,6 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 
 ### 13.4 `GET /uploads/{id}/download`
 
-- 認可: 契約に対するアクセス権あり
-- 動作: SharePoint への署名付き URL を生成し `302` リダイレクト
-
-### 13.5 `DELETE /uploads/{id}`
-
-- 認可: `admin` / アップロード者
-- 動作: `deleted_at` を設定する論理削除
-
-### 13.3 `GET /uploads/{id}/download`
-
 - 認可: アップロード者 / `reviewer` / `approver` / `auditor` / `admin`
 - 動作: SharePoint item ID から Microsoft Graph / SharePoint の閲覧 URL を解決し、302 redirect する
 - 失敗時:
@@ -693,6 +706,12 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
   - URL 解決失敗時に `sharepoint-stub://` などの疑似 URL へフォールバックしない
   - 本番 secret / Graph 設定未投入時は失敗を明示し、利用者に疑似ダウンロード経路を提示しない
   - 成功時の監査 payload は `external_url_resolved=true` / `external_write=false` を保持し、URL文字列そのものは監査ログへ残さない
+  - URL 解決失敗 (`502`) 時も `external_url_resolved=false` で監査ログへ記録する
+
+### 13.5 `DELETE /uploads/{id}`
+
+- 認可: `admin` / アップロード者
+- 動作: `deleted_at` を設定する論理削除
 
 ---
 
@@ -738,12 +757,12 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 
 ## 16. レート制限
 
-| ルート | 制限 |
-|--------|------|
-| `POST /contracts/{id}/reviews` | 1 ユーザー 30 req/h |
-| `POST /uploads/init` | 1 ユーザー 60 req/h |
-| `POST /uploads/complete` | 1 ユーザー 60 req/h |
-| 既定 | 1 ユーザー 600 req/min |
+| ルート                         | 制限                   |
+| ------------------------------ | ---------------------- |
+| `POST /contracts/{id}/reviews` | 1 ユーザー 30 req/h    |
+| `POST /uploads/init`           | 1 ユーザー 60 req/h    |
+| `POST /uploads/complete`       | 1 ユーザー 60 req/h    |
+| 既定                           | 1 ユーザー 600 req/min |
 
 超過時 `429 Too Many Requests` + `Retry-After` ヘッダ。
 
@@ -751,20 +770,20 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 
 ## 17. 認可マトリクス (抜粋)
 
-| エンドポイント | viewer | drafter | reviewer | approver | admin | auditor |
-|---------------|:------:|:-------:|:--------:|:--------:|:-----:|:-------:|
-| GET /contracts | o | o | o | o | o | o |
-| POST /contracts | - | o | o | o | o | - |
-| POST /contracts/{id}/submit | - | o | - | - | o | - |
-| POST /contracts/{id}/reviews | - | o | o | - | o | - |
-| POST /workflow-steps/{id}/approve | - | - | - | o | o | - |
-| GET /audit-logs | - | - | - | - | o | o |
-| POST /audit-logs/verify | - | - | - | - | o | o |
+| エンドポイント                    | viewer | drafter | reviewer | approver | admin | auditor |
+| --------------------------------- | :----: | :-----: | :------: | :------: | :---: | :-----: |
+| GET /contracts                    |   o    |    o    |    o     |    o     |   o   |    o    |
+| POST /contracts                   |   -    |    o    |    o     |    o     |   o   |    -    |
+| POST /contracts/{id}/submit       |   -    |    o    |    -     |    -     |   o   |    -    |
+| POST /contracts/{id}/reviews      |   -    |    o    |    o     |    -     |   o   |    -    |
+| POST /workflow-steps/{id}/approve |   -    |    -    |    -     |    o     |   o   |    -    |
+| GET /audit-logs                   |   -    |    -    |    -     |    -     |   o   |    o    |
+| POST /audit-logs/verify           |   -    |    -    |    -     |    -     |   o   |    o    |
 
 ---
 
 ## 18. 変更履歴
 
-| 日付 | 版 | 変更内容 |
-|------|----|---------|
+| 日付       | 版   | 変更内容 |
+| ---------- | ---- | -------- |
 | 2026-05-16 | v1.0 | 初版作成 |

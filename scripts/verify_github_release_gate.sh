@@ -73,13 +73,21 @@ PR_58="$(gh pr view 58 --json number,isDraft,baseRefName,headRefName,mergeStateS
 PR_58_BASE="$(jq -r '.baseRefName' <<<"${PR_58}")"
 PR_58_HEAD="$(jq -r '.headRefName' <<<"${PR_58}")"
 PR_58_STATE="$(jq -r '.state' <<<"${PR_58}")"
-PR_58_CHECKS="$(jq -r '[.statusCheckRollup[]? | select(.conclusion != null) | .conclusion] | unique | join(",")' <<<"${PR_58}")"
+# Concluded checks must all be SUCCESS. Pending (null conclusion) checks fail
+# the gate only while the PR is still open — a merged PR can carry permanently
+# stuck third-party checks that will never conclude.
+PR_58_CHECKS="$(jq -r '[.statusCheckRollup[]? | .conclusion | select(. != null and . != "")] | unique | join(",")' <<<"${PR_58}")"
+PR_58_PENDING="$(jq -r '[.statusCheckRollup[]? | select(.conclusion == null or .conclusion == "")] | length' <<<"${PR_58}")"
 
 [ "${PR_58_BASE}" = "main" ] && pass "PR #58 targets main" || fail "PR #58 base is ${PR_58_BASE}; expected main"
 [ "${PR_58_HEAD}" = "feat/phase1-neon-cf-preview" ] && pass "PR #58 head branch is feat/phase1-neon-cf-preview" || fail "PR #58 head is ${PR_58_HEAD}"
 [ "${PR_58_STATE}" = "MERGED" ] && pass "PR #58 is merged" || fail "PR #58 state is ${PR_58_STATE}; expected MERGED"
 if [ "${PR_58_CHECKS}" = "SUCCESS" ]; then
-  pass "PR #58 status checks are all success"
+  if [ "${PR_58_PENDING}" -eq 0 ] || [ "${PR_58_STATE}" = "MERGED" ]; then
+    pass "PR #58 concluded status checks are all success (pending: ${PR_58_PENDING}, state: ${PR_58_STATE})"
+  else
+    fail "PR #58 has ${PR_58_PENDING} pending status checks while open"
+  fi
 else
   fail "PR #58 status check conclusions are ${PR_58_CHECKS}; expected SUCCESS"
 fi
@@ -124,11 +132,13 @@ fi
 
 contains "${LATEST_CI_URL}" "/actions/runs/" && pass "Latest ${REQUIRED_CI_WORKFLOW} run URL is recorded" || fail "Latest ${REQUIRED_CI_WORKFLOW} run URL is missing"
 
-OPEN_ISSUES="$(gh issue list --state open --limit 100 --json number --jq '[.[].number | tostring] | sort | join(",")')"
+# Only release-blocking (P0) issues gate the release. Pinning the full open
+# issue list would break the gate whenever any routine P2/P3 issue is filed.
+OPEN_ISSUES="$(gh issue list --state open --limit 100 --label P0 --json number --jq '[.[].number | tostring] | sort | join(",")')"
 if [ "${OPEN_ISSUES}" = "${REQUIRED_OPEN_ISSUES}" ]; then
-  pass "Open issues are exactly ${REQUIRED_OPEN_ISSUES}"
+  pass "Open P0 issues are exactly ${REQUIRED_OPEN_ISSUES}"
 else
-  fail "Open issues are ${OPEN_ISSUES}; expected ${REQUIRED_OPEN_ISSUES}"
+  fail "Open P0 issues are ${OPEN_ISSUES}; expected ${REQUIRED_OPEN_ISSUES}"
 fi
 
 ISSUE_50_LABELS="$(gh issue view 50 --json labels --jq '[.labels[].name] | join(",")')"

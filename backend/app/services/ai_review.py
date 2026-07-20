@@ -78,9 +78,7 @@ class AIReviewResult:
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
-        data["issues"] = [
-            {**asdict(i), "severity": i.severity.value} for i in self.issues
-        ]
+        data["issues"] = [{**asdict(i), "severity": i.severity.value} for i in self.issues]
         data["overall_risk"] = self.overall_risk.value
         return data
 
@@ -168,14 +166,14 @@ class AIReviewService:
     ) -> None:
         settings = get_settings()
         self._mode = (mode or os.getenv("AI_REVIEW_MODE", "stub") or "stub").lower()
+        if self._mode not in {"stub", "real"}:
+            raise RuntimeError(f"AI_REVIEW_MODE must be 'stub' or 'real', got {self._mode!r}")
         self._api_key = settings.claude_api_key.get_secret_value()
         if settings.is_production:
             if self._mode == "stub":
                 raise RuntimeError("AI_REVIEW_MODE=stub is disabled when APP_ENV=production")
             if self._api_key == "sk-ant-replace-me" or not self._api_key.startswith("sk-ant-"):
-                raise RuntimeError(
-                    "CLAUDE_API_KEY must be configured when APP_ENV=production"
-                )
+                raise RuntimeError("CLAUDE_API_KEY must be configured when APP_ENV=production")
         self._client = anthropic_client
         self._detector = detector or SensitiveDetector()
         self._model_id = model_id or settings.claude_model
@@ -187,9 +185,7 @@ class AIReviewService:
     # Public API
     # ------------------------------------------------------------------
 
-    async def review_contract(
-        self, text: str, contract_type: str
-    ) -> AIReviewResult:
+    async def review_contract(self, text: str, contract_type: str) -> AIReviewResult:
         """Return a structured AI review for ``text`` of ``contract_type``."""
         if not text or not text.strip():
             raise AIReviewServiceError("contract text is empty")
@@ -251,8 +247,14 @@ class AIReviewService:
         """
         issues: list[dict[str, Any]] = []
 
-        def add(code: str, title: str, sev: RiskLevel, desc: str,
-                clause: str | None = None, action: str | None = None) -> None:
+        def add(
+            code: str,
+            title: str,
+            sev: RiskLevel,
+            desc: str,
+            clause: str | None = None,
+            action: str | None = None,
+        ) -> None:
             issues.append(
                 {
                     "code": code,

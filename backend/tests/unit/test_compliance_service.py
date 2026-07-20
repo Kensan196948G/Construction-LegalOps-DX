@@ -176,6 +176,37 @@ class TestGetResult:
         assert "disclaimer" in result
         assert "checked_at" in result
 
+    async def test_checklist_codes_filters_findings_and_overall_status(self) -> None:
+        contract = _make_contract()
+        session = _execute_returning(contract)
+        actor = _make_actor()
+
+        matched = MagicMock()
+        matched.code = "KEN19-1"
+        matched.title = "工事内容"
+        matched.severity = "warn"
+        matched.description = "工事内容の記載が必要です"
+        matched.citation = "建設業法第19条1号"
+
+        excluded = MagicMock()
+        excluded.code = "SUBCON-60"
+        excluded.title = "下請代金支払"
+        excluded.severity = "block"
+        excluded.description = "60日以内の支払が必要です"
+        excluded.citation = "下請法第2条の2"
+
+        with patch("app.services.compliance_checker.ComplianceChecker") as MockChecker:
+            instance = MockChecker.return_value
+            instance.check = AsyncMock(return_value=[matched, excluded])
+            result = await compliance_service.get_result(
+                session, contract_id=1, viewer=actor, checklist_codes=["KEN19-1"]
+            )
+
+        assert result is not None
+        assert [f["rule_id"] for f in result["findings"]] == ["KEN19-1"]
+        # The excluded "block" finding must not leak into overall_status.
+        assert result["overall_status"] != "fail"
+
     async def test_returns_result_with_no_findings(self) -> None:
         contract = _make_contract()
         session = _execute_returning(contract)
