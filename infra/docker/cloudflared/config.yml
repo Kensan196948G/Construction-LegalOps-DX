@@ -1,0 +1,18 @@
+# cloudflared ingress config for the legalops-prod tunnel.
+#
+# The tunnel is run with a credentials file (not --token) so ingress rules are
+# defined HERE rather than in the Cloudflare dashboard. A token-run tunnel with
+# no dashboard public-hostname returns 503 for every HTTP request, which is the
+# failure this file fixes.
+#
+# The credentials file is a secret and is bind-mounted from the host at deploy
+# time (see docker-compose.cloudflare-tunnel.yml); it is never committed.
+
+tunnel: 3e1bddee-c527-4351-a4e0-8d37f3b9855a
+credentials-file: /etc/cloudflared/creds.json
+
+ingress:
+  - hostname: legalops.mirai-dx-platform.com
+    service: http://nginx:80
+  # Everything else is refused rather than silently served.
+  - service: http_status:404
