@@ -82,16 +82,19 @@ services:
       JWT_SECRET: ${JWT_SECRET:?required in production}
       ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:?required in production}
       ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:?required in production}
-      ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:?required in production}
+      # Optional: unused when EDGE_AUTH_BOUNDARY=cloudflare-access (no Entra SSO)
+      ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:-}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY:?required in production}
-      HENNGE_TENANT_ID: ${HENNGE_TENANT_ID:?required in production}
-      HENNGE_API_KEY: ${HENNGE_API_KEY:?required in production}
+      # Optional: HENNGE One is not contracted for this deployment
+      HENNGE_TENANT_ID: ${HENNGE_TENANT_ID:-}
+      HENNGE_API_KEY: ${HENNGE_API_KEY:-}
       # Production fail-closed guards reject stub modes at call time; the
       # overlay must pin every integration mode explicitly (default is stub).
       SSO_MODE: ${SSO_MODE:?required in production}
       AI_REVIEW_MODE: ${AI_REVIEW_MODE:?required in production}
       SHAREPOINT_MODE: ${SHAREPOINT_MODE:?required in production}
-      NOTIFICATION_MODE: ${NOTIFICATION_MODE:?required in production}
+      NOTIFY_MODE: ${NOTIFY_MODE:?required in production}
+      EDGE_AUTH_BOUNDARY: ${EDGE_AUTH_BOUNDARY:-}
     # 本番では nginx 越しでのみ公開
     ports: !reset []
     read_only: true
@@ -120,7 +123,8 @@ services:
       SSO_MODE: ${SSO_MODE:?required in production}
       AI_REVIEW_MODE: ${AI_REVIEW_MODE:?required in production}
       SHAREPOINT_MODE: ${SHAREPOINT_MODE:?required in production}
-      NOTIFICATION_MODE: ${NOTIFICATION_MODE:?required in production}
+      NOTIFY_MODE: ${NOTIFY_MODE:?required in production}
+      EDGE_AUTH_BOUNDARY: ${EDGE_AUTH_BOUNDARY:-}
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
