@@ -47,34 +47,38 @@ function toFindingStatus(severity: string | null | undefined): CStatus {
   return "warning"; // default: unchecked = needs review
 }
 
+function categoryLabel(category: string): string {
+  const labels: Record<string, string> = {
+    construction_law: "建設業法",
+    subcontract_act: "下請法",
+    others: "その他法令",
+  };
+  return labels[category] ?? category;
+}
+
 async function getComplianceState(params: SearchParams) {
   const cleanup = await bindServerSession();
   try {
-    const result = await complianceApi.checklists({ page: 1, page_size: 100 });
+    const checklists = await complianceApi.checklists({ page: 1, page_size: 100 });
 
-    const frameworks: Framework[] = result.items.map((cl) => {
-      const total = cl.items.length;
-      // Without run results, all items are "not yet checked" (na)
+    const frameworks: Framework[] = checklists.map((cl) => {
       return {
         id: String(cl.id),
         label: cl.name,
         passed: 0,
         failed: 0,
-        na: total,
+        na: 1,
       };
     });
 
-    // Flatten all checklist items as findings
-    const allFindings: Finding[] = result.items.flatMap((cl) =>
-      cl.items.map((item) => ({
-        id: String(item.id),
-        law: cl.name,
-        item: item.title,
-        status: toFindingStatus(item.severity ?? null),
-        lastCheck: "—",
-        detail: item.description ?? "",
-      })),
-    );
+    const allFindings: Finding[] = checklists.map((cl) => ({
+      id: String(cl.id),
+      law: categoryLabel(cl.category),
+      item: cl.name,
+      status: toFindingStatus(null),
+      lastCheck: "—",
+      detail: cl.description ?? "",
+    }));
 
     // Client-side filters
     const filtered = allFindings.filter((f) => {

@@ -184,6 +184,15 @@ export const userSchema = z.object({
 });
 export type User = z.infer<typeof userSchema>;
 
+export const userSyncJobSchema = z.object({
+  job_id: z.string().min(1),
+  status: z.enum(["queued", "running", "completed", "failed"]),
+  triggered_by: idSchema.optional().nullable(),
+  queued_at: datetimeSchema,
+  note: z.string().optional().nullable(),
+});
+export type UserSyncJob = z.infer<typeof userSyncJobSchema>;
+
 // ---------------------------------------------------------------------------
 // Attachment
 // ---------------------------------------------------------------------------
@@ -440,9 +449,11 @@ export const complianceChecklistItemSchema = z.object({
 });
 export const complianceChecklistSchema = z.object({
   id: idSchema,
+  code: z.string(),
   name: z.string(),
+  category: z.string(),
   contract_type: contractTypeEnum.or(z.string()).optional().nullable(),
-  items: z.array(complianceChecklistItemSchema),
+  description: z.string().optional().nullable(),
   is_active: z.boolean().default(true),
 });
 export type ComplianceChecklist = z.infer<typeof complianceChecklistSchema>;
@@ -452,14 +463,29 @@ export const complianceRunResultSchema = z.object({
   passed: z.boolean(),
   note: z.string().optional(),
 });
-export const complianceRunSchema = z.object({
-  id: idSchema,
+export const complianceFindingSchema = z.object({
+  rule_id: z.string(),
+  rule_name: z.string(),
+  severity: z.enum(["info", "low", "medium", "high", "critical"]),
+  status: z.enum(["pass", "fail", "warning", "skipped"]),
+  message: z.string(),
+  clause_seq: z.number().int().optional().nullable(),
+  citations: z.array(z.string()).default([]),
+});
+export const complianceCheckResultSchema = z.object({
   contract_id: idSchema,
-  checklist_id: idSchema,
-  status: z.enum(["queued", "running", "completed", "failed"]),
-  results: z.array(complianceRunResultSchema).optional(),
-  started_at: datetimeSchema.optional().nullable(),
-  finished_at: datetimeSchema.optional().nullable(),
+  checked_at: datetimeSchema,
+  overall_status: z.enum(["pass", "fail", "warning", "skipped"]),
+  findings: z.array(complianceFindingSchema).default([]),
+  disclaimer: z.string(),
+});
+export type ComplianceCheckResult = z.infer<typeof complianceCheckResultSchema>;
+export const complianceRunSchema = z.object({
+  job_id: z.string().min(1),
+  contract_id: idSchema,
+  accepted_at: datetimeSchema,
+  status: z.enum(["queued", "running", "done", "failed"]),
+  disclaimer: z.string(),
 });
 export type ComplianceRun = z.infer<typeof complianceRunSchema>;
 
