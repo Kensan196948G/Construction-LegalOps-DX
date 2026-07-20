@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 
 import { refreshAccessToken } from "@/lib/auth/refresh-token";
@@ -109,26 +110,95 @@ export const authConfig = {
 
   providers: [
     // -------------------------------------------------------------------------
-    // Microsoft Entra ID via HENNGE One (OIDC)
+    // Cloudflare Access (edge authentication) — primary provider.
     //
-    // `issuer` には HENNGE One 側 discovery URL から導出される issuer 値を
-    // env で渡す。`AUTH_MICROSOFT_ENTRA_ID_ISSUER` が未設定の場合は next-auth が
-    // 既定の Microsoft endpoint にフォールバックする。
+    // Cloudflare Access authenticates the user at the edge (email OTP + rule
+    // groups) and injects `Cf-Access-Jwt-Assertion` /
+    // `Cf-Access-Authenticated-User-Email` on every request that reaches the
+    // origin. The origin is only reachable through the tunnel behind Access,
+    // so those headers are trustworthy; the backend additionally verifies the
+    // JWT cryptographically (see backend `verify_access_jwt`, #63).
+    //
+    // authorize() reads the headers from the incoming callback request and
+    // forwards them to `/api/v1/auth/me`, which returns the resolved identity
+    // and RBAC role. No Microsoft / password login is involved.
     // -------------------------------------------------------------------------
-    MicrosoftEntraID({
-      clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
-      clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-      issuer: process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
-      authorization: {
-        params: {
-          // offline_access で refresh_token を取得
-          scope: "openid profile email offline_access",
-          // HENNGE One 要件: 再認証を強制したい場合に CTO 側で `prompt=login` を渡せるよう
-          // 環境変数で上書き可能にする
-          prompt: process.env.AUTH_MICROSOFT_ENTRA_ID_PROMPT,
-        },
+    Credentials({
+      id: "cloudflare-access",
+      name: "Cloudflare Access",
+      credentials: {},
+      async authorize(_credentials, request) {
+        const assertion = request.headers.get("cf-access-jwt-assertion");
+        const email = request.headers.get("cf-access-authenticated-user-email");
+        if (!assertion || !email) {
+          // No Access identity on the request → refuse (fail-closed).
+          return null;
+        }
+
+        const baseUrl =
+          process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
+        if (!baseUrl) return null;
+
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5_000);
+          const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/auth/me`, {
+            method: "GET",
+            headers: {
+              // Forward the edge-injected Access identity; the backend verifies
+              // the assertion against Cloudflare's public certs.
+              "Cf-Access-Jwt-Assertion": assertion,
+              "Cf-Access-Authenticated-User-Email": email,
+              Accept: "application/json",
+            },
+            cache: "no-store",
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (!res.ok) return null;
+          const body = (await res.json()) as {
+            id?: string;
+            email?: string;
+            name?: string;
+            role?: string;
+            department_id?: string | null;
+          };
+          return {
+            id: body.id ?? email,
+            email: body.email ?? email,
+            name: body.name ?? email,
+            // carried into the jwt callback below
+            role: normalizeRole(body.role),
+            department_id: body.department_id ?? null,
+          } as unknown as import("next-auth").User;
+        } catch {
+          return null;
+        }
       },
     }),
+
+    // -------------------------------------------------------------------------
+    // Microsoft Entra ID via HENNGE One (OIDC) — retained but only registered
+    // when a real client id is configured. This deployment authenticates via
+    // Cloudflare Access, so it stays dormant unless Entra is explicitly set up.
+    // -------------------------------------------------------------------------
+    ...(process.env.AUTH_MICROSOFT_ENTRA_ID_ID &&
+    process.env.AUTH_MICROSOFT_ENTRA_ID_ID !==
+      "00000000-0000-0000-0000-000000000000"
+      ? [
+          MicrosoftEntraID({
+            clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
+            clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+            issuer: process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
+            authorization: {
+              params: {
+                scope: "openid profile email offline_access",
+                prompt: process.env.AUTH_MICROSOFT_ENTRA_ID_PROMPT,
+              },
+            },
+          }),
+        ]
+      : []),
   ],
 
   callbacks: {
@@ -160,6 +230,35 @@ export const authConfig = {
      * - 通常リクエスト: access_token が期限切れ手前なら refresh する。
      */
     async jwt({ token, account, user }) {
+      // --- Cloudflare Access sign-in (Credentials provider) ---
+      // No OAuth `account`; the user object already carries the backend-resolved
+      // role/department from authorize(). The session is re-established from the
+      // edge identity on each sign-in, so no refresh_token bookkeeping is needed.
+      if (user && !account) {
+        const u = user as unknown as {
+          id?: string;
+          role?: unknown;
+          department_id?: string | null;
+        };
+        token.role = normalizeRole(u.role);
+        token.department_id = u.department_id ?? null;
+        if (u.id) token.sub = u.id;
+        token.error = undefined;
+        token.auth_method = "cloudflare-access";
+        // Access sessions are gated by Cloudflare Access at the edge; give the
+        // app JWT a short lifetime so revocation at Access propagates quickly.
+        token.expires_at = Math.floor(Date.now() / 1000) + 60 * 60;
+        return token;
+      }
+
+      // Access sessions carry no OAuth refresh_token. When the short-lived app
+      // JWT lapses, let the request fall through to middleware, which re-signs
+      // the user in from the still-valid edge Access headers — never a refresh
+      // error loop.
+      if (token.auth_method === "cloudflare-access") {
+        return token;
+      }
+
       // --- 初回サインイン ---
       if (account) {
         token.id_token = account.id_token;

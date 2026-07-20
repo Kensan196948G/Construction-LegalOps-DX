@@ -63,5 +63,10 @@ declare module "next-auth/jwt" {
      * session callback でクライアントへ伝搬される。
      */
     error?: string;
+    /**
+     * 認証方式。`"cloudflare-access"` の場合は OAuth refresh を行わず、
+     * 期限切れ時は middleware がエッジの Access identity から再サインインする。
+     */
+    auth_method?: string;
   }
 }
