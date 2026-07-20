@@ -197,8 +197,19 @@ services:
     container_name: legalops-celery-beat
     <<: *restart
     user: "10001:10001"
+    # Write the schedule DB and pidfile to the writable tmpfs, not the CWD:
+    # the prod overlay mounts the root filesystem read-only, so the default
+    # ./celerybeat-schedule path fails with [Errno 13] Permission denied.
     command:
-      ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
+      [
+        "celery",
+        "-A",
+        "app.worker.celery_app",
+        "beat",
+        "--loglevel=info",
+        "--schedule=/tmp/celerybeat-schedule",
+        "--pidfile=/tmp/celerybeat.pid",
+      ]
     env_file:
       - ../../.env
     environment:
