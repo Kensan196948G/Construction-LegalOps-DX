@@ -167,6 +167,10 @@ services:
       AUTH_URL: ${AUTH_URL:?required in production}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       AUTH_SECRET: ${AUTH_SECRET:?required in production}
+      # Server-side NextAuth authorize() reaches the backend internally so the
+      # frontend→backend call bypasses Cloudflare Access (the forwarded
+      # Cf-Access-* headers are verified by the backend instead).
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://nginx}
     ports: !reset []
     read_only: true
     tmpfs:
