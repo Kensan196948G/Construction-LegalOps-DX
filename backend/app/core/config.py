@@ -109,6 +109,18 @@ class Settings(BaseSettings):
     )
     session_cookie_max_age: int = Field(default=3600, alias="SESSION_COOKIE_MAX_AGE")
 
+    # ----- Cloudflare Access edge authentication -----
+    # Required when production runs in Access-only mode:
+    #   APP_ENV=production SSO_MODE=stub EDGE_AUTH_BOUNDARY=cloudflare-access
+    # The issuer/team domain should include the scheme, e.g.
+    #   https://<team-name>.cloudflareaccess.com
+    cloudflare_access_issuer: str | None = Field(default=None, alias="CLOUDFLARE_ACCESS_ISSUER")
+    cloudflare_access_audience: str | None = Field(default=None, alias="CLOUDFLARE_ACCESS_AUD")
+    cloudflare_access_certs_url: str | None = Field(
+        default=None,
+        alias="CLOUDFLARE_ACCESS_CERTS_URL",
+    )
+
     # ----- CSP enforcement -----
     # True → enforce CSP; False → Content-Security-Policy-Report-Only.
     # Defaults to is_production so existing deploy configs are unaffected.

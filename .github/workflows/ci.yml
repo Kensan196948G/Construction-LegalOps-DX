@@ -269,6 +269,10 @@ jobs:
           AI_REVIEW_MODE: real
           SHAREPOINT_MODE: real
           NOTIFY_MODE: real
+          CLOUDFLARE_ACCESS_ISSUER: https://ci.cloudflareaccess.com
+          CLOUDFLARE_ACCESS_AUD: ci
+          AUTH_URL: https://ci.invalid
+          AUTH_SECRET: ci
           NEXT_PUBLIC_API_BASE_URL: https://ci.invalid
         run: |
           docker compose \

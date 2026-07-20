@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Image from "next/image";
 
 import { LoginForm } from "@/components/auth/login-form";
@@ -17,13 +18,20 @@ interface LoginPageProps {
 
 /**
  * 未認証ランディング。
- * - Entra ID (Microsoft) SSO を主、メール/パスワードを補助として `LoginForm` (Components Team) が描画。
- * - middleware が未認証アクセスを `/login?callbackUrl=...` に redirect する想定。
+ *
+ * 本デプロイの認証境界は Cloudflare Access。エッジで認証済みのリクエストには
+ * `Cf-Access-Authenticated-User-Email` が付与されるため、その場合は
+ * `LoginForm` が `cloudflare-access` provider へ自動サインインする。
+ * middleware が未認証アクセスを `/login?callbackUrl=...` に redirect する。
  */
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = (await searchParams) ?? {};
   const callbackUrl = params.callbackUrl ?? "/dashboard";
   const error = params.error;
+
+  const requestHeaders = await headers();
+  const accessEmail = requestHeaders.get("cf-access-authenticated-user-email");
+  const behindAccess = Boolean(accessEmail);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-muted/30 px-6 py-12">
@@ -47,11 +55,17 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <div className="rounded-lg border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">ログイン</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            会社の Microsoft アカウントでサインインしてください。
+            {behindAccess
+              ? `Cloudflare Access で認証されました（${accessEmail}）。サインインしています…`
+              : "このアプリは Cloudflare Access 経由でのみアクセスできます。"}
           </p>
 
           <div className="mt-6">
-            <LoginForm callbackUrl={callbackUrl} error={error} />
+            <LoginForm
+              callbackUrl={callbackUrl}
+              error={error}
+              behindAccess={behindAccess}
+            />
           </div>
         </div>
 

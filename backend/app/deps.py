@@ -7,6 +7,7 @@ Loop 4. The principal is built directly from the decoded JWT claims.
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -16,9 +17,11 @@ from fastapi import Depends, Header, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.exceptions import ForbiddenError, UnauthorizedError
 from app.core.security import decode_token
 from app.db.session import get_db
+from app.services.cloudflare_access import verify_access_jwt
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +83,69 @@ class CurrentUser:
 
 
 _bearer_scheme: Final[HTTPBearer] = HTTPBearer(auto_error=False)
+
+
+def _cloudflare_access_required() -> bool:
+    return (
+        (os.getenv("APP_ENV", settings.app_env) or "").lower() == "production"
+        and (os.getenv("SSO_MODE", "stub") or "").lower() == "stub"
+        and (os.getenv("EDGE_AUTH_BOUNDARY", "") or "").lower() == "cloudflare-access"
+    )
+
+
+def _role_from_claims(claims: dict[str, object]) -> Role:
+    role_claim = claims.get("role") or claims.get("roles")
+    if isinstance(role_claim, list):
+        role = str(role_claim[0]) if role_claim else ROLE_GUEST
+    elif isinstance(role_claim, str):
+        role = role_claim
+    else:
+        role = ROLE_GUEST
+    return role if role in ALL_ROLES else ROLE_GUEST
+
+
+def _department_ids_from_claims(claims: dict[str, object]) -> tuple[str, ...]:
+    dept_claim = claims.get("department_ids") or claims.get("departments") or []
+    if isinstance(dept_claim, list):
+        return tuple(str(d) for d in dept_claim)
+    if isinstance(dept_claim, str):
+        return (dept_claim,)
+    return ()
+
+
+async def _claims_from_cloudflare_access(
+    *,
+    assertion: str | None,
+    authenticated_email: str | None,
+) -> dict[str, object]:
+    if not assertion:
+        raise UnauthorizedError("Missing Cloudflare Access JWT header.")
+    if not authenticated_email:
+        raise UnauthorizedError("Missing Cloudflare Access authenticated email header.")
+    try:
+        access_claims = await verify_access_jwt(assertion)
+    except ValueError as exc:
+        raise UnauthorizedError(f"Invalid Cloudflare Access token: {exc}") from exc
+
+    token_email = access_claims.get("email")
+    if not isinstance(token_email, str) or not token_email.strip():
+        raise UnauthorizedError("Cloudflare Access token is missing email claim.")
+    normalized_token_email = token_email.strip().lower()
+    normalized_header_email = authenticated_email.strip().lower()
+    if normalized_header_email != normalized_token_email:
+        raise UnauthorizedError("Cloudflare Access email header does not match JWT.")
+
+    subject = access_claims.get("sub")
+    if not isinstance(subject, str) or not subject:
+        subject = normalized_token_email
+    return {
+        "sub": subject,
+        "email": normalized_token_email,
+        "role": ROLE_DRAFTER,
+        "department_ids": [],
+        "cf_access_aud": access_claims.get("aud"),
+        "cf_access_iss": access_claims.get("iss"),
+    }
 
 
 def _coerce_user_id(value: object) -> uuid.UUID | str:
@@ -235,6 +301,11 @@ async def _resolve_db_user_id(
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     session: AsyncSession = Depends(get_db),
+    cf_access_jwt_assertion: str | None = Header(default=None, alias="Cf-Access-Jwt-Assertion"),
+    cf_access_authenticated_user_email: str | None = Header(
+        default=None,
+        alias="Cf-Access-Authenticated-User-Email",
+    ),
 ) -> CurrentUser:
     """Decode the bearer token and build a :class:`CurrentUser`.
 
@@ -243,37 +314,25 @@ async def get_current_user(
     per-request dependency cache means this shares the request's session
     with the endpoint rather than opening a second one.
     """
-    if credentials is None or credentials.scheme.lower() != "bearer":
+    if _cloudflare_access_required():
+        claims = await _claims_from_cloudflare_access(
+            assertion=cf_access_jwt_assertion,
+            authenticated_email=cf_access_authenticated_user_email,
+        )
+    elif credentials is None or credentials.scheme.lower() != "bearer":
         raise UnauthorizedError("Missing or malformed Authorization header.")
-
-    try:
-        claims = decode_token(credentials.credentials)
-    except ValueError as exc:
-        raise UnauthorizedError(f"Invalid token: {exc}") from exc
+    else:
+        try:
+            claims = decode_token(credentials.credentials)
+        except ValueError as exc:
+            raise UnauthorizedError(f"Invalid token: {exc}") from exc
 
     subject = claims.get("sub")
     if not subject:
         raise UnauthorizedError("Token is missing 'sub' claim.")
 
-    role_claim = claims.get("role") or claims.get("roles")
-    if isinstance(role_claim, list):
-        role = str(role_claim[0]) if role_claim else ROLE_GUEST
-    elif isinstance(role_claim, str):
-        role = role_claim
-    else:
-        role = ROLE_GUEST
-
-    if role not in ALL_ROLES:
-        # Unknown role — degrade to guest rather than fail outright.
-        role = ROLE_GUEST
-
-    dept_claim = claims.get("department_ids") or claims.get("departments") or []
-    if isinstance(dept_claim, list):
-        department_ids = tuple(str(d) for d in dept_claim)
-    elif isinstance(dept_claim, str):
-        department_ids = (dept_claim,)
-    else:
-        department_ids = ()
+    role = _role_from_claims(claims)
+    department_ids = _department_ids_from_claims(claims)
 
     email = claims.get("email")
     email_str = email if isinstance(email, str) else None

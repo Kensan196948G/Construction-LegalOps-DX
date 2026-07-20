@@ -95,6 +95,8 @@ services:
       SHAREPOINT_MODE: ${SHAREPOINT_MODE:?required in production}
       NOTIFY_MODE: ${NOTIFY_MODE:?required in production}
       EDGE_AUTH_BOUNDARY: ${EDGE_AUTH_BOUNDARY:-}
+      CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:?required when EDGE_AUTH_BOUNDARY=cloudflare-access}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?required when EDGE_AUTH_BOUNDARY=cloudflare-access}
     # 本番では nginx 越しでのみ公開
     ports: !reset []
     read_only: true
@@ -125,6 +127,8 @@ services:
       SHAREPOINT_MODE: ${SHAREPOINT_MODE:?required in production}
       NOTIFY_MODE: ${NOTIFY_MODE:?required in production}
       EDGE_AUTH_BOUNDARY: ${EDGE_AUTH_BOUNDARY:-}
+      CLOUDFLARE_ACCESS_ISSUER: ${CLOUDFLARE_ACCESS_ISSUER:?required when EDGE_AUTH_BOUNDARY=cloudflare-access}
+      CLOUDFLARE_ACCESS_AUD: ${CLOUDFLARE_ACCESS_AUD:?required when EDGE_AUTH_BOUNDARY=cloudflare-access}
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -158,6 +162,11 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:?required in production}
       TZ: ${TZ:-Asia/Tokyo}
+      # NextAuth: pin the public origin so callback URLs use the real host
+      # instead of the internal 0.0.0.0:3000 bind address.
+      AUTH_URL: ${AUTH_URL:?required in production}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
+      AUTH_SECRET: ${AUTH_SECRET:?required in production}
     ports: !reset []
     read_only: true
     tmpfs:
