@@ -135,7 +135,12 @@ async def start_graph_sync(
     *,
     triggered_by: int | None,
 ) -> UserSyncJob:
-    """Queue a Microsoft Graph sync job placeholder without external writes."""
+    """Queue a local Microsoft Graph sync job handle without external writes.
+
+    Production Graph execution is intentionally held behind the #23/#50 human
+    gates. This function returns an auditable queued handle and never contacts
+    Microsoft Graph by itself.
+    """
     _ = session
     queued_at = datetime.now(UTC)
     return UserSyncJob(

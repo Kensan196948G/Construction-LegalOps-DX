@@ -38,7 +38,7 @@ class UploadInitResponse(BaseModel):
     """Response of ``POST /uploads/init``."""
 
     upload_id: str
-    upload_url: str
+    upload_url: str | None = None
     upload_token: str
     storage: AttachmentStorage = AttachmentStorage.SHAREPOINT
     expires_in: int = 3600

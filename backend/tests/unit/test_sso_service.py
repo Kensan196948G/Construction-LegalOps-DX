@@ -62,6 +62,9 @@ def _make_settings(
     entra_scopes: str = "openid profile email",
 ) -> MagicMock:
     s = MagicMock()
+    # MagicMock attributes are truthy by default; the production stub guard in
+    # SSOService.__init__ must not fire for unit tests running in stub mode.
+    s.is_production = False
     secret_mock = MagicMock()
     secret_mock.get_secret_value.return_value = jwt_secret
     s.jwt_secret = secret_mock

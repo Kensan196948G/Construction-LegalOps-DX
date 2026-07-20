@@ -64,7 +64,9 @@ class ComplianceCheckResult(BaseModel):
 class ComplianceRunResponse(BaseModel):
     """Response of ``POST /compliance/checks/{contract_id}/run``.
 
-    The run is asynchronous; clients should poll ``GET`` for the result.
+    The response remains job-shaped for client compatibility. The current
+    implementation completes the check inline and clients can poll ``GET`` for
+    the canonical result view.
     """
 
     job_id: str

@@ -3,7 +3,7 @@
 Covers:
 - list_checklists : category / contract_type filter branches
 - get_result      : contract not found / snapshot build / ComplianceChecker execution
-- start_run       : contract not found / job_id generation
+- start_run       : contract not found / checker execution / job_id generation
 """
 
 from __future__ import annotations
@@ -389,18 +389,22 @@ class TestStartRun:
         with pytest.raises(LookupError, match="not found"):
             await compliance_service.start_run(session, contract_id=999, actor=actor)
 
-    async def test_returns_job_handle_when_contract_found(self) -> None:
+    async def test_returns_completed_job_handle_when_contract_found(self) -> None:
         contract = _make_contract()
         session = _execute_returning(contract)
         actor = _make_actor()
 
-        result = await compliance_service.start_run(session, contract_id=1, actor=actor)
+        with patch("app.services.compliance_checker.ComplianceChecker") as MockChecker:
+            instance = MockChecker.return_value
+            instance.check = AsyncMock(return_value=[])
+            result = await compliance_service.start_run(session, contract_id=1, actor=actor)
 
         assert result["contract_id"] == 1
-        assert result["status"] == "queued"
+        assert result["status"] == "done"
         assert "job_id" in result
         assert "accepted_at" in result
         assert "disclaimer" in result
+        instance.check.assert_awaited_once()
 
     async def test_job_id_is_valid_uuid_string(self) -> None:
         """job_id returned by start_run is a valid UUID string."""
@@ -445,14 +449,18 @@ class TestStartRun:
         session = _execute_returning(contract)
         actor = _make_actor()
 
-        result = await compliance_service.start_run(
-            session,
-            contract_id=1,
-            checklist_codes=["建設業法19条", "下請法3条"],
-            actor=actor,
-        )
+        with patch("app.services.compliance_checker.ComplianceChecker") as MockChecker:
+            instance = MockChecker.return_value
+            instance.check = AsyncMock(return_value=[])
+            result = await compliance_service.start_run(
+                session,
+                contract_id=1,
+                checklist_codes=["建設業法19条", "下請法3条"],
+                actor=actor,
+            )
 
-        assert result["status"] == "queued"
+        assert result["status"] == "done"
+        instance.check.assert_awaited_once()
 
     async def test_disclaimer_in_job_handle(self) -> None:
         """Job handle always carries the legal disclaimer."""

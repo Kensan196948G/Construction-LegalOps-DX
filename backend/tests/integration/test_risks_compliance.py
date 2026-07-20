@@ -132,7 +132,7 @@ async def test_get_compliance_result_not_found(client, auth_headers_admin):
 
 
 async def test_run_compliance_check_accepted(client, auth_headers_admin, auth_headers_legal):
-    """POST /compliance/checks/{id}/run → 202 with job_id."""
+    """POST /compliance/checks/{id}/run → 202 with a completed job handle."""
     contract_id = await _create_contract(client, auth_headers_legal)
     r = await client.post(
         f"/api/v1/compliance/checks/{contract_id}/run",
@@ -142,7 +142,7 @@ async def test_run_compliance_check_accepted(client, auth_headers_admin, auth_he
     body = r.json()
     assert "job_id" in body
     assert body["contract_id"] == contract_id
-    assert body["status"] == "queued"
+    assert body["status"] == "done"
     assert "disclaimer" in body
 
 

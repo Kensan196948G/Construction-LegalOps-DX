@@ -5,6 +5,9 @@ Public API::
     async def parse(file_path: str, mime_type: str) -> ParsedDocument
     class FileParser: async def parse(...)
     class ParsedDocument: text, page_count, metadata, used_ocr, warnings
+
+Image-only PDFs must fail closed until real OCR is configured. The parser
+must not return placeholder OCR text to downstream legal review.
 """
 
 from __future__ import annotations
@@ -181,8 +184,8 @@ def test_parse_pdf_extracts_text(tmp_path: Path):
     assert doc.metadata["title"] == "TestTitle"
 
 
-def test_parse_pdf_page_extract_exception_adds_warning(tmp_path: Path):
-    """Arrange: page.extract_text raises. Act: _parse_pdf. Assert: warning added (lines 101-103)."""
+def test_parse_pdf_page_extract_exception_fails_closed_when_no_text(tmp_path: Path):
+    """Extract failures with no text must fail closed instead of returning OCR placeholders."""
     from unittest.mock import MagicMock, patch
 
     mock_page = MagicMock()
@@ -196,15 +199,14 @@ def test_parse_pdf_page_extract_exception_adds_warning(tmp_path: Path):
     p.write_bytes(b"%PDF fake")
 
     parser = fp.FileParser()
-    with patch("pypdf.PdfReader", return_value=mock_reader):
-        doc = parser._parse_pdf(p)
+    with pytest.raises(fp.FileParserError, match="extract failed"), patch(
+        "pypdf.PdfReader", return_value=mock_reader
+    ):
+        parser._parse_pdf(p)
 
-    assert any("extract failed" in w for w in doc.warnings)
-    assert doc.metadata["producer"] is None
 
-
-def test_parse_pdf_image_only_uses_ocr_stub(tmp_path: Path):
-    """All pages empty → image-only PDF → used_ocr=True, OCR stub text (lines 107-111)."""
+def test_parse_pdf_image_only_fails_closed_without_ocr_backend(tmp_path: Path):
+    """All pages empty -> image-only PDF -> FileParserError, no placeholder text."""
     from unittest.mock import MagicMock, patch
 
     mock_page = MagicMock()
@@ -218,12 +220,10 @@ def test_parse_pdf_image_only_uses_ocr_stub(tmp_path: Path):
     p.write_bytes(b"%PDF fake")
 
     parser = fp.FileParser(ocr_enabled=False)
-    with patch("pypdf.PdfReader", return_value=mock_reader):
-        doc = parser._parse_pdf(p)
-
-    assert doc.used_ocr is True
-    assert "OCR-STUB" in doc.text
-    assert any("image-only" in w for w in doc.warnings)
+    with pytest.raises(
+        fp.FileParserError, match="OCR backend is not configured"
+    ), patch("pypdf.PdfReader", return_value=mock_reader):
+        parser._parse_pdf(p)
 
 
 def test_parse_pdf_metadata_none_when_reader_metadata_absent(tmp_path: Path):
@@ -406,32 +406,18 @@ def test_parse_text_all_encodings_fail_raises(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# _ocr_stub — lines 178-181
+# _raise_ocr_unavailable
 # ---------------------------------------------------------------------------
 
 
-def test_ocr_stub_disabled_returns_stub_message(tmp_path: Path):
-    """Arrange: ocr_enabled=False. Act: _ocr_stub. Assert: OCR-STUB in result (line 178-179)."""
+def test_ocr_unavailable_raises_without_placeholder_text(tmp_path: Path):
+    """Arrange: image-only file. Act: OCR guard. Assert: fail-closed error."""
     p = tmp_path / "image.pdf"
     p.write_bytes(b"%PDF fake")
 
     parser = fp.FileParser(ocr_enabled=False)
-    result = parser._ocr_stub(p)
-
-    assert "OCR-STUB" in result
-    assert p.name in result
-
-
-def test_ocr_stub_enabled_returns_ocr_message(tmp_path: Path):
-    """Arrange: ocr_enabled=True. Act: _ocr_stub. Assert: OCR (not STUB) in result (line 181)."""
-    p = tmp_path / "scan.pdf"
-    p.write_bytes(b"%PDF fake")
-
-    parser = fp.FileParser(ocr_enabled=True)
-    result = parser._ocr_stub(p)
-
-    assert "[OCR]" in result
-    assert p.name in result
+    with pytest.raises(fp.FileParserError, match=r"image\.pdf"):
+        parser._raise_ocr_unavailable(p, warnings=["PDF appears image-only"])
 
 
 # ---------------------------------------------------------------------------

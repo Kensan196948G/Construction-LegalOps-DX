@@ -39,6 +39,31 @@ async def test_audit_log_created_on_contract_create(client, auth_headers_legal, 
     assert any(it["action"] == "contract.create" for it in items)
 
 
+async def test_user_sync_returns_queued_job_and_audit_log(client, auth_headers_admin):
+    """POST /users/sync remains queued locally and writes an audit trail."""
+    r_sync = await client.post("/api/v1/users/sync", headers=auth_headers_admin)
+
+    assert r_sync.status_code == 202
+    body = r_sync.json()
+    assert body["job_id"].startswith("graph-sync-")
+    assert body["status"] == "queued"
+    assert body["triggered_by"] is not None
+    assert "Production execution requires" in body["note"]
+
+    r_audit = await client.get(
+        "/api/v1/audit-logs?action=user.sync",
+        headers=auth_headers_admin,
+    )
+    assert r_audit.status_code == 200
+    items = r_audit.json().get("items", [])
+    sync_rows = [item for item in items if item["action"] == "user.sync"]
+    assert sync_rows
+    payload_after = sync_rows[-1]["payload"]["after"]
+    assert payload_after["job_id"] == body["job_id"]
+    assert payload_after["status"] == "queued"
+    assert payload_after["external_write"] is False
+
+
 async def test_hash_chain_is_continuous(client, auth_headers_admin):
     """Arrange: trigger multiple events. Act: fetch + verify. Assert: continuous."""
     # Arrange — generate some events via several creations

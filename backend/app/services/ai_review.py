@@ -168,12 +168,19 @@ class AIReviewService:
     ) -> None:
         settings = get_settings()
         self._mode = (mode or os.getenv("AI_REVIEW_MODE", "stub") or "stub").lower()
+        self._api_key = settings.claude_api_key.get_secret_value()
+        if settings.is_production:
+            if self._mode == "stub":
+                raise RuntimeError("AI_REVIEW_MODE=stub is disabled when APP_ENV=production")
+            if self._api_key == "sk-ant-replace-me" or not self._api_key.startswith("sk-ant-"):
+                raise RuntimeError(
+                    "CLAUDE_API_KEY must be configured when APP_ENV=production"
+                )
         self._client = anthropic_client
         self._detector = detector or SensitiveDetector()
         self._model_id = model_id or settings.claude_model
         self._max_tokens = settings.claude_max_tokens
         self._timeout = settings.claude_timeout_seconds
-        self._api_key = settings.claude_api_key.get_secret_value()
         self._breaker = _CircuitBreaker()
 
     # ------------------------------------------------------------------

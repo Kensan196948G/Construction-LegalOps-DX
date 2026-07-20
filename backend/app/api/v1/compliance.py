@@ -2,7 +2,7 @@
 
 - GET `/compliance/checks/{contract_id}` : 建設業法・下請法等の機械的チェック結果
 - GET `/compliance/checklists` : 適用可能なチェックリスト一覧
-- POST `/compliance/checks/{contract_id}/run` : チェックリスト適用 (非同期)
+- POST `/compliance/checks/{contract_id}/run` : チェックリスト適用 (即時実行 + job-shaped response)
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ async def get_compliance_result(
     "/checks/{contract_id}/run",
     response_model=ComplianceRunResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="チェックリスト適用 (非同期実行)",
+    summary="チェックリスト適用 (即時実行)",
 )
 async def run_compliance_check(
     contract_id: int,

@@ -2,8 +2,9 @@
 
 Extracts plain text from PDF, Word (``.docx``), and Excel (``.xlsx``)
 uploads so downstream services (AI review, clause extractor) can operate
-on a normalised string. OCR for image-only PDFs is intentionally a stub
-in Loop 2 — Loop 4 will integrate Azure AI Document Intelligence.
+on a normalised string. Image-only PDFs fail closed until a real OCR backend
+is explicitly approved and configured; placeholder OCR text must never flow
+into legal review.
 
 The parser is async at the API boundary (callers may stream large files
 from object storage) but the heavy lifting itself is synchronous — we
@@ -103,12 +104,12 @@ class FileParser:
                 pages_text.append("")
 
         body = "\n\n".join(p for p in pages_text if p.strip())
-        used_ocr = False
         if not body.strip():
-            # No extractable text — image-only PDF.
-            used_ocr = True
-            body = self._ocr_stub(path)
-            warnings.append("PDF appears image-only; OCR stub used")
+            # No extractable text — image-only PDF. Returning placeholder OCR
+            # text would make downstream legal review look evidence-backed, so
+            # fail closed until a real OCR provider is configured.
+            warnings.append("PDF appears image-only; OCR backend is not configured")
+            self._raise_ocr_unavailable(path, warnings=warnings)
 
         meta = {
             "producer": getattr(reader.metadata, "producer", None) if reader.metadata else None,
@@ -119,7 +120,7 @@ class FileParser:
             text=body,
             page_count=len(reader.pages),
             metadata=meta,
-            used_ocr=used_ocr,
+            used_ocr=False,
             warnings=warnings,
         )
 
@@ -173,12 +174,13 @@ class FileParser:
                 continue
         raise FileParserError(f"could not decode text file: {path}")
 
-    def _ocr_stub(self, path: Path) -> str:
-        """Placeholder OCR — Loop 4 swaps in Azure Document Intelligence."""
-        if not self.ocr_enabled:
-            return f"[OCR-STUB] {path.name} はテキスト抽出不可。Loop 4 で OCR 連携予定。"
-        # When enabled in the future, route to the real backend.
-        return f"[OCR] {path.name} (real OCR not wired in Loop 2)"
+    def _raise_ocr_unavailable(self, path: Path, *, warnings: list[str] | None = None) -> None:
+        """Fail closed for image-only PDFs until real OCR is wired."""
+        detail = "; ".join(warnings or [])
+        suffix = f" ({detail})" if detail else ""
+        raise FileParserError(
+            f"OCR backend is not configured for image-only PDF: {path.name}{suffix}"
+        )
 
 
 # Module-level convenience wrapper.

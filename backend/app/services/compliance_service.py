@@ -189,7 +189,7 @@ async def get_result(
 
 
 # ---------------------------------------------------------------------------
-# Start async run (job dispatch stub — future: Celery / ARQ task)
+# Start compliance run
 # ---------------------------------------------------------------------------
 
 
@@ -200,9 +200,11 @@ async def start_run(
     checklist_codes: list[str] | None = None,
     actor: Any,
 ) -> dict[str, Any]:
-    """Accept a compliance check run request and return a job handle.
+    """Run the compliance checks for a contract and return a completed job handle.
 
-    The actual async execution is deferred (future implementation).
+    The API keeps a job-shaped response for client compatibility. Until a
+    durable worker queue is approved, this path executes the same checker used
+    by ``get_result`` so callers do not receive a false queued state.
     Raises ``LookupError`` when the contract does not exist.
     """
     stmt = select(Contract).where(
@@ -214,10 +216,14 @@ async def start_run(
     if contract is None:
         raise LookupError(f"Contract id={contract_id} not found")
 
+    result = await get_result(session, contract_id=contract_id, viewer=actor)
+    if result is None:
+        raise LookupError(f"Contract id={contract_id} not found")
+
     return {
         "job_id": str(uuid4()),
         "contract_id": contract_id,
         "accepted_at": datetime.now(UTC),
-        "status": "queued",
+        "status": "done",
         "disclaimer": _COMPLIANCE_DISCLAIMER,
     }

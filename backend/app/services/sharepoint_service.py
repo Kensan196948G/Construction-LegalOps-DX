@@ -74,7 +74,10 @@ class SharePointService:
         site_url: str | None = None,
         drive_id: str | None = None,
     ) -> None:
+        settings = get_settings()
         self._mode = (mode or os.getenv("SHAREPOINT_MODE", "stub") or "stub").lower()
+        if settings.is_production and self._mode == "stub":
+            raise RuntimeError("SHAREPOINT_MODE=stub is disabled when APP_ENV=production")
         self._stub_root = stub_root or _DEFAULT_STUB_ROOT
         self._site_url = site_url or os.getenv(
             "SHAREPOINT_SITE_URL", "https://contoso.sharepoint.com/sites/legalops"
