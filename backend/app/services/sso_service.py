@@ -49,15 +49,9 @@ from app.models.enums import UserRole
 
 logger = structlog.get_logger(__name__)
 
-_AUTHORIZE_PATH: Final[str] = (
-    "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
-)
-_TOKEN_PATH: Final[str] = (
-    "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
-)
-_JWKS_PATH: Final[str] = (
-    "https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys"
-)
+_AUTHORIZE_PATH: Final[str] = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize"
+_TOKEN_PATH: Final[str] = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
+_JWKS_PATH: Final[str] = "https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys"
 
 # Conservative HTTP timeout (seconds) for *all* outbound calls so that a
 # slow IdP can't tie up worker threads.
@@ -104,8 +98,20 @@ class SSOService:
     def __init__(self, *, mode: str | None = None) -> None:
         self._settings = get_settings()
         self._mode = (mode or os.getenv("SSO_MODE", "stub") or "stub").lower()
-        if self._settings.is_production and self._mode == "stub":
-            raise RuntimeError("SSO_MODE=stub is disabled when APP_ENV=production")
+        # Stub identities carry no real authentication. They are allowed in
+        # production ONLY when the operator explicitly declares that a
+        # Cloudflare Access edge boundary performs the actual authN
+        # (user decision 2026-07-20: Access-only auth, no Entra ID).
+        if (
+            self._settings.is_production
+            and self._mode == "stub"
+            and os.getenv("EDGE_AUTH_BOUNDARY", "").lower() != "cloudflare-access"
+        ):
+            raise RuntimeError(
+                "SSO_MODE=stub is disabled when APP_ENV=production "
+                "(set EDGE_AUTH_BOUNDARY=cloudflare-access only when a "
+                "Cloudflare Access application authenticates every request)"
+            )
         self._secret = self._settings.jwt_secret.get_secret_value().encode("utf-8")
         self._issuer = self._settings.jwt_issuer
         self._audience = self._settings.jwt_audience
@@ -200,9 +206,7 @@ class SSOService:
             "nonce": secrets.token_urlsafe(8),
         }
         id_token = _hs256_encode(claims, self._secret)
-        access_token = _hs256_encode(
-            {**claims, "typ": "access"}, self._secret
-        )
+        access_token = _hs256_encode({**claims, "typ": "access"}, self._secret)
         refresh_token = secrets.token_urlsafe(32)
         logger.info("sso.exchange_code.stub", upn=upn)
         return Token(
@@ -370,9 +374,7 @@ class SSOService:
 
     def _token_request(self, form: dict[str, str]) -> dict[str, Any]:
         url = self._token_endpoint()
-        body = urlencode({k: v for k, v in form.items() if v is not None}).encode(
-            "utf-8"
-        )
+        body = urlencode({k: v for k, v in form.items() if v is not None}).encode("utf-8")
         req = urllib.request.Request(  # noqa: S310 — endpoint is operator-controlled
             url,
             data=body,

@@ -71,13 +71,21 @@ class NotificationService:
     ) -> None:
         settings = get_settings()
         self._mode = (mode or os.getenv("NOTIFY_MODE", "stub") or "stub").lower()
+        if self._mode not in {"stub", "real", "queued", "disabled"}:
+            raise RuntimeError(
+                "NOTIFY_MODE must be 'stub', 'real', 'queued', or 'disabled', "
+                f"got {self._mode!r}"
+            )
         if settings.is_production and self._mode == "stub":
-            raise RuntimeError("NOTIFY_MODE=stub is disabled when APP_ENV=production")
+            raise RuntimeError(
+                "NOTIFY_MODE=stub is disabled when APP_ENV=production "
+                "(use NOTIFY_MODE=disabled for in-app-only delivery)"
+            )
         self._graph_sender = graph_sender or os.getenv("EXCHANGE_SENDER_UPN", "").strip()
         self._teams_webhook_url = teams_webhook_url or os.getenv("TEAMS_WEBHOOK_URL", "").strip()
-        self._desknets_webhook_url = desknets_webhook_url or os.getenv(
-            "DESKNETS_WEBHOOK_URL", ""
-        ).strip()
+        self._desknets_webhook_url = (
+            desknets_webhook_url or os.getenv("DESKNETS_WEBHOOK_URL", "").strip()
+        )
         self._graph_access_token: str | None = None
         self._sent: list[NotificationRecord] = []
 
@@ -101,7 +109,11 @@ class NotificationService:
         record = NotificationRecord(
             id=uuid4(),
             channel=NotificationChannel.MAIL,
-            status=NotificationStatus.SENT if self._mode == "stub" else NotificationStatus.QUEUED,
+            status=(
+                NotificationStatus.SENT
+                if self._mode in ("stub", "disabled")
+                else NotificationStatus.QUEUED
+            ),
             to=tuple(to),
             subject=subject,
             body=body,
@@ -134,7 +146,11 @@ class NotificationService:
         record = NotificationRecord(
             id=uuid4(),
             channel=NotificationChannel.TEAMS,
-            status=NotificationStatus.SENT if self._mode == "stub" else NotificationStatus.QUEUED,
+            status=(
+                NotificationStatus.SENT
+                if self._mode in ("stub", "disabled")
+                else NotificationStatus.QUEUED
+            ),
             to=(channel_or_user,),
             subject=title,
             body=body,
@@ -204,7 +220,11 @@ class NotificationService:
         record = NotificationRecord(
             id=uuid4(),
             channel=NotificationChannel.DESKNETS,
-            status=NotificationStatus.SENT if self._mode == "stub" else NotificationStatus.QUEUED,
+            status=(
+                NotificationStatus.SENT
+                if self._mode in ("stub", "disabled")
+                else NotificationStatus.QUEUED
+            ),
             to=(upn,),
             subject=subject,
             body=body,
@@ -248,9 +268,7 @@ class NotificationService:
         message = {
             "subject": record.subject,
             "body": {"contentType": "Text", "content": record.body},
-            "toRecipients": [
-                {"emailAddress": {"address": recipient}} for recipient in record.to
-            ],
+            "toRecipients": [{"emailAddress": {"address": recipient}} for recipient in record.to],
             "ccRecipients": [
                 {"emailAddress": {"address": recipient}}
                 for recipient in record.metadata.get("cc", [])
@@ -424,12 +442,17 @@ async def list_for_user(
     )
     total = int((await session.execute(total_statement)).scalar_one())
 
-    items_statement = _apply_filters(
-        select(Notification),
-        user_id=user_id,
-        status=status,
-        channel=channel,
-    ).order_by(Notification.created_at.desc(), Notification.id.desc()).offset(offset).limit(size)
+    items_statement = (
+        _apply_filters(
+            select(Notification),
+            user_id=user_id,
+            status=status,
+            channel=channel,
+        )
+        .order_by(Notification.created_at.desc(), Notification.id.desc())
+        .offset(offset)
+        .limit(size)
+    )
     rows = (await session.execute(items_statement)).scalars().all()
     return ([_to_out(row) for row in rows], total)
 
@@ -466,14 +489,18 @@ async def mark_all_read(
     user_id: Any,
 ) -> int:
     rows = (
-        await session.execute(
-            select(Notification).where(
-                Notification.recipient_id == user_id,
-                Notification.deleted_at.is_(None),
-                Notification.read_at.is_(None),
+        (
+            await session.execute(
+                select(Notification).where(
+                    Notification.recipient_id == user_id,
+                    Notification.deleted_at.is_(None),
+                    Notification.read_at.is_(None),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     now = datetime.now(UTC)
     for notification in rows:
         notification.read_at = now
