@@ -2,7 +2,7 @@
 
 - GET `/compliance/checks/{contract_id}` : 建設業法・下請法等の機械的チェック結果
 - GET `/compliance/checklists` : 適用可能なチェックリスト一覧
-- POST `/compliance/checks/{contract_id}/run` : チェックリスト適用 (非同期)
+- POST `/compliance/checks/{contract_id}/run` : チェックリスト適用 (即時実行 + job-shaped response)
 """
 
 from __future__ import annotations
@@ -57,11 +57,15 @@ async def list_checklists(
 )
 async def get_compliance_result(
     contract_id: int,
+    checklist_codes: list[str] | None = Query(default=None, description="未指定時は全件"),
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> ComplianceCheckResult:
     result = await compliance_service.get_result(
-        session, contract_id=contract_id, viewer=current_user
+        session,
+        contract_id=contract_id,
+        viewer=current_user,
+        checklist_codes=checklist_codes,
     )
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
@@ -72,7 +76,7 @@ async def get_compliance_result(
     "/checks/{contract_id}/run",
     response_model=ComplianceRunResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="チェックリスト適用 (非同期実行)",
+    summary="チェックリスト適用 (即時実行)",
 )
 async def run_compliance_check(
     contract_id: int,

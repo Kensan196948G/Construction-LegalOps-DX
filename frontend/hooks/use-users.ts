@@ -12,10 +12,10 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query";
 
-import { ApiError } from "@/lib/api/client";
+import type { ApiError } from "@/lib/api/client";
 import { authApi, usersApi, type UserListParams } from "@/lib/api/endpoints";
 import { queryKeys } from "@/lib/api/query-keys";
-import type { Paginated, User } from "@/lib/api/schemas";
+import type { Paginated, User, UserSyncJob } from "@/lib/api/schemas";
 
 // --- /auth/me --------------------------------------------------------------
 
@@ -79,10 +79,10 @@ export function useUpdateUser(
 }
 
 export function useSyncUsers(
-  options?: UseMutationOptions<{ job_id: string }, ApiError, void>,
+  options?: UseMutationOptions<UserSyncJob, ApiError, void>,
 ) {
   const qc = useQueryClient();
-  return useMutation<{ job_id: string }, ApiError, void>({
+  return useMutation<UserSyncJob, ApiError, void>({
     mutationFn: () => usersApi.sync(),
     ...options,
     onSuccess: (data, vars, ctx, fwCtx) => {

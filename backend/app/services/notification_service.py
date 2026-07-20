@@ -69,7 +69,10 @@ class NotificationService:
         teams_webhook_url: str | None = None,
         desknets_webhook_url: str | None = None,
     ) -> None:
+        settings = get_settings()
         self._mode = (mode or os.getenv("NOTIFY_MODE", "stub") or "stub").lower()
+        if settings.is_production and self._mode == "stub":
+            raise RuntimeError("NOTIFY_MODE=stub is disabled when APP_ENV=production")
         self._graph_sender = graph_sender or os.getenv("EXCHANGE_SENDER_UPN", "").strip()
         self._teams_webhook_url = teams_webhook_url or os.getenv("TEAMS_WEBHOOK_URL", "").strip()
         self._desknets_webhook_url = desknets_webhook_url or os.getenv(

@@ -1,7 +1,7 @@
 # ☁️ Cloudflare Runbook — `legalops.mirai-dx-platform.com`
 
-> **状態: 承認待ち / 未適用 (2026-07-19 Loop 89)**  
-> 本書は Cloudflare 側の実作業を安全に進めるための手順書です。`legalops` サブドメインの新規作成要件は反映済みですが、DNS 作成、Access 作成、Tunnel 作成、本番デプロイはこのセッションでは実行していません。
+> **状態: 承認待ち / 未適用 (2026-07-20 Loop 107 + PR #59)**
+> 本書は Cloudflare 側の実作業を安全に進めるための手順書です。`legalops` サブドメインの新規作成要件と、取得済みドメイン `mirai-dx-platform.com` の利用要件は反映済みです。DNS 作成、Access 作成、Tunnel 作成、本番デプロイはこのセッションでは実行していません。
 
 ---
 
@@ -12,7 +12,7 @@
 | 🌐 サブドメイン | `legalops` |
 | 🏷️ FQDN | `legalops.mirai-dx-platform.com` |
 | 🗂️ Zone | `mirai-dx-platform.com` |
-| 🆕 要件状態 | `legalops` は新規作成対象、親ドメインは取得済み |
+| 🆕 要件状態 | `legalops` は新規作成対象、親ドメイン `mirai-dx-platform.com` は取得済み |
 | 🔐 公開方針 | Cloudflare Access で認証境界を先に作る |
 | 🔌 接続方式 | Cloudflare Tunnel → 既存 nginx |
 | 🚫 今回実施しないこと | 公開 DNS 変更 / 本番デプロイ / 課金変更 / Secrets 投入 |
@@ -21,7 +21,7 @@
 
 ## 🔍 2. 現状確認
 
-2026-07-19 時点の読み取り確認:
+2026-07-20 Loop 106 時点の読み取り確認:
 
 | 確認 | 結果 |
 |---|---|
@@ -29,7 +29,7 @@
 | Cloudflare Zone ID | `e375e651e49a40801a305b89e297bff0` |
 | `mirai-dx-platform.com` NS | `kareem.ns.cloudflare.com`, `nia.ns.cloudflare.com` |
 | `mirai-dx-platform.com` SOA | Cloudflare (`dns.cloudflare.com`) |
-| `legalops.mirai-dx-platform.com` | Cloudflare API / DNS ともに未登録 |
+| `legalops.mirai-dx-platform.com` | Cloudflare API / DNS ともに未登録。新規サブドメインとして承認後に作成 |
 | ローカル検証用 WebUI | `http://192.168.0.185:38100/` / `http://192.168.0.185:38100/healthz` |
 | systemd user service | `construction-legalops-standalone-webui.service` |
 
@@ -97,6 +97,22 @@ cloudflared tunnel route dns <TUNNEL_ID_OR_NAME> legalops.mirai-dx-platform.com
 
 > ⚠️ このコマンドは公開 DNS を変更します。実行は人間承認後のみです。
 > 現時点では `legalops` 専用 Tunnel ID が未確定のため、既存 Tunnel の流用はしません。
+> DNS レコードと Tunnel は独立しています。DNS CNAME を先に作成した状態で Tunnel が未起動または停止すると、利用者には Cloudflare `1016` が表示される可能性があります。
+
+承認後に CLI で再現する場合は、誤実行防止のため承認フレーズ必須の helper を使います。
+
+```bash
+# dry-run: 実際の DNS 変更は行わない
+LEGALOPS_CLOUDFLARE_APPROVAL=APPROVE_LEGALOPS_CLOUDFLARE \
+TUNNEL_ID_OR_NAME=<TUNNEL_ID_OR_NAME> \
+./scripts/apply_cloudflare_legalops_after_approval.sh
+
+# apply: 公開 DNS CNAME を作成するため、人間の最終承認後のみ実行
+LEGALOPS_CLOUDFLARE_APPROVAL=APPROVE_LEGALOPS_CLOUDFLARE \
+EXECUTE=1 \
+TUNNEL_ID_OR_NAME=<TUNNEL_ID_OR_NAME> \
+./scripts/apply_cloudflare_legalops_after_approval.sh
+```
 
 ---
 
@@ -162,7 +178,7 @@ cloudflared tunnel info <TUNNEL_ID_OR_NAME>
 cloudflared tunnel ingress validate infra/cloudflare/tunnel-config.example.yml
 ```
 
-2026-07-19 Loop 89 時点では、`./scripts/verify_cloudflare_legalops.sh` を含む pre-deploy gate が成功し、
+2026-07-20 Loop 106 時点では、`./scripts/verify_cloudflare_legalops.sh` を含む pre-deploy gate が成功し、
 Cloudflare API / DNS を変更しない read-only 確認で `mirai-dx-platform.com` zone が active、`legalops.mirai-dx-platform.com` の CNAME / A が未作成であること、
 Tunnel ingress template が `legalops.mirai-dx-platform.com -> http://nginx:80` として検証対象になっていることを確認済みです。
 

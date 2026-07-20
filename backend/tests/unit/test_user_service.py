@@ -417,7 +417,7 @@ async def test_soft_delete_user_rejects_self_delete() -> None:
 
 @pytest.mark.asyncio
 async def test_start_graph_sync_returns_queued_job_without_external_call() -> None:
-    """Arrange: admin trigger. Act: start_graph_sync. Assert: queued job."""
+    """Arrange: admin trigger. Act: start_graph_sync. Assert: auditable queued job."""
     session = _make_session()
 
     result = await user_service.start_graph_sync(session, triggered_by=7)
@@ -425,6 +425,8 @@ async def test_start_graph_sync_returns_queued_job_without_external_call() -> No
     assert result.status == "queued"
     assert result.triggered_by == 7
     assert result.job_id.startswith("graph-sync-")
+    assert result.note is not None
+    assert "Production execution requires" in result.note
 
 
 # ---------------------------------------------------------------------------

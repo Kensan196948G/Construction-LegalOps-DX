@@ -92,6 +92,8 @@ bash -n scripts/install_standalone_webui_systemd.sh >/dev/null 2>&1 && check "St
 
 if [ -x "./scripts/verify_standalone_webui_runtime.sh" ]; then
   ./scripts/verify_standalone_webui_runtime.sh >/dev/null && check "Standalone WebUI runtime preflight" 0 || check "Standalone WebUI runtime preflight" 1
+else
+  check "verify_standalone_webui_runtime.sh missing (fail-closed)" 1
 fi
 
 # ---------------------------------------------------------------------------
@@ -102,6 +104,8 @@ echo "📊 Monitoring"
 
 if [ -f "./scripts/verify_monitoring_config.sh" ]; then
   bash ./scripts/verify_monitoring_config.sh >/dev/null && check "monitoring config preflight" 0 || check "monitoring config preflight" 1
+else
+  check "verify_monitoring_config.sh missing (fail-closed)" 1
 fi
 
 # ---------------------------------------------------------------------------
@@ -112,10 +116,24 @@ echo "💾 Backup / Restore"
 
 if [ -f "./scripts/verify_backup_restore_docs.sh" ]; then
   bash ./scripts/verify_backup_restore_docs.sh >/dev/null && check "backup/restore evidence preflight" 0 || check "backup/restore evidence preflight" 1
+else
+  check "verify_backup_restore_docs.sh missing (fail-closed)" 1
 fi
 
 # ---------------------------------------------------------------------------
-# 7. Security
+# 7. Local workspace disclosure
+# ---------------------------------------------------------------------------
+echo ""
+echo "🧭 Local Workspace"
+
+if [ -f "./scripts/verify_local_workspace_state.sh" ]; then
+  bash ./scripts/verify_local_workspace_state.sh >/dev/null && check "local workspace state preflight" 0 || check "local workspace state preflight" 1
+else
+  check "verify_local_workspace_state.sh missing (fail-closed)" 1
+fi
+
+# ---------------------------------------------------------------------------
+# 8. Security
 # ---------------------------------------------------------------------------
 echo ""
 echo "🔒 Security"
@@ -127,34 +145,48 @@ echo "🔒 Security"
 
 if [ -x "./scripts/scan_secrets.sh" ]; then
   ./scripts/scan_secrets.sh >/dev/null && check "secret exposure scan" 0 || check "secret exposure scan" 1
+else
+  check "scan_secrets.sh missing (fail-closed)" 1
 fi
 
 if [ -x "./scripts/verify_cloudflare_legalops.sh" ]; then
   ./scripts/verify_cloudflare_legalops.sh >/dev/null && check "Cloudflare legalops subdomain preflight" 0 || check "Cloudflare legalops subdomain preflight" 1
+else
+  check "verify_cloudflare_legalops.sh missing (fail-closed)" 1
 fi
 
 if [ -x "./scripts/verify_release_docs.sh" ]; then
   ./scripts/verify_release_docs.sh >/dev/null && check "release documentation preflight" 0 || check "release documentation preflight" 1
+else
+  check "verify_release_docs.sh missing (fail-closed)" 1
 fi
 
 if [ -x "./scripts/verify_goal_completion_evidence.sh" ]; then
   ./scripts/verify_goal_completion_evidence.sh >/dev/null && check "goal completion evidence preflight" 0 || check "goal completion evidence preflight" 1
+else
+  check "verify_goal_completion_evidence.sh missing (fail-closed)" 1
 fi
 
 if [ -x "./scripts/verify_review_evidence.sh" ]; then
   ./scripts/verify_review_evidence.sh >/dev/null && check "review evidence preflight" 0 || check "review evidence preflight" 1
+else
+  check "verify_review_evidence.sh missing (fail-closed)" 1
 fi
 
 if [ -x "./scripts/verify_dependency_audit_evidence.sh" ]; then
   ./scripts/verify_dependency_audit_evidence.sh >/dev/null && check "dependency audit evidence preflight" 0 || check "dependency audit evidence preflight" 1
+else
+  check "verify_dependency_audit_evidence.sh missing (fail-closed)" 1
 fi
 
 if [ -x "./scripts/verify_github_release_gate.sh" ]; then
   ./scripts/verify_github_release_gate.sh >/dev/null && check "GitHub release gate preflight" 0 || check "GitHub release gate preflight" 1
+else
+  check "verify_github_release_gate.sh missing (fail-closed)" 1
 fi
 
 # ---------------------------------------------------------------------------
-# 8. Environment
+# 9. Environment
 # ---------------------------------------------------------------------------
 echo ""
 echo "🔧 Environment"
@@ -165,7 +197,7 @@ echo "🔧 Environment"
 [ -n "${CLAUDE_API_KEY:-}" ] && check "CLAUDE_API_KEY is set" 0 || warn "CLAUDE_API_KEY not set (AI review disabled)"
 
 # ---------------------------------------------------------------------------
-# 9. Docker images
+# 10. Docker images
 # ---------------------------------------------------------------------------
 echo ""
 echo "🐳 Docker"
@@ -209,6 +241,8 @@ fi
 
 if [ -x "./scripts/check_unhealthy_services.sh" ]; then
   ./scripts/check_unhealthy_services.sh >/dev/null && check "unhealthy watchdog report" 0 || warn "unhealthy services detected — review before deploy"
+else
+  check "check_unhealthy_services.sh missing (fail-closed)" 1
 fi
 
 # ---------------------------------------------------------------------------

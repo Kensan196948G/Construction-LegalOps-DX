@@ -23,7 +23,7 @@ from app.schemas.upload import (
     UploadInitRequest,
     UploadInitResponse,
 )
-from app.services.sharepoint_service import SharePointError, SharePointService
+from app.services.sharepoint_service import SharePointService
 
 ALLOWED_MIME_TYPES: Final[frozenset[str]] = frozenset(
     {
@@ -96,7 +96,13 @@ async def create_upload_session(
     requester: CurrentUser,
     payload: UploadInitRequest,
 ) -> UploadInitResponse:
-    """Return a signed upload token for a later completion callback."""
+    """Return a signed upload token for a later completion callback.
+
+    Until the approved SharePoint/Graph direct-upload route is configured,
+    do not expose pseudo external URLs to callers. The completion token remains
+    auditable, while ``upload_url=None`` makes the missing external write path
+    explicit at the API boundary.
+    """
     if payload.mime_type not in ALLOWED_MIME_TYPES:
         raise ValueError(f"unsupported mime type: {payload.mime_type}")
     await _ensure_contract(session, payload.contract_id)
@@ -117,7 +123,7 @@ async def create_upload_session(
     token = _issue_token(claims)
     return UploadInitResponse(
         upload_id=upload_id,
-        upload_url=f"sharepoint-stub://uploads/{upload_id}",
+        upload_url=None,
         upload_token=token,
         storage=AttachmentStorage.SHAREPOINT,
         expires_in=UPLOAD_TOKEN_TTL_SECONDS,
@@ -191,10 +197,7 @@ async def create_download_url(
     attachment = await get_upload(session, upload_id=upload_id, viewer=viewer)
     if attachment is None:
         raise LookupError("upload not found")
-    try:
-        return await SharePointService().get_url(attachment.sharepoint_item_id)
-    except SharePointError:
-        return f"sharepoint-stub://items/{attachment.sharepoint_item_id}"
+    return await SharePointService().get_url(attachment.sharepoint_item_id)
 
 
 async def soft_delete(

@@ -194,6 +194,9 @@ export const apiClient: AxiosInstance = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
+  // FastAPI binds repeated query keys (?k=a&k=b), not PHP-style brackets
+  // (?k[]=a) which axios emits by default for array params.
+  paramsSerializer: { indexes: null },
 });
 
 // --- Request interceptor: JWT bearer の付与 ---------------------------------

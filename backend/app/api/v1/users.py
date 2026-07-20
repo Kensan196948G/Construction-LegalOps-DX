@@ -225,11 +225,29 @@ async def delete_user(
     response_model=UserSyncJob,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Microsoft Graph ユーザー同期",
-    description="非同期でジョブを起動し、ジョブ ID を返却する。",
+    description=(
+        "Microsoft Graph ユーザー同期ジョブを受付し、ジョブ ID を返却する。"
+        "本番 Graph credentials / worker 承認前は外部通信せず queued として監査する。"
+    ),
 )
 async def sync_users(
+    request: Request,
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
     _: None = Depends(require_role("admin")),
 ) -> UserSyncJob:
-    return await user_service.start_graph_sync(session, triggered_by=current_user.db_id)
+    job = await user_service.start_graph_sync(session, triggered_by=current_user.db_id)
+    await audit_service.log(
+        session,
+        actor_id=current_user.db_id,
+        action="user.sync",
+        target_type="users",
+        target_id=None,
+        payload={
+            "job_id": job.job_id,
+            "status": job.status,
+            "external_write": False,
+        },
+        request=request,
+    )
+    return job

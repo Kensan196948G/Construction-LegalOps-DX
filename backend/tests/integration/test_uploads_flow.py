@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import select
@@ -68,6 +69,7 @@ async def test_upload_init_complete_get_and_delete(client: Any, test_engine: Any
     assert init.status_code == 200, init.text
     token = init.json()["upload_token"]
     assert init.json()["upload_id"]
+    assert init.json()["upload_url"] is None
 
     complete = await client.post(
         f"{UPLOADS}/complete",
@@ -88,6 +90,37 @@ async def test_upload_init_complete_get_and_delete(client: Any, test_engine: Any
     fetched = await client.get(f"{UPLOADS}/{attachment_id}", headers=headers)
     assert fetched.status_code == 200
     assert fetched.json()["id"] == attachment_id
+
+    with patch(
+        "app.services.upload_service.SharePointService.get_url",
+        new=AsyncMock(return_value="https://contoso.sharepoint.com/sites/legalops/doc.aspx"),
+    ):
+        successful_download = await client.get(
+            f"{UPLOADS}/{attachment_id}/download",
+            headers=headers,
+            follow_redirects=False,
+        )
+    assert successful_download.status_code == 302
+    assert successful_download.headers["location"].startswith(
+        "https://contoso.sharepoint.com/"
+    )
+
+    audit = await client.get(
+        "/api/v1/audit-logs?action=upload.download",
+        headers=_headers("admin", "upload-audit-admin@example.com"),
+    )
+    assert audit.status_code == 200
+    download_rows = [
+        row for row in audit.json()["items"] if row["target_id"] == attachment_id
+    ]
+    assert download_rows
+    payload_after = download_rows[-1]["payload"]["after"]
+    assert payload_after["external_url_resolved"] is True
+    assert payload_after["external_write"] is False
+
+    download = await client.get(f"{UPLOADS}/{attachment_id}/download", headers=headers)
+    assert download.status_code == 502
+    assert download.json()["detail"] == "sharepoint url unavailable"
 
     deleted = await client.delete(f"{UPLOADS}/{attachment_id}", headers=headers)
     assert deleted.status_code == 204

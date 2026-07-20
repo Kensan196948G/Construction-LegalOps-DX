@@ -104,6 +104,8 @@ class SSOService:
     def __init__(self, *, mode: str | None = None) -> None:
         self._settings = get_settings()
         self._mode = (mode or os.getenv("SSO_MODE", "stub") or "stub").lower()
+        if self._settings.is_production and self._mode == "stub":
+            raise RuntimeError("SSO_MODE=stub is disabled when APP_ENV=production")
         self._secret = self._settings.jwt_secret.get_secret_value().encode("utf-8")
         self._issuer = self._settings.jwt_issuer
         self._audience = self._settings.jwt_audience

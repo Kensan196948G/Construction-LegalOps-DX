@@ -22,6 +22,7 @@ from app.schemas.upload import (
     UploadOut,
 )
 from app.services import audit_service, upload_service
+from app.services.sharepoint_service import SharePointError
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
@@ -143,6 +144,21 @@ async def download_upload(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="upload not found")
     except PermissionError:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+    except SharePointError:
+        # Failed downloads are audit-relevant too: record before surfacing 502.
+        await audit_service.log(
+            session,
+            actor_id=current_user.db_id,
+            action="upload.download",
+            target_type="uploads",
+            target_id=upload_id,
+            payload={"external_url_resolved": False, "external_write": False},
+            request=request,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="sharepoint url unavailable",
+        )
 
     await audit_service.log(
         session,
@@ -150,6 +166,7 @@ async def download_upload(
         action="upload.download",
         target_type="uploads",
         target_id=upload_id,
+        payload={"external_url_resolved": True, "external_write": False},
         request=request,
     )
     return RedirectResponse(url=url, status_code=302)

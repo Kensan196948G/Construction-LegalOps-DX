@@ -12,6 +12,8 @@ TUNNEL_CONFIG="infra/cloudflare/tunnel-config.example.yml"
 DNS_EXAMPLE="infra/cloudflare/dns-records.legalops.example.json"
 ACCESS_POLICY="infra/cloudflare/access-policy.yml"
 COMPOSE_OVERLAY="infra/docker/docker-compose.cloudflare-tunnel.yml"
+RUNBOOK="docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md"
+APPLY_HELPER="scripts/apply_cloudflare_legalops_after_approval.sh"
 
 PASS=0
 FAIL=0
@@ -49,6 +51,8 @@ echo ""
 [ -f "${DNS_EXAMPLE}" ] && pass "DNS record example exists" || fail "DNS record example missing: ${DNS_EXAMPLE}"
 [ -f "${ACCESS_POLICY}" ] && pass "Access policy example exists" || fail "Access policy missing: ${ACCESS_POLICY}"
 [ -f "${COMPOSE_OVERLAY}" ] && pass "Cloudflare Tunnel compose overlay exists" || fail "Compose overlay missing: ${COMPOSE_OVERLAY}"
+[ -f "${RUNBOOK}" ] && pass "Cloudflare legalops runbook exists" || fail "Cloudflare runbook missing: ${RUNBOOK}"
+[ -f "${APPLY_HELPER}" ] && pass "Approval-gated Cloudflare apply helper exists" || fail "Apply helper missing: ${APPLY_HELPER}"
 
 if [ -f "${TUNNEL_CONFIG}" ]; then
   contains "${TUNNEL_CONFIG}" "hostname: ${HOSTNAME}" && pass "Tunnel hostname is ${HOSTNAME}" || fail "Tunnel hostname is not ${HOSTNAME}"
@@ -72,6 +76,25 @@ fi
 if [ -f "${COMPOSE_OVERLAY}" ]; then
   contains "${COMPOSE_OVERLAY}" "CLOUDFLARE_TUNNEL_TOKEN" && pass "Compose overlay expects CLOUDFLARE_TUNNEL_TOKEN" || fail "Compose overlay missing CLOUDFLARE_TUNNEL_TOKEN"
   contains "${COMPOSE_OVERLAY}" "cloudflare/cloudflared" && pass "Compose overlay uses official cloudflared image" || fail "Compose overlay image is not cloudflare/cloudflared"
+fi
+
+if [ -f "${RUNBOOK}" ]; then
+  contains "${RUNBOOK}" "2026-07-20 Loop 106" && pass "Runbook records current Loop 106 Cloudflare status" || fail "Runbook is not synced to Loop 106"
+  contains "${RUNBOOK}" "親ドメイン \`mirai-dx-platform.com\` は取得済み" && pass "Runbook records acquired parent domain requirement" || fail "Runbook missing acquired parent domain requirement"
+  contains "${RUNBOOK}" "\`legalops\` は新規作成対象" && pass "Runbook records legalops as new subdomain" || fail "Runbook missing legalops new-subdomain requirement"
+  contains "${RUNBOOK}" "\`legalops.mirai-dx-platform.com\` | Cloudflare API / DNS ともに未登録。新規サブドメインとして承認後に作成" && pass "Runbook records legalops DNS/API absence before approval" || fail "Runbook missing legalops pre-approval absence"
+  contains "${RUNBOOK}" "DNS レコードと Tunnel は独立" && pass "Runbook documents DNS/Tunnel independence" || fail "Runbook missing DNS/Tunnel independence warning"
+  contains "${RUNBOOK}" "1016" && pass "Runbook documents Cloudflare 1016 rollback risk" || fail "Runbook missing Cloudflare 1016 risk"
+  contains "${RUNBOOK}" "Access を DNS 公開前に作成" && pass "Runbook requires Access before DNS publication" || fail "Runbook missing Access-before-DNS rule"
+  contains "${RUNBOOK}" "DNS 作成、Access 作成、Tunnel 作成、本番デプロイはこのセッションでは実行していません" && pass "Runbook preserves no-production-change stop line" || fail "Runbook missing no-production-change stop line"
+  contains "${RUNBOOK}" "apply_cloudflare_legalops_after_approval.sh" && pass "Runbook references approval-gated apply helper" || fail "Runbook missing approval-gated apply helper"
+fi
+
+if [ -f "${APPLY_HELPER}" ]; then
+  contains "${APPLY_HELPER}" "APPROVE_LEGALOPS_CLOUDFLARE" && pass "Apply helper requires explicit approval phrase" || fail "Apply helper missing approval phrase"
+  contains "${APPLY_HELPER}" 'EXECUTE="${EXECUTE:-0}"' && pass "Apply helper defaults to dry-run mode" || fail "Apply helper does not default to dry-run"
+  contains "${APPLY_HELPER}" 'LEGALOPS_HOSTNAME="${LEGALOPS_HOSTNAME:-legalops.mirai-dx-platform.com}"' && pass "Apply helper does not inherit shell HOSTNAME" || fail "Apply helper may inherit shell HOSTNAME"
+  contains "${APPLY_HELPER}" "cloudflared tunnel route dns" && pass "Apply helper routes DNS via cloudflared only after approval" || fail "Apply helper missing cloudflared DNS route"
 fi
 
 if command -v dig >/dev/null 2>&1; then

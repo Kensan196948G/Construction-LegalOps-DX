@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -135,11 +135,16 @@ async def start_graph_sync(
     *,
     triggered_by: int | None,
 ) -> UserSyncJob:
-    """Queue a Microsoft Graph sync job placeholder without external writes."""
+    """Queue a local Microsoft Graph sync job handle without external writes.
+
+    Production Graph execution is intentionally held behind the #23/#50 human
+    gates. This function returns an auditable queued handle and never contacts
+    Microsoft Graph by itself.
+    """
     _ = session
     queued_at = datetime.now(UTC)
     return UserSyncJob(
-        job_id=f"graph-sync-{queued_at.strftime('%Y%m%d%H%M%S')}",
+        job_id=f"graph-sync-{queued_at.strftime('%Y%m%d%H%M%S')}-{uuid4().hex[:8]}",
         status="queued",
         triggered_by=triggered_by,
         queued_at=queued_at,

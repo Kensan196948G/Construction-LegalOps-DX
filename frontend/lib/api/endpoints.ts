@@ -26,6 +26,7 @@ import {
   clauseSchema,
   clauseLibrarySchema,
   complianceChecklistSchema,
+  complianceCheckResultSchema,
   complianceRunSchema,
   connectionTestSchema,
   contractSchema,
@@ -43,6 +44,7 @@ import {
   riskUpdateSchema,
   templateSchema,
   userSchema,
+  userSyncJobSchema,
   versionSchema,
   workflowInstanceSchema,
   workflowSchema,
@@ -158,7 +160,7 @@ export const usersApi = {
 
   /** Microsoft Graph 同期 (202 Accepted) */
   sync: () =>
-    apiClient.post<{ job_id: string }>("/users/sync").then((r) => r.data),
+    postParsed(apiResponse(userSyncJobSchema), "/users/sync"),
 };
 
 // ===========================================================================
@@ -337,18 +339,23 @@ export const risksApi = {
 
 export const complianceApi = {
   checklists: (params?: ListParams) =>
-    getParsed(paginatedSchema(complianceChecklistSchema), "/compliance/checklists", {
+    getParsed(z.array(complianceChecklistSchema), "/compliance/checklists", {
       params: buildParams(params),
     }),
 
-  /** 契約に対するチェックリスト適用 (202 Accepted) */
-  runForContract: (
-    contractId: number | string,
-    data: { checklist_id: number | string },
-  ) => postParsed(apiResponse(complianceRunSchema), `/contracts/${contractId}/compliance-runs`, data),
+  /** 契約に対するチェックリスト適用 (202 Accepted; inline completed job handle) */
+  runForContract: (contractId: number | string, checklistCodes?: string[]) =>
+    postParsed(
+      apiResponse(complianceRunSchema),
+      `/compliance/checks/${contractId}/run`,
+      undefined,
+      { params: checklistCodes?.length ? { checklist_codes: checklistCodes } : undefined },
+    ),
 
-  getRun: (id: number | string) =>
-    getParsed(apiResponse(complianceRunSchema), `/compliance-runs/${id}`),
+  getResult: (contractId: number | string, checklistCodes?: string[]) =>
+    getParsed(apiResponse(complianceCheckResultSchema), `/compliance/checks/${contractId}`, {
+      params: checklistCodes?.length ? { checklist_codes: checklistCodes } : undefined,
+    }),
 };
 
 // ===========================================================================

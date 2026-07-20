@@ -15,31 +15,38 @@
 
 ---
 
-## 🚦 現在のリリース直前状態 (2026-07-19 / Loop 93)
+## 🚦 現在のリリース直前状態 (2026-07-20 / Loop 107)
 
-| 項目 | 現在状態 | 補足 |
-|---|---|---|
-| ✅ コード完成度 | Release candidate | Phase 1 のフロントエンド / バックエンド / DB / 監査 / 監視 / 運用文書は実装・検証済み |
-| 🛑 本番リリース / deploy | 未実行 | CTO/Supervisor は **本番直前の承認待ち** で停止 |
-| 🌐 公開 DNS | 未変更 | `legalops.mirai-dx-platform.com` CNAME / A は未作成 |
-| ☁️ Cloudflare | 承認待ち | `legalops` 新規サブドメイン要件を反映済み。Access / Tunnel / DNS CNAME / cloudflared token は #50 の人間作業 |
-| 🔐 Secrets | 未投入 | Vault / Key Vault 本番 secret 投入は #23 の人間作業 |
-| 🛡️ CSP | Report-Only | enforce 切替は #24 の人間承認後 |
-| 🖥️ 検証用 WebUI | 起動・検証済み | `http://192.168.0.185:38100/` / `construction-legalops-standalone-webui.service` / runtime preflightでHTML実体・status JSON・自動port範囲・listen実体を検証 |
-| 📊 GitHub / CI | 同期・検証済み | Project #30 / #23 / #24 / #50 / open PR 0 / 最新CI成功を GitHub release gate preflightで検証 |
-| ⚠️ Pre-deploy warnings | 既知・分類済み | 本番secret / SSO / AI key / Docker build skip の5件のみ。未知warning 0 |
-| 📋 Release checklist | 分類済み | 未チェック73件は人間承認 / 本番実行 / リリース後確認項目として分類済み |
-| 🛑 Stop-line証跡 | 検証済み | Git tag 0 / GitHub Release 0 / GitHub Deployments 0 / legalops DNS未作成 |
-| 🎯 Goal evidence | 検証済み | `/goal` 完了条件と証拠表・最終報告・停止線の対応を `verify_goal_completion_evidence.sh` で検証 |
-| 🔍 Review evidence | 検証済み | CodeRabbit timeout / 代替静的検証 / security review / Critical-High limitation を `verify_review_evidence.sh` で検証 |
-| 🧬 Dependency audit | 検証済み | npm high/critical 0、moderate 4 は既知残リスク、pip-audit 72 deps / 0 vulnerabilities |
-| 📎 SharePoint Graph | 実装・検証済み | SharePoint Graph real mode は Entra client-credentials + Microsoft Graph drive upload / webUrl 解決に対応。unit contract 33 passed |
-| 📣 Notification real mode | 実装・検証済み | Exchange Graph sendMail / Teams webhook / desknet's webhook を mock contract で検証。unit 32 passed |
-| 📤 Contract submit | 実装・検証済み | `POST /contracts/{id}/submit` は draft → in_review に遷移。unit/integration contract 38 passed、ruff/mypy clean |
-| 📑 Contract subresources | 実装・検証済み | `/contracts/{id}/versions` と `/contracts/{id}/clauses` は DB-backed / current snapshot で 501 stub 回避。unit/integration contract 43 passed |
-| 📊 Monitoring config | 実装・検証済み | Prometheus は Docker DNS discovery で backend replicas を scrape。monitoring config preflight 19 passed |
-| 💾 Backup / Restore | 検証済み | `backup_db.sh` は `.sha256` 記録/復元前検証に対応。backup/restore evidence preflight 36 passed、PITR drill は承認後ゲートとして維持 |
-| 📋 最終判断資料 | 整備済み | [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) / [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md) |
+| 項目                       | 現在状態          | 補足                                                                                                                                                                                                                                                                                                                 |
+| -------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ コード完成度            | Release candidate | Phase 1 のフロントエンド / バックエンド / DB / 監査 / 監視 / 運用文書は実装・検証済み                                                                                                                                                                                                                                |
+| 🛑 本番リリース / deploy   | 未実行            | CTO/Supervisor は **本番直前の承認待ち** で停止                                                                                                                                                                                                                                                                      |
+| 🌐 公開 DNS                | 未変更            | `legalops.mirai-dx-platform.com` CNAME / A は未作成                                                                                                                                                                                                                                                                  |
+| ☁️ Cloudflare              | 承認待ち          | `legalops.mirai-dx-platform.com` 新規サブドメイン要件を反映済み。Cloudflare zone は active、`legalops` CNAME / A は未作成。Access / Tunnel / DNS CNAME / cloudflared token は #50 の人間作業                                                                                                                         |
+| 🔐 Secrets                 | 未投入            | Vault / Key Vault 本番 secret 投入は #23 の人間作業                                                                                                                                                                                                                                                                  |
+| 🛡️ CSP                     | Report-Only       | enforce 切替は #24 の人間承認後                                                                                                                                                                                                                                                                                      |
+| 🖥️ 検証用 WebUI            | 起動・検証済み    | `http://192.168.0.185:38100/` / `construction-legalops-standalone-webui.service` / runtime preflightでHTML実体・status JSON・自動port範囲・listen実体を検証                                                                                                                                                          |
+| 📊 GitHub / CI             | 同期・検証済み    | Project #30 / #23 / #24 / #50 / PR #58 merged / 最新main CI成功を GitHub release gate preflightで検証。Loop 94〜107 差分は PR #59 として正本化                                                                                                                                                                       |
+| 🧭 Local workspace         | 検証済み          | `verify_local_workspace_state.sh` (時点非依存 fail-closed 検査 + 現況開示) → 8 passed。Loop 94〜107 差分は commit 済み (PR #59)                                                                                                                                                                                      |
+| ⚠️ Pre-deploy warnings     | 既知・分類済み    | 本番secret / SSO / AI key / Docker build skip の5件のみ。未知warning 0                                                                                                                                                                                                                                               |
+| 📋 Release checklist       | 分類済み          | 未チェック73件は人間承認 / 本番実行 / リリース後確認項目として分類済み                                                                                                                                                                                                                                               |
+| 🛑 Stop-line証跡           | 検証済み          | 未承認 tag / Release 0 (承認済み: v0.1.12) / GitHub Deployments 0 / legalops DNS未作成                                                                                                                                                                                                                                             |
+| 🎯 Goal evidence           | 検証済み          | `/goal` 完了条件と証拠表・最終報告・停止線の対応を `verify_goal_completion_evidence.sh` で検証                                                                                                                                                                                                                       |
+| 🔍 Review evidence         | 検証済み          | CodeRabbit timeout / 代替静的検証 / security review / Critical-High limitation を `verify_review_evidence.sh` で検証                                                                                                                                                                                                 |
+| 🧬 Dependency audit        | 検証済み          | npm high/critical 0、moderate 4 は既知残リスク、pip-audit 72 deps / 0 vulnerabilities                                                                                                                                                                                                                                |
+| 📎 SharePoint Graph        | 実装・検証済み    | SharePoint Graph real mode は Entra client-credentials + Microsoft Graph drive upload / webUrl 解決に対応。unit contract 33 passed                                                                                                                                                                                   |
+| 📣 Notification real mode  | 実装・検証済み    | Exchange Graph sendMail / Teams webhook / desknet's webhook を mock contract で検証。unit 32 passed                                                                                                                                                                                                                  |
+| 🧾 Template creation UI    | 実装・検証済み    | 未実装 alert を撤去し、`CreateTemplateButton` を dialog form + `useCreateTemplate` + `router.refresh()` で `/templates` 作成APIへ接続                                                                                                                                                                                |
+| 📤 Contract submit         | 実装・検証済み    | `POST /contracts/{id}/submit` は draft → in_review に遷移。unit/integration contract 38 passed、ruff/mypy clean                                                                                                                                                                                                      |
+| 📑 Contract subresources   | 実装・検証済み    | `/contracts/{id}/versions` と `/contracts/{id}/clauses` は DB-backed / current snapshot で 501 stub 回避。unit/integration contract 43 passed                                                                                                                                                                        |
+| ⚖️ Compliance run          | 実装・検証済み    | `POST /compliance/checks/{contract_id}/run` は false queued を避け、ComplianceChecker を即時実行して `status=done` を返す。backend 72 passed、frontend typecheck/lint clean                                                                                                                                          |
+| 👥 User sync               | 実装・検証済み    | `POST /users/sync` は Graph credentials / worker 承認前に外部通信せず `queued` を返し、`user.sync` 監査 payload に `external_write=false` を記録。backend 25 passed、frontend typecheck/lint clean                                                                                                                   |
+| 📄 File parser / OCR guard | 実装・検証済み    | 画像PDFは実OCRバックエンド承認・設定まで placeholder OCR を返さず fail-closed。`tests/unit/test_file_parser.py` 22 passed、ruff clean、mypy success                                                                                                                                                                  |
+| 📥 Upload URL guard        | 実装・検証済み    | `POST /uploads/init` は承認済みdirect-upload URL未設定時に `upload_url=null` を返し、`sharepoint-stub://` 疑似URLを利用者へ提示しない。downloadもURL解決失敗時は 502 fail-closed、成功時監査 payload は `external_url_resolved=true` / `external_write=false`。upload integration 2 passed、ruff clean、mypy success |
+| 📊 Monitoring config       | 実装・検証済み    | Prometheus は Docker DNS discovery で backend replicas を scrape。monitoring config preflight 19 passed                                                                                                                                                                                                              |
+| 💾 Backup / Restore        | 検証済み          | `backup_db.sh` は `.sha256` 記録/復元前検証に対応。backup/restore evidence preflight 36 passed、PITR drill は承認後ゲートとして維持                                                                                                                                                                                  |
+| 🧾 Local disclosure gate   | 検証済み          | release docs / pre-deployがローカル作業ツリー状態と実git状態の一致を検証                                                                                                                                                                                                                                             |
+| 📋 最終判断資料            | 整備済み          | [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) / [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md)                                                                                                                                                            |
 
 ```mermaid
 flowchart LR
@@ -203,12 +210,12 @@ flowchart LR
 
 ### 🗺️ 6 ヶ月ロードマップ
 
-| 期間                                     | 🎯 フォーカス                       | ✅ ステータス                                                  |
-| ---------------------------------------- | ----------------------------------- | -------------------------------------------------------------- |
-| ✅ Month 1〜2 (2026-05-16 〜 2026-07-15) | 基盤整備・主要機能実装 (Loop 1〜30) | 🏁 **完了** (v0.1.11 / 30 ループ / 832+ tests / 91% coverage) |
-| 🔧 Month 3〜4 (2026-07-16 〜 2026-09-15) | 品質向上・テスト整備 (Loop 31〜56) | 🏁 **Phase 1 完了** (v0.1.12 / 900+ tests / CF/Neon IaC / 監視・Incident運用 / fail-closed test gates / release docs sync) |
-| 🧪 Month 5 (2026-09-16 〜 2026-10-15)    | 統合テスト・バグ修正                | ⏳ 未着手                                                      |
-| 🎉 Month 6 (2026-10-16 〜 2026-11-16)    | リリース準備・本番移行              | ⏳ 未着手（人間は Vault secrets 投入 + CSP enforce 切替 + CF/Neon リソース作成） |
+| 期間                                     | 🎯 フォーカス                       | ✅ ステータス                                                                                                              |
+| ---------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| ✅ Month 1〜2 (2026-05-16 〜 2026-07-15) | 基盤整備・主要機能実装 (Loop 1〜30) | 🏁 **完了** (v0.1.11 / 30 ループ / 832+ tests / 91% coverage)                                                              |
+| 🔧 Month 3〜4 (2026-07-16 〜 2026-09-15) | 品質向上・テスト整備 (Loop 31〜56)  | 🏁 **Phase 1 完了** (v0.1.12 / 900+ tests / CF/Neon IaC / 監視・Incident運用 / fail-closed test gates / release docs sync) |
+| 🧪 Month 5 (2026-09-16 〜 2026-10-15)    | 統合テスト・バグ修正                | ⏳ 未着手                                                                                                                  |
+| 🎉 Month 6 (2026-10-16 〜 2026-11-16)    | リリース準備・本番移行              | ⏳ 未着手（人間は Vault secrets 投入 + CSP enforce 切替 + CF/Neon リソース作成）                                           |
 
 ### ⚠️ 残日数による自動縮退ルール
 
@@ -583,14 +590,14 @@ cp .env.example .env
 
 📝 `.env` の主要キー（本番は Vault / Key Vault 経由を推奨）：
 
-| 🔑 キー                                                       | 📝 用途                 | 📍 取得元              |
-| ------------------------------------------------------------- | ----------------------- | ---------------------- |
-| `POSTGRES_PASSWORD`                                           | DB パスワード           | `openssl rand -hex 32` |
+| 🔑 キー                                                       | 📝 用途                                                  | 📍 取得元              |
+| ------------------------------------------------------------- | -------------------------------------------------------- | ---------------------- |
+| `POSTGRES_PASSWORD`                                           | DB パスワード                                            | `openssl rand -hex 32` |
 | `JWT_SECRET`                                                  | JWT 署名鍵 (HS256 開発用。 本番は RS256 鍵を Vault 管理) | `openssl rand -hex 32` |
-| `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` | Entra ID SSO            | Azure Portal           |
-| `HENNGE_*`                                                    | HENNGE One IdP プロキシ | HENNGE 管理画面        |
-| `CLAUDE_API_KEY`                                              | Claude API              | Anthropic Console      |
-| `SHAREPOINT_SITE_URL` / `SHAREPOINT_DRIVE_ID`                 | SharePoint 連携         | M365 管理センター      |
+| `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` | Entra ID SSO                                             | Azure Portal           |
+| `HENNGE_*`                                                    | HENNGE One IdP プロキシ                                  | HENNGE 管理画面        |
+| `CLAUDE_API_KEY`                                              | Claude API                                               | Anthropic Console      |
+| `SHAREPOINT_SITE_URL` / `SHAREPOINT_DRIVE_ID`                 | SharePoint 連携                                          | M365 管理センター      |
 
 ### 2️⃣ Docker Compose で一括起動
 
@@ -613,33 +620,33 @@ docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade h
 
 ### 🖥️ Standalone WebUI（SSH先Linux / systemd運用）
 
-SSH 先の Linux ルートフォルダでは、生成済みの [`docs/Construction-LegalOps-DX (Standalone).html`](docs/Construction-LegalOps-DX%20(Standalone).html) を**変換せずそのまま配信**する Standalone WebUI を systemd で常駐できます。
+SSH 先の Linux ルートフォルダでは、生成済みの [`docs/Construction-LegalOps-DX (Standalone).html`](<docs/Construction-LegalOps-DX%20(Standalone).html>) を**変換せずそのまま配信**する Standalone WebUI を systemd で常駐できます。
 IP アドレスとポートは起動時に自動選択され、URL / PID / 停止情報は [`reports/webui/standalone-webui.json`](reports/webui/standalone-webui.json) に保存されます。
 ポートは `38100-38999` から空き番号を自動選択します。
 systemd 起動時の `stop_command` は `systemctl --user stop construction-legalops-standalone-webui.service` になります。
 
 現在の検証用 WebUI は SSH 先 Linux 上で systemd user service として稼働中です。
 
-| 🧭 項目 | ✅ 現在値 |
-|---|---|
-| URL | `http://192.168.0.185:38100/` |
-| Health | `http://192.168.0.185:38100/healthz` → `ok` |
-| HEAD | `curl -fsSI http://192.168.0.185:38100/` → `200 OK` / `text/html; charset=utf-8` |
-| Source endpoint | `http://192.168.0.185:38100/standalone-source` |
-| systemd unit | `construction-legalops-standalone-webui.service` (`enabled` / `active`) |
-| Status file | `reports/webui/standalone-webui.json` (`host=192.168.0.185`, `port=38100`) |
-| Listen | `192.168.0.185:38100` / PID は status JSON と一致 |
-| 停止 | `ssh kensan@192.168.0.185 "systemctl --user stop construction-legalops-standalone-webui.service"` |
+| 🧭 項目         | ✅ 現在値                                                                                         |
+| --------------- | ------------------------------------------------------------------------------------------------- |
+| URL             | `http://192.168.0.185:38100/`                                                                     |
+| Health          | `http://192.168.0.185:38100/healthz` → `ok`                                                       |
+| HEAD            | `curl -fsSI http://192.168.0.185:38100/` → `200 OK` / `text/html; charset=utf-8`                  |
+| Source endpoint | `http://192.168.0.185:38100/standalone-source`                                                    |
+| systemd unit    | `construction-legalops-standalone-webui.service` (`enabled` / `active`)                           |
+| Status file     | `reports/webui/standalone-webui.json` (`host=192.168.0.185`, `port=38100`)                        |
+| Listen          | `192.168.0.185:38100` / PID は status JSON と一致                                                 |
+| 停止            | `ssh kensan@192.168.0.185 "systemctl --user stop construction-legalops-standalone-webui.service"` |
 
-| 🧭 操作 | 🔧 コマンド |
-| ------- | ----------- |
-| systemd 登録 + 起動 | `bash scripts/install_standalone_webui_systemd.sh --user install` |
+| 🧭 操作               | 🔧 コマンド                                                                |
+| --------------------- | -------------------------------------------------------------------------- |
+| systemd 登録 + 起動   | `bash scripts/install_standalone_webui_systemd.sh --user install`          |
 | SSHログアウト後も維持 | `bash scripts/install_standalone_webui_systemd.sh --user --linger install` |
-| systemd 状態 | `bash scripts/install_standalone_webui_systemd.sh --user status` |
-| HTTP health | `bash scripts/install_standalone_webui_systemd.sh --user health` |
-| 再起動 | `bash scripts/install_standalone_webui_systemd.sh --user restart` |
-| 停止 | `bash scripts/install_standalone_webui_systemd.sh --user stop` |
-| 登録解除 | `bash scripts/install_standalone_webui_systemd.sh --user uninstall` |
+| systemd 状態          | `bash scripts/install_standalone_webui_systemd.sh --user status`           |
+| HTTP health           | `bash scripts/install_standalone_webui_systemd.sh --user health`           |
+| 再起動                | `bash scripts/install_standalone_webui_systemd.sh --user restart`          |
+| 停止                  | `bash scripts/install_standalone_webui_systemd.sh --user stop`             |
+| 登録解除              | `bash scripts/install_standalone_webui_systemd.sh --user uninstall`        |
 
 systemd unit 名は `construction-legalops-standalone-webui.service` です。
 root 管理の system unit として登録する場合のみ `--system` を使います。
@@ -698,11 +705,11 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Invoke-StandaloneWebUILinu
 
 #### 🪟 Codex デスクトップ / Windows 側からの一時プレビュー
 
-| 🧭 操作 | 🔧 コマンド |
-| ------- | ----------- |
-| 起動 / 再利用 | `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Start-StandaloneWebUI.ps1` |
-| 状態確認 | `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Get-StandaloneWebUIStatus.ps1` |
-| 停止 | `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Stop-StandaloneWebUI.ps1` |
+| 🧭 操作       | 🔧 コマンド                                                                           |
+| ------------- | ------------------------------------------------------------------------------------- |
+| 起動 / 再利用 | `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Start-StandaloneWebUI.ps1`     |
+| 状態確認      | `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Get-StandaloneWebUIStatus.ps1` |
+| 停止          | `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/Stop-StandaloneWebUI.ps1`      |
 
 ### 4️⃣ 開発モード（ホットリロード）
 
@@ -790,35 +797,37 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-> 📌 本 README は **Phase 1 最終整備（Loop 88, 2026-07-19 更新）** 時点のものです。
+> 📌 本 README は **v0.1.12 リリース準備（Loop 107 + PR #59, 2026-07-20 更新）** 時点のものです。
 >
-> | 指標                  | 値                                                                                   |
-> | --------------------- | ------------------------------------------------------------------------------------ |
-> | 📦 バージョン         | v0.1.12                                                                              |
-> | 🧪 バックエンドテスト | 900+ passed / 0 failed（pre-deploy gate）                                            |
-> | 📊 カバレッジ         | 89%                                                                                  |
-> | 🔧 mypy               | 0 errors (97 files) / ruff clean                                                     |
-> | 🔒 Security scan      | Bandit clean (High 0 / Critical 0)                                                   |
-> | 🧩 API 完成度         | AI review / templates / users / auth callback / uploads / notifications DB-backed 化 |
-> | 🗄️ 全サービス         | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化) |
-> | 👥 ユーザー管理       | list/detail/create/update/identity-link/soft-delete/sync受付 DB-backed + audit       |
-> | 📎 アップロード       | signed upload token + attachments metadata DB-backed + soft delete                  |
-> | 📎 SharePoint Graph   | SharePoint Graph real mode 実装済み（client-credentials / drive upload / webUrl 解決 / fail-closed tests 33 passed） |
-> | 📣 Notification real  | Notification real mode 実装済み（Exchange Graph sendMail / Teams webhook / desknet's webhook / fail-closed tests 32 passed） |
-> | 📤 Contract submit    | `POST /contracts/{id}/submit` は legacy 501 stub を撤去し draft → in_review 遷移を実装（unit/integration 38 passed / ruff / mypy） |
-> | 📑 Contract subresources | `/contracts/{id}/versions` current snapshot と `/contracts/{id}/clauses` DB-backed seq order を実装（unit/integration 43 passed / ruff / mypy） |
-> | 🔐 SSO callback/logout | SSOService wrapper + HttpOnly cookie / idempotent logout                            |
-> | ⚡ E2E                | Playwright 51 passed（Docker公式イメージ・knowledge詳細含む・CI HARD gate）          |
-> | 🧪 Jest               | 35 passed / CI HARD gate                                                             |
-> | 📈 負荷テスト         | k6 smoke/load/soak（`infra/k6/`・SLO p95<500ms・週次 + 手動 CI）                     |
-> | 🏥 /readyz            | Deep check (DB critical + Redis/Claude degraded)                                     |
-> | 🔐 RS256              | 鍵ローテーション対応（kid ヘッダ + JWT_PUBLIC_KEYS 退役鍵検証）main マージ済み       |
-> | ☁️ Cloudflare/Neon     | **preview 実デプロイ済み**: `https://legalops-preview.mirai-dx-platform.com`（named tunnel + Neon `development` branch、デプロイ後検証 16/16 PASS）。Neon プロジェクト `Construction-LegalOps-DX` 作成済み（PG16 / migration 001→005 + roundtrip 検証済み）。本番 `legalops.mirai-dx-platform.com` は Y 承認後 Phase 2 |
-> | 📊 監視基盤           | Prometheus + Alertmanager + Grafana + Loki/Promtail + 追加メトリクス + backend replica DNS discovery |
-> | 📢 Incident運用       | On-call役割表 + GitHub incident labels + unhealthy watchdog 整備済み                |
-> | 🗄️ Migration rollback | 一時 PostgreSQL 16 で Alembic roundtrip 検証済み（upgrade/downgrade/idempotent）      |
-> | 🔍 Pre-deploy gate    | ruff/mypy/pytest/migration/typecheck/eslint/Bandit/npm audit/dependency audit evidence/secret scan/compose/monitoring config/Standalone WebUI runtime/Cloudflare legalops/release docs/goal evidence/review evidence/GitHub release gate/latest CI/warning classification/checklist pending classification/production stop-line |
-> | 🔧 JIT プロビジョニング | 完了（audit chain 統合 + commit 窓可観測性）                                        |
+> | 指標                     | 値                                                                                                                                                                                                                                                                                                                              |
+> | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | 📦 バージョン            | v0.1.12                                                                                                                                                                                                                                                                                                                         |
+> | 🧪 バックエンドテスト    | 900+ passed / 0 failed（pre-deploy gate）                                                                                                                                                                                                                                                                                       |
+> | 📊 カバレッジ            | 89%                                                                                                                                                                                                                                                                                                                             |
+> | 🔧 mypy                  | 0 errors (97 files) / ruff clean                                                                                                                                                                                                                                                                                                |
+> | 🔒 Security scan         | Bandit clean (High 0 / Critical 0)                                                                                                                                                                                                                                                                                              |
+> | 🧩 API 完成度            | AI review / templates / users / auth callback / uploads / notifications DB-backed 化                                                                                                                                                                                                                                            |
+> | 🗄️ 全サービス            | risk/compliance/knowledge/template/clause-library/reviews/workflows (全 DB バック化)                                                                                                                                                                                                                                            |
+> | 👥 ユーザー管理          | list/detail/create/update/identity-link/soft-delete/sync受付 DB-backed + audit                                                                                                                                                                                                                                                  |
+> | 📎 アップロード          | signed upload token + attachments metadata DB-backed + soft delete                                                                                                                                                                                                                                                              |
+> | 📎 SharePoint Graph      | SharePoint Graph real mode 実装済み（client-credentials / drive upload / webUrl 解決 / fail-closed tests 33 passed）                                                                                                                                                                                                            |
+> | 📣 Notification real     | Notification real mode 実装済み（Exchange Graph sendMail / Teams webhook / desknet's webhook / fail-closed tests 32 passed）                                                                                                                                                                                                    |
+> | 📤 Contract submit       | `POST /contracts/{id}/submit` は legacy 501 stub を撤去し draft → in_review 遷移を実装（unit/integration 38 passed / ruff / mypy）                                                                                                                                                                                              |
+> | 📑 Contract subresources | `/contracts/{id}/versions` current snapshot と `/contracts/{id}/clauses` DB-backed seq order を実装（unit/integration 43 passed / ruff / mypy）                                                                                                                                                                                 |
+> | ⚖️ Compliance run        | `POST /compliance/checks/{contract_id}/run` は ComplianceChecker 即時実行 + `status=done`、frontend API schema/route も backend と整合（backend 72 passed / frontend typecheck + lint）                                                                                                                                         |
+> | 👥 User sync             | `POST /users/sync` は外部 Graph 呼び出しなしで queued job を返し、`user.sync` audit log + `external_write=false` を検証（backend 25 passed / frontend typecheck + lint）                                                                                                                                                        |
+> | 🔐 SSO callback/logout   | SSOService wrapper + HttpOnly cookie / idempotent logout                                                                                                                                                                                                                                                                        |
+> | ⚡ E2E                   | Playwright 51 passed（Docker公式イメージ・knowledge詳細含む・CI HARD gate）                                                                                                                                                                                                                                                     |
+> | 🧪 Jest                  | 35 passed / CI HARD gate                                                                                                                                                                                                                                                                                                        |
+> | 📈 負荷テスト            | k6 smoke/load/soak（`infra/k6/`・SLO p95<500ms・週次 + 手動 CI）                                                                                                                                                                                                                                                                |
+> | 🏥 /readyz               | Deep check (DB critical + Redis/Claude degraded)                                                                                                                                                                                                                                                                                |
+> | 🔐 RS256                 | 鍵ローテーション対応（kid ヘッダ + JWT_PUBLIC_KEYS 退役鍵検証）main マージ済み                                                                                                                                                                                                                                                  |
+> | ☁️ Cloudflare/Neon       | **preview 実デプロイ済み**: `https://legalops-preview.mirai-dx-platform.com`（named tunnel + Neon `development` branch、デプロイ後検証 16/16 PASS）。Neon プロジェクト `Construction-LegalOps-DX` 作成済み（PG16 / migration 001→005 + roundtrip 検証済み）。本番 `legalops.mirai-dx-platform.com` は Y 承認後 Phase 2          |
+> | 📊 監視基盤              | Prometheus + Alertmanager + Grafana + Loki/Promtail + 追加メトリクス + backend replica DNS discovery                                                                                                                                                                                                                            |
+> | 📢 Incident運用          | On-call役割表 + GitHub incident labels + unhealthy watchdog 整備済み                                                                                                                                                                                                                                                            |
+> | 🗄️ Migration rollback    | 一時 PostgreSQL 16 で Alembic roundtrip 検証済み（upgrade/downgrade/idempotent）                                                                                                                                                                                                                                                |
+> | 🔍 Pre-deploy gate       | ruff/mypy/pytest/migration/typecheck/eslint/Bandit/npm audit/dependency audit evidence/secret scan/compose/monitoring config/Standalone WebUI runtime/Cloudflare legalops/release docs/goal evidence/review evidence/GitHub release gate/latest CI/warning classification/checklist pending classification/production stop-line |
+> | 🔧 JIT プロビジョニング  | 完了（audit chain 統合 + commit 窓可観測性）                                                                                                                                                                                                                                                                                    |
 >
 > 🖥️ 検証用 WebUI: `http://192.168.0.185:38100/` (`/healthz` = `ok`, systemd active) ／ 🌐 preview: `https://legalops-preview.mirai-dx-platform.com`
 > 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) / CF 本番リソース（本番 Tunnel/Access/`legalops` CNAME）(P0) — コードブロッカー 0 / 本番 deploy 未実行 / 本番 DNS 未変更（preview 用 `legalops-preview` CNAME のみユーザー承認の上作成済み）
@@ -826,18 +835,19 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 
 ---
 
-## 🔌 Backend API カバレッジ（v0.1.12 / Loop 93）
+## 🔌 Backend API カバレッジ（v0.1.12 / Loop 105）
 
-| エンドポイント            | ステータス     | テスト数        |
-| ------------------------- | -------------- | --------------- |
+| エンドポイント            | ステータス     | テスト数                                |
+| ------------------------- | -------------- | --------------------------------------- |
 | `/api/v1/contracts`       | ✅ 実装+テスト | CRUD + submit + versions + clauses 回帰 |
-| `/api/v1/reviews`         | ✅ 実装+テスト | 13件            |
-| `/api/v1/workflows`       | ✅ 実装+テスト | 8件             |
-| `/api/v1/risks`           | ✅ 実装+テスト | 5件             |
-| `/api/v1/compliance`      | ✅ 実装+テスト | 6件             |
-| `/api/v1/knowledge`       | ✅ 実装+テスト | 6件 (DB バック) |
-| `/api/v1/templates`       | ✅ 実装+テスト | 7件 (DB バック) |
-| `/api/v1/clauses-library` | ✅ 実装+テスト | 8件 (DB バック) |
-| `/api/v1/audit-logs`      | ✅ 実装+テスト | 3件             |
-| `/api/v1/dashboard`       | ✅ 実装+テスト | 3件             |
-| `/api/v1/health`          | ✅ 実装+テスト | 3件             |
+| `/api/v1/reviews`         | ✅ 実装+テスト | 13件                                    |
+| `/api/v1/workflows`       | ✅ 実装+テスト | 8件                                     |
+| `/api/v1/risks`           | ✅ 実装+テスト | 5件                                     |
+| `/api/v1/compliance`      | ✅ 実装+テスト | 6件                                     |
+| `/api/v1/users`           | ✅ 実装+テスト | Graph sync queued + audit               |
+| `/api/v1/knowledge`       | ✅ 実装+テスト | 6件 (DB バック)                         |
+| `/api/v1/templates`       | ✅ 実装+テスト | 7件 (DB バック)                         |
+| `/api/v1/clauses-library` | ✅ 実装+テスト | 8件 (DB バック)                         |
+| `/api/v1/audit-logs`      | ✅ 実装+テスト | 4件                                     |
+| `/api/v1/dashboard`       | ✅ 実装+テスト | 3件                                     |
+| `/api/v1/health`          | ✅ 実装+テスト | 3件                                     |
