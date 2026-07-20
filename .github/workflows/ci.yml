@@ -268,7 +268,7 @@ jobs:
           SSO_MODE: real
           AI_REVIEW_MODE: real
           SHAREPOINT_MODE: real
-          NOTIFICATION_MODE: real
+          NOTIFY_MODE: real
           NEXT_PUBLIC_API_BASE_URL: https://ci.invalid
         run: |
           docker compose \

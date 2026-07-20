@@ -16,6 +16,17 @@
 | 破壊的 migration | 🚫 予定なし          | Alembic rollback は手順化済み。実行は承認後                                                                         |
 | CD workflow      | 🔒 承認待ち          | `.github/workflows/deploy.yml` は手動起動 + production environment + `APPROVE_PRODUCTION_CHANGE` 入力で fail-closed |
 
+## 🔐 1.5 認証方式の確定記録 (2026-07-20 ユーザー決定)
+
+| 項目            | 決定                                                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 認証境界        | **Cloudflare Access 一本化**（メール OTP + ルールグループ許可リスト）。Entra ID / M365 は本デプロイでは不使用                                    |
+| アプリ側        | `SSO_MODE=stub` + `EDGE_AUTH_BOUNDARY=cloudflare-access` の明示 opt-in がある場合のみ本番で stub 身分証を許可（opt-in なしは従来どおり起動拒否） |
+| SharePoint 連携 | `SHAREPOINT_MODE=disabled` — uploads はメタデータ管理のみ（`upload_url=null`）、操作は明示エラー                                                 |
+| 通知連携        | `NOTIFY_MODE=disabled` — アプリ内記録のみ、外部送信なし                                                                                          |
+| AI レビュー     | 使用（`CLAUDE_API_KEY` 実値必須・fail-closed 維持）                                                                                              |
+| 前提            | `legalops` DNS 公開は Access アプリ + ルールグループ作成の**後**                                                                                 |
+
 ## 📊 2. 現在の検証スナップショット (2026-07-20 / Loop 107)
 
 | 項目                             | 現在値                                                                                                                                                                                                                                                                                                                               | 判定                              |
@@ -39,6 +50,7 @@
 | User sync queued audit           | `POST /users/sync` は外部 Graph 呼び出しなしで `queued` を返し、`user.sync` 監査 payload に `external_write=false` を記録。backend 25 passed / frontend typecheck + targeted lint clean                                                                                                                                              | ✅                                |
 | File parser OCR guard            | 画像PDFは実OCRバックエンド承認・設定まで placeholder OCR を返さず fail-closed。`backend/tests/unit/test_file_parser.py` → 22 passed / ruff clean / mypy success                                                                                                                                                                      | ✅                                |
 | Upload URL guard                 | `POST /uploads/init` は承認済みdirect-upload URL未設定時に `upload_url=null`。downloadはSharePoint URL 解決失敗時に `sharepoint-stub://` へフォールバックせず `502 sharepoint url unavailable`。成功時監査 payload は `external_url_resolved=true` / `external_write=false`。upload integration 2 passed / ruff clean / mypy success | ✅                                |
+| Production stub guard            | `APP_ENV=production` では SharePoint / AI review / Notification の `stub` mode と Claude sentinel key を起動時に拒否。SSO stub は `EDGE_AUTH_BOUNDARY=cloudflare-access` 明示時のみ許可。`backend/tests/unit/test_production_stub_guards.py` → 9 passed                                      | ✅                                |
 | Monitoring config                | `bash scripts/verify_monitoring_config.sh` → Passed 19 / Failed 0。Prometheus backend DNS discovery / YAML / Grafana / docs 整合を検証                                                                                                                                                                                               | ✅                                |
 | Backup / restore evidence        | `bash scripts/verify_backup_restore_docs.sh` → Passed 36 / Failed 0。pg_dump / pg_restore 手順、backup_db.sh checksum、Alembic rollback、PITR未実演停止線をread-only検証                                                                                                                                                             | ✅ / ⏳                           |
 | Warning classification           | `./scripts/verify_predeploy_warning_classification.sh` → Passed 13 / Failed 0。既知warning 5件のみ、未知warning 0                                                                                                                                                                                                                    | ✅                                |
@@ -50,7 +62,7 @@
 | WebUI                            | `http://192.168.0.185:38100/healthz` → `ok` / systemd enabled + active / `192.168.0.185:38100` listen                                                                                                                                                                                                                                | ✅                                |
 | CodeRabbit review                | CLI 0.6.5 / auth OK。`coderabbit review --agent -t uncommitted` は解析開始後 240s で findings 前タイムアウト                                                                                                                                                                                                                         | ⚠️ ローカル静的検証で代替         |
 | Local workspace                  | Loop 94〜107 差分は PR #59 で正本化。本番公開 (DNS / Access / secrets / CSP enforce) は人間ゲート                                                                                                                                                                                                                                    | ✅ 正本化済み                     |
-| Local workspace state            | `bash scripts/verify_local_workspace_state.sh` → Passed 8 / Failed 0。時点非依存 fail-closed 検査 (secret 混入 / 実行ビット / git 整合 / verifier 実在) + 現況開示                                                                                                                                                                                  | ✅                                |
+| Local workspace state            | `bash scripts/verify_local_workspace_state.sh` → Passed 8 / Failed 0。時点非依存 fail-closed 検査 (secret 混入 / 実行ビット / git 整合 / verifier 実在) + 現況開示                                                                                                                                                                   | ✅                                |
 
 Warnings は本番 secret 未投入、SSO / AI key 未投入、Docker build skip に起因する既知5件のみ。いずれも #23 / #50 の人間承認後に解消する前提であり、secret 値はリポジトリ・Issue・ログへ出力しない。未知warningは `scripts/verify_predeploy_warning_classification.sh` で検出時に失敗させる。
 

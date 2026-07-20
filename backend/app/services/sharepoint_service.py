@@ -76,8 +76,15 @@ class SharePointService:
     ) -> None:
         settings = get_settings()
         self._mode = (mode or os.getenv("SHAREPOINT_MODE", "stub") or "stub").lower()
+        if self._mode not in {"stub", "real", "disabled"}:
+            raise RuntimeError(
+                f"SHAREPOINT_MODE must be 'stub', 'real', or 'disabled', got {self._mode!r}"
+            )
         if settings.is_production and self._mode == "stub":
-            raise RuntimeError("SHAREPOINT_MODE=stub is disabled when APP_ENV=production")
+            raise RuntimeError(
+                "SHAREPOINT_MODE=stub is disabled when APP_ENV=production "
+                "(use SHAREPOINT_MODE=disabled to run without SharePoint)"
+            )
         self._stub_root = stub_root or _DEFAULT_STUB_ROOT
         self._site_url = site_url or os.getenv(
             "SHAREPOINT_SITE_URL", "https://contoso.sharepoint.com/sites/legalops"
@@ -91,8 +98,13 @@ class SharePointService:
     # Public API
     # ------------------------------------------------------------------
 
+    def _ensure_enabled(self) -> None:
+        if self._mode == "disabled":
+            raise SharePointError("SharePoint integration is disabled (SHAREPOINT_MODE=disabled)")
+
     async def upload(self, file_bytes: bytes, path: str) -> str:
         """Upload ``file_bytes`` to ``path`` and return the doc ID."""
+        self._ensure_enabled()
         if not path:
             raise SharePointError("path is required")
         if self._mode != "stub":  # pragma: no cover - Loop 4 path
@@ -117,6 +129,7 @@ class SharePointService:
 
     async def get_url(self, doc_id: str) -> str:
         """Return a viewable URL for ``doc_id``."""
+        self._ensure_enabled()
         if self._mode != "stub":  # pragma: no cover - Loop 4 path
             return await self._real_get_url(doc_id)
         marker = self._stub_root / "_index" / f"{doc_id}.path"
@@ -127,6 +140,7 @@ class SharePointService:
 
     async def download(self, doc_id: str) -> bytes:
         """Stub-only helper used by tests and the file_parser bridge."""
+        self._ensure_enabled()
         if self._mode != "stub":  # pragma: no cover
             raise SharePointError("download() is stub-only in Loop 2")
         marker = self._stub_root / "_index" / f"{doc_id}.path"
