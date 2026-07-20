@@ -11,7 +11,11 @@
 #
 # Safety:
 #   - This file does not create Cloudflare DNS, Access, Tunnel, or Neon resources.
-#   - CLOUDFLARE_TUNNEL_TOKEN must be injected from Vault / secret manager.
+#   - The tunnel is run with a credentials file + local ingress config, NOT
+#     --token. A token-run tunnel with no dashboard public-hostname returns 503
+#     for every HTTP request; the local config.yml defines the ingress instead.
+#   - CLOUDFLARE_TUNNEL_CREDENTIALS_FILE points at the tunnel credentials JSON
+#     (a secret, bind-mounted read-only from the host — never committed).
 #   - nginx host ports are closed; cloudflared reaches nginx:80 on legalops-net.
 # ============================================================
 name: construction-legalops-dx
@@ -26,12 +30,18 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: legalops-cloudflared
     restart: unless-stopped
+    # Run as the host user that owns the mounted credentials file (mode 0400),
+    # otherwise the default nonroot image user cannot read /etc/cloudflared/creds.json.
+    user: "${CLOUDFLARE_TUNNEL_UID:-1000}:${CLOUDFLARE_TUNNEL_GID:-1000}"
     command:
       - "tunnel"
       - "--no-autoupdate"
+      - "--config"
+      - "/etc/cloudflared/config.yml"
       - "run"
-      - "--token"
-      - "${CLOUDFLARE_TUNNEL_TOKEN:?required after human approval}"
+    volumes:
+      - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - ${CLOUDFLARE_TUNNEL_CREDENTIALS_FILE:?required — path to the tunnel credentials JSON}:/etc/cloudflared/creds.json:ro
     depends_on:
       nginx:
         condition: service_healthy
