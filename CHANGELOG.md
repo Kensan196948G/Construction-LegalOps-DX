@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-07-20
+
+### Fixed (2026-07-20 Verify: fail-closed 化のテスト回帰)
+
+- **🧪 test_sso_service の MagicMock fixture に `is_production = False` を明示** — SSOService の本番 stub 拒否ガードが truthy な MagicMock 属性で誤発火し 3 failed + 34 errors となる回帰を修正（production=True 経路は `test_production_stub_guards.py` が担当）
+
 ### Added (2026-07-19 Phase 1 確定: Neon 実環境検証 + Cloudflare preview 実デプロイ)
 
 - **🗄️ Neon 実プロジェクト作成と migration 検証** (グローバル CLAUDE.md §27.2 包括承認範囲):
@@ -693,7 +699,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⚠️ **P2: python-jose → PyJWT 移行**（ecdsa/rsa 純 Python 暗号依存の除去 — Issue #41）
 - ⚠️ **P2: JIT プロビジョニング残課題**（commit 境界 / requester 帰属 / identity linking — Issue #48）
 
-[Unreleased]: https://github.com/Construction-LegalOps-DX/Construction-LegalOps-DX/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/Kensan196948G/Construction-LegalOps-DX/compare/v0.1.12...HEAD
+[0.1.12]: https://github.com/Kensan196948G/Construction-LegalOps-DX/compare/v0.1.11...v0.1.12
 
 ## [0.1.8] - 2026-05-30
 
