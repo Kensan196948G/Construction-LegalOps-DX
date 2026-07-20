@@ -220,8 +220,13 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      # beat はプロセス存在確認のみ
-      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' >/dev/null || exit 1"]
+      # Liveness via the beat pidfile — the slim image ships no pgrep/procps,
+      # so verify the recorded PID is alive instead (kill -0 is a shell builtin).
+      test:
+        [
+          "CMD-SHELL",
+          'kill -0 "$(cat /tmp/celerybeat.pid)" 2>/dev/null || exit 1',
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
