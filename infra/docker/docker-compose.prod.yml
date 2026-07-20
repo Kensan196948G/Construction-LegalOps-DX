@@ -86,6 +86,12 @@ services:
       CLAUDE_API_KEY: ${CLAUDE_API_KEY:?required in production}
       HENNGE_TENANT_ID: ${HENNGE_TENANT_ID:?required in production}
       HENNGE_API_KEY: ${HENNGE_API_KEY:?required in production}
+      # Production fail-closed guards reject stub modes at call time; the
+      # overlay must pin every integration mode explicitly (default is stub).
+      SSO_MODE: ${SSO_MODE:?required in production}
+      AI_REVIEW_MODE: ${AI_REVIEW_MODE:?required in production}
+      SHAREPOINT_MODE: ${SHAREPOINT_MODE:?required in production}
+      NOTIFICATION_MODE: ${NOTIFICATION_MODE:?required in production}
     # 本番では nginx 越しでのみ公開
     ports: !reset []
     read_only: true
@@ -111,6 +117,10 @@ services:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:?required in production}
       CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:?required in production}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY:?required in production}
+      SSO_MODE: ${SSO_MODE:?required in production}
+      AI_REVIEW_MODE: ${AI_REVIEW_MODE:?required in production}
+      SHAREPOINT_MODE: ${SHAREPOINT_MODE:?required in production}
+      NOTIFICATION_MODE: ${NOTIFICATION_MODE:?required in production}
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777

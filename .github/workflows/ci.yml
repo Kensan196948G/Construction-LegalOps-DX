@@ -265,6 +265,10 @@ jobs:
           CLAUDE_API_KEY: ci
           HENNGE_TENANT_ID: ci
           HENNGE_API_KEY: ci
+          SSO_MODE: real
+          AI_REVIEW_MODE: real
+          SHAREPOINT_MODE: real
+          NOTIFICATION_MODE: real
           NEXT_PUBLIC_API_BASE_URL: https://ci.invalid
         run: |
           docker compose \
