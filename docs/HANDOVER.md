@@ -1,15 +1,15 @@
 # HANDOVER — Construction-LegalOps-DX
 
-次セッション (Loop 107 以降、または本番リリース準備チーム) への引き継ぎ書です。
+次セッション (Loop 108 以降、または本番リリース準備チーム) への引き継ぎ書です。
 
 - 作成日: **2026-05-16** (Loop 5 初版)
-- 最終更新: **2026-07-20** (Loop 107: Upload init null URL guard)
+- 最終更新: **2026-07-20** (Loop 108: Cloudflare Access JWT guard / Production stub guard)
 - 対象プロジェクト: Construction-LegalOps-DX
 - リリース期限: **2026-11-16** (登録日 2026-05-16 から 6 ヶ月、絶対厳守)
 - 現在ステータス: **v0.1.12** — pre-deploy gate 900+ tests / frontend E2E 51 passed / Phase 1 完了 / 本番承認待ち
 - **本番デプロイ**: **未実行・人間承認待ち**（PR マージ・タグ作成・DNS 変更・本番デプロイは CTO/Supervisor 範囲外）
 
-> 📌 Loop 107 時点: Phase 1 のコード作業は完了し、AI review / templates / users / auth callback / uploads / notifications / knowledge / reviews は DB-backed または runtime-ready の契約に同期済み。Upload init は承認済みdirect-upload URL未設定時に `upload_url=null` を返し、疑似外部URLを利用者へ提示しない。Upload download は SharePoint URL 解決失敗時に `sharepoint-stub://` へフォールバックせず `502 sharepoint url unavailable` で fail-closed とし、成功時監査 payload に `external_url_resolved=true` / `external_write=false` を残す。画像PDFは実OCRバックエンド承認・設定まで placeholder OCR を返さず fail-closed とし、法務レビューへ根拠不明のOCR風テキストが流入しないようにした。`POST /users/sync` は Graph credentials / worker 承認前に外部通信せず queued job を返し、`user.sync` 監査 payload に `external_write=false` を残す。Template creation UI は未実装 alert を撤去し、`useCreateTemplate` 経由で `/templates` 作成APIへ接続済み。CF/Neon IaC、`legalops.mirai-dx-platform.com` の Cloudflare read-only preflight、Cloudflare公式根拠付きRunbook、release evidence matrix、final stop report、release docs preflight、goal completion evidence preflight、review evidence preflight、dependency audit evidence preflight、backup/restore evidence preflight、Standalone WebUI systemd (`http://192.168.0.185:38100/`) は確認済み。`scripts/verify_local_workspace_state.sh` は時点非依存の fail-closed 検査 (secret 混入 / 実行ビット / git 整合 / verifier 実在) とローカル作業ツリーの現況開示を read-only で行う。Loop 94〜107 差分は PR #59 で正本化済み。本番公開 (DNS / Access / secrets / CSP enforce) は人間ゲート。CD workflow は `workflow_dispatch` + `production` environment + `APPROVE_PRODUCTION_CHANGE` 明示入力で fail-closed。
+> 📌 Loop 108 時点: Phase 1 のコード作業は完了し、AI review / templates / users / auth callback / uploads / notifications / knowledge / reviews は DB-backed または runtime-ready の契約に同期済み。本番 `APP_ENV=production` では SharePoint / AI review / Notification の `stub` mode と Claude sentinel key を起動時に拒否し、SSO stub は Cloudflare Access が唯一の認証境界であることを `EDGE_AUTH_BOUNDARY=cloudflare-access` で明示した場合のみ許可する。Access-only 本番モードでは `Cf-Access-Jwt-Assertion` を RS256 / issuer / AUD で検証し、Access email header と JWT email の一致から実ユーザーを JIT / 監査する。Upload init は承認済みdirect-upload URL未設定時に `upload_url=null` を返し、疑似外部URLを利用者へ提示しない。Upload download は SharePoint URL 解決失敗時に `sharepoint-stub://` へフォールバックせず `502 sharepoint url unavailable` で fail-closed とし、成功時監査 payload に `external_url_resolved=true` / `external_write=false` を残す。画像PDFは実OCRバックエンド承認・設定まで placeholder OCR を返さず fail-closed とし、法務レビューへ根拠不明のOCR風テキストが流入しないようにした。`POST /users/sync` は Graph credentials / worker 承認前に外部通信せず queued job を返し、`user.sync` 監査 payload に `external_write=false` を残す。Template creation UI は未実装 alert を撤去し、`useCreateTemplate` 経由で `/templates` 作成APIへ接続済み。CF/Neon IaC、`legalops.mirai-dx-platform.com` の Cloudflare read-only preflight、Cloudflare公式根拠付きRunbook、release evidence matrix、final stop report、release docs preflight、goal completion evidence preflight、review evidence preflight、dependency audit evidence preflight、backup/restore evidence preflight、Standalone WebUI systemd (`http://192.168.0.185:38100/`) は確認済み。`scripts/verify_local_workspace_state.sh` は時点非依存の fail-closed 検査 (secret 混入 / 実行ビット / git 整合 / verifier 実在) とローカル作業ツリーの現況開示を read-only で行う。Loop 94〜108 差分は本番公開 (DNS / Access / secrets / CSP enforce) の人間ゲートを越えずに維持。CD workflow は `workflow_dispatch` + `production` environment + `APPROVE_PRODUCTION_CHANGE` 明示入力で fail-closed。
 > 本書は「人間判断待ち / 残課題 / 過去設計履歴」を保持する。現行の承認判断は [`docs/PRODUCTION_APPROVAL_PACKET.md`](./PRODUCTION_APPROVAL_PACKET.md)、[`docs/RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md)、[`docs/RELEASE_EVIDENCE_MATRIX.md`](./RELEASE_EVIDENCE_MATRIX.md)、[`docs/FINAL_RELEASE_STOP_REPORT.md`](./FINAL_RELEASE_STOP_REPORT.md) を正とする。
 
 ---
@@ -132,15 +132,15 @@
 
 12. **Cloudflare / Neon 移行** ✅ **IaC コード完成 + legalops サブドメイン手順化 (Issue #50)**
     - `infra/cloudflare/`: wrangler.toml / access-policy.yml / neon-config.md / tunnel-config.example.yml / dns-records.legalops.example.json
-    - `infra/docker/docker-compose.cloudflare-tunnel.yml`: cloudflared connector overlay（承認後に `CLOUDFLARE_TUNNEL_TOKEN` を Vault / secret manager から注入）
+    - `infra/docker/docker-compose.cloudflare-tunnel.yml`: cloudflared connector overlay（承認後に Tunnel credentials JSON を安全な host path へ配備し、`CLOUDFLARE_TUNNEL_CREDENTIALS_FILE` を Vault / secret manager から環境へ注入）
     - `docs/CLOUDFLARE_LEGALOPS_SUBDOMAIN_RUNBOOK.md`: `legalops.mirai-dx-platform.com` の DNS / Tunnel / Access / rollback 手順
-    - `scripts/verify_cloudflare_legalops.sh`: DNS を変更せず、Tunnel/DNS/Access/compose/NS/CNAME 未作成状態を検証する read-only preflight
+    - `scripts/verify_cloudflare_legalops.sh`: DNS を変更せず、Tunnel/DNS/Access/compose/NS/Cloudflare Access challenge 状態を検証する read-only preflight
     - CD 経路: deploy.yml に CF/Neon デプロイジョブ 3 件追加（`workflow_dispatch` + `production` environment + `APPROVE_PRODUCTION_CHANGE` + secrets 未設定時 fail-closed）
     - **本番適用は人間による Cloudflare API token 発行・Access/Tunnel/DNS 作成承認後**
 
 ---
 
-## 3. 推奨次アクション (Loop 107 以降の優先順)
+## 3. 推奨次アクション (Loop 108 以降の優先順)
 
 ### Sprint 1 (リリース 2026-08-16 〜 2026-10-16) — ✅ **Loop 32-33 で完了**
 
@@ -202,4 +202,4 @@
 ---
 
 > 本引き継ぎ書の初版は Loop 5 完了時 (2026-05-16) に作成されました。
-> Loop 107 (2026-07-20) 時点で現行リリースゲートへ同期済みです。次セッションは `state.json`、`docs/PRODUCTION_APPROVAL_PACKET.md`、`docs/RELEASE_CHECKLIST.md`、`docs/RELEASE_EVIDENCE_MATRIX.md`、`docs/FINAL_RELEASE_STOP_REPORT.md`、`scripts/verify_local_workspace_state.sh`、`scripts/verify_backup_restore_docs.sh`、`scripts/verify_dependency_audit_evidence.sh`、`scripts/verify_review_evidence.sh`、`scripts/verify_goal_completion_evidence.sh`、`scripts/verify_github_release_gate.sh`、`scripts/verify_standalone_webui_runtime.sh`、`scripts/verify_predeploy_warning_classification.sh`、`scripts/verify_release_checklist_pending_items.sh`、`scripts/verify_production_stop_line.sh` を確認し、#23 / #24 / #50 / PITR の人間承認ゲートを越えない範囲で Verify / Release 準備を継続してください。
+> Loop 108 (2026-07-20) 時点で現行リリースゲートへ同期済みです。次セッションは `state.json`、`docs/PRODUCTION_APPROVAL_PACKET.md`、`docs/RELEASE_CHECKLIST.md`、`docs/RELEASE_EVIDENCE_MATRIX.md`、`docs/FINAL_RELEASE_STOP_REPORT.md`、`scripts/verify_local_workspace_state.sh`、`scripts/verify_backup_restore_docs.sh`、`scripts/verify_dependency_audit_evidence.sh`、`scripts/verify_review_evidence.sh`、`scripts/verify_goal_completion_evidence.sh`、`scripts/verify_github_release_gate.sh`、`scripts/verify_standalone_webui_runtime.sh`、`scripts/verify_predeploy_warning_classification.sh`、`scripts/verify_release_checklist_pending_items.sh`、`scripts/verify_production_stop_line.sh` を確認し、#23 / #24 / #50 / PITR の人間承認ゲートを越えない範囲で Verify / Release 準備を継続してください。

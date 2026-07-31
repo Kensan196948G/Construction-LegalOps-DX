@@ -37,7 +37,7 @@ warn() {
 contains() {
   local file="$1"
   local pattern="$2"
-  grep -Fq "$pattern" "$file"
+  grep -Fq -- "$pattern" "$file"
 }
 
 echo "================================================"
@@ -70,23 +70,24 @@ if [ -f "${ACCESS_POLICY}" ]; then
   contains "${ACCESS_POLICY}" "domain: \"${HOSTNAME}\"" && pass "Access policy domain is ${HOSTNAME}" || fail "Access policy domain mismatch"
   contains "${ACCESS_POLICY}" "LegalOps-Users" && pass "Access policy includes LegalOps-Users" || fail "Access policy missing LegalOps-Users"
   contains "${ACCESS_POLICY}" "LegalOps-Admins" && pass "Access policy includes LegalOps-Admins" || fail "Access policy missing LegalOps-Admins"
-  contains "${ACCESS_POLICY}" "value: \"mfa\"" && pass "Access policy requires MFA" || fail "Access policy does not require MFA"
+  contains "${ACCESS_POLICY}" "one_time_pin" && pass "Access policy uses Cloudflare email OTP IdP" || fail "Access policy missing email OTP IdP"
 fi
 
 if [ -f "${COMPOSE_OVERLAY}" ]; then
-  contains "${COMPOSE_OVERLAY}" "CLOUDFLARE_TUNNEL_TOKEN" && pass "Compose overlay expects CLOUDFLARE_TUNNEL_TOKEN" || fail "Compose overlay missing CLOUDFLARE_TUNNEL_TOKEN"
+  contains "${COMPOSE_OVERLAY}" "CLOUDFLARE_TUNNEL_CREDENTIALS_FILE" && pass "Compose overlay expects Cloudflare Tunnel credentials file" || fail "Compose overlay missing CLOUDFLARE_TUNNEL_CREDENTIALS_FILE"
+  contains "${COMPOSE_OVERLAY}" "NOT" && contains "${COMPOSE_OVERLAY}" "--token" && pass "Compose overlay documents credentials-file mode instead of token-run mode" || fail "Compose overlay missing credentials-file mode note"
   contains "${COMPOSE_OVERLAY}" "cloudflare/cloudflared" && pass "Compose overlay uses official cloudflared image" || fail "Compose overlay image is not cloudflare/cloudflared"
 fi
 
 if [ -f "${RUNBOOK}" ]; then
-  contains "${RUNBOOK}" "2026-07-20 Loop 106" && pass "Runbook records current Loop 106 Cloudflare status" || fail "Runbook is not synced to Loop 106"
+  contains "${RUNBOOK}" "2026-07-20 Loop 108" && pass "Runbook records current Loop 108 Cloudflare status" || fail "Runbook is not synced to Loop 108"
   contains "${RUNBOOK}" "親ドメイン \`mirai-dx-platform.com\` は取得済み" && pass "Runbook records acquired parent domain requirement" || fail "Runbook missing acquired parent domain requirement"
   contains "${RUNBOOK}" "\`legalops\` は新規作成対象" && pass "Runbook records legalops as new subdomain" || fail "Runbook missing legalops new-subdomain requirement"
-  contains "${RUNBOOK}" "\`legalops.mirai-dx-platform.com\` | Cloudflare API / DNS ともに未登録。新規サブドメインとして承認後に作成" && pass "Runbook records legalops DNS/API absence before approval" || fail "Runbook missing legalops pre-approval absence"
+  contains "${RUNBOOK}" "Cloudflare API で CNAME 1件を確認" && pass "Runbook records current legalops DNS/API presence" || fail "Runbook missing legalops DNS/API presence"
   contains "${RUNBOOK}" "DNS レコードと Tunnel は独立" && pass "Runbook documents DNS/Tunnel independence" || fail "Runbook missing DNS/Tunnel independence warning"
   contains "${RUNBOOK}" "1016" && pass "Runbook documents Cloudflare 1016 rollback risk" || fail "Runbook missing Cloudflare 1016 risk"
   contains "${RUNBOOK}" "Access を DNS 公開前に作成" && pass "Runbook requires Access before DNS publication" || fail "Runbook missing Access-before-DNS rule"
-  contains "${RUNBOOK}" "DNS 作成、Access 作成、Tunnel 作成、本番デプロイはこのセッションでは実行していません" && pass "Runbook preserves no-production-change stop line" || fail "Runbook missing no-production-change stop line"
+  contains "${RUNBOOK}" "CTO/Supervisor は DNS 作成、Access 作成、Tunnel 作成、本番デプロイを実行していません" && pass "Runbook preserves no-production-change stop line" || fail "Runbook missing no-production-change stop line"
   contains "${RUNBOOK}" "apply_cloudflare_legalops_after_approval.sh" && pass "Runbook references approval-gated apply helper" || fail "Runbook missing approval-gated apply helper"
 fi
 
@@ -95,6 +96,43 @@ if [ -f "${APPLY_HELPER}" ]; then
   contains "${APPLY_HELPER}" 'EXECUTE="${EXECUTE:-0}"' && pass "Apply helper defaults to dry-run mode" || fail "Apply helper does not default to dry-run"
   contains "${APPLY_HELPER}" 'LEGALOPS_HOSTNAME="${LEGALOPS_HOSTNAME:-legalops.mirai-dx-platform.com}"' && pass "Apply helper does not inherit shell HOSTNAME" || fail "Apply helper may inherit shell HOSTNAME"
   contains "${APPLY_HELPER}" "cloudflared tunnel route dns" && pass "Apply helper routes DNS via cloudflared only after approval" || fail "Apply helper missing cloudflared DNS route"
+  contains "${APPLY_HELPER}" "resolve_tunnel_uuid" && pass "Apply helper resolves tunnel names to UUIDs before routing" || fail "Apply helper does not resolve tunnel names"
+  contains "${APPLY_HELPER}" "TUNNEL_UUID" && pass "Apply helper accepts explicit tunnel UUID" || fail "Apply helper missing explicit tunnel UUID input"
+  contains "${APPLY_HELPER}" "EXPECTED_CNAME" && pass "Apply helper computes expected cfargotunnel CNAME" || fail "Apply helper missing expected CNAME check"
+  contains "${APPLY_HELPER}" "Cloudflare API CNAME post-check mismatch" && pass "Apply helper fails closed on API CNAME post-check mismatch" || fail "Apply helper missing API CNAME mismatch guard"
+  contains "${APPLY_HELPER}" "CLOUDFLARE_API_TOKEN is required" && pass "Apply helper requires API token for proxied CNAME validation" || fail "Apply helper missing API-token post-check requirement"
+  contains "${APPLY_HELPER}" "Cloudflare-Access" && pass "Apply helper verifies Access challenge after route" || fail "Apply helper missing Access challenge post-check"
+  if grep -Fq 'cloudflared tunnel route dns "${TUNNEL_ID_OR_NAME}"' "${APPLY_HELPER}"; then
+    fail "Apply helper still routes DNS with ambiguous tunnel name input"
+  else
+    pass "Apply helper does not pass ambiguous tunnel name to route dns"
+  fi
+
+  MOCK_BIN="$(mktemp -d)"
+  cat > "${MOCK_BIN}/cloudflared" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "$*" = "tunnel list --output json" ]; then
+  printf '[{"id":"11111111-2222-3333-4444-555555555555","name":"legalops-test"}]\n'
+  exit 0
+fi
+echo "unexpected cloudflared invocation: $*" >&2
+exit 2
+SH
+  chmod +x "${MOCK_BIN}/cloudflared"
+  MOCK_DRY_RUN="$(
+    PATH="${MOCK_BIN}:${PATH}" \
+    LEGALOPS_CLOUDFLARE_APPROVAL="APPROVE_LEGALOPS_CLOUDFLARE" \
+    TUNNEL_ID_OR_NAME="legalops-test" \
+    EXECUTE=0 \
+    "${APPLY_HELPER}" 2>&1
+  )"
+  rm -rf "${MOCK_BIN}"
+  if echo "${MOCK_DRY_RUN}" | grep -Fq "Would run: cloudflared tunnel route dns 11111111-2222-3333-4444-555555555555 ${HOSTNAME}"; then
+    pass "Apply helper dry-run resolves tunnel names before route dns"
+  else
+    fail "Apply helper dry-run did not prove UUID route dns resolution"
+  fi
 fi
 
 if command -v dig >/dev/null 2>&1; then
@@ -172,9 +210,9 @@ PY
       [ "${API_ZONE_STATUS}" = "active" ] && pass "Cloudflare zone status is active" || warn "Cloudflare zone status is ${API_ZONE_STATUS:-unknown}"
       API_RECORD_COUNT="$(echo "${API_SUMMARY}" | awk -F= '/^record_count=/{print $2; exit}')"
       if [ "${API_RECORD_COUNT:-0}" = "0" ]; then
-        pass "Cloudflare API confirms ${HOSTNAME} DNS record is absent"
+        warn "Cloudflare API confirms ${HOSTNAME} DNS record is absent"
       else
-        warn "Cloudflare API found ${API_RECORD_COUNT} existing ${HOSTNAME} DNS record(s)"
+        pass "Cloudflare API confirms ${HOSTNAME} DNS record exists (${API_RECORD_COUNT})"
       fi
     else
       warn "Cloudflare API read-only check failed: $(echo "${API_SUMMARY}" | awk -F= '/^error=/{print $2; exit}')"

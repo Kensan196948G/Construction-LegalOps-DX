@@ -1,7 +1,7 @@
 # ☁️ Cloudflare Runbook — `legalops.mirai-dx-platform.com`
 
-> **状態: 承認待ち / 未適用 (2026-07-20 Loop 107 + PR #59)**
-> 本書は Cloudflare 側の実作業を安全に進めるための手順書です。`legalops` サブドメインの新規作成要件と、取得済みドメイン `mirai-dx-platform.com` の利用要件は反映済みです。DNS 作成、Access 作成、Tunnel 作成、本番デプロイはこのセッションでは実行していません。
+> **状態: Cloudflare edge 適用済み / 本番 deploy 承認待ち (2026-07-20 Loop 108 + PR #69 / Issue #63 close)**
+> 本書は Cloudflare 側の実作業を安全に進めるための手順書です。`legalops` サブドメインの新規作成要件と、取得済みドメイン `mirai-dx-platform.com` の利用要件は反映済みです。DNS / Access / Tunnel は人間または外部操作で作成済みとして read-only 確認しました。CTO/Supervisor は DNS 作成、Access 作成、Tunnel 作成、本番デプロイを実行していません。
 
 ---
 
@@ -21,7 +21,7 @@
 
 ## 🔍 2. 現状確認
 
-2026-07-20 Loop 106 時点の読み取り確認:
+2026-07-20 Loop 108 時点の読み取り確認:
 
 | 確認 | 結果 |
 |---|---|
@@ -29,7 +29,9 @@
 | Cloudflare Zone ID | `e375e651e49a40801a305b89e297bff0` |
 | `mirai-dx-platform.com` NS | `kareem.ns.cloudflare.com`, `nia.ns.cloudflare.com` |
 | `mirai-dx-platform.com` SOA | Cloudflare (`dns.cloudflare.com`) |
-| `legalops.mirai-dx-platform.com` | Cloudflare API / DNS ともに未登録。新規サブドメインとして承認後に作成 |
+| `legalops.mirai-dx-platform.com` | Cloudflare API で CNAME 1件を確認。公開 DNS は Cloudflare proxy A/AAAA を返す |
+| Access challenge | `curl -I https://legalops.mirai-dx-platform.com/healthz` → Access login 302 / `www-authenticate: Cloudflare-Access` |
+| Access origin JWT 検証 | `Cf-Access-Jwt-Assertion` を backend で RS256 検証し、AUD / issuer / email header match を fail-closed で確認 |
 | ローカル検証用 WebUI | `http://192.168.0.185:38100/` / `http://192.168.0.185:38100/healthz` |
 | systemd user service | `construction-legalops-standalone-webui.service` |
 
@@ -102,17 +104,19 @@ cloudflared tunnel route dns <TUNNEL_ID_OR_NAME> legalops.mirai-dx-platform.com
 承認後に CLI で再現する場合は、誤実行防止のため承認フレーズ必須の helper を使います。
 
 ```bash
-# dry-run: 実際の DNS 変更は行わない
+# dry-run: 実際の DNS 変更は行わない。Tunnel UUID と post-check 予定を表示する
 LEGALOPS_CLOUDFLARE_APPROVAL=APPROVE_LEGALOPS_CLOUDFLARE \
-TUNNEL_ID_OR_NAME=<TUNNEL_ID_OR_NAME> \
+TUNNEL_UUID=<TUNNEL_UUID> \
 ./scripts/apply_cloudflare_legalops_after_approval.sh
 
 # apply: 公開 DNS CNAME を作成するため、人間の最終承認後のみ実行
 LEGALOPS_CLOUDFLARE_APPROVAL=APPROVE_LEGALOPS_CLOUDFLARE \
 EXECUTE=1 \
-TUNNEL_ID_OR_NAME=<TUNNEL_ID_OR_NAME> \
+TUNNEL_UUID=<TUNNEL_UUID> \
 ./scripts/apply_cloudflare_legalops_after_approval.sh
 ```
+
+`TUNNEL_ID_OR_NAME` を指定した場合でも helper は `cloudflared tunnel list --output json` で UUID に解決し、`cloudflared tunnel route dns <UUID> legalops.mirai-dx-platform.com` だけを実行します。作成後は `dig CNAME` の結果が `<UUID>.cfargotunnel.com` と一致することを確認し、不一致なら非ゼロ終了します。
 
 ---
 
@@ -127,13 +131,14 @@ Access application:
 | Domain | `legalops.mirai-dx-platform.com` |
 | Session duration | `24h` |
 | IdP | Microsoft Entra ID |
+| Origin verification | `Cf-Access-Jwt-Assertion` を `CLOUDFLARE_ACCESS_ISSUER` + `CLOUDFLARE_ACCESS_AUD` で検証 |
 
 Policy:
 
 | Policy | Decision | Include | Require |
 |---|---|---|---|
-| Allow LegalOps Users | Allow | Entra ID group / approved users | MFA from IdP |
-| Admin Panel | Allow | `LegalOps-Admins` | MFA from IdP |
+| Allow LegalOps Users | Allow | `LegalOps-Users` group / approved users | OTP allowlist（将来 IdP MFA） |
+| Admin Panel | Allow | `LegalOps-Admins` | OTP allowlist（将来 IdP MFA） |
 
 設定案:
 
@@ -148,11 +153,11 @@ Policy:
 3. 🔐 人間: Cloudflare Zero Trust で Entra ID IdP を登録
 4. 🔐 人間: Access self-hosted application `LegalOps-DX` を作成
 5. 🔌 人間: Tunnel を作成し `<TUNNEL_ID>` を取得
-6. 🔑 人間: `CLOUDFLARE_TUNNEL_TOKEN` を Vault / secret manager へ投入
+6. 🔑 人間: Tunnel credentials JSON を安全な host path へ配備し、`CLOUDFLARE_TUNNEL_CREDENTIALS_FILE`、`CLOUDFLARE_ACCESS_ISSUER`、`CLOUDFLARE_ACCESS_AUD` を Vault / secret manager から環境へ注入
 7. 🧪 CTO: `infra/cloudflare/tunnel-config.example.yml` を実値化したステージング設定で検証
 8. 🔌 人間承認後: Tunnel overlay で connector を起動
-9. 🌐 人間: `legalops` CNAME を `<TUNNEL_ID>.cfargotunnel.com` へ作成
-10. ✅ CTO: health / Access / RBAC / audit smoke を確認
+9. 🌐 人間: `legalops` CNAME を `<TUNNEL_UUID>.cfargotunnel.com` へ作成（2026-07-20 時点で外部/人間操作により作成済み）
+10. ✅ CTO: health / Access / RBAC / audit smoke を確認（未認証 request は Access 302 challenge を確認済み）
 
 ```bash
 docker compose \
@@ -178,9 +183,9 @@ cloudflared tunnel info <TUNNEL_ID_OR_NAME>
 cloudflared tunnel ingress validate infra/cloudflare/tunnel-config.example.yml
 ```
 
-2026-07-20 Loop 106 時点では、`./scripts/verify_cloudflare_legalops.sh` を含む pre-deploy gate が成功し、
-Cloudflare API / DNS を変更しない read-only 確認で `mirai-dx-platform.com` zone が active、`legalops.mirai-dx-platform.com` の CNAME / A が未作成であること、
-Tunnel ingress template が `legalops.mirai-dx-platform.com -> http://nginx:80` として検証対象になっていることを確認済みです。
+2026-07-20 Loop 108 時点では、`./scripts/verify_cloudflare_legalops.sh` を含む pre-deploy gate が成功し、
+Cloudflare API / DNS を変更しない read-only 確認で `mirai-dx-platform.com` zone が active、`legalops.mirai-dx-platform.com` の CNAME が Cloudflare API 上に存在し、公開 DNS は Cloudflare proxy A/AAAA を返すこと、
+未認証 request が Cloudflare Access login 302 で止まること、Tunnel ingress template が `legalops.mirai-dx-platform.com -> http://nginx:80` として検証対象になっていることを確認済みです。
 
 Access 適用後は未認証アクセスがログインへリダイレクトされること、認証後に `/healthz` と UI が到達できることを確認します。
 
