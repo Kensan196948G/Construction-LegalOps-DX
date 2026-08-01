@@ -1,13 +1,5 @@
 {
   "mcpServers": {
-    "github": {
-      "alwaysLoad": true,
-      "command": "npx",
-      "args": ["-y", "@anthropic/mcp-server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
     "memory": {
       "alwaysLoad": true,
       "command": "npx",
