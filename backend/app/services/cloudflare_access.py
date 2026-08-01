@@ -13,6 +13,8 @@ from typing import Any, Final
 
 import httpx
 import jwt
+from cryptography import x509
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 from app.core.config import settings
 
@@ -67,6 +69,22 @@ async def _load_certs() -> dict[str, str]:
     return certs
 
 
+def _load_public_key(cert: str) -> Any:
+    """Parse a Cloudflare Access cert entry into a public key.
+
+    Cloudflare's ``/cdn-cgi/access/certs`` endpoint returns PEM X.509
+    certificates (``BEGIN CERTIFICATE``), which PyJWT cannot consume directly.
+    ``BEGIN PUBLIC KEY`` entries are also accepted for tests and older
+    configurations.
+    """
+
+    pem = cert.encode("utf-8")
+    try:
+        return x509.load_pem_x509_certificate(pem).public_key()
+    except ValueError:
+        return load_pem_public_key(pem)
+
+
 async def verify_access_jwt(token: str) -> dict[str, Any]:
     """Verify a Cloudflare Access JWT and return its claims.
 
@@ -89,14 +107,15 @@ async def verify_access_jwt(token: str) -> dict[str, Any]:
         raise ValueError("Cloudflare Access JWT kid is unknown")
 
     try:
+        public_key = _load_public_key(cert)
         claims: dict[str, Any] = jwt.decode(
             token,
-            cert,
+            public_key,
             algorithms=["RS256"],
             audience=audience,
             issuer=issuer,
         )
-    except jwt.PyJWTError as exc:
+    except (jwt.PyJWTError, ValueError, TypeError) as exc:
         raise ValueError(f"invalid Cloudflare Access JWT: {exc}") from exc
     return claims
 
