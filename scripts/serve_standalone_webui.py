@@ -92,6 +92,15 @@ class StandaloneHandler(BaseHTTPRequestHandler):
                 send_body=send_body,
             )
             return
+        if path == "/favicon.svg":
+            icon_path: Path = self.server.html_path.parent / "favicon.svg"
+            if icon_path.exists():
+                self._send_bytes(
+                    icon_path.read_bytes(),
+                    "image/svg+xml",
+                    send_body=send_body,
+                )
+                return
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def log_message(self, fmt: str, *args: object) -> None:
