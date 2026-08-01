@@ -200,14 +200,14 @@ try {
         if (rot.nudge.count < maxNudges) {
           rot.nudge.count += 1;
           nudgePayload = {
-            hookSpecificOutput: {
-              hookEventName: "Stop",
-              additionalContext:
-                `🔁 [GoalRotation] phase=${rot.current} の Completion Criteria が未充足のまま終了しようとしています` +
-                ` (nudge ${rot.nudge.count}/${maxNudges})。継続可能なら作業を続け、充足したら state.json の` +
-                ` goal_rotation.phase_done=true 書き込みと reports/handoff/ への Session Handoff 出力を行ってください。` +
-                `継続不能 (blocked) ならそのまま終了して構いません (launcher がリトライ/強制前進を処理します)。`,
-            },
+            // Stop hook は hookSpecificOutput 非対応 (Codex / Claude Code とも
+            // "invalid stop hook JSON output" 検証エラーになる)。
+            // 両者で有効な共通ユニバーサルフィールド systemMessage で通知する。
+            systemMessage:
+              `🔁 [GoalRotation] phase=${rot.current} の Completion Criteria が未充足のまま終了しようとしています` +
+              ` (nudge ${rot.nudge.count}/${maxNudges})。継続可能なら作業を続け、充足したら state.json の` +
+              ` goal_rotation.phase_done=true 書き込みと reports/handoff/ への Session Handoff 出力を行ってください。` +
+              `継続不能 (blocked) ならそのまま終了して構いません (launcher がリトライ/強制前進を処理します)。`,
           };
           console.log(`[SessionEnd][GoalRotation] 🔁 continuation nudge ${rot.nudge.count}/${maxNudges} (phase=${rot.current})`);
         }
@@ -305,12 +305,13 @@ if (dreamingEnabled) {
   }
 }
 
-// v10.7: バッファしたログを出力する。nudge 時は stdout を JSON 専用にするため
-// 通常ログを stderr へ退避し、additionalContext JSON のみを stdout へ書く。
+// v10.7 + Codex compat: バッファしたログは常に stderr へ退避する。
+// Codex は Stop hook の stdout を厳密に JSON として検証するため
+// (continue / stopReason / suppressOutput / systemMessage / decision / reason
+// のみ許可、非 JSON 行は "hook returned invalid stop hook JSON output" になる)、
+// stdout にはスキーマ準拠 JSON (または空) のみを書く。
+for (const line of LOG_BUFFER) process.stderr.write(line + "\n");
 if (nudgePayload) {
-  for (const line of LOG_BUFFER) process.stderr.write(line + "\n");
   ORIG_LOG(JSON.stringify(nudgePayload));
-} else {
-  for (const line of LOG_BUFFER) ORIG_LOG(line);
 }
 process.exit(0);
