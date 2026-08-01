@@ -33,7 +33,7 @@ export interface RefreshedTokens {
   expires_at: number;
 }
 
-const REFRESH_TIMEOUT_MS = 5_000;
+const REFRESH_TIMEOUT_MS = 15_000;
 
 /**
  * backend に refresh_token を渡して新しい access_token を取得する。
