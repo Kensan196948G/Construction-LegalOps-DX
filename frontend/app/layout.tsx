@@ -20,9 +20,9 @@ export const metadata: Metadata = {
     "建設業向け法務 DX プラットフォーム — 契約レビュー・承認ワークフロー・リスク管理を一元化",
   applicationName: "Construction-LegalOps-DX",
   icons: {
-    icon: "/logo.svg",
-    shortcut: "/logo.svg",
-    apple: "/logo.svg",
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
   },
   robots: { index: false, follow: false },
 };
