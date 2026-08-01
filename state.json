@@ -1777,11 +1777,19 @@
     "safety": "No production deploy, public DNS change, Cloudflare DNS record creation, Tunnel creation, Access application creation, Neon resource creation, Vault secret injection, CSP enforce switch, git push, PR merge, release tag, GitHub release, GitHub deployment, destructive migration, certificate issuance, billing change, or secrets change executed."
   },
   "preview": {
-    "url": "https://legalops-preview.mirai-dx-platform.com",
+    "status": "削除済み・本番一本化 (2026-08-01)",
+    "url": "https://legalops-preview.mirai-dx-platform.com (削除済み: NXDOMAIN 確認)",
     "tunnel": "legalops-preview (459059b3-b750-45c5-aa59-a0305293c439)",
     "origin": "host nginx :8410 -> compose (staging) + Neon development branch",
     "smoke": "16/16 PASS (2026-07-19)",
-    "rollback": "CNAME削除 + tunnel削除 + connector停止 + compose down"
+    "deleted_at": "2026-08-01",
+    "rollback": "復元: CNAME/tunnel 再作成 + connector 再起動（2026-08-01 削除済み）"
+  },
+  "subdomain": {
+    "url": "https://legalops.mirai-dx-platform.com",
+    "tunnel": "legalops-prod (3e1bddee-c527-4351-a4e0-8d37f3b9855a)",
+    "edge": "Cloudflare edge 適用済み (CNAME + Access + Tunnel)",
+    "consolidation": "preview 用 legalops-preview を削除し単一サブドメインへ一本化完了 (2026-08-01)"
   },
   "neon": {
     "project": "Construction-LegalOps-DX (snowy-sound-99973684)",

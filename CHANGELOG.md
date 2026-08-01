@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (2026-08-01: サブドメイン一本化)
+
+- **🌐 サブドメイン一本化**: 公開 URL を `https://legalops.mirai-dx-platform.com` に統一し、
+  preview 用 `legalops-preview.mirai-dx-platform.com`（tunnel `legalops-preview` / CNAME）を
+  削除して一本化した（2026-08-01 に CNAME NXDOMAIN 化・tunnel 459059b3… 削除・connector 停止を確認）。
+  README / infra Cloudflare README / state.json の記録を一本化済み状態へ更新
+  （本番 deploy と DNS/Tunnel 変更は引き続き人間ゲート）。
+
 ## [0.1.12] - 2026-07-20
 
 ### Fixed (2026-07-20 Verify: fail-closed 化のテスト回帰)
@@ -19,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Construction-LegalOps-DX` (aws-ap-southeast-1 / PG16) を作成し、`development` branch で
   alembic 001→005 適用 + roundtrip (downgrade base → re-upgrade) + SQLAlchemy asyncpg
   `?ssl=require` 接続を検証した (17 tables / pg_trgm / uuid-ossp)。本番用 `main` branch は未適用。
-- **🌐 Cloudflare 非本番 preview 実デプロイ**: named tunnel `legalops-preview` +
+- **🌐 Cloudflare 非本番 preview 実デプロイ**（※ 2026-08-01 に本番 `legalops.mirai-dx-platform.com` へ一本化のため削除済み）: named tunnel `legalops-preview` +
   DNS CNAME `legalops-preview.mirai-dx-platform.com` (ユーザー承認済み・可逆) で
   docker compose (staging 相当・Neon development DB) を公開し、デプロイ後検証 16/16 PASS
   (health / 主要画面 / 401 fail-closed / JWT→JIT provisioning / Neon read・write /
