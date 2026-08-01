@@ -233,7 +233,7 @@ class SharePointService:
                 "scope": _GRAPH_SCOPE,
             }
         ).encode("utf-8")
-        req = urllib.request.Request(  # noqa: S310  # nosec B310
+        req = urllib.request.Request(  # nosec B310
             token_url,
             data=body,
             method="POST",
