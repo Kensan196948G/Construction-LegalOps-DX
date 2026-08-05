@@ -161,6 +161,18 @@
 - その他 PII: ラベル自動付与 + 通知。
 - 検出履歴はすべて監査ログ。
 
+### 7.4 実装（2026-08-05 追記）
+
+- `app/services/rls.py` に RLS ポリシー定義の正本を集約し、migration 006/007 と同期。
+  `RLS_ENFORCED=true` 時は ASGI ミドルウェアが JWT / Cloudflare Access JWT を検証し、
+  `app.actor_id` / `app.role` / `app.actor_email` をトランザクションへ設定する。
+- 案件単位 ACL（`access_control_entries`）: user / department / role / external_counsel。
+  外部顧問弁護士は email ベースの案件限定アクセス。
+- 倫理壁: `contracts.ethical_wall=true`（人事・談合・内部通報案件）は
+  admin/auditor または user ACL 付与者のみ可視。
+- AI 外部送信前の DLP 検査と通知経路のブロック、AI 入出力の保持期間
+  （`retention_rules`・Legal Hold 連動）を実装。
+
 ---
 
 ## 8. アプリケーション セキュリティ
@@ -364,3 +376,22 @@ api_design 側のロール (`viewer / drafter / reviewer / approver / admin / au
 4. **PII**: `app/middleware/sensitive_masking.py` がレスポンスをマイナンバー / 電話 / メールでマスク。`my_number` 系フィールド名は **完全削除** (マスク版すら返さない)。
 5. **CSP**: `app/middleware/security_headers.py` で `default-src 'self'` を強制。SharePoint 画像許可はフロント `next.config.mjs` 側の責務とし、本ミドルウェアでは静的に許可しない。
 6. **ヘルスチェック**: `GET /healthz` は軽量 liveness（プロセス応答確認のみ）。`GET /readyz` は deep check 実装済み — DB (Critical: 失敗時 503)・Redis・Claude API (Optional: 失敗時 200 + degraded) を個別検証し `{"status": "ready"|"degraded", "checks": {...}, "warnings": [...]}` を返す。Kubernetes readiness probe / ALB ヘルスチェックはこのエンドポイントを使用する。
+
+---
+
+## 20. P0-6 実装ステータス（2026-08-05 完了）
+
+評価指摘の「ポリシーと実装の差」を解消した。
+
+| 要求 | 実装 |
+|---|---|
+| PostgreSQL の `CREATE POLICY` / `ENABLE ROW LEVEL SECURITY` | migration 006/007 で `contracts`・`access_control_entries`・`contract_documents`・`change_orders`・`disputes`・`partners`・`legal_holds`・`retention_rules`・`audit_anchors`・`external_forward_events` ほか 13 テーブルに適用。`set_rls_context` が `app.actor_id` / `app.role` / `app.actor_email` をトランザクション単位で設定 |
+| 案件単位 ACL と機密区分 | `access_control_entries`（user / department / role / external_counsel）・`contracts.case_category` / `ethical_wall`。API: `/contracts/{id}/access-control`、`/security/access-grants` |
+| 外部顧問弁護士用の案件限定アクセス | principal_type=external_counsel（メール単位・期限付き）。RLS ポリシーで `app.actor_email` を照合 |
+| 人事・談合調査・内部通報案件の倫理壁 | `ethical_wall=true` は明示許可ユーザー or admin/auditor のみ可視（RLS + アプリ層二重判定・fail-closed） |
+| Purview DLP / 同等の実通信ブロック | `sensitive_detector` + マスキングミドルウェア + AI 引用 URL 許可リスト（`/ai/evidence/verify`）。Purview 接続は設定ゲート付き |
+| WORM 相当ストレージへの監査ログ外部保管 | `audit_export_jobs`（JSONL + Ed25519 署名）・`audit_anchors`（HMAC-SHA256 日次アンカー）。外部シンクは `WORM_SINK_URL` / `AUDIT_ANCHOR_SINK_PATH` 設定時に有効化 |
+| Microsoft Sentinel への転送 | `external_forward_events` アウトボックス。`SENTINEL_ENABLED=true` かつ接続情報が揃うまで status=blocked（fail-closed） |
+| AI 入力・出力の保存期間と削除処理 | `/security/retention-settings`・`/retention/rules` で管理。超過分は result 空化 + `retention.delete` 監査記録 |
+| Legal Hold 時の自動削除停止 | `legal_hold_cases` / `legal_holds` active 中はパージスキップ + `retention.blocked` 記録 |
+| 改ざん防止の強化 | DB 内ハッシュチェーンに加え、日次アンカー署名と外部 WORM 出力により DB 管理者単独での改ざんを検知可能に |

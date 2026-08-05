@@ -24,7 +24,7 @@ import io
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -264,6 +264,8 @@ class AuditService:
 def _json_default(o: Any) -> Any:
     import decimal
 
+    if isinstance(o, date):
+        return o.isoformat()
     if isinstance(o, datetime):
         return o.isoformat()
     if isinstance(o, UUID):

@@ -31,11 +31,9 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import INET, JSONB
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, InetType, JsonType, UuidType
 
 from ._mixins import IntPKMixin
 
@@ -76,13 +74,13 @@ class AuditLog(IntPKMixin, Base):
     target_type: Mapped[str] = mapped_column(String(64), nullable=False)
     target_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     request_id: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=True
+        UuidType, nullable=True
     )
-    ip_address: Mapped[str | None] = mapped_column(INET, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(InetType, nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     # ``payload`` stores the canonical ``{"before": ..., "after": ...}`` dict.
     payload: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
+        JsonType, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
     previous_hash: Mapped[str | None] = mapped_column(CHAR(64), nullable=True)
     hash_chain: Mapped[str] = mapped_column(CHAR(64), nullable=False)

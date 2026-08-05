@@ -14,10 +14,9 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import Base, JsonType
 
 from ._mixins import AuditedByMixin, IntPKMixin, TimestampMixin
 
@@ -30,12 +29,12 @@ class KnowledgeArticle(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     title: Mapped[str] = mapped_column(String(256), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     contract_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    # tags stored as a JSONB array for PostgreSQL; SQLite fallback via test_session shim
+    # tags stored as a JsonType array for PostgreSQL; SQLite fallback via test_session shim
     tags: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, default=list, server_default="'[]'"
+        JsonType, nullable=False, default=list, server_default="'[]'"
     )
     citations: Mapped[list[str]] = mapped_column(
-        JSONB, nullable=False, default=list, server_default="'[]'"
+        JsonType, nullable=False, default=list, server_default="'[]'"
     )
     author_id: Mapped[int | None] = mapped_column(
         BigInteger,

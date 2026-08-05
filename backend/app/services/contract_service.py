@@ -42,6 +42,19 @@ async def create_contract(
         end_date=data.end_date,
         department_id=data.department_id,
         drafter_id=drafter_id,
+        order_date=data.order_date,
+        receipt_date=data.receipt_date,
+        inspection_date=data.inspection_date,
+        payment_date=data.payment_date,
+        transaction_kind=data.transaction_kind,
+        is_public_work=data.is_public_work,
+        handles_personal_data=data.handles_personal_data,
+        our_capital_jpy=data.our_capital_jpy,
+        counterparty_capital_jpy=data.counterparty_capital_jpy,
+        our_employees=data.our_employees,
+        counterparty_employees=data.counterparty_employees,
+        case_category=data.case_category,
+        ethical_wall=data.ethical_wall,
         confidentiality=(
             data.confidentiality.value
             if hasattr(data.confidentiality, "value")

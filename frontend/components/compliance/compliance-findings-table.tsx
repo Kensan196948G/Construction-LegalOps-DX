@@ -3,15 +3,30 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, CircleDashed, XCircle } from "lucide-react";
+import type { ComplianceFindingStatus } from "@/lib/compliance/status";
 
-type CStatus = "compliant" | "warning" | "non_compliant";
-interface Finding { id: string; law: string; item: string; status: CStatus; lastCheck: string; detail: string; }
+interface Finding { id: string; law: string; item: string; status: ComplianceFindingStatus; lastCheck: string; detail: string; }
 interface Props { items: Finding[]; total: number; page: number; perPage: number; defaultFilters: { framework?: string; status?: string }; }
 
-const STATUS_LABEL: Record<CStatus, string> = { compliant: "適合", warning: "要確認", non_compliant: "不適合" };
-const STATUS_V: Record<CStatus, "default" | "secondary" | "destructive"> = { compliant: "default", warning: "secondary", non_compliant: "destructive" };
-const StatusIcon = ({ s }: { s: CStatus }) => s === "compliant" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : s === "warning" ? <AlertTriangle className="h-4 w-4 text-amber-500" /> : <XCircle className="h-4 w-4 text-destructive" />;
+const STATUS_LABEL: Record<ComplianceFindingStatus, string> = {
+  compliant: "適合",
+  warning: "要確認",
+  non_compliant: "不適合",
+  not_run: "未実施",
+};
+const STATUS_V: Record<ComplianceFindingStatus, "default" | "secondary" | "destructive" | "outline"> = {
+  compliant: "default",
+  warning: "secondary",
+  non_compliant: "destructive",
+  not_run: "outline",
+};
+const StatusIcon = ({ s }: { s: ComplianceFindingStatus }) => {
+  if (s === "compliant") return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+  if (s === "warning") return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+  if (s === "non_compliant") return <XCircle className="h-4 w-4 text-destructive" />;
+  return <CircleDashed className="h-4 w-4 text-muted-foreground" />;
+};
 const LAWS = ["建設業法", "下請法", "電子帳簿保存法", "個人情報保護法"];
 
 export function ComplianceFindingsTable({ items, total, defaultFilters }: Props) {
@@ -40,6 +55,7 @@ export function ComplianceFindingsTable({ items, total, defaultFilters }: Props)
             <SelectItem value="compliant">適合</SelectItem>
             <SelectItem value="warning">要確認</SelectItem>
             <SelectItem value="non_compliant">不適合</SelectItem>
+            <SelectItem value="not_run">未実施</SelectItem>
           </SelectContent>
         </Select>
       </div>

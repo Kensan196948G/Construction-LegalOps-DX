@@ -94,7 +94,7 @@ contains_file "${REPORT}" "## 🧯 10. Stop Line" && pass "Final report includes
 contains_file "${EVIDENCE}" "#23" && contains_file "${EVIDENCE}" "#24" && contains_file "${EVIDENCE}" "#50" && pass "Evidence matrix records all human gates #23/#24/#50" || fail "Evidence matrix missing one or more human gates"
 contains_file "${EVIDENCE}" "未承認 tag / Release 0" && pass "Evidence matrix records no unapproved release tags" || fail "Evidence matrix missing unapproved-tag evidence"
 contains_file "${EVIDENCE}" "GitHub Deployments 0" && pass "Evidence matrix records no GitHub deployments" || fail "Evidence matrix missing no-deployment evidence"
-contains_file "${EVIDENCE}" "CNAME / A は未作成" && pass "Evidence matrix records legalops DNS absence" || fail "Evidence matrix missing legalops DNS absence"
+contains_file "${EVIDENCE}" "Cloudflare Access 302" && pass "Evidence matrix records Cloudflare Access challenge" || fail "Evidence matrix missing Cloudflare Access challenge"
 
 if grep -Fq "コメント予定" "${EVIDENCE}"; then
   fail "Evidence matrix still contains pending comment wording"

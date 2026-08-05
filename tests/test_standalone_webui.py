@@ -118,3 +118,17 @@ def test_write_status_honors_systemd_stop_command(tmp_path: Path, monkeypatch) -
     assert payload["stop_command"] == (
         "systemctl --user stop construction-legalops-standalone-webui.service"
     )
+
+
+def test_resolve_requested_host_env_override(monkeypatch) -> None:
+    module = load_server_module()
+
+    monkeypatch.setenv("STANDALONE_WEBUI_HOST", "0.0.0.0")
+    assert module.resolve_requested_host("auto") == "0.0.0.0"
+
+    monkeypatch.delenv("STANDALONE_WEBUI_HOST")
+    auto_host = module.resolve_requested_host("auto")
+    assert isinstance(auto_host, str)
+    assert auto_host != "auto"
+
+    assert module.resolve_requested_host("192.168.0.10") == "192.168.0.10"

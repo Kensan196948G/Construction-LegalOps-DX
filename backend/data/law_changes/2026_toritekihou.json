@@ -1,0 +1,25 @@
+{
+  "law_name": "中小受託取引適正化法（取適法）",
+  "change_id": "toritekihou-2026-01-01",
+  "effective_date": "2026-01-01",
+  "summary": "下請法が取適法に改称・改正。従業員数基準の追加、特定運送委託の追加、協議に応じない一方的代金決定の禁止、手形払い等の禁止、電磁的方法による明示、用語変更。",
+  "affected_contract_types": ["請負", "委託", "その他"],
+  "affected_rule_ids": [
+    "toritekihou_applies",
+    "toritekihou_order_date_unknown",
+    "toritekihou_specific_transport",
+    "toritekihou_record_retention",
+    "toritekihou_payment_terms",
+    "toritekihou_payment_late",
+    "toritekihou_promissory_note",
+    "toritekihou_ecb_factoring",
+    "toritekihou_unilateral_pricing",
+    "toritekihou_written_delivery"
+  ],
+  "affected_template_ids": ["TMPL-SHITAUKE-001"],
+  "primary_sources": [
+    "https://www.jftc.go.jp/partnership_package/toritekihou.html",
+    "https://www.jftc.go.jp/houdou/pressrelease/2025/may/250516_toritekiseiritsu.html"
+  ],
+  "recommendation": "2026-01-01 以降の注文は取適法で判定する。従業員数基準・支払期日（受領日+60日以内）・手形等禁止・価格協議証跡の再確認が必要。既存契約・テンプレート・チェックルールの影響を棚卸しする。"
+}

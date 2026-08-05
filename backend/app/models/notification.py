@@ -17,10 +17,9 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, JsonType
 
 from ._mixins import IntPKMixin, TimestampMixin
 from .enums import NotificationChannel, NotificationStatus
@@ -54,7 +53,7 @@ class Notification(IntPKMixin, TimestampMixin, Base):
     subject: Mapped[str] = mapped_column(String(256), nullable=False)
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
     payload: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
+        JsonType, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="queued", server_default="'queued'"

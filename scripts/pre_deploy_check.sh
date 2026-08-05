@@ -214,14 +214,24 @@ if command -v docker &>/dev/null; then
     CELERY_BROKER_URL=redis://:dummy@redis:6379/1 \
     CELERY_RESULT_BACKEND=redis://:dummy@redis:6379/2 \
     JWT_SECRET=dummy \
+    AUTH_URL=https://legalops.mirai-dx-platform.com \
+    AUTH_SECRET=dummy-auth-secret-for-compose-validation \
+    NEXTAUTH_SECRET=dummy-auth-secret-for-compose-validation \
     ENTRA_TENANT_ID=dummy \
     ENTRA_CLIENT_ID=dummy \
     ENTRA_CLIENT_SECRET=dummy \
     CLAUDE_API_KEY=dummy \
     HENNGE_TENANT_ID=dummy \
     HENNGE_API_KEY=dummy \
+    SSO_MODE=stub \
+    AI_REVIEW_MODE=real \
+    SHAREPOINT_MODE=disabled \
+    NOTIFY_MODE=disabled \
+    EDGE_AUTH_BOUNDARY=cloudflare-access \
+    CLOUDFLARE_ACCESS_ISSUER=https://legalops.cloudflareaccess.com \
+    CLOUDFLARE_ACCESS_AUD=dummy-access-aud \
     NEXT_PUBLIC_API_BASE_URL=https://legalops.mirai-dx-platform.com \
-    CLOUDFLARE_TUNNEL_TOKEN=dummy \
+    CLOUDFLARE_TUNNEL_CREDENTIALS_FILE=/tmp/legalops-cloudflared-creds-dummy.json \
     docker compose \
       -f infra/docker/docker-compose.yml \
       -f infra/docker/docker-compose.prod.yml \

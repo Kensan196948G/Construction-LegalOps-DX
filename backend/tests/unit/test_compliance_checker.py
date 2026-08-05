@@ -39,7 +39,16 @@ def _snap(**kwargs) -> ContractSnapshot:
 
 # Full text that satisfies all 建設業法19条 keywords
 _KEN19_FULL_TEXT = (
-    "工事内容 請負代金 工期 引渡 前金払 設計変更 不可抗力 契約不適合 紛争解決 反社会的勢力"
+    "工事内容 請負代金 工期 引渡 前金払 部分払 出来高払 設計変更 第三者損害 "
+    "天災 価格変動 スライド 瑕疵担保 紛争解決 反社会的勢力 "
+    "2026年4月1日着工、2027年3月31日完成"
+)
+
+# 労務費等の内訳・価格変動対応を含む完全テキスト
+_FULL_UKEOI_TEXT = (
+    _KEN19_FULL_TEXT
+    + " 労務費 材料費 安全衛生経費 法定福利費 建退共 契約前通知 価格変更協議"
+    " 2026年4月1日着工、2027年3月31日完成。請負代金 100,000,000円。"
 )
 
 
@@ -172,7 +181,7 @@ class TestCheckKenpou19:
         assert findings == []
 
     async def test_ukeoi_all_keywords_present_returns_empty(self) -> None:
-        """All 9 keywords present → no finding (line 125-126)."""
+        """All 11 required items present → no finding."""
         snap = _snap(text=_KEN19_FULL_TEXT, contract_type=ContractType.UKEOI)
         findings = self.checker._check_kenpou_19(snap, snap.text)
         assert findings == []
@@ -184,22 +193,22 @@ class TestCheckKenpou19:
         assert findings == []
 
     async def test_ukeoi_missing_all_keywords_fires_block(self) -> None:
-        """All keywords absent → BLOCK finding with all 9 labels (lines 121-127)."""
+        """All items absent → BLOCK finding with all 11 labels."""
         snap = _snap(text="契約書", contract_type=ContractType.UKEOI)
         findings = self.checker._check_kenpou_19(snap, snap.text)
         assert len(findings) == 1
         f = findings[0]
         assert f.code == "construction_law_19"
         assert f.severity == ComplianceSeverity.BLOCK
-        assert len(f.matched_keywords) == 9
+        assert len(f.matched_keywords) == 11
 
     async def test_ukeoi_missing_some_keywords_lists_them(self) -> None:
         """Partially-filled text reports only the missing labels."""
-        text = "工事内容 請負代金 工期 引渡 前金払"  # 5 of 9 present
+        text = "工事内容 請負代金 工期 引渡 前金払"  # 5 of 11 present
         snap = _snap(text=text, contract_type=ContractType.UKEOI)
         findings = self.checker._check_kenpou_19(snap, text)
-        assert len(findings) == 1
-        assert len(findings[0].matched_keywords) == 4  # 4 missing
+        main = next(f for f in findings if f.code == "construction_law_19")
+        assert len(main.matched_keywords) == 6  # 6 missing
 
     async def test_finding_citation(self) -> None:
         snap = _snap(text="", contract_type=ContractType.UKEOI)
@@ -254,27 +263,38 @@ class TestCheckSubcontractLaw:
         findings = self.checker._check_subcontract_law(snap, "")
         assert findings == []
 
-    def test_counterparty_capital_none_returns_empty(self) -> None:
+    def test_counterparty_capital_none_flags_unknown_kind(self) -> None:
+        """相手方資本金が不明でも自社規模から対象可能性は通知する。"""
         snap = _snap(our_capital_jpy=400_000_000, counterparty_capital_jpy=None)
         findings = self.checker._check_subcontract_law(snap, "")
-        assert findings == []
+        codes = [f.code for f in findings]
+        assert codes == ["toritekihou_transaction_kind_unknown"]
 
-    def test_threshold_not_met_returns_empty(self) -> None:
-        """Both capitals equal 300M → threshold not met."""
+    def test_threshold_not_met_flags_unknown_kind(self) -> None:
+        """Capital equal 300M → not applicable, but 取引類型不明は通知する。"""
         snap = _snap(our_capital_jpy=300_000_000, counterparty_capital_jpy=300_000_000)
         findings = self.checker._check_subcontract_law(snap, "")
-        assert findings == []
+        codes = [f.code for f in findings]
+        assert codes == ["toritekihou_transaction_kind_unknown"]
 
     def test_threshold_met_fires_warn(self) -> None:
-        """ours > 300M, theirs <= 300M → WARN finding (lines 166-175)."""
-        snap = _snap(our_capital_jpy=400_000_000, counterparty_capital_jpy=100_000_000)
+        """ours > 300M, theirs <= 300M → WARN finding."""
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+        )
         findings = self.checker._check_subcontract_law(snap, "60日以内に支払う。")
         codes = [f.code for f in findings]
         assert "subcontract_act_applies" in codes
 
     def test_payment_term_absent_fires_additional_block(self) -> None:
         """60-day payment text absent → BLOCK finding added (lines 176-186)."""
-        snap = _snap(our_capital_jpy=400_000_000, counterparty_capital_jpy=100_000_000)
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+        )
         findings = self.checker._check_subcontract_law(snap, "特に規定なし。")
         codes = [f.code for f in findings]
         assert "subcontract_act_applies" in codes
@@ -284,7 +304,11 @@ class TestCheckSubcontractLaw:
 
     def test_payment_term_60days_kansuji_prevents_block(self) -> None:
         """六十日 (kanji form) also satisfies the payment-term check."""
-        snap = _snap(our_capital_jpy=400_000_000, counterparty_capital_jpy=100_000_000)
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+        )
         findings = self.checker._check_subcontract_law(snap, "代金は六十日以内に支払う。")
         codes = [f.code for f in findings]
         assert "subcontract_act_payment_terms" not in codes
@@ -518,3 +542,213 @@ class TestCheckerCheckIntegration:
         snap = _snap(text="", contract_type=ContractType.OTHER)
         findings = await self.checker.check(snap)
         assert all(isinstance(f, ComplianceFinding) for f in findings)
+
+
+# ---------------------------------------------------------------------------
+# 取適法（中小受託取引適正化法）— P0-1
+# ---------------------------------------------------------------------------
+
+
+class TestToritekihou:
+    def setup_method(self) -> None:
+        self.checker = ComplianceChecker()
+
+    def test_employee_based_applicability(self) -> None:
+        """従業員数基準だけで適用判定できる（資本金なしでも）。"""
+        snap = _snap(
+            our_employees=400,
+            counterparty_employees=120,
+            transaction_kind="manufacturing",
+            order_date="2026-03-01",
+        )
+        findings = self.checker._check_toritekihou(snap, "60日以内に支払う。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_applies" in codes
+        assert "subcontract_act_applies" not in codes
+
+    def test_service_kind_uses_100_employee_threshold(self) -> None:
+        """役務提供委託は従業員 100 人超で委託事業者となる。"""
+        snap = _snap(
+            our_employees=150,
+            counterparty_employees=50,
+            transaction_kind="service",
+            order_date="2026-03-01",
+        )
+        findings = self.checker._check_toritekihou(snap, "60日以内に支払う。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_applies" in codes
+
+    def test_order_date_switch_to_new_law(self) -> None:
+        """2026-01-01 以降発注は取適法、以前は旧下請法。"""
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+            order_date="2026-01-01",
+        )
+        findings = self.checker._check_toritekihou(snap, "60日以内に支払う。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_applies" in codes
+        assert "toritekihou_payment_terms" not in codes
+
+        snap_old = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+            order_date="2025-12-31",
+        )
+        findings_old = self.checker._check_toritekihou(snap_old, "60日以内に支払う。")
+        codes_old = [f.code for f in findings_old]
+        assert "subcontract_act_applies" in codes_old
+        assert "toritekihou_applies" not in codes_old
+
+    def test_payment_date_exceeding_60_days_fires_block(self) -> None:
+        from datetime import date
+
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+            order_date=date(2026, 3, 1),
+            receipt_date=date(2026, 3, 10),
+            payment_date=date(2026, 5, 30),  # 81 days later
+        )
+        findings = self.checker._check_toritekihou(snap, "60日以内に支払う。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_payment_late" in codes
+        assert (
+            next(f for f in findings if f.code == "toritekihou_payment_late").severity
+            == ComplianceSeverity.BLOCK
+        )
+
+    def test_promissory_note_prohibited(self) -> None:
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+            order_date="2026-03-01",
+        )
+        findings = self.checker._check_toritekihou(snap, "支払は手形にて行う。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_promissory_note" in codes
+
+    def test_unilateral_pricing_fires_block(self) -> None:
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="manufacturing",
+            order_date="2026-03-01",
+        )
+        findings = self.checker._check_toritekihou(snap, "代金は甲が一方的に定める。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_unilateral_pricing" in codes
+
+    def test_specific_transport(self) -> None:
+        snap = _snap(
+            our_capital_jpy=400_000_000,
+            counterparty_capital_jpy=100_000_000,
+            transaction_kind="transport",
+            order_date="2026-03-01",
+        )
+        findings = self.checker._check_toritekihou(snap, "60日以内に支払う。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_specific_transport" in codes
+
+    def test_unknown_kind_flags_profile(self) -> None:
+        """取引類型不明でも資本金・従業員から対象となり得る場合は通知する。"""
+        snap = _snap(our_capital_jpy=400_000_000, counterparty_capital_jpy=100_000_000)
+        findings = self.checker._check_toritekihou(snap, "60日以内に支払う。")
+        codes = [f.code for f in findings]
+        assert "toritekihou_transaction_kind_unknown" in codes
+
+
+# ---------------------------------------------------------------------------
+# 改正建設業法・労務費基準（P0-2）
+# ---------------------------------------------------------------------------
+
+
+class TestLaborCostRules:
+    def setup_method(self) -> None:
+        self.checker = ComplianceChecker()
+
+    def test_ukeoi_missing_breakdown_fires_warn(self) -> None:
+        snap = _snap(contract_type=ContractType.UKEOI)
+        findings = self.checker._check_labor_cost(snap, "工事内容 請負代金 工期。")
+        codes = [f.code for f in findings]
+        assert "construction_law_labor_breakdown" in codes
+
+    def test_full_breakdown_prevents_warn(self) -> None:
+        text = "労務費 材料費 安全衛生経費 法定福利費 建退共 スライド条項"
+        snap = _snap(contract_type=ContractType.UKEOI)
+        findings = self.checker._check_labor_cost(snap, text)
+        codes = [f.code for f in findings]
+        assert "construction_law_labor_breakdown" not in codes
+
+    def test_abnormally_low_bid_detected(self) -> None:
+        snap = _snap(contract_type=ContractType.UKEOI)
+        findings = self.checker._check_labor_cost(snap, "著しく低い見積りに基づく価格。")
+        codes = [f.code for f in findings]
+        assert "construction_law_abnormally_low_bid" in codes
+
+    def test_pre_notification_missing_when_material_costs_mentioned(self) -> None:
+        snap = _snap(contract_type=ContractType.UKEOI)
+        findings = self.checker._check_labor_cost(snap, "資材価格の高騰が懸念される。")
+        codes = [f.code for f in findings]
+        assert "construction_law_pre_notification" in codes
+
+    def test_price_revision_clause_warn_for_public_work(self) -> None:
+        snap = _snap(contract_type=ContractType.UKEOI, is_public_work=True)
+        findings = self.checker._check_labor_cost(snap, "工事内容 請負代金 工期。")
+        codes = [f.code for f in findings]
+        assert "construction_law_price_revision_clause" in codes
+
+
+# ---------------------------------------------------------------------------
+# 建設業法 19 条拡充（P0-3）
+# ---------------------------------------------------------------------------
+
+
+class TestKenpou19Expanded:
+    def setup_method(self) -> None:
+        self.checker = ComplianceChecker()
+
+    def test_cross_document_scan_satisfies_required_items(self) -> None:
+        """本文にない項目でも約款・特記仕様書にあれば充足とする。"""
+        main_text = "工事内容 請負代金 工期 引渡 前金払 部分払 出来高払 設計変更"
+        documents = {
+            "約款": "第三者損害 天災 価格変動 スライド 瑕疵担保 紛争解決",
+        }
+        snap = _snap(
+            text=main_text,
+            contract_type=ContractType.UKEOI,
+            documents=documents,
+        )
+        findings = self.checker._check_kenpou_19(snap, main_text)
+        codes = [f.code for f in findings]
+        assert "construction_law_19" not in codes
+
+    def test_amount_mismatch_fires_warn(self) -> None:
+        snap = _snap(
+            contract_type=ContractType.UKEOI,
+            amount_jpy=100_000_000,
+        )
+        text = "請負代金は 50,000,000円 とする。"
+        findings = self.checker._check_kenpou_19(snap, text)
+        codes = [f.code for f in findings]
+        assert "construction_law_19_amount_mismatch" in codes
+
+    def test_amount_unverifiable_fires_warn(self) -> None:
+        snap = _snap(
+            contract_type=ContractType.UKEOI,
+            amount_jpy=100_000_000,
+        )
+        findings = self.checker._check_kenpou_19(snap, "請負代金は別途協議とする。")
+        codes = [f.code for f in findings]
+        assert "construction_law_19_amount_unverifiable" in codes
+
+    def test_reversed_dates_fires_warn(self) -> None:
+        text = "着工 2027年4月1日。完成 2026年3月31日。"
+        snap = _snap(contract_type=ContractType.UKEOI)
+        findings = self.checker._check_kenpou_19(snap, text)
+        codes = [f.code for f in findings]
+        assert "construction_law_19_date_order" in codes

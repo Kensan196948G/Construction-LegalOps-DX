@@ -8,7 +8,30 @@
 
 set -euo pipefail
 
-WEBUI_URL="${STANDALONE_WEBUI_URL:-http://192.168.0.185:38100/}"
+resolve_expected_host() {
+  python3 - <<'PY'
+import socket
+
+candidates = []
+try:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.connect(("8.8.8.8", 80))
+        ip = sock.getsockname()[0]
+        if not ip.startswith(("127.", "169.254.")):
+            candidates.append(ip)
+except OSError:
+    pass
+for ip in candidates:
+    if ip.startswith(("192.168.", "10.", "172.")):
+        print(ip)
+        break
+else:
+    print(candidates[0] if candidates else "127.0.0.1")
+PY
+}
+
+EXPECTED_HOST="${STANDALONE_WEBUI_HOST:-$(resolve_expected_host)}"
+WEBUI_URL="${STANDALONE_WEBUI_URL:-http://${EXPECTED_HOST}:38100/}"
 WEBUI_HEALTH_URL="${STANDALONE_WEBUI_HEALTH_URL:-${WEBUI_URL%/}/healthz}"
 WEBUI_SOURCE_URL="${STANDALONE_WEBUI_SOURCE_URL:-${WEBUI_URL%/}/standalone-source}"
 WEBUI_SERVICE="${STANDALONE_WEBUI_SERVICE:-construction-legalops-standalone-webui.service}"

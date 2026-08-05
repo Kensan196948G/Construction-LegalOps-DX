@@ -6,6 +6,7 @@ import { ComplianceFindingsTable } from "@/components/compliance/compliance-find
 import { AiDisclaimerInline } from "@/components/legal/ai-disclaimer-inline";
 import { bindServerSession } from "@/lib/auth/session-bridge.server";
 import { complianceApi } from "@/lib/api/endpoints";
+import { toFindingStatus, type ComplianceFindingStatus } from "@/lib/compliance/status";
 
 export const metadata: Metadata = {
   title: "コンプライアンスチェック",
@@ -22,8 +23,6 @@ interface CompliancePageProps {
   searchParams?: Promise<SearchParams>;
 }
 
-type CStatus = "compliant" | "warning" | "non_compliant";
-
 interface Framework {
   id: string;
   label: string;
@@ -36,15 +35,9 @@ interface Finding {
   id: string;
   law: string;
   item: string;
-  status: CStatus;
+  status: ComplianceFindingStatus;
   lastCheck: string;
   detail: string;
-}
-
-function toFindingStatus(severity: string | null | undefined): CStatus {
-  if (severity === "high" || severity === "critical") return "non_compliant";
-  if (severity === "medium") return "warning";
-  return "warning"; // default: unchecked = needs review
 }
 
 function categoryLabel(category: string): string {

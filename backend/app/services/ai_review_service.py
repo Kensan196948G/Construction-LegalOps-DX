@@ -36,6 +36,8 @@ def _to_dict(review: LegalReview) -> dict[str, Any]:
         "ai_input_tokens": review.ai_input_tokens,
         "ai_output_tokens": review.ai_output_tokens,
         "result": result,
+        "requires_human_review": bool(result.get("requires_human_review", False)),
+        "citation_gaps": int(result.get("citation_gaps", 0)),
         "findings": result.get("issues", []),
         "suggested_actions": result.get("suggested_actions", []),
         "disclaimer": (
@@ -88,6 +90,19 @@ def _api_issue(issue: dict[str, Any], seq: int) -> dict[str, Any]:
         "comment": issue.get("description") or issue.get("comment") or "",
         "suggestion": issue.get("recommended_action"),
         "citations": list(issue.get("citations") or []),
+        "source_page": issue.get("source_page"),
+        "clause_number": issue.get("clause_number"),
+        "excerpt": issue.get("excerpt"),
+        "law_name": issue.get("law_name"),
+        "law_article": issue.get("law_article"),
+        "law_version": issue.get("law_version"),
+        "effective_date": issue.get("effective_date"),
+        "primary_source_url": issue.get("primary_source_url"),
+        "internal_policy_id": issue.get("internal_policy_id"),
+        "internal_policy_version": issue.get("internal_policy_version"),
+        "rule_id": issue.get("rule_id"),
+        "ai_confidence": issue.get("ai_confidence"),
+        "verdict": issue.get("verdict", "finding"),
         "suggested_actions": [],
     }
 

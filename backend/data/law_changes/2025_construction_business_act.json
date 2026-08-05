@@ -1,0 +1,22 @@
+{
+  "law_name": "建設業法（改正・全面施行）",
+  "change_id": "construction-business-act-2025-12-01",
+  "effective_date": "2025-12-01",
+  "summary": "適正な労務費・材料費等の確保、内訳明示、著しく低い見積り・短工期の禁止、契約前通知、価格変更協議等が具体化。",
+  "affected_contract_types": ["請負", "JV"],
+  "affected_rule_ids": [
+    "construction_law_labor_breakdown",
+    "construction_law_abnormally_low_bid",
+    "construction_law_unreasonably_short_period",
+    "construction_law_pre_notification",
+    "construction_law_price_revision_clause",
+    "construction_law_19_amount_unverifiable",
+    "construction_law_19_amount_mismatch"
+  ],
+  "affected_template_ids": ["TMPL-UKEOI-001"],
+  "primary_sources": [
+    "https://www.mlit.go.jp/totikensangyo/const/content/001979929.pdf",
+    "https://elaws.e-gov.go.jp/document?lawid=324AC0000000100"
+  ],
+  "recommendation": "請負契約の内訳明示（労務費・材料費・安全衛生経費・法定福利費・建退共）と、低見積・短工期・契約前通知・価格変更協議の条項確認を既存契約とひな形で実施する。"
+}

@@ -188,6 +188,34 @@ class Settings(BaseSettings):
     audit_retention_years: int = Field(default=10, alias="AUDIT_RETENTION_YEARS")
     audit_log_sink: str = Field(default="stdout", alias="AUDIT_LOG_SINK")
 
+    # ----- P0-6: WORM 相当の監査アンカー外部保管 -----
+    # 日次アンカーを書き出す外部シンク。未設定ならアンカーは DB 内のみ
+    # （改ざん検知は DB 内ハッシュチェーン + 日次署名で担保）。
+    worm_sink_url: str = Field(default="", alias="WORM_SINK_URL")
+    worm_sink_auth_token: SecretStr = Field(
+        default=SecretStr(""), alias="WORM_SINK_AUTH_TOKEN"
+    )
+    audit_anchor_sink_path: str = Field(
+        default="", alias="AUDIT_ANCHOR_SINK_PATH"
+    )
+
+    # ----- P0-6: Microsoft Sentinel 転送（未設定時は fail-closed） -----
+    sentinel_enabled: bool = Field(default=False, alias="SENTINEL_ENABLED")
+    sentinel_workspace_id: str = Field(default="", alias="SENTINEL_WORKSPACE_ID")
+    sentinel_primary_key: SecretStr = Field(
+        default=SecretStr(""), alias="SENTINEL_PRIMARY_KEY"
+    )
+    sentinel_dcr_uri: str = Field(
+        default="", alias="SENTINEL_DCR_URI"
+    )
+
+    # ----- P0-6: AI 入出力の保存期間（Legal Hold で停止） -----
+    retention_ai_input_days: int = Field(default=90, alias="RETENTION_AI_INPUT_DAYS")
+    retention_ai_output_days: int = Field(default=365, alias="RETENTION_AI_OUTPUT_DAYS")
+    retention_attachment_days: int = Field(
+        default=3650, alias="RETENTION_ATTACHMENT_DAYS"
+    )
+
     # ----- Feature flags -----
     feature_ai_review: bool = Field(default=True, alias="FEATURE_AI_REVIEW")
     feature_sharepoint_sync: bool = Field(default=False, alias="FEATURE_SHAREPOINT_SYNC")

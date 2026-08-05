@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # verify_production_stop_line.sh — read-only proof that production release,
-# deploy, public DNS changes, and release tags remain stopped.
+# deploy, unapproved release tags, and unauthenticated public origin access
+# remain stopped.
 #
 # This script does not create/delete DNS records, releases, deployments, tags,
 # PRs, issues, secrets, or Cloudflare resources.
@@ -11,6 +12,8 @@ OWNER="${GITHUB_OWNER:-Kensan196948G}"
 REPO="${GITHUB_REPOSITORY_NAME:-Construction-LegalOps-DX}"
 PROJECT_NUMBER="${GITHUB_PROJECT_NUMBER:-30}"
 HOSTNAME="${LEGALOPS_HOSTNAME:-legalops.mirai-dx-platform.com}"
+REQUIRED_OPEN_PRS="${REQUIRED_OPEN_PRS:-}"
+REQUIRED_OPEN_PRS_LABEL="${REQUIRED_OPEN_PRS:-none}"
 
 PASS=0
 FAIL=0
@@ -35,19 +38,83 @@ echo "================================================"
 echo "🛑 Production Stop-Line Preflight"
 echo "================================================"
 
-CNAME_RECORD="$(dig +short CNAME "${HOSTNAME}" || true)"
 A_RECORD="$(dig +short A "${HOSTNAME}" || true)"
 
-if [ -z "${CNAME_RECORD}" ]; then
-  pass "${HOSTNAME} CNAME is absent"
+if [ -n "${A_RECORD}" ]; then
+  pass "${HOSTNAME} resolves through Cloudflare proxy"
 else
-  fail "${HOSTNAME} CNAME exists: ${CNAME_RECORD}"
+  fail "${HOSTNAME} A record is not visible"
 fi
 
-if [ -z "${A_RECORD}" ]; then
-  pass "${HOSTNAME} A record is absent"
+if [ -n "${CLOUDFLARE_API_TOKEN:-}" ]; then
+  DNS_API_SUMMARY="$(
+    HOSTNAME="${HOSTNAME}" python3 - <<'PY'
+import json
+import os
+import sys
+import urllib.parse
+import urllib.request
+
+base = "https://api.cloudflare.com/client/v4"
+token = os.environ["CLOUDFLARE_API_TOKEN"]
+hostname = os.environ["HOSTNAME"]
+zone = ".".join(hostname.split(".")[-2:])
+headers = {
+    "Authorization": f"Bearer {token}",
+    "Content-Type": "application/json",
+}
+
+
+def request_json(path: str) -> dict:
+    request = urllib.request.Request(f"{base}{path}", headers=headers)
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return json.load(response)
+
+
+try:
+    zones = request_json(f"/zones?name={urllib.parse.quote(zone)}&status=active")
+    zone_records = zones.get("result") or []
+    if not zones.get("success") or not zone_records:
+        print("api_success=false")
+        print("record_count=0")
+        print("proxied_count=0")
+        print("error=zone_not_found")
+        sys.exit(0)
+    zone_id = zone_records[0]["id"]
+    records = request_json(
+        f"/zones/{zone_id}/dns_records?name={urllib.parse.quote(hostname)}"
+    )
+    dns_records = records.get("result") or []
+    proxied_records = [record for record in dns_records if record.get("proxied") is True]
+    print("api_success=true")
+    print(f"record_count={len(dns_records)}")
+    print(f"proxied_count={len(proxied_records)}")
+except Exception as exc:
+    print("api_success=false")
+    print("record_count=0")
+    print("proxied_count=0")
+    print(f"error={type(exc).__name__}")
+PY
+  )"
+  DNS_API_SUCCESS="$(awk -F= '/^api_success=/{print $2; exit}' <<<"${DNS_API_SUMMARY}")"
+  DNS_API_RECORD_COUNT="$(awk -F= '/^record_count=/{print $2; exit}' <<<"${DNS_API_SUMMARY}")"
+  DNS_API_PROXIED_COUNT="$(awk -F= '/^proxied_count=/{print $2; exit}' <<<"${DNS_API_SUMMARY}")"
+  if [ "${DNS_API_SUCCESS}" = "true" ] && [ "${DNS_API_RECORD_COUNT:-0}" -gt 0 ] && [ "${DNS_API_PROXIED_COUNT:-0}" -gt 0 ]; then
+    pass "${HOSTNAME} Cloudflare DNS API record is proxied"
+  else
+    fail "${HOSTNAME} Cloudflare DNS API proxied record check failed"
+  fi
 else
-  fail "${HOSTNAME} A record exists: ${A_RECORD}"
+  fail "CLOUDFLARE_API_TOKEN is required for proxied DNS stop-line verification"
+fi
+
+ACCESS_HEADERS="$(curl -fsSI --max-time 20 "https://${HOSTNAME}/healthz" || true)"
+if echo "${ACCESS_HEADERS}" | grep -Eq '^HTTP/[0-9.]+ 302' \
+  && echo "${ACCESS_HEADERS}" | grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/cdn-cgi/access/login/' \
+  && contains "${ACCESS_HEADERS}" "Cloudflare-Access"; then
+  pass "${HOSTNAME} unauthenticated healthz is challenged by Cloudflare Access"
+else
+  fail "${HOSTNAME} unauthenticated healthz is not protected by Cloudflare Access"
 fi
 
 # The stop line forbids UNAPPROVED tags/releases. Tags approved through the
@@ -76,11 +143,12 @@ else
   fail "GitHub deployment count is ${DEPLOYMENT_COUNT}; expected 0"
 fi
 
-OPEN_PR_COUNT="$(gh pr list --state open --json number --jq 'length')"
-if [ "${OPEN_PR_COUNT}" = "0" ]; then
-  pass "Open PR count is 0"
+OPEN_PR_NUMBERS="$(gh pr list --state open --json number --jq '[.[].number | tostring] | sort | join(",")')"
+OPEN_PR_NUMBERS_LABEL="${OPEN_PR_NUMBERS:-none}"
+if [ "${OPEN_PR_NUMBERS}" = "${REQUIRED_OPEN_PRS}" ]; then
+  pass "Open PRs are exactly ${REQUIRED_OPEN_PRS_LABEL}"
 else
-  fail "Open PR count is ${OPEN_PR_COUNT}; expected 0"
+  fail "Open PRs are ${OPEN_PR_NUMBERS_LABEL}; expected ${REQUIRED_OPEN_PRS_LABEL}"
 fi
 
 # Only P0 (release-blocking) issues gate the stop line; routine P2/P3 issues

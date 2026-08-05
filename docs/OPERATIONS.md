@@ -43,6 +43,23 @@ graph LR
 
 ポート割当の詳細と背景 (マルチプロジェクト共存ホスト) は `docs/PORT_ALLOCATION.md` を参照。
 
+### 1.1 🖥️ 検証用 Standalone WebUI
+
+リリース承認確認用の Standalone WebUI は systemd user service
+(`construction-legalops-standalone-webui.service`) として常駐し、起動時に
+**現在のホスト IP + 空きポート (38100-38999) を自動選択**します。
+
+| 項目 | 内容 |
+|---|---|
+| 📁 現在の URL / PID / 停止コマンド | `reports/webui/standalone-webui.json`（起動時に自動更新） |
+| 🔍 IP 確認 | `hostname -I`（ホストの現在の IP 一覧） |
+| ✅ health | `curl -fsS http://<現在のIP>:38100/healthz` → `ok` |
+| 🔧 固定ホスト指定 | `STANDALONE_WEBUI_HOST=<IP>` を設定して `bash scripts/install_standalone_webui_systemd.sh --user install` |
+| 🔄 再起動 | `bash scripts/install_standalone_webui_systemd.sh --user restart` |
+
+> ⚠️ DHCP 等でホスト IP が変わった場合、旧 IP の URL は到達不能になります。
+> その場合は status JSON の `url` を確認するか、サービスを再起動して新しい IP へ張り直してください。
+
 ---
 
 ## 📌 2. サービスの起動 / 停止 / 再起動
@@ -194,6 +211,19 @@ VAULT_MODE=azure AZURE_KEY_VAULT_NAME=<vault名> KEY_DIR=/tmp/legalops-keys ./sc
   `certbot-www` volume を nginx の `/.well-known/acme-challenge/` と共有する。
 - ⚠️ 実際の証明書発行・更新開始は DNS / Cloudflare Tunnel 採否 / 本番公開方式の人間承認後に実行する。
 - ⚠️ **未整備**: 本番の HTTP→HTTPS 恒久リダイレクトは `infra/nginx/default.conf` 内で**コメントアウト状態** (`# return 301 https://...`)。本番切替時にアンコメントが必要
+
+### 3.4 🔐 セキュリティ統制（P0-6・2026-08-05 追記）
+
+| 変数 | 説明 | 既定 |
+|---|---|---|
+| `RLS_ENFORCED` | `true` で PostgreSQL RLS を実行時強制（本番推奨 `true`） | `false` |
+| `WORM_ARCHIVE_PATH` | 監査ログ WORM 相当 JSONL の出力先 | `./data/worm-export` |
+| `SENTINEL_ENABLED` | Microsoft Sentinel 転送の有効化 | `false` |
+| `SENTINEL_WORKSPACE_ID` / `SENTINEL_PRIMARY_KEY` / `SENTINEL_DCR_URI` | Log Analytics Data Collector API 接続情報 | 空 |
+| `RETENTION_AI_INPUT_DAYS` / `RETENTION_AI_OUTPUT_DAYS` / `RETENTION_ATTACHMENT_DAYS` | AI 入出力・添付の保持期間 | 90 / 365 / 3650 |
+
+- ⚠️ Legal Hold 適用中は対象データ（契約・AI 入出力・紛争証拠）の自動削除を停止する。
+- ⚠️ 監査ログの外部保存は append-only JSONL + 日次 SHA-256 アンカーで行い、削除・上書きしない。
 
 ---
 

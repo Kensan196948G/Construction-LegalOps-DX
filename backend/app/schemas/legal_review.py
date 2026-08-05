@@ -35,6 +35,23 @@ class ReviewIssue(BaseModel):
     comment: str
     suggestion: str | None = None
     citations: list[str] = Field(default_factory=list)
+    # --- v2: 根拠保証（P0-4） ---
+    source_page: int | None = None
+    clause_number: str | None = None
+    excerpt: str | None = None
+    law_name: str | None = None
+    law_article: str | None = None
+    law_version: str | None = None
+    effective_date: str | None = None
+    primary_source_url: str | None = None
+    internal_policy_id: str | None = None
+    internal_policy_version: str | None = None
+    rule_id: str | None = None
+    ai_confidence: float | None = Field(default=None, ge=0, le=1)
+    verdict: str = Field(
+        default="finding",
+        pattern="^(finding|compliant|needs_human_review|unverifiable)$",
+    )
     suggested_actions: list[SuggestedAction] = Field(default_factory=list)
 
 

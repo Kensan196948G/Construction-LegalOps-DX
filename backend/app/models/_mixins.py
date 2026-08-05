@@ -86,7 +86,8 @@ class IntPKMixin:
     """``id BIGSERIAL PRIMARY KEY`` column."""
 
     id: Mapped[int] = mapped_column(
-        BigInteger,
+        # SQLite では INTEGER（autoincrement 必須）、PG では BIGINT
+        BigInteger().with_variant(Integer, "sqlite"),
         primary_key=True,
         autoincrement=True,
     )

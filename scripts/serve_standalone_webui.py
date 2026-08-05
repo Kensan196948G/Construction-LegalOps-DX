@@ -54,6 +54,21 @@ def select_host() -> str:
     return candidates[0] if candidates else "127.0.0.1"
 
 
+def resolve_requested_host(requested: str) -> str:
+    """Return the effective bind host.
+
+    ``auto`` (the CLI default) selects the current route-source private IPv4.
+    The ``STANDALONE_WEBUI_HOST`` environment variable overrides ``auto`` so
+    operators can pin a specific interface without changing the systemd unit.
+    An explicit ``--host`` value always wins over the environment.
+    """
+    if requested == "auto":
+        requested = os.environ.get("STANDALONE_WEBUI_HOST", "auto")
+    if requested == "auto":
+        return select_host()
+    return requested
+
+
 def find_free_port(host: str, start: int = 38100, end: int = 38999) -> int:
     for port in range(start, end + 1):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -165,7 +180,11 @@ def write_status(path: Path, host: str, port: int, html_path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--html", type=Path, default=DEFAULT_HTML)
-    parser.add_argument("--host", default="auto")
+    parser.add_argument(
+        "--host",
+        default="auto",
+        help="Bind address (default: auto; STANDALONE_WEBUI_HOST env overrides auto)",
+    )
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--status", type=Path, default=DEFAULT_STATUS)
     args = parser.parse_args()
@@ -174,7 +193,7 @@ def main() -> int:
     if not html_path.exists():
         raise FileNotFoundError(html_path)
 
-    host = select_host() if args.host == "auto" else args.host
+    host = resolve_requested_host(args.host)
     port = args.port or find_free_port(host)
     mimetypes.add_type("text/html", ".html")
 

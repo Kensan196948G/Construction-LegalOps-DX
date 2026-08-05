@@ -19,10 +19,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import ArrayTextType, Base, JsonType
 
 from ._mixins import AuditedByMixin, IntPKMixin, TimestampMixin
 from .enums import ClauseRecommendation, RiskLevel
@@ -54,7 +53,7 @@ class ClauseLibrary(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
         server_default="'recommended'",
     )
     tags: Mapped[list[str]] = mapped_column(
-        ARRAY(Text), nullable=False, default=list, server_default="'{}'"
+        ArrayTextType, nullable=False, default=list, server_default="'{}'"
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -103,7 +102,7 @@ class Clause(IntPKMixin, TimestampMixin, Base):
     )
     risk_level: Mapped[str | None] = mapped_column(String(16), nullable=True)
     ai_findings: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
+        JsonType, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
 
     contract: Mapped[Contract] = relationship("Contract", back_populates="clauses")

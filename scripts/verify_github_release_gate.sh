@@ -14,6 +14,7 @@ REQUIRED_OPEN_PRS="${REQUIRED_OPEN_PRS:-}"
 REQUIRED_CI_WORKFLOW="${REQUIRED_CI_WORKFLOW:-CI}"
 REQUIRED_CI_BRANCH="${REQUIRED_CI_BRANCH:-main}"
 REQUIRED_OPEN_PRS_LABEL="${REQUIRED_OPEN_PRS:-none}"
+PROJECT_OPEN_PRS_LABEL="${REQUIRED_OPEN_PRS:-0}"
 
 PASS=0
 FAIL=0
@@ -61,12 +62,48 @@ PY
 CURRENT_MARKER="Loop ${CURRENT_LOOP}"
 [ -n "${CURRENT_LOOP}" ] && pass "Current loop marker loaded from state.json: ${CURRENT_MARKER}" || fail "Could not load current loop marker from state.json"
 
+STATE_SUMMARY="$(
+  python3 - <<'PY'
+import json
+with open("state.json", encoding="utf-8") as fh:
+    state = json.load(fh)
+print(state["project"].get("last_session_summary", ""))
+PY
+)"
+
 OPEN_PR_NUMBERS="$(gh pr list --state open --json number --jq '[.[].number | tostring] | sort | join(",")')"
 OPEN_PR_NUMBERS_LABEL="${OPEN_PR_NUMBERS:-none}"
 if [ "${OPEN_PR_NUMBERS}" = "${REQUIRED_OPEN_PRS}" ]; then
   pass "Open PRs are exactly ${REQUIRED_OPEN_PRS_LABEL}"
 else
   fail "Open PRs are ${OPEN_PR_NUMBERS_LABEL}; expected ${REQUIRED_OPEN_PRS_LABEL}"
+fi
+
+if contains ",${REQUIRED_OPEN_PRS}," ",70,"; then
+  PR_70="$(gh pr view 70 --json number,isDraft,baseRefName,headRefName,mergeStateStatus,mergeable,state,statusCheckRollup,url)"
+  PR_70_STATE="$(jq -r '.state // ""' <<<"${PR_70}")"
+  PR_70_MERGEABLE="$(jq -r '.mergeable // ""' <<<"${PR_70}")"
+  PR_70_MERGE_STATE="$(jq -r '.mergeStateStatus // ""' <<<"${PR_70}")"
+  PR_70_FAILED_CHECKS="$(
+    jq -r '
+      .statusCheckRollup[]?
+      | select(
+          ((.__typename == "CheckRun") and ((.status // "") != "COMPLETED" or (.conclusion // "") != "SUCCESS"))
+          or
+          ((.__typename == "StatusContext") and ((.state // "") != "SUCCESS"))
+        )
+      | if .__typename == "CheckRun" then "\(.name):\(.status):\(.conclusion)" else "\(.context):\(.state)" end
+    ' <<<"${PR_70}"
+  )"
+
+  [ "${PR_70_STATE}" = "OPEN" ] && pass "PR #70 is open for human merge approval" || fail "PR #70 state is ${PR_70_STATE}; expected OPEN"
+  [ "${PR_70_MERGEABLE}" = "MERGEABLE" ] && pass "PR #70 is mergeable" || fail "PR #70 mergeable is ${PR_70_MERGEABLE}; expected MERGEABLE"
+  [ "${PR_70_MERGE_STATE}" = "CLEAN" ] && pass "PR #70 merge state is CLEAN" || fail "PR #70 merge state is ${PR_70_MERGE_STATE}; expected CLEAN"
+  if [ -z "${PR_70_FAILED_CHECKS}" ]; then
+    pass "PR #70 status checks are all success"
+  else
+    fail "PR #70 has non-success status checks: ${PR_70_FAILED_CHECKS}"
+  fi
 fi
 
 PR_58="$(gh pr view 58 --json number,isDraft,baseRefName,headRefName,mergeStateStatus,state,statusCheckRollup,url)"
@@ -148,13 +185,36 @@ contains "${ISSUE_50_LABELS}" "infra" && pass "Issue #50 has infra label" || fai
 
 PROJECT_README="$(gh project view "${PROJECT_NUMBER}" --owner "${OWNER}" --format json --jq .readme)"
 contains "${PROJECT_README}" "${CURRENT_MARKER}" && pass "Project #${PROJECT_NUMBER} readme current marker is ${CURRENT_MARKER}" || fail "Project #${PROJECT_NUMBER} readme missing ${CURRENT_MARKER}"
-contains "${PROJECT_README}" "Open PRs | 0" && pass "Project #${PROJECT_NUMBER} readme records open PR 0" || fail "Project #${PROJECT_NUMBER} readme missing open PR 0"
+PR_62="$(gh pr view 62 --json number,isDraft,baseRefName,headRefName,mergeStateStatus,state,statusCheckRollup,url)"
+PR_62_STATE="$(jq -r '.state' <<<"${PR_62}")"
+[ "${PR_62_STATE}" = "MERGED" ] && pass "PR #62 is merged" || fail "PR #62 state is ${PR_62_STATE}; expected MERGED"
+PR_69="$(gh pr view 69 --json number,isDraft,baseRefName,headRefName,mergeStateStatus,state,statusCheckRollup,url)"
+PR_69_STATE="$(jq -r '.state' <<<"${PR_69}")"
+[ "${PR_69_STATE}" = "MERGED" ] && pass "PR #69 is merged" || fail "PR #69 state is ${PR_69_STATE}; expected MERGED"
+
+contains "${PROJECT_README}" "Open PRs | ${PROJECT_OPEN_PRS_LABEL}" && pass "Project #${PROJECT_NUMBER} readme records open PR ${PROJECT_OPEN_PRS_LABEL}" || fail "Project #${PROJECT_NUMBER} readme missing open PR ${PROJECT_OPEN_PRS_LABEL}"
 contains "${PROJECT_README}" "PR #58 | merged" && pass "Project #${PROJECT_NUMBER} readme records PR #58 merged state" || fail "Project #${PROJECT_NUMBER} readme missing PR #58 merged state"
+contains "${PROJECT_README}" "PR #62 | merged" && pass "Project #${PROJECT_NUMBER} readme records PR #62 merged state" || fail "Project #${PROJECT_NUMBER} readme missing PR #62 merged state"
+contains "${PROJECT_README}" "PR #65 | merged" && pass "Project #${PROJECT_NUMBER} readme records PR #65 merged state" || fail "Project #${PROJECT_NUMBER} readme missing PR #65 merged state"
+contains "${PROJECT_README}" "PR #66 | merged" && pass "Project #${PROJECT_NUMBER} readme records PR #66 merged state" || fail "Project #${PROJECT_NUMBER} readme missing PR #66 merged state"
+contains "${PROJECT_README}" "PR #69 | merged" && pass "Project #${PROJECT_NUMBER} readme records PR #69 merged state" || fail "Project #${PROJECT_NUMBER} readme missing PR #69 merged state"
+contains "${PROJECT_README}" "Production stop-line | Open PR ${PROJECT_OPEN_PRS_LABEL}" && pass "Project #${PROJECT_NUMBER} readme records production stop-line open PR ${PROJECT_OPEN_PRS_LABEL}" || fail "Project #${PROJECT_NUMBER} readme production stop-line missing open PR ${PROJECT_OPEN_PRS_LABEL}"
 contains "${PROJECT_README}" "#23 / #24 / #50 only" && pass "Project #${PROJECT_NUMBER} readme records only #23/#24/#50 open" || fail "Project #${PROJECT_NUMBER} readme missing open issue gate"
-contains "${PROJECT_README}" "legalops.mirai-dx-platform.com CNAME/A remains absent" && pass "Project #${PROJECT_NUMBER} readme records legalops DNS absence" || fail "Project #${PROJECT_NUMBER} readme missing legalops DNS absence"
+contains "${PROJECT_README}" "Cloudflare Access 302 challenge" && pass "Project #${PROJECT_NUMBER} readme records legalops Access challenge" || fail "Project #${PROJECT_NUMBER} readme missing legalops Access challenge"
+contains "${PROJECT_README}" "Cloudflare legalops preflight | Passed 46 / Failed 0 / Warnings 0" && pass "Project #${PROJECT_NUMBER} readme records Cloudflare legalops 46/0" || fail "Project #${PROJECT_NUMBER} readme missing Cloudflare legalops 46/0"
+contains "${PROJECT_README}" "Release docs | Passed 352 / Failed 0" && pass "Project #${PROJECT_NUMBER} readme records release docs 352/0" || fail "Project #${PROJECT_NUMBER} readme missing release docs 352/0"
+contains "${PROJECT_README}" "deploy_ready=false" && pass "Project #${PROJECT_NUMBER} readme records deploy_ready=false while human gates remain" || fail "Project #${PROJECT_NUMBER} readme missing deploy_ready=false"
+contains "${PROJECT_README}" "Cloudflare DNS API proxied=true + Access login redirect verified" && pass "Project #${PROJECT_NUMBER} readme records proxied DNS and Access login stop-line" || fail "Project #${PROJECT_NUMBER} readme missing proxied DNS/Access login stop-line"
 contains "${PROJECT_README}" "http://192.168.0.185:38100/" && pass "Project #${PROJECT_NUMBER} readme records WebUI URL" || fail "Project #${PROJECT_NUMBER} readme missing WebUI URL"
 contains "${PROJECT_README}" "production release / deploy" && pass "Project #${PROJECT_NUMBER} readme records production deploy stop line" || fail "Project #${PROJECT_NUMBER} readme missing deploy stop line"
 contains "${PROJECT_README}" "Issue #50 Loop" && pass "Project #${PROJECT_NUMBER} readme links Issue #50 evidence" || fail "Project #${PROJECT_NUMBER} readme missing Issue #50 evidence link"
+LATEST_ISSUE_50_URL="$(gh issue view 50 --json comments --jq '.comments[-1].url // ""')"
+LATEST_ISSUE_50_BODY="$(gh issue view 50 --json comments --jq '.comments[-1].body // ""')"
+contains "${PROJECT_README}" "${LATEST_ISSUE_50_URL}" && pass "Project #${PROJECT_NUMBER} readme links latest Issue #50 evidence" || fail "Project #${PROJECT_NUMBER} readme missing latest Issue #50 evidence"
+contains "${PROJECT_README}" "Issue #50 Loop 108 evidence | ${LATEST_ISSUE_50_URL}" && pass "Project #${PROJECT_NUMBER} readme formats latest Issue #50 evidence row" || fail "Project #${PROJECT_NUMBER} readme latest Issue #50 evidence row is malformed"
+contains "${STATE_SUMMARY}" "${LATEST_ISSUE_50_URL}" && pass "state.json records latest Issue #50 evidence URL" || fail "state.json missing latest Issue #50 evidence URL"
+contains "${LATEST_ISSUE_50_BODY}" "Release docs: Passed 352 / Failed 0" && pass "Latest Issue #50 evidence records release docs 352/0" || fail "Latest Issue #50 evidence missing release docs 352/0"
+contains "${LATEST_ISSUE_50_BODY}" "No production deploy or production release executed by this session" && pass "Latest Issue #50 evidence records production stop-line" || fail "Latest Issue #50 evidence missing production stop-line"
 
 PROJECT_ITEMS="$(
   gh project item-list "${PROJECT_NUMBER}" --owner "${OWNER}" --limit 100 --format json \

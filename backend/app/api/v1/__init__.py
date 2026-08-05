@@ -12,14 +12,18 @@ from app.api.v1 import (
     admin,
     audit_logs,
     auth,
+    business,
     compliance,
     contracts,
     dashboard,
+    governance,
     health,
     knowledge,
+    legal_ai,
     notifications,
     reviews,
     risks,
+    security,
     templates,
     uploads,
     users,
@@ -43,6 +47,20 @@ api_router.include_router(audit_logs.router)
 api_router.include_router(uploads.router)
 api_router.include_router(notifications.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(business.change_orders_router)
+api_router.include_router(business.documents_router)
+api_router.include_router(business.payment_router)
+api_router.include_router(business.partners_router)
+api_router.include_router(business.disputes_router)
+api_router.include_router(governance.acl_router)
+api_router.include_router(governance.legal_holds_router)
+api_router.include_router(governance.retention_router)
+api_router.include_router(governance.anchor_router)
+api_router.include_router(governance.admin_router)
+api_router.include_router(security.router)
+api_router.include_router(legal_ai.applicable_laws_router)
+api_router.include_router(legal_ai.evidence_router)
+api_router.include_router(legal_ai.impact_router)
 
 
 __all__ = ["api_router"]

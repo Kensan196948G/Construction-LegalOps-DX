@@ -346,6 +346,13 @@ async def get_current_user(
         claims=claims,
     )
 
+    # P0-6: PostgreSQL RLS コンテキスト（app.actor_id / app.role）を設定する。
+    # SQLite では no-op。これにより contracts テーブルの行レベル可視性が
+    # 認証済み利用者単位で強制される。
+    from app.services.rls_context import set_rls_context
+
+    await set_rls_context(session, actor_id=db_id, role=role, email=email_str)
+
     return CurrentUser(
         id=coerced_subject,
         email=email_str,

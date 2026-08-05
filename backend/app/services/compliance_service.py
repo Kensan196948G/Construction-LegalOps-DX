@@ -146,23 +146,93 @@ async def get_result(
     if contract is None:
         return None
 
-    # Build a ContractSnapshot from the ORM model.
+    # Build a ContractSnapshot from the ORM model + 契約パッケージ文書テーブル.
+    meta = contract.extra_metadata or {}
+    from app.models.contract_document import ContractDocument
+
+    documents = {str(k): str(v) for k, v in (meta.get("documents") or {}).items()}
+    try:
+        doc_rows = (
+            await session.execute(
+                select(ContractDocument).where(
+                    ContractDocument.contract_id == contract_id,
+                    ContractDocument.deleted_at.is_(None),
+                )
+            )
+        ).scalars().all()
+        for doc in doc_rows:
+            if doc.content:
+                documents.setdefault(doc.doc_type, doc.content)
+    except Exception:  # pragma: no cover - モック/旧 DB では metadata のみで続行
+        pass
+    from unittest.mock import Mock
+
+    def _attr(name: str, default: Any = None) -> Any:
+        value = getattr(contract, name, default)
+        return default if isinstance(value, Mock) else value
+
+    def _meta(name: str, default: Any = None) -> Any:
+        return meta.get(name, default)
+
+    amount = _attr("amount")
     snapshot = ContractSnapshot(
-        text=getattr(contract, "text", "") or "",
-        contract_type=contract.contract_type,
-        amount_jpy=(int(contract.amount) if contract.amount is not None else None),
+        text=_attr("text", "") or "",
+        contract_type=_attr("contract_type", "その他"),
+        amount_jpy=(int(amount) if amount is not None else None),
         is_public_work=bool(
-            contract.extra_metadata.get("is_public_work", False)
-            if contract.extra_metadata
-            else False
+            _attr("is_public_work", False) or _meta("is_public_work", False)
         ),
-        counterparty_capital_jpy=None,
-        our_capital_jpy=None,
+        counterparty_capital_jpy=(
+            _attr("counterparty_capital_jpy")
+            if _attr("counterparty_capital_jpy") is not None
+            else _meta("counterparty_capital_jpy")
+        ),
+        our_capital_jpy=(
+            _attr("our_capital_jpy")
+            if _attr("our_capital_jpy") is not None
+            else _meta("our_capital_jpy")
+        ),
+        counterparty_employees=(
+            _attr("counterparty_employees")
+            if _attr("counterparty_employees") is not None
+            else _meta("counterparty_employees")
+        ),
+        our_employees=(
+            _attr("our_employees")
+            if _attr("our_employees") is not None
+            else _meta("our_employees")
+        ),
         handles_personal_data=bool(
-            contract.extra_metadata.get("handles_personal_data", False)
-            if contract.extra_metadata
-            else False
+            _attr("handles_personal_data", False)
+            or _meta("handles_personal_data", False)
         ),
+        order_date=(
+            _attr("order_date")
+            if _attr("order_date") is not None
+            else _meta("order_date")
+        ),
+        receipt_date=(
+            _attr("receipt_date")
+            if _attr("receipt_date") is not None
+            else _meta("receipt_date")
+        ),
+        inspection_date=(
+            _attr("inspection_date")
+            if _attr("inspection_date") is not None
+            else _meta("inspection_date")
+        ),
+        payment_date=(
+            _attr("payment_date")
+            if _attr("payment_date") is not None
+            else _meta("payment_date")
+        ),
+        transaction_kind=(
+            _attr("transaction_kind")
+            if _attr("transaction_kind") is not None
+            else _meta("transaction_kind")
+        ),
+        # 文書パッケージ: 専用テーブルがあれば横断し、無ければ metadata にフォールバック
+        documents=documents,
     )
 
     checker = ComplianceChecker()

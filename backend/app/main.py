@@ -47,6 +47,14 @@ from app.observability.operational_metrics import update_operational_metrics
 
 logger = get_logger(__name__)
 
+try:
+    from importlib.metadata import version as _installed_version
+
+    APP_VERSION = _installed_version("construction-legalops-dx-backend")
+except Exception:  # pragma: no cover - source checkout without install
+    # Mirror backend/pyproject.toml when the package metadata is unavailable.
+    APP_VERSION = "0.1.12"
+
 _REGISTRY: Final[CollectorRegistry] = CollectorRegistry()
 
 _REQUEST_COUNTER: Final[Counter] = Counter(
@@ -191,7 +199,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title=settings.app_name,
-        version="0.1.0",
+        version=APP_VERSION,
         description=(
             "Construction-LegalOps-DX backend API. Japanese construction "
             "industry legal operations platform."

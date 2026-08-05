@@ -1,10 +1,10 @@
 """``legal_reviews`` table model + related issue/action ORM helpers.
 
 Reflects ``docs/database_design.md`` section 4.4. AI-generated findings are
-stored in the ``result`` JSONB column; the ``ReviewIssue`` and
+stored in the ``result`` JsonType column; the ``ReviewIssue`` and
 ``SuggestedAction`` classes below are Pydantic-friendly *structural* helpers
 exposed via ``app.schemas.legal_review`` — they are not separate tables
-because the data lives within the JSONB blob per the design doc.
+because the data lives within the JsonType blob per the design doc.
 """
 
 from __future__ import annotations
@@ -22,10 +22,9 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, JsonType
 
 from ._mixins import AuditedByMixin, IntPKMixin, TimestampMixin
 from .enums import ReviewStatus, ReviewType, RiskLevel
@@ -63,7 +62,7 @@ class LegalReview(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     # Risk score 0-100; not in the raw DDL but required by the team contract.
     risk_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     result: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
+        JsonType, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

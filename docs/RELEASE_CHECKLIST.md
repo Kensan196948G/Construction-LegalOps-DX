@@ -2,10 +2,10 @@
 
 本ドキュメントは **2026-11-16 本番リリース** に向けた最終確認チェックリストです。
 
-**最終更新: 2026-07-20 (v0.1.12 / Loop 107)** — Upload init null URL guard、Cloudflare `legalops.mirai-dx-platform.com` 新規サブドメイン承認ゲート、Upload download audit/fail-closed、File parser OCR fail-closed、User sync queued audit、SharePoint Graph real mode、Notification real mode、公式根拠、pre-deploy gate、Standalone WebUI runtime preflight、release docs preflight、goal evidence preflight、review evidence preflight、dependency audit evidence preflight、backup/restore evidence preflight、local workspace state preflight、GitHub release gate、latest main CI success、warning classification、checklist pending classification、production stop-line、final stop report を反映
+**最終更新: 2026-08-05 (v0.1.12 / Loop 109)** — Cloudflare Access JWT guard、Production stub guard、Upload init null URL guard、Cloudflare `legalops.mirai-dx-platform.com` 新規サブドメイン承認ゲート、Upload download audit/fail-closed、File parser OCR fail-closed、User sync queued audit、SharePoint Graph real mode、Notification real mode、公式根拠、pre-deploy gate、Standalone WebUI runtime preflight、release docs preflight、goal evidence preflight、review evidence preflight、dependency audit evidence preflight、backup/restore evidence preflight、local workspace state preflight、GitHub release gate、latest main CI success、warning classification、checklist pending classification、production stop-line、final stop report を反映
 
 > 📎 承認者向けの集約資料: [`docs/PRODUCTION_APPROVAL_PACKET.md`](./PRODUCTION_APPROVAL_PACKET.md)。
-> Loop 107 時点の CI / pre-deploy / Cloudflare / Upload URL guard / File parser OCR guard / User sync queued audit / SharePoint Graph real mode / Notification real mode / WebUI runtime / goal evidence / review evidence / dependency audit evidence / backup/restore evidence / local workspace state / GitHub release gate / warning classification / checklist pending classification / production stop-line / review 実施状況は同パケット §2 を正とする。
+> Loop 108 時点の CI / pre-deploy / Cloudflare / Access JWT guard / Production stub guard / Upload URL guard / File parser OCR guard / User sync queued audit / SharePoint Graph real mode / Notification real mode / WebUI runtime / goal evidence / review evidence / dependency audit evidence / backup/restore evidence / local workspace state / GitHub release gate / warning classification / checklist pending classification / production stop-line / review 実施状況は同パケット §2 を正とする。
 > `/goal` 完了条件ごとの証拠は [`docs/RELEASE_EVIDENCE_MATRIX.md`](./RELEASE_EVIDENCE_MATRIX.md) を正とする。
 
 ## 📊 Release Readiness ダッシュボード (2026-07-19)
@@ -37,7 +37,7 @@
 
 - [ ] GitHub Projects の Production Release マイルストーン (期限 2026-11-16) の未解決 Issue がゼロ。
 - [ ] `CHANGELOG.md` の `## [0.1.0] - 2026-05-16` セクションが最新コミットを反映している。
-- [ ] `state.json` の `project.status` が `release_ready` / `code_complete_deployment_ready` / `production_ready_pending_human_actions` のいずれかである。
+- [ ] `state.json` の `project.status` が `release_ready` / `code_complete_production_approval_pending` / `production_ready_pending_human_actions` のいずれかである。
 - [ ] CodeRabbit / Codex review の Critical/High 指摘がすべて解消済み。
 - [ ] `docs/HANDOVER.md` の未解決事項リストが空、または許容済みリスクとして文書化済み。
 - [ ] `docs/PRODUCTION_APPROVAL_PACKET.md` を Security / Infra / Legal / Release の各責任者が確認済み。
@@ -152,10 +152,12 @@
 - [ ] `mirai-dx-platform.com` の NS が Cloudflare (`nia.ns.cloudflare.com`, `kareem.ns.cloudflare.com`) であることを確認。
 - [ ] `legalops.mirai-dx-platform.com` に既存 DNS レコードがない、または置換対象として承認済み。
 - [ ] Cloudflare Access self-hosted application `LegalOps-DX` を作成済み。
-- [ ] Access policy は `LegalOps-Users` / `LegalOps-Admins` + MFA に限定済み。
-- [ ] Tunnel ID を取得し、CNAME `legalops -> <TUNNEL_ID>.cfargotunnel.com` の作成承認済み。
-- [ ] `CLOUDFLARE_TUNNEL_TOKEN` を Vault / secret manager から注入し、`infra/docker/docker-compose.cloudflare-tunnel.yml` overlay で cloudflared を起動する手順を承認済み。
-- [ ] `./scripts/verify_cloudflare_legalops.sh` が成功し、`legalops` CNAME の未作成/承認済み状態、Tunnel ingress、Access policy、compose overlay を read-only で確認済み。
+- [ ] Access policy は `LegalOps-Users` / `LegalOps-Admins` のメール OTP allowlist に限定済み（将来 IdP 導入時は MFA require を追加）。
+- [ ] Access application の AUD tag を `CLOUDFLARE_ACCESS_AUD`、team domain を `CLOUDFLARE_ACCESS_ISSUER` として Vault / secret manager へ登録済み。
+- [ ] Tunnel UUID を取得し、CNAME `legalops -> <TUNNEL_UUID>.cfargotunnel.com` の作成承認済み。
+- [ ] `scripts/apply_cloudflare_legalops_after_approval.sh` の dry-run で Tunnel UUID 解決と Cloudflare API CNAME post-check 予定を確認済み。
+- [ ] Tunnel credentials JSON を安全な host path へ配備し、`CLOUDFLARE_TUNNEL_CREDENTIALS_FILE` を Vault / secret manager から環境へ注入して `infra/docker/docker-compose.cloudflare-tunnel.yml` overlay で cloudflared を起動する手順を承認済み。
+- [ ] `./scripts/verify_cloudflare_legalops.sh` が成功し、`legalops` Cloudflare proxy 解決、Access 302 challenge、Tunnel ingress、Access policy、compose overlay を read-only で確認済み。
 - [ ] `scripts/pre_deploy_check.sh` の Cloudflare Tunnel compose overlay config が成功。
 - [ ] `cloudflared tunnel ingress validate infra/cloudflare/tunnel-config.example.yml` が成功。
 - [ ] DNS 作成後のロールバック手順（CNAME 削除 / Tunnel 停止 / Access 無効化）を担当者が確認済み。
@@ -226,5 +228,5 @@
 
 ---
 
-> 本チェックリストは Loop 107 (2026-07-20) 時点の実装・検証状態に同期済みです。
+> 本チェックリストは Loop 108 (2026-07-20) 時点の実装・検証状態に同期済みです。
 > 本番リリース日 (2026-11-16) までに各項目の責任者・期限を再確認し、本番 deploy / DNS / secrets は人間承認後に実行すること。
