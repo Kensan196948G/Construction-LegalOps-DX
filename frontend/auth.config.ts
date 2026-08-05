@@ -34,6 +34,10 @@ import { refreshAccessToken } from "@/lib/auth/refresh-token";
 // access_token を更新前にこの秒数だけ前倒しで refresh する
 const REFRESH_BEFORE_EXPIRY_SECONDS = 60;
 
+// backend /api/v1/auth/me は初回に Cloudflare 証明書取得 + JIT プロビジョニング +
+// 監査書込を行うため、短すぎるタイムアウトは初回サインインを失敗させる。
+const BACKEND_REQUEST_TIMEOUT_MS = 15_000;
+
 // 既知ロール (backend `app/models/enums.py::UserRole` と完全一致)
 const KNOWN_ROLES = [
   "viewer",
@@ -67,7 +71,7 @@ async function fetchBackendIdentity(
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5_000);
+    const timeout = setTimeout(() => controller.abort(), BACKEND_REQUEST_TIMEOUT_MS);
     const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/auth/me`, {
       method: "GET",
       headers: {
@@ -141,7 +145,7 @@ export const authConfig = {
 
         try {
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 5_000);
+          const timeout = setTimeout(() => controller.abort(), BACKEND_REQUEST_TIMEOUT_MS);
           const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/v1/auth/me`, {
             method: "GET",
             headers: {

@@ -19,11 +19,9 @@ from sqlalchemy import (
     Index,
     String,
 )
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, JsonType, UuidType
 
 from ._mixins import IntPKMixin, TimestampMixin
 from .enums import UserRole
@@ -41,7 +39,7 @@ class User(IntPKMixin, TimestampMixin, Base):
     __tablename__ = "users"
 
     entra_oid: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), nullable=False, unique=True
+        UuidType, nullable=False, unique=True
     )
     email: Mapped[str] = mapped_column(String(256), nullable=False, unique=True)
     display_name: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -58,7 +56,7 @@ class User(IntPKMixin, TimestampMixin, Base):
         DateTime(timezone=True), nullable=True
     )
     attributes: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
+        JsonType, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
 
     department: Mapped[Department | None] = relationship(

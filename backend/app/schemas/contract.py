@@ -38,6 +38,28 @@ class ContractBase(BaseModel):
     department_id: int
     confidentiality: Confidentiality = Confidentiality.NORMAL
     extra_metadata: dict[str, Any] = Field(default_factory=dict, alias="metadata")
+    # ---- 法令適用・支払コンプライアンス正本カラム（P0-1 / 支払コンプライアンス） ----
+    order_date: date | None = None
+    receipt_date: date | None = None
+    inspection_date: date | None = None
+    payment_date: date | None = None
+    transaction_kind: Annotated[
+        str | None,
+        Field(
+            pattern="^(manufacturing|repair|information|service|transport|construction)$",
+        ),
+    ] = None
+    is_public_work: bool = False
+    handles_personal_data: bool = False
+    our_capital_jpy: int | None = Field(default=None, ge=0)
+    counterparty_capital_jpy: int | None = Field(default=None, ge=0)
+    our_employees: int | None = Field(default=None, ge=0)
+    counterparty_employees: int | None = Field(default=None, ge=0)
+    case_category: Annotated[
+        str | None,
+        Field(pattern="^(normal|hr|bid_rigging|whistleblowing|legal)$"),
+    ] = None
+    ethical_wall: bool = False
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -49,6 +71,20 @@ class ContractBase(BaseModel):
             and self.end_date < self.start_date
         ):
             raise ValueError("end_date must be on or after start_date")
+        dates = [
+            ("order_date", self.order_date),
+            ("receipt_date", self.receipt_date),
+            ("inspection_date", self.inspection_date),
+            ("payment_date", self.payment_date),
+        ]
+        previous: date | None = None
+        previous_name: str | None = None
+        for name, value in dates:
+            if value is None:
+                continue
+            if previous is not None and value < previous:
+                raise ValueError(f"{name} must be on or after {previous_name}")
+            previous, previous_name = value, name
         return self
 
 
@@ -70,6 +106,25 @@ class ContractUpdate(BaseModel):
     confidentiality: Confidentiality | None = None
     status: ContractStatus | None = None
     extra_metadata: dict[str, Any] | None = Field(default=None, alias="metadata")
+    order_date: date | None = None
+    receipt_date: date | None = None
+    inspection_date: date | None = None
+    payment_date: date | None = None
+    transaction_kind: Annotated[
+        str | None,
+        Field(pattern="^(manufacturing|repair|information|service|transport|construction)$"),
+    ] = None
+    is_public_work: bool | None = None
+    handles_personal_data: bool | None = None
+    our_capital_jpy: int | None = Field(default=None, ge=0)
+    counterparty_capital_jpy: int | None = Field(default=None, ge=0)
+    our_employees: int | None = Field(default=None, ge=0)
+    counterparty_employees: int | None = Field(default=None, ge=0)
+    case_category: Annotated[
+        str | None,
+        Field(pattern="^(normal|hr|bid_rigging|whistleblowing|legal)$"),
+    ] = None
+    ethical_wall: bool | None = None
     version: int = Field(..., description="Optimistic-lock token (current row version)")
 
     model_config = ConfigDict(populate_by_name=True)
@@ -102,6 +157,19 @@ class ContractRead(ORMModel, TimestampsMixin):
     version: int
     department: DepartmentBrief | None = None
     drafter: UserBrief | None = None
+    order_date: date | None = None
+    receipt_date: date | None = None
+    inspection_date: date | None = None
+    payment_date: date | None = None
+    transaction_kind: str | None = None
+    is_public_work: bool = False
+    handles_personal_data: bool = False
+    our_capital_jpy: int | None = None
+    counterparty_capital_jpy: int | None = None
+    our_employees: int | None = None
+    counterparty_employees: int | None = None
+    case_category: str | None = None
+    ethical_wall: bool = False
 
 
 class ContractDetail(ContractRead):

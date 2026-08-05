@@ -26,7 +26,7 @@
 | `legalops` DNS record | Cloudflare API で `legalops.mirai-dx-platform.com` のレコード 1 件を read-only 確認済み。公開 DNS は Cloudflare proxy A/AAAA を返す |
 | Cloudflare Access | 未認証 `https://legalops.mirai-dx-platform.com/healthz` は Cloudflare Access login 302 challenge で保護済み |
 | `legalops` 要件 | 新規サブドメイン要件を反映済み。親ドメイン `mirai-dx-platform.com` は取得済み |
-| 🧪 preview | **`https://legalops-preview.mirai-dx-platform.com` 稼働中** — named tunnel `legalops-preview` (459059b3-…) → host nginx :8410 → compose (staging) + Neon `development`。CNAME はユーザー承認 (2026-07-19) の上作成。削除で完全 rollback 可 |
+| ✅ サブドメイン | **`https://legalops.mirai-dx-platform.com` のみ** — 一本化方針により preview 用 `legalops-preview`（tunnel 459059b3-… / CNAME）は 2026-08-01 削除済み（NXDOMAIN 化・connector 停止を確認）。復元は CNAME / tunnel 再作成 |
 | 🗄️ Neon | プロジェクト `Construction-LegalOps-DX` (`snowy-sound-99973684`, PG16, ap-southeast-1) 作成済み。詳細は `neon-config.md` |
 | WebUI preview (LAN) | `http://192.168.0.185:38100/` |
 | systemd service | `construction-legalops-standalone-webui.service` |

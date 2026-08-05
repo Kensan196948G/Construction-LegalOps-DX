@@ -121,4 +121,42 @@ export const queryKeys = {
     all: ["settings"] as const,
     aiSettings: () => ["settings", "ai-settings"] as const,
   },
+
+  changeOrders: {
+    all: ["change-orders"] as const,
+    lists: () => ["change-orders", "list"] as const,
+    list: (params?: unknown) => ["change-orders", "list", params] as const,
+    impact: (contractId: number | string) =>
+      ["change-orders", "impact", contractId] as const,
+  },
+
+  partners: {
+    all: ["partners"] as const,
+    lists: () => ["partners", "list"] as const,
+    list: (params?: unknown) => ["partners", "list", params] as const,
+    summary: () => ["partners", "summary"] as const,
+  },
+
+  disputes: {
+    all: ["disputes"] as const,
+    lists: () => ["disputes", "list"] as const,
+    list: (params?: unknown) => ["disputes", "list", params] as const,
+    details: () => ["disputes", "detail"] as const,
+    detail: (id: number | string) => ["disputes", "detail", id] as const,
+    exposure: () => ["disputes", "exposure"] as const,
+  },
+
+  payments: {
+    all: ["payments"] as const,
+    check: (contractId: number | string) =>
+      ["payments", "check", contractId] as const,
+  },
+
+  governance: {
+    all: ["governance"] as const,
+    acl: (contractId: number | string) =>
+      ["governance", "acl", contractId] as const,
+    legalHolds: (params?: unknown) => ["governance", "legal-holds", params] as const,
+    retention: () => ["governance", "retention"] as const,
+  },
 } as const;

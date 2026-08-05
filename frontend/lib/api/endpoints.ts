@@ -18,11 +18,16 @@ import {
   apiResponse,
   paginatedSchema,
   // schemas
+  accessControlEntrySchema,
   aiProviderConfigSchema,
   aiSettingsSchema,
+  applicableLawSchema,
   attachmentSchema,
   auditLogSchema,
   auditVerifyResultSchema,
+  changeOrderEvidenceSchema,
+  changeOrderImpactSchema,
+  changeOrderSchema,
   clauseSchema,
   clauseLibrarySchema,
   complianceChecklistSchema,
@@ -34,10 +39,21 @@ import {
   contractUpdateSchema,
   dashboardSummarySchema,
   dashboardTrendsSchema,
+  disputeDetailSchema,
+  disputeEvidenceSchema,
+  disputeExposureSchema,
+  disputeSchema,
+  disputeTimelineEventSchema,
+  evidenceHitSchema,
   healthSchema,
   knowledgeArticleSchema,
+  legalHoldSchema,
   legalReviewSchema,
   notificationSchema,
+  partnerSchema,
+  partnerSummarySchema,
+  paymentComplianceSchema,
+  retentionRuleSchema,
   reviewCreateSchema,
   riskHeatmapSchema,
   riskItemSchema,
@@ -49,11 +65,17 @@ import {
   workflowInstanceSchema,
   workflowSchema,
   workflowStepSchema,
+  idSchema,
   type AiProvider,
   type AiSettingsUpdate,
+  type ChangeOrderCreate,
   type ContractCreate,
   type ContractUpdate,
+  type Dispute,
+  type DisputeEvidence,
   type Paginated,
+  type Partner,
+  type PaymentFinding,
   type ReviewCreate,
   type RiskUpdate,
 } from "./schemas";
@@ -544,6 +566,174 @@ export const settingsApi = {
 };
 
 // ===========================================================================
+// 14. 変更契約・クレーム管理
+// ===========================================================================
+
+export interface ChangeOrderListParams extends ListParams {
+  contract_id?: number | string;
+  status?: string;
+}
+
+export const changeOrdersApi = {
+  list: (params?: ChangeOrderListParams) =>
+    getParsed(paginatedSchema(changeOrderSchema), "/change-orders", {
+      params: buildParams(params),
+    }),
+
+  create: (contractId: number | string, data: Partial<ChangeOrderCreate>) =>
+    postParsed(changeOrderSchema, "/change-orders", data, {
+      params: { contract_id: contractId },
+    }),
+
+  update: (id: number | string, data: Partial<ChangeOrderCreate>) =>
+    patchParsed(changeOrderSchema, `/change-orders/${id}`, data),
+
+  evidence: (id: number | string) =>
+    getParsed(z.array(changeOrderEvidenceSchema), `/change-orders/${id}/evidence`),
+
+  addEvidence: (
+    id: number | string,
+    data: Partial<{
+      evidence_type: string;
+      description?: string;
+      occurred_at?: string;
+      attachment_id?: number | string;
+    }>,
+  ) => postParsed(changeOrderEvidenceSchema, `/change-orders/${id}/evidence`, data),
+
+  impact: (contractId: number | string) =>
+    getParsed(changeOrderImpactSchema, `/change-orders/impact/${contractId}`),
+};
+
+// ===========================================================================
+// 15. 協力会社コンプライアンス台帳
+// ===========================================================================
+
+export interface PartnerListParams extends ListParams {
+  partner_type?: string;
+  risk_level?: string;
+}
+
+export const partnersApi = {
+  list: (params?: PartnerListParams) =>
+    getParsed(paginatedSchema(partnerSchema), "/partners", {
+      params: buildParams(params),
+    }),
+
+  summary: () => getParsed(partnerSummarySchema, "/partners/summary"),
+
+  create: (data: Partial<Partner>) => postParsed(partnerSchema, "/partners", data),
+
+  update: (id: number | string, data: Partial<Partner>) =>
+    patchParsed(partnerSchema, `/partners/${id}`, data),
+};
+
+// ===========================================================================
+// 16. 紛争・事故・債権管理
+// ===========================================================================
+
+export interface DisputeListParams extends ListParams {
+  status?: string;
+  dispute_type?: string;
+}
+
+export const disputesApi = {
+  list: (params?: DisputeListParams) =>
+    getParsed(paginatedSchema(disputeSchema), "/disputes", {
+      params: buildParams(params),
+    }),
+
+  exposure: () => getParsed(disputeExposureSchema, "/disputes/exposure"),
+
+  get: (id: number | string) => getParsed(disputeDetailSchema, `/disputes/${id}`),
+
+  create: (data: Partial<Dispute>) => postParsed(disputeSchema, "/disputes", data),
+
+  update: (id: number | string, data: Partial<Dispute>) =>
+    patchParsed(disputeSchema, `/disputes/${id}`, data),
+
+  addTimeline: (
+    id: number | string,
+    data: Partial<{
+      event_type: string;
+      occurred_at?: string;
+      description?: string;
+    }>,
+  ) => postParsed(disputeTimelineEventSchema, `/disputes/${id}/timeline`, data),
+
+  addEvidence: (
+    id: number | string,
+    data: Partial<DisputeEvidence>,
+  ) => postParsed(disputeEvidenceSchema, `/disputes/${id}/evidence`, data),
+};
+
+// ===========================================================================
+// 17. 支払・出来高・検収コンプライアンス
+// ===========================================================================
+
+export const paymentComplianceApi = {
+  check: (contractId: number | string) =>
+    getParsed(paymentComplianceSchema, `/contracts/${contractId}/payment-compliance`),
+
+  findings: (contractId: number | string) =>
+    getParsed(paymentComplianceSchema, `/contracts/${contractId}/payment-compliance`).then(
+      (r) => r.findings as PaymentFinding[],
+    ),
+};
+
+// ===========================================================================
+// 18. ガバナンス（P0-6）・法務 AI（一次情報検索）
+// ===========================================================================
+
+export const governanceApi = {
+  /** 案件単位 ACL */
+  acl: (contractId: number | string) =>
+    getParsed(z.array(accessControlEntrySchema), `/contracts/${contractId}/access-control`),
+
+  grant: (contractId: number | string, data: Record<string, unknown>) =>
+    postParsed(accessControlEntrySchema, `/contracts/${contractId}/access-control`, data),
+
+  revoke: (contractId: number | string, entryId: number | string) =>
+    apiClient.delete(`/contracts/${contractId}/access-control/${entryId}`).then(() => undefined),
+
+  /** リーガルホールド */
+  legalHolds: (params?: { active?: boolean }) =>
+    getParsed(z.array(legalHoldSchema), "/legal-holds", {
+      params: buildParams(params),
+    }),
+
+  /** 保持期間 */
+  retentionRules: () => getParsed(z.array(retentionRuleSchema), "/retention"),
+};
+
+export const legalAiApi = {
+  /** 適用法令自動判定（POST /compliance/applicable-laws） */
+  applicableLaws: (data: Record<string, unknown>) =>
+    postParsed(
+      z.object({
+        contract_id: idSchema.nullable().optional(),
+        contract_type: z.string(),
+        laws: z.array(applicableLawSchema).default([]),
+        applied: z.array(applicableLawSchema).default([]),
+      }),
+      "/compliance/applicable-laws",
+      data,
+    ),
+
+  /** 一次情報限定根拠検索（POST /ai/evidence） */
+  evidence: (data: { query: string; max_results?: number }) =>
+    postParsed(
+      z.object({
+        query: z.string(),
+        hits: z.array(evidenceHitSchema).default([]),
+        citation_verification: z.record(z.string(), z.unknown()).default({}),
+      }),
+      "/ai/evidence",
+      data,
+    ),
+};
+
+// ===========================================================================
 // Meta / Health
 // ===========================================================================
 
@@ -572,5 +762,11 @@ export const api = {
   notifications: notificationsApi,
   dashboard: dashboardApi,
   settings: settingsApi,
+  changeOrders: changeOrdersApi,
+  partners: partnersApi,
+  disputes: disputesApi,
+  payments: paymentComplianceApi,
+  governance: governanceApi,
+  legalAi: legalAiApi,
   meta: metaApi,
 } as const;

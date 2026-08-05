@@ -22,6 +22,8 @@ import {
   CalendarClock,
   Building2,
   Swords,
+  FileDiff,
+  ReceiptText,
   BarChart3,
   type LucideIcon,
 } from "lucide-react";
@@ -42,7 +44,9 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { label: "契約台帳", href: "/contracts", icon: FolderKanban, group: "contracts" },
   { label: "契約申請・稟議", href: "/applications", icon: ClipboardList, group: "contracts" },
   { label: "承認ワークフロー", href: "/workflows", icon: Workflow, group: "contracts" },
+  { label: "変更契約・クレーム", href: "/change-orders", icon: FileDiff, group: "contracts" },
   { label: "法務相談", href: "/consultations", icon: MessageSquareText, group: "legal" },
+  { label: "支払・検収コンプライアンス", href: "/payments", icon: ReceiptText, group: "legal" },
   { label: "リスク管理", href: "/risks", icon: ShieldAlert, group: "legal" },
   { label: "建設業法務チェック", href: "/construction-legal", icon: HardHat, group: "legal" },
   { label: "契約期限・更新管理", href: "/deadlines", icon: CalendarClock, group: "legal" },

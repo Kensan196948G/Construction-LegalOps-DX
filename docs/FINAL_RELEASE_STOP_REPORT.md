@@ -1,6 +1,6 @@
 # 🚦 Final Release Stop Report — Construction-LegalOps-DX
 
-> **最終更新: 2026-07-20 / Loop 108**
+> **最終更新: 2026-08-05 / Loop 109**
 > 本書は、本番リリース直前で CTO/Supervisor が停止するための最終報告書です。  
 > 本番 deploy / 公開 DNS 変更 / secret 投入 / Loop 108 差分のPR merge / release tag は実行していません。
 
@@ -82,7 +82,7 @@
 | Frontend E2E                     | Playwright 51 passed                                                                                                                                                                                                                                                                                                      |
 | Jest                             | 35 passed                                                                                                                                                                                                                                                                                                                 |
 | Security                         | Bandit / npm audit / secret scan 成功                                                                                                                                                                                                                                                                                     |
-| Dependency audit                 | Passed 23 / Failed 0。npm audit high/critical 0、moderate 4 は既知残リスク。pip-audit は隔離venv方式で72 deps / 0 vulnerabilities                                                                                                                                                                                         |
+| Dependency audit                 | Passed 23 / Failed 0。npm audit high/critical 0、moderate 0（2026-08-05 依存更新で解消）。pip-audit は隔離venv方式で72 deps / 0 vulnerabilities                                                                                                                                                                                         |
 | SharePoint Graph real mode       | `backend/tests/unit/test_sharepoint_service.py` → 33 passed。token取得 / drive upload / webUrl 解決 / drive id不足 / Graph不正応答 fail-closed                                                                                                                                                                            |
 | Notification real mode           | `backend/tests/unit/test_notification_service.py` → 32 passed。Exchange Graph sendMail / Teams webhook / desknet's webhook / 設定不足 fail-closed                                                                                                                                                                         |
 | Template creation UI             | 未実装 alert を撤去し、`CreateTemplateButton` を dialog form + `useCreateTemplate` + `router.refresh()` で `/templates` 作成APIへ接続。typecheck / targeted ESLint / release docs verifier 通過                                                                                                                           |

@@ -755,7 +755,74 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 
 ---
 
-## 16. レート制限
+## 16. 高優先業務機能 API（2026-08-05 追加）
+
+### 16.1 紛争・クレーム・事故・債権管理 (`/disputes`)
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| GET | `/disputes` | 一覧（q / status / dispute_type / page / size） |
+| POST | `/disputes` | 案件登録（drafter/reviewer/approver/admin） |
+| GET | `/disputes/exposure` | エクスポージャー集計（by_status / total_claimed / total_reserve / deadlines_within_180d） |
+| PATCH | `/disputes/{id}` | 状態・金額・期限の更新 |
+| POST | `/disputes/{id}/timeline` | 事実経過タイムライン追加 |
+| POST | `/disputes/{id}/evidence` | 証拠登録（preserved フラグで保全） |
+
+### 16.2 変更契約・追加工事・クレーム (`/change-orders`)
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| GET | `/change-orders` | 一覧（contract_id / status） |
+| POST | `/change-orders?contract_id=` | 登録（response_deadline は requested_at + 14 日で自動計算） |
+| GET | `/change-orders/impact/{contract_id}` | 原契約＋変更の累積金額・工期影響・失権リスク集計 |
+| PATCH | `/change-orders/{id}` | 更新（approved 時に cumulative_after_jpy 再計算） |
+| POST | `/change-orders/{id}/evidence` | 証拠（日報・写真・メール・議事録・指示書）紐付け |
+
+### 16.3 協力会社コンプライアンス台帳 (`/partners`)
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| GET | `/partners` | 一覧（q / partner_type / risk_level） |
+| GET | `/partners/summary` | リスク集計（by_risk_level / antisocial_unconfirmed / permit_expiring_within_90d） |
+| POST | `/partners` | 登録（risk_level と risk_reasons を自動判定） |
+| PATCH | `/partners/{id}` | 更新（許可・社会保険・CCUS・反社チェック） |
+
+### 16.4 支払・出来高・検収コンプライアンス (`/contracts/{id}/payment-compliance`)
+
+- `GET /contracts/{contract_id}/payment-compliance`
+- 発注日 2026-01-01 前後で取適法/旧下請法を切替、公共工事は 50 日、それ以外は 60 日基準
+- 受領日→支払日の実日数、遅延利息概算（年 14.6%）、手形・電子記録債権・ファクタリング・
+  不当減額・保留金の文言判定
+- レスポンス: `law_version` / `applicable_threshold_days` / `days_receipt_to_payment` /
+  `late_interest_jpy` / `overall_status` / `findings[]`
+
+### 16.5 契約文書パッケージ (`/contracts/{id}/documents`)
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| GET | `/contracts/{id}/documents` | パッケージ文書一覧（priority 順） |
+| POST | `/contracts/{id}/documents` | 文書追加（契約書・約款・特記仕様書・設計図書・見積書等） |
+| PATCH | `/contracts/{id}/documents/{document_id}` | 文書更新 |
+| GET | `/contracts/{id}/documents/consistency` | 文書間の金額（20% 超乖離）・工期逆転・責任帰属の矛盾検出 |
+
+### 16.6 ガバナンス / セキュリティ統制（P0-6）
+
+- ACL: `GET/POST /contracts/{contract_id}/access-control`、`DELETE /contracts/{contract_id}/access-control/{entry_id}`
+- Legal Hold: `GET/POST /legal-holds`、`POST /legal-holds/{id}/release`
+- 保持期間: `GET/PUT /security/retention-settings`、`POST /security/retention/run`（purge）
+- 監査 WORM: `GET/POST /security/audit-export`、アンカー検証
+- Sentinel: `GET /security/sentinel/status`
+
+### 16.7 適用法令・根拠検索（AI 第 1 優先）
+
+- `GET /compliance/applicable-laws?contract_id=` — 適用法令自動判定
+- `GET /ai/evidence/search?query=` — 一次情報限定 RAG（許可ホスト検証付き）
+- `POST /ai/evidence/verify` — 引用 URL の一次情報検証
+- `GET /ai/law-change-impact?effective_date=` — 法令改正影響分析
+
+---
+
+## 17. レート制限
 
 | ルート                         | 制限                   |
 | ------------------------------ | ---------------------- |
@@ -768,7 +835,7 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 
 ---
 
-## 17. 認可マトリクス (抜粋)
+## 18. 認可マトリクス (抜粋)
 
 | エンドポイント                    | viewer | drafter | reviewer | approver | admin | auditor |
 | --------------------------------- | :----: | :-----: | :------: | :------: | :---: | :-----: |
@@ -779,11 +846,18 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 | POST /workflow-steps/{id}/approve |   -    |    -    |    -     |    o     |   o   |    -    |
 | GET /audit-logs                   |   -    |    -    |    -     |    -     |   o   |    o    |
 | POST /audit-logs/verify           |   -    |    -    |    -     |    -     |   o   |    o    |
+| GET/POST /disputes                |   o    |    o    |    o     |    o     |   o   |    o    |
+| GET/POST /change-orders           |   o    |    o    |    o     |    o     |   o   |    o    |
+| GET/POST /partners                |   o    |    o    |    o     |    o     |   o   |    o    |
+| GET /contracts/{id}/documents     |   o    |    o    |    o     |    o     |   o   |    o    |
+| GET /contracts/{id}/payment-compliance | o |    o    |    o     |    o     |   o   |    o    |
+| GET/POST /legal-holds             |   -    |    -    |    -     |    -     |   o   |    o    |
 
 ---
 
-## 18. 変更履歴
+## 19. 変更履歴
 
 | 日付       | 版   | 変更内容 |
 | ---------- | ---- | -------- |
 | 2026-05-16 | v1.0 | 初版作成 |
+| 2026-08-05 | v0.2 | 高優先業務機能 API（紛争/変更契約/協力会社/支払/文書パッケージ）と P0-6 ガバナンス API を追加 |

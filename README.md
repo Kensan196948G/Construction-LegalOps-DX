@@ -91,7 +91,7 @@ flowchart LR
 
 **Construction-LegalOps-DX** は、建設業界に特化した法務オペレーション支援プラットフォームです。
 
-🏗️ 建設業の現場・本社・法務部門にまたがる契約レビュー、下請法対応、建設業法に基づく書類整備、社内法令照会といった業務を、**AI アシスト + 既存業務システム連携** によって統合的に効率化します。
+🏗️ 建設業の現場・本社・法務部門にまたがる契約レビュー、取適法（旧下請法）対応、建設業法に基づく書類整備、社内法令照会といった業務を、**AI アシスト + 既存業務システム連携** によって統合的に効率化します。
 
 🌟 **三本柱** で業務を支えます：
 
@@ -128,7 +128,7 @@ flowchart LR
 
 - 📊 契約書のリスク観点抽出（5段階スコアリング）
 - ✍️ 修正候補の **下書き** 提示（最終判断は人間）
-- 🔍 社内規程・建設業法・下請法に基づく一次回答
+- 🔍 社内規程・建設業法・取適法（旧下請法）に基づく一次回答
 - 🧠 Claude API（Anthropic）による高精度な日本語処理
 
 ### 🔄 ワークフロー連携
@@ -142,6 +142,17 @@ flowchart LR
 - 📜 全操作の監査ログ自動記録（PostgreSQL トリガー）
 - 🔐 RBAC による 7 ロールアクセス制御
 - 📅 電子帳簿保存法に基づく保存期間管理
+- 🔒 **PostgreSQL RLS / 案件単位 ACL（外部顧問弁護士のメール単位アクセス・倫理壁）**
+- 🛡️ **Legal Hold（証拠保全）・AI 入出力の保存期間ポリシー・WORM 相当の監査外部出力・Sentinel 転送**
+
+### 🏗️ 建設業法務の正本機能（2026-08-05 対応）
+
+- 📑 **変更契約・追加工事・クレーム管理**: 通知期限の自動計算・失権リスク警告・累積影響分析・証拠紐付け
+- 📚 **契約パッケージ文書管理**: 約款・特記仕様書・設計図書・見積書等を優先順位付きで一元管理し、金額・工期・責任分担の矛盾を自動検出
+- 💰 **支払・出来高・検収コンプライアンス**: 取適法 60 日 / 公共工事 50 日基準の実日計算・遅延利息・手形等禁止判定
+- 🏢 **協力会社コンプライアンス台帳**: 建設業許可・社会保険・CCUS・技術者資格・反社確認・倒産リスクを理由付きで自動評価
+- ⚔️ **紛争・事故・債権管理**: タイムライン・証拠保全・消滅時効管理・経営層向けエクスポージャー集計
+- ⚖️ **適用法令自動判定・一次情報限定 RAG・法令改正影響分析**: 取適法（2026-01-01 施行）への新旧切替を含む根拠付き支援
 
 ---
 
@@ -153,7 +164,7 @@ flowchart LR
 | 📉 **見落としリスク**   | AI 一次レビューによる二重チェック体制                |
 | 🔍 **検索効率**         | 紙台帳・Excel 管理 → 数秒で全文検索                  |
 | 📋 **監査対応工数**     | 法定書類提出を半自動化                               |
-| 🛡️ **コンプライアンス** | 建設業法・下請法・電子帳簿保存法の準拠を自動的に支援 |
+| 🛡️ **コンプライアンス** | 建設業法（19 条・労務費基準）・取適法（2026 年施行）・電子帳簿保存法の準拠を自動的に支援 |
 
 💰 **投資回収**: 法務 + 管理部門 5 名 × 月 20 時間削減 ≈ 年間 1,200 時間の生産性向上
 
@@ -623,6 +634,11 @@ docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade h
 
 SSH 先の Linux ルートフォルダでは、生成済みの [`docs/Construction-LegalOps-DX (Standalone).html`](<docs/Construction-LegalOps-DX (Standalone).html>) を**変換せずそのまま配信**する Standalone WebUI を systemd で常駐できます。
 IP アドレスとポートは起動時に自動選択され、URL / PID / 停止情報は [`reports/webui/standalone-webui.json`](reports/webui/standalone-webui.json) に保存されます。
+
+> ⚠️ **ホストの IP が DHCP 等で変わると URL も変わります**。表示できない場合は
+> `cat reports/webui/standalone-webui.json` の `url` / `health_url` を確認してください。
+> 固定したい場合は `STANDALONE_WEBUI_HOST=<IP>` を指定して
+> `bash scripts/install_standalone_webui_systemd.sh --user install` を再実行してください。
 ポートは設定済みの自動割当範囲から空き番号を選択します。
 systemd 起動時の `stop_command` は status JSON に記録されます。
 
@@ -823,15 +839,16 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 > | 📈 負荷テスト            | k6 smoke/load/soak（`infra/k6/`・SLO p95<500ms・週次 + 手動 CI）                                                                                                                                                                                                                                                                |
 > | 🏥 /readyz               | Deep check (DB critical + Redis/Claude degraded)                                                                                                                                                                                                                                                                                |
 > | 🔐 RS256                 | 鍵ローテーション対応（kid ヘッダ + JWT_PUBLIC_KEYS 退役鍵検証）main マージ済み                                                                                                                                                                                                                                                  |
-> | ☁️ Cloudflare/Neon       | **preview 実デプロイ済み**: `https://legalops-preview.mirai-dx-platform.com`（named tunnel + Neon `development` branch、デプロイ後検証 16/16 PASS）。Neon プロジェクト `Construction-LegalOps-DX` 作成済み（PG16 / migration 001→005 + roundtrip 検証済み）。本番 `legalops.mirai-dx-platform.com` は Y 承認後 Phase 2          |
+> | ☁️ Cloudflare/Neon       | **サブドメイン一本化**: `https://legalops.mirai-dx-platform.com` のみ（Cloudflare edge 適用済み・Access 保護・tunnel `legalops-prod`）。preview 用 `legalops-preview`（CNAME/tunnel）は 2026-08-01 削除済み・一本化完了。Neon プロジェクト `Construction-LegalOps-DX` 作成済み（PG16 / migration 001→005 + roundtrip 検証済み）          |
 > | 📊 監視基盤              | Prometheus + Alertmanager + Grafana + Loki/Promtail + 追加メトリクス + backend replica DNS discovery                                                                                                                                                                                                                            |
 > | 📢 Incident運用          | On-call役割表 + GitHub incident labels + unhealthy watchdog 整備済み                                                                                                                                                                                                                                                            |
 > | 🗄️ Migration rollback    | 一時 PostgreSQL 16 で Alembic roundtrip 検証済み（upgrade/downgrade/idempotent）                                                                                                                                                                                                                                                |
 > | 🔍 Pre-deploy gate       | ruff/mypy/pytest/migration/typecheck/eslint/Bandit/npm audit/dependency audit evidence/secret scan/compose/monitoring config/Standalone WebUI runtime/Cloudflare legalops/release docs/goal evidence/review evidence/GitHub release gate/latest CI/warning classification/checklist pending classification/production stop-line |
 > | 🔧 JIT プロビジョニング  | 完了（audit chain 統合 + commit 窓可観測性）                                                                                                                                                                                                                                                                                    |
 >
-> 🖥️ 検証用 WebUI: 内部運用環境で `/healthz` = `ok`、systemd active を確認済み。実URLはアクセス制御された運用証跡とセッション最終報告を参照 ／ 🌐 preview: `https://legalops-preview.mirai-dx-platform.com`
-> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) / CF 本番リソース（本番 Tunnel/Access/`legalops` CNAME）(P0) — コードブロッカー 0 / 本番 deploy 未実行 / 本番 DNS 未変更（preview 用 `legalops-preview` CNAME のみユーザー承認の上作成済み）
+> 🖥️ 検証用 WebUI: 内部運用環境で `/healthz` = `ok`、systemd active を確認済み。実URLはアクセス制御された運用証跡とセッション最終報告を参照 ／ 🌐 Web: `https://legalops.mirai-dx-platform.com`
+> 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) — コードブロッカー 0 / 本番 deploy 未実行 / Cloudflare edge（本番 Tunnel / Access / `legalops` CNAME）適用済み・サブドメインは `legalops.mirai-dx-platform.com` に一本化済み（preview 用 `legalops-preview` CNAME/tunnel は 2026-08-01 削除済み）
+> 📌 **Loop 109（2026-08-05）: 外部評価 67/100 への最終対応完了** — P0-6（RLS/ACL/Legal Hold/保存期間/WORM/Sentinel）・高優先業務機能（変更契約/文書パッケージ/支払/協力会社/紛争）・AI 機能（適用法令判定/一次情報 RAG/改正影響分析）を実装し、PG16 実 DB で pytest 1,057 passed・frontend typecheck/lint/Jest 40 passed を確認。
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md) ／ 承認パケット: [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) ／ 証拠表: [`docs/RELEASE_EVIDENCE_MATRIX.md`](./docs/RELEASE_EVIDENCE_MATRIX.md) ／ 最終停止報告: [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md)
 
 ---

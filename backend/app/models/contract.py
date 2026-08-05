@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import (
     CHAR,
     BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     ForeignKey,
@@ -28,19 +29,22 @@ from sqlalchemy import (
     Numeric,
     String,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, JsonType
 
 from ._mixins import AuditedByMixin, IntPKMixin, TimestampMixin
 from .enums import Confidentiality, ContractStatus
 
 if TYPE_CHECKING:
+    from .access_control import AccessControlEntry
     from .attachment import Attachment
+    from .change_order import ChangeOrder
     from .clause import Clause
     from .comment import Comment
+    from .contract_document import ContractDocument
     from .legal_review import LegalReview
+    from .payment_record import PaymentRecord
     from .risk_item import RiskItem
     from .workflow import WorkflowStep
 
@@ -86,9 +90,29 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     sharepoint_item_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # --- 法令適用・支払コンプライアンスの正本項目（評価 P0-1/P0-2/P0-3 対応） ---
+    order_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    receipt_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    inspection_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    payment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    transaction_kind: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    is_public_work: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    handles_personal_data: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    our_capital_jpy: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    counterparty_capital_jpy: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    our_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    counterparty_employees: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    case_category: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    ethical_wall: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     extra_metadata: Mapped[dict[str, Any]] = mapped_column(
         "metadata",
-        JSONB,
+        JsonType,
         nullable=False,
         default=dict,
         server_default="'{}'::jsonb",
@@ -113,6 +137,18 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     workflow_steps: Mapped[list[WorkflowStep]] = relationship(
         "WorkflowStep", back_populates="contract", cascade="all, delete-orphan"
     )
+    access_entries: Mapped[list[AccessControlEntry]] = relationship(
+        "AccessControlEntry", back_populates="contract", cascade="all, delete-orphan"
+    )
+    documents: Mapped[list[ContractDocument]] = relationship(
+        "ContractDocument", back_populates="contract", cascade="all, delete-orphan"
+    )
+    change_orders: Mapped[list[ChangeOrder]] = relationship(
+        "ChangeOrder", back_populates="contract", cascade="all, delete-orphan"
+    )
+    payment_records: Mapped[list[PaymentRecord]] = relationship(
+        "PaymentRecord", back_populates="contract", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -130,6 +166,24 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
         CheckConstraint(
             f"confidentiality IN ({_ALLOWED_CONF})",
             name="ck_contracts_confidentiality",
+        ),
+        CheckConstraint(
+            "case_category IS NULL OR case_category IN "
+            "('normal', 'hr', 'bid_rigging', 'whistleblowing', 'legal')",
+            name="ck_contracts_case_category",
+        ),
+        CheckConstraint(
+            "transaction_kind IS NULL OR transaction_kind IN "
+            "('manufacturing', 'repair', 'information', 'service', 'transport', 'construction')",
+            name="ck_contracts_transaction_kind",
+        ),
+        CheckConstraint(
+            "payment_date IS NULL OR receipt_date IS NULL OR payment_date >= receipt_date",
+            name="ck_contracts_payment_after_receipt",
+        ),
+        CheckConstraint(
+            "inspection_date IS NULL OR receipt_date IS NULL OR inspection_date >= receipt_date",
+            name="ck_contracts_inspection_after_receipt",
         ),
         Index(
             "ix_contracts_status",

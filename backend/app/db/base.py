@@ -5,7 +5,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy import JSON, DateTime, MetaData, String, Text, Uuid, func
+from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -23,6 +24,21 @@ class Base(DeclarativeBase):
     """Project-wide declarative base."""
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
+
+
+# JSONB の可搬型エイリアス: PostgreSQL では JSONB、SQLite では JSON。
+# モデル定義を単一に保ちつつ、SQLite の create_all / ローカルテストでも
+# テーブル生成を可能にする。
+JsonType = JSON().with_variant(JSONB, "postgresql")
+
+# INET の可搬型エイリアス（SQLite は VARCHAR(45) で代替）。
+InetType = INET().with_variant(String(45), "sqlite")
+
+# UUID の可搬型エイリアス: PostgreSQL では native UUID、SQLite では CHAR(32)。
+UuidType = Uuid(as_uuid=True)
+
+# TEXT[] の可搬型エイリアス（SQLite は JSON 配列で代替）。
+ArrayTextType = ARRAY(Text).with_variant(JSON, "sqlite")
 
 
 class UUIDPrimaryKeyMixin:
@@ -64,8 +80,12 @@ class SoftDeleteMixin:
 
 __all__ = [
     "NAMING_CONVENTION",
+    "ArrayTextType",
     "Base",
+    "InetType",
+    "JsonType",
     "SoftDeleteMixin",
     "TimestampMixin",
     "UUIDPrimaryKeyMixin",
+    "UuidType",
 ]

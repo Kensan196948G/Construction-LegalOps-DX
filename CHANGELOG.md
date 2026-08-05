@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-08-05: 外部評価 67/100 への最終対応)
+
+- **🔐 P0-6 内部統制の実装完了（DB RLS / ACL / Legal Hold / Retention / WORM / Sentinel）**:
+  - PostgreSQL ROW LEVEL SECURITY: `contracts` ほか 13 テーブルに
+    `app.actor_id` / `app.role` / `app.actor_email` ベースのポリシーを適用
+    （`006_security_rls` / `007_business_domain`）。倫理壁（人事・談合・内部通報）案件は
+    明示許可ユーザー or admin/auditor のみ可視。
+  - 案件単位 ACL（外部顧問弁護士のメール単位アクセス含む）、Legal Hold の
+    発動・解除・自動削除停止、AI 入出力の保存期間ポリシー（`/security` `/legal-holds`
+    `/retention` `/contracts/{id}/access-control` API）。
+  - 監査ログの日次アンカー（HMAC-SHA256 署名）と WORM 相当の JSONL 外部出力
+    （`/audit/anchor` `/security/audit-exports`）、Microsoft Sentinel 転送
+    アウトボックス（設定不足時は blocked / fail-closed）。
+- **📑 変更契約・追加工事・クレーム管理**: 設計変更 / 追加工事 / 口頭指示追認 /
+  工期延長 / スライド請求の正本管理。通知期限 14 日の自動計算、失権リスク警告、
+  原契約＋承認済み変更の累積影響分析、日報・写真・メール等の証拠紐付け
+  （`/change-orders` + `/impact/{contract_id}`）。
+- **📚 契約パッケージ文書管理**: 契約書・約款・特記仕様書・設計図書・見積書・工程表等を
+  優先順位付きで一元管理し、金額乖離（20% 超）・工期逆転・責任帰属の矛盾を自動検出
+  （`/contracts/{id}/documents` + `/consistency`）。
+- **💰 支払・出来高・検収コンプライアンス**: 発注/受領/検収/支払日から取適法 60 日・
+  公共工事 50 日基準を実日計算、遅延利息概算（年 14.6%）、手形等禁止・不当減額・
+  保留金の判定（`/contracts/{id}/payment-compliance`、支払イベント正本
+  `/payments` + `payment_records` テーブル）。
+- **🏢 協力会社コンプライアンス台帳**: 建設業許可（特定/一般・期限）・社会保険・CCUS・
+  監理技術者資格・経営事項審査・反社確認・倒産リスク・再下請関係を正本化し、
+  リスクレベルを理由付きで自動判定（`/partners` + `/summary`）。
+- **⚔️ 紛争・事故・債権管理**: 案件台帳・事実経過タイムライン・証拠保全（preserved）・
+  消滅時効/通知期限・経営層向けエクスポージャー集計（`/disputes` + `/exposure`）。
+- **⚖️ 適用法令自動判定（AI 機能 #3）**: 契約類型・資本金・従業員数・発注日・公共/民間から
+  建設業法・取適法・品確法・個人情報保護法等の適用を根拠付きで提示
+  （`/compliance/applicable-laws`）。
+- **📖 一次情報限定 RAG（AI 機能 #1）**: ナレッジベース限定検索＋公的機関 URL 許可リスト
+  検証（`/ai/evidence` + `/verify`）。
+- **📅 法令改正影響分析（AI 機能 #2）**: 取適法施行日を軸に既存契約の影響（従業員数基準・
+  手形禁止・60 日超・労務費内訳欠落）を抽出（`/compliance/law-change-impact`）。
+- **🧪 検証**: バックエンド pytest 1,057 passed（PostgreSQL 16 実 DB・マイグレーション
+  001→007 適用済み）、ruff / mypy クリーン、フロントエンド typecheck / lint / Jest 40 passed。
+
+### Added / Changed (2026-08-04: 外部評価 P0 対応)
+
+- **⚖️ 取適法（中小受託取引適正化法）対応**: 2026-01-01 施行の新旧法切替（発注日基準）、
+  資本金＋従業員数による適用マトリクス（製造委託等 3 億円/300 人、役務提供委託 1 億円/100 人）、
+  受領日から 60 日支払期日の実日付計算、手形払い禁止・電子記録債権/ファクタリング判定、
+  一方的な代金決定の禁止、特定運送委託、書面交付事項、取引記録保存を
+  `compliance_checker.py` に実装（`toritekihou_*` ルール群）。
+- **🧱 改正建設業法・労務費基準**: 労務費・材料費・安全衛生経費・法定福利費・建退共の内訳確認、
+  著しく低い見積り／短工期の検知、契約前通知、価格変更協議（スライド）条項を追加
+  （`construction_law_labor_breakdown` ほか）。
+- **📄 建設業法 19 条チェックを拡充**: 法定記載事項を 11 項目へ拡大、約款・特記仕様書等の
+  文書横断判定、台帳金額と書面金額の乖離（20% 超）・日付順序の妥当性検証を追加。
+- **🔍 AI レビューの根拠保証（P0-4）**: 指摘ごとに原文抜粋・法令名・条番号・法令バージョン・
+  施行日・一次情報 URL（公的機関ホスト限定）・社内規程 ID/版数・ルール ID・AI 信頼度・
+  verdict を必須化。根拠不足は `needs_human_review` へ降格、根拠なき回答は `unverifiable`。
+- **🛡️ プロンプトインジェクション対策（P0-5）**: 契約原文を非信頼データマーカーで分離、
+  文書内命令の無視指示、JSON Schema 検証、URL 許可リスト、攻撃文書の回帰テストを追加。
+- **🧪 テスト拡充**: compliance_checker / ai_review の新ルール 33 件追加（ユニット 823 件 PASS）。
+
+### Changed (2026-08-01: サブドメイン一本化)
+
+- **🌐 サブドメイン一本化**: 公開 URL を `https://legalops.mirai-dx-platform.com` に統一し、
+  preview 用 `legalops-preview.mirai-dx-platform.com`（tunnel `legalops-preview` / CNAME）を
+  削除して一本化した（2026-08-01 に CNAME NXDOMAIN 化・tunnel 459059b3… 削除・connector 停止を確認）。
+  README / infra Cloudflare README / state.json の記録を一本化済み状態へ更新
+  （本番 deploy と DNS/Tunnel 変更は引き続き人間ゲート）。
+
 ## [0.1.12] - 2026-07-20
 
 ### Fixed (2026-07-20 Verify: fail-closed 化のテスト回帰)
@@ -19,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Construction-LegalOps-DX` (aws-ap-southeast-1 / PG16) を作成し、`development` branch で
   alembic 001→005 適用 + roundtrip (downgrade base → re-upgrade) + SQLAlchemy asyncpg
   `?ssl=require` 接続を検証した (17 tables / pg_trgm / uuid-ossp)。本番用 `main` branch は未適用。
-- **🌐 Cloudflare 非本番 preview 実デプロイ**: named tunnel `legalops-preview` +
+- **🌐 Cloudflare 非本番 preview 実デプロイ**（※ 2026-08-01 に本番 `legalops.mirai-dx-platform.com` へ一本化のため削除済み）: named tunnel `legalops-preview` +
   DNS CNAME `legalops-preview.mirai-dx-platform.com` (ユーザー承認済み・可逆) で
   docker compose (staging 相当・Neon development DB) を公開し、デプロイ後検証 16/16 PASS
   (health / 主要画面 / 401 fail-closed / JWT→JIT provisioning / Neon read・write /

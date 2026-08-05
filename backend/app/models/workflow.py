@@ -5,7 +5,7 @@ Reflects ``docs/database_design.md`` sections 4.8 / 4.9.
 Note:
     ``WorkflowTemplate`` is exposed as an alias of :class:`Workflow` to
     satisfy the team contract; the design doc keeps templates and definitions
-    co-located in a single ``workflows`` table where ``definition`` JSONB
+    co-located in a single ``workflows`` table where ``definition`` JsonType
     stores the template steps.
 """
 
@@ -26,10 +26,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, JsonType
 
 from ._mixins import IntPKMixin, TimestampMixin
 from .enums import WorkflowStepStatus, WorkflowStepType
@@ -56,7 +55,7 @@ class Workflow(IntPKMixin, TimestampMixin, Base):
         Boolean, nullable=False, default=True, server_default="true"
     )
     definition: Mapped[dict[str, Any]] = mapped_column(
-        JSONB, nullable=False, default=dict, server_default="'{}'::jsonb"
+        JsonType, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 

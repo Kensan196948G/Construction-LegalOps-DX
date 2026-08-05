@@ -492,6 +492,33 @@ WHERE previous_hash IS DISTINCT FROM prev
    OR hash_chain <> encode(digest(coalesce(prev, repeat('0',64)) || payload::text, 'sha256'), 'hex');
 ```
 
+### 4.14 高優先業務機能テーブル（migration 007_business_domain）
+
+外部評価（2026-08）の P0-6 と高優先業務機能に対応する正本テーブル。
+
+| テーブル | 用途 | 主要カラム |
+|---|---|---|
+| `access_control_entries` | 案件単位 ACL（user / department / role / external_counsel） | contract_id, principal_type, principal_id, access_level, expires_at |
+| `legal_holds` | 証拠保全（Legal Hold） | target_type, target_id, status, started_by, released_by, ethical_wall |
+| `audit_anchors` | 監査ログ日次アンカー（WORM 外部保管の整合検証） | anchor_date, event_count, aggregate_hash, signature, external_ref |
+| `contract_documents` | 契約パッケージ文書（契約書・約款・特記仕様書等） | contract_id, doc_type, priority, amount_jpy, start/end_date, content |
+| `change_orders` | 変更契約・追加工事・クレーム | contract_id, change_no, change_type, response_deadline, amount_jpy, cumulative_after_jpy |
+| `change_order_evidence` | 変更工事の証拠（日報・写真・メール・議事録等） | change_order_id, evidence_type, attachment_id |
+| `partners` | 協力会社コンプライアンス台帳 | permit_expiry, social_insurance_joined, ccus_registered, anti_social_check, risk_level |
+| `disputes` | 紛争・クレーム案件台帳 | dispute_no, dispute_type, status, amount_claimed_jpy, reserve_amount_jpy, statute_limitations_date |
+| `dispute_timeline_events` | 紛争の事実経過タイムライン | dispute_id, occurred_at, event_type |
+| `dispute_evidence` | 紛争証拠（保全フラグ付き） | dispute_id, evidence_type, preserved |
+| `payment_records` | 発注/受領/検収/支払イベントの正本 | contract_id, record_type, event_date, payment_due_date, payment_method |
+| `document_consistency_results` | 文書間の金額・工期・日付矛盾チェック結果 | contract_id, status, findings JSONB, checked_at |
+| `retention_rules` | データ保持期間ルール（AI 入出力等） | data_type, retention_days, action |
+| `external_forward_events` | Sentinel 等外部転送イベントの証跡 | source_type, event_type, payload_hash, status |
+
+`contracts` には法令適用・支払コンプライアンスの正本カラムを追加:
+`order_date` / `receipt_date` / `inspection_date` / `payment_date` /
+`transaction_kind` / `is_public_work` / `handles_personal_data` /
+`our_capital_jpy` / `counterparty_capital_jpy` / `our_employees` /
+`counterparty_employees` / `case_category` / `ethical_wall`。
+
 ---
 
 ## 5. 行レベルセキュリティ (RLS) 例
@@ -508,6 +535,25 @@ USING (
 ```
 
 アプリ側 (FastAPI) は接続セッション開始時に `SET LOCAL app.current_department_id = ...; SET LOCAL app.current_role = ...;` を発行する。
+
+### 5.1 実装（migration 006/007）
+
+`contracts` ほか業務テーブルに対し `ENABLE ROW LEVEL SECURITY` を適用済み。
+アプリは単一 DB ロールで接続し、認証済みユーザーの識別情報を
+`set_config('app.actor_id' / 'app.role' / 'app.actor_email', ..., true)` で
+トランザクションに載せる（`app/services/rls.py`）。
+
+- ヘルパー関数: `legalops_actor_id()` / `legalops_actor_role()` / `legalops_actor_email()`
+- ポリシー: `contracts_app_access`（admin/auditor・draft 本人・`contract_access_grants`）
+- ポリシー: `contracts_tenant_isolation` / `contracts_ethical_wall`
+  （department / user / role / external_counsel の ACL、倫理壁案件は
+   admin/auditor または user ACL 付与者のみ可視）
+- 子テーブル（disputes / change_orders / contract_documents / payment_records 等）は
+  親契約の可視性（`legalops_contract_visible`）に連動
+- 管理系テーブル（legal_holds / retention_rules / audit_anchors / external_forward_events）は
+  admin/auditor のみ
+
+SQLite テスト環境では RLS を適用せず、サービス層のアクセス判定（ACL）で代替する。
 
 ---
 
@@ -548,6 +594,8 @@ USING (
 | audit_logs | 10 年以上 | 物理削除禁止 |
 | notifications | 1 年 | 物理削除可 |
 | attachments メタ | 契約に従属 | SharePoint 側保存ポリシーと同期 |
+| AI 入出力（legal_reviews.result 等） | `retention_rules` に従う（既定: 出力 365 日） | Legal Hold 中は削除停止、期限超過は結果を redact |
+| 監査アンカー | 10 年以上 | WORM 相当の JSONL 外部保存 + 日次 SHA-256 アンカー |
 
 ---
 
@@ -556,3 +604,4 @@ USING (
 | 日付 | 版 | 変更内容 |
 |------|----|---------|
 | 2026-05-16 | v1.0 | 初版作成 |
+| 2026-08-05 | v0.2 | P0-6（RLS/ACL/Legal Hold/WORM/Sentinel/保持）と高優先業務機能テーブルを追加 |

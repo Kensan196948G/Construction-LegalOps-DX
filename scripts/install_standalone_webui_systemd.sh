@@ -21,6 +21,8 @@ Examples:
 
 Environment:
   SERVICE_NAME  Override the unit name. Default: construction-legalops-standalone-webui
+  STANDALONE_WEBUI_HOST  Optional bind host override (e.g. 0.0.0.0 or a fixed LAN IP).
+                         If unset, the server auto-selects the current route-source IP.
 USAGE
 }
 
@@ -77,6 +79,11 @@ fi
 
 UNIT_PATH="${UNIT_DIR}/${UNIT_NAME}"
 
+HOST_ENV_LINE=""
+if [[ -n "${STANDALONE_WEBUI_HOST:-}" ]]; then
+  HOST_ENV_LINE="Environment=\"STANDALONE_WEBUI_HOST=${STANDALONE_WEBUI_HOST}\""
+fi
+
 render_unit() {
   cat <<UNIT
 [Unit]
@@ -89,6 +96,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=${REPO_ROOT}
 Environment="STANDALONE_WEBUI_STOP_COMMAND=${STOP_COMMAND}"
+${HOST_ENV_LINE}
 ExecStart=${PYTHON_BIN} ${REPO_ROOT}/scripts/serve_standalone_webui.py
 Restart=always
 RestartSec=5

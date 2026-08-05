@@ -65,11 +65,66 @@ class _FakeResponse:
 @pytest_asyncio.fixture(scope="session")
 async def notification_test_engine() -> AsyncGenerator[Any, None]:
     """Unit-test engine with the full SQLAlchemy schema applied."""
+    from sqlalchemy import delete, select
+
     from app.db.test_session import create_all_for_tests, create_test_engine
+    from app.models.contract import Contract
+    from app.models.department import Department
+    from app.models.user import User
 
     engine = create_test_engine()
     try:
         await create_all_for_tests(engine)
+        # PostgreSQL では FK が強制されるため、通知テストが参照する
+        # users / departments / contracts の正本行を seed する。
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+        Session = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
+        async with Session() as session:
+            # 共有 PG テスト DB での再実行冪等性: 通知テーブルはテスト専用に空にする
+            await session.execute(delete(Notification))
+            dept = (
+                await session.execute(select(Department).where(Department.id == 1))
+            ).scalar_one_or_none()
+            if dept is None:
+                session.add(Department(id=1, code="D-NOTIFY", name="法務部"))
+                await session.flush()
+            for uid, email in (
+                (1, "user1@test.local"),
+                (2, "user2@test.local"),
+                (99, "user99@test.local"),
+            ):
+                user = (
+                    await session.execute(select(User).where(User.id == uid))
+                ).scalar_one_or_none()
+                if user is None:
+                    session.add(
+                        User(
+                            id=uid,
+                            entra_oid=__import__("uuid").uuid4(),
+                            email=email,
+                            display_name=f"利用者{uid}",
+                            role="viewer",
+                            department_id=1,
+                            is_active=True,
+                        )
+                    )
+            contract = (
+                await session.execute(select(Contract).where(Contract.id == 7))
+            ).scalar_one_or_none()
+            if contract is None:
+                session.add(
+                    Contract(
+                        id=7,
+                        contract_no="C-NOTIFY-007",
+                        title="通知テスト契約",
+                        counterparty="株式会社テスト",
+                        contract_type="請負",
+                        department_id=1,
+                        drafter_id=1,
+                    )
+                )
+            await session.commit()
         yield engine
     finally:
         await engine.dispose()

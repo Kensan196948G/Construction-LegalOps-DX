@@ -50,7 +50,7 @@ def _sync_sqlite_url() -> str:
 # ---------------------------------------------------------------------------
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture()
 async def db_engine() -> AsyncGenerator[Any, None]:
     """Create an async engine and (best-effort) the schema.
 
@@ -64,7 +64,14 @@ async def db_engine() -> AsyncGenerator[Any, None]:
         pytest.skip("SQLAlchemy async support unavailable")
 
     url = _resolve_db_url()
-    engine = create_async_engine(url, future=True, echo=False)
+    # PostgreSQL では NullPool にして、テストごとのイベントループで
+    # 接続が跨らないようにする（cross-loop エラー防止）。
+    if url.startswith("postgresql"):
+        from sqlalchemy.pool import NullPool
+
+        engine = create_async_engine(url, future=True, echo=False, poolclass=NullPool)
+    else:
+        engine = create_async_engine(url, future=True, echo=False)
 
     # Best-effort schema bootstrap. Don't fail collection if metadata is
     # not importable yet.

@@ -147,6 +147,346 @@ export type UploadStorage = z.infer<typeof uploadStorageEnum>;
 export const auditActionEnum = z.string().min(1); // 例: "contract.update"
 
 // ===========================================================================
+// 高優先業務機能（変更契約・協力会社・紛争・支払コンプライアンス）
+// backend/app/schemas/business.py と契約を合わせる
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// 変更契約・クレーム
+// ---------------------------------------------------------------------------
+
+export const changeOrderTypeEnum = z.enum([
+  "design_change",
+  "additional_work",
+  "verbal_direction",
+  "schedule_extension",
+  "price_slide",
+  "claim",
+  "other",
+]);
+export type ChangeOrderType = z.infer<typeof changeOrderTypeEnum>;
+
+export const changeOrderStatusEnum = z.enum([
+  "registered",
+  "notice_sent",
+  "in_consultation",
+  "approved",
+  "rejected",
+  "forfeited",
+]);
+export type ChangeOrderStatus = z.infer<typeof changeOrderStatusEnum>;
+
+export const changeOrderSchema = z.object({
+  id: idSchema,
+  contract_id: idSchema,
+  change_no: z.string(),
+  change_type: changeOrderTypeEnum,
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  requested_by: z.string().nullable().optional(),
+  requested_at: dateSchema.nullable().optional(),
+  response_deadline: dateSchema.nullable().optional(),
+  status: changeOrderStatusEnum,
+  amount_jpy: z.number().int().nullable().optional(),
+  schedule_impact_days: z.number().int().nullable().optional(),
+  forfeiture_warning: z.string().nullable().optional(),
+  evidence_summary: z.record(z.string(), z.unknown()).default({}),
+  original_amount_jpy: z.number().int().nullable().optional(),
+  cumulative_after_jpy: z.number().int().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  deleted_at: datetimeSchema.nullable().optional(),
+});
+export type ChangeOrder = z.infer<typeof changeOrderSchema>;
+
+export const changeOrderCreateSchema = changeOrderSchema
+  .omit({
+    id: true,
+    contract_id: true,
+    change_no: true,
+    created_at: true,
+    updated_at: true,
+    deleted_at: true,
+  })
+  .extend({
+    change_type: changeOrderTypeEnum,
+    title: z.string().min(1),
+    status: changeOrderStatusEnum.optional(),
+  });
+export type ChangeOrderCreate = z.infer<typeof changeOrderCreateSchema>;
+
+export const changeOrderEvidenceTypeEnum = z.enum([
+  "daily_report",
+  "photo",
+  "email",
+  "minutes",
+  "instruction",
+  "other",
+]);
+
+export const changeOrderEvidenceSchema = z.object({
+  id: idSchema,
+  change_order_id: idSchema,
+  evidence_type: changeOrderEvidenceTypeEnum,
+  description: z.string().nullable().optional(),
+  occurred_at: dateSchema.nullable().optional(),
+  attachment_id: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type ChangeOrderEvidence = z.infer<typeof changeOrderEvidenceSchema>;
+
+export const changeOrderImpactSchema = z.object({
+  contract_id: idSchema,
+  original_amount_jpy: z.number().int().nullable(),
+  approved_delta_jpy: z.number().int(),
+  cumulative_after_jpy: z.number().int().nullable(),
+  order_count: z.number().int(),
+  approved_count: z.number().int(),
+  schedule_impact_days_total: z.number().int(),
+  forfeiture_risks: z.number().int(),
+});
+export type ChangeOrderImpact = z.infer<typeof changeOrderImpactSchema>;
+
+// ---------------------------------------------------------------------------
+// 協力会社コンプライアンス台帳
+// ---------------------------------------------------------------------------
+
+export const partnerTypeEnum = z.enum(["元請", "下請", "専門工事", "材料", "輸送", "その他"]);
+export type PartnerType = z.infer<typeof partnerTypeEnum>;
+
+export const antiSocialCheckEnum = z.enum(["confirmed", "unconfirmed", "pending"]);
+export const bankruptcyRiskEnum = z.enum(["low", "medium", "high", "unknown"]);
+
+export const partnerSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  partner_type: partnerTypeEnum,
+  permit_number: z.string().nullable().optional(),
+  permit_types: z.array(z.string()).default([]),
+  permit_specific: z.boolean().nullable().optional(),
+  permit_expiry: dateSchema.nullable().optional(),
+  social_insurance_joined: z.boolean().nullable().optional(),
+  ccus_registered: z.boolean().nullable().optional(),
+  ccus_expiry: dateSchema.nullable().optional(),
+  supervisor_qualifications: z.array(z.string()).default([]),
+  business_evaluation: z.record(z.string(), z.unknown()).default({}),
+  anti_social_check: antiSocialCheckEnum,
+  anti_social_checked_at: dateSchema.nullable().optional(),
+  bankruptcy_risk: bankruptcyRiskEnum,
+  insurance_joined: z.boolean().nullable().optional(),
+  re_subcontract: z.boolean().nullable().optional(),
+  last_transaction: dateSchema.nullable().optional(),
+  risk_level: z.enum(["low", "medium", "high", "critical"]),
+  risk_reasons: z.array(z.record(z.string(), z.string())).default([]),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  deleted_at: datetimeSchema.nullable().optional(),
+});
+export type Partner = z.infer<typeof partnerSchema>;
+
+export const partnerSummarySchema = z.object({
+  total: z.number().int(),
+  by_risk_level: z.record(z.string(), z.number().int()).default({}),
+  antisocial_unconfirmed: z.number().int(),
+  permit_expiring_within_90d: z.number().int(),
+});
+export type PartnerSummary = z.infer<typeof partnerSummarySchema>;
+
+// ---------------------------------------------------------------------------
+// 紛争・事故・債権管理
+// ---------------------------------------------------------------------------
+
+export const disputeTypeEnum = z.enum([
+  "claim",
+  "defect",
+  "delay",
+  "payment",
+  "labor",
+  "accident",
+  "other",
+]);
+export type DisputeType = z.infer<typeof disputeTypeEnum>;
+
+export const disputeStatusEnum = z.enum([
+  "open",
+  "investigating",
+  "escalated",
+  "resolved",
+  "closed",
+]);
+export type DisputeStatus = z.infer<typeof disputeStatusEnum>;
+
+export const disputePriorityEnum = z.enum(["高", "中", "低"]);
+export const resolutionMethodEnum = z.enum([
+  "negotiation",
+  "mediation",
+  "arbitration",
+  "lawsuit",
+  "construction_dispute_review",
+  "other",
+]);
+
+export const disputeSchema = z.object({
+  id: idSchema,
+  dispute_no: z.string(),
+  contract_id: idSchema.nullable().optional(),
+  dispute_type: disputeTypeEnum,
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  status: disputeStatusEnum,
+  priority: disputePriorityEnum,
+  counterparty: z.string().nullable().optional(),
+  amount_claimed_jpy: z.number().int().nullable().optional(),
+  reserve_amount_jpy: z.number().int().nullable().optional(),
+  assignee_id: idSchema.nullable().optional(),
+  statute_limitations_date: dateSchema.nullable().optional(),
+  notice_deadline: dateSchema.nullable().optional(),
+  resolution_method: resolutionMethodEnum,
+  legal_hold_id: idSchema.nullable().optional(),
+  exposure: z.record(z.string(), z.unknown()).default({}),
+  resolved_at: datetimeSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  deleted_at: datetimeSchema.nullable().optional(),
+});
+export type Dispute = z.infer<typeof disputeSchema>;
+
+export const disputeTimelineEventSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  occurred_at: datetimeSchema,
+  event_type: z.enum(["fact", "notice", "hearing", "evidence", "settlement", "escalation", "other"]),
+  description: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeTimelineEvent = z.infer<typeof disputeTimelineEventSchema>;
+
+export const disputeEvidenceSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  evidence_type: z.enum(["contract", "email", "photo", "daily_report", "minutes", "other"]),
+  description: z.string().nullable().optional(),
+  occurred_at: dateSchema.nullable().optional(),
+  attachment_id: idSchema.nullable().optional(),
+  preserved: z.boolean(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeEvidence = z.infer<typeof disputeEvidenceSchema>;
+
+export const disputeDetailSchema = disputeSchema.extend({
+  timeline: z.array(disputeTimelineEventSchema).default([]),
+  evidence: z.array(disputeEvidenceSchema).default([]),
+});
+export type DisputeDetail = z.infer<typeof disputeDetailSchema>;
+
+export const disputeExposureSchema = z.object({
+  by_status: z.record(z.string(), z.record(z.string(), z.number().int())).default({}),
+  total_claimed_jpy: z.number().int(),
+  total_reserve_jpy: z.number().int(),
+  deadlines_within_180d: z.number().int(),
+});
+export type DisputeExposure = z.infer<typeof disputeExposureSchema>;
+
+// ---------------------------------------------------------------------------
+// 支払・出来高・検収コンプライアンス
+// ---------------------------------------------------------------------------
+
+export const paymentFindingSchema = z.object({
+  code: z.string(),
+  title: z.string(),
+  severity: z.enum(["block", "warn", "info"]),
+  description: z.string(),
+  citation: z.string(),
+});
+export type PaymentFinding = z.infer<typeof paymentFindingSchema>;
+
+export const paymentComplianceSchema = z.object({
+  contract_id: idSchema,
+  order_date: dateSchema.nullable().optional(),
+  receipt_date: dateSchema.nullable().optional(),
+  inspection_date: dateSchema.nullable().optional(),
+  payment_date: dateSchema.nullable().optional(),
+  transaction_kind: z.string().nullable().optional(),
+  is_public_work: z.boolean().default(false),
+  law_version: z.string(),
+  applicable_threshold_days: z.number().int(),
+  days_receipt_to_payment: z.number().int().nullable().optional(),
+  days_inspection_to_payment: z.number().int().nullable().optional(),
+  late_interest_jpy: z.string(),
+  overall_status: z.enum(["pass", "warn", "block"]),
+  findings: z.array(paymentFindingSchema).default([]),
+});
+export type PaymentCompliance = z.infer<typeof paymentComplianceSchema>;
+
+// ---------------------------------------------------------------------------
+// P0-6 ガバナンス・法務 AI（管理画面・法務画面用）
+// ---------------------------------------------------------------------------
+
+export const accessControlEntrySchema = z.object({
+  id: idSchema,
+  contract_id: idSchema,
+  principal_type: z.enum(["user", "department", "role", "external_counsel"]),
+  principal_id: z.string(),
+  access_level: z.enum(["read", "write", "approve", "admin"]),
+  granted_by: idSchema.nullable().optional(),
+  expires_at: datetimeSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+
+export const legalHoldSchema = z.object({
+  id: idSchema,
+  target_type: z.string(),
+  target_id: idSchema,
+  reason: z.string(),
+  status: z.string(),
+  started_by: idSchema.nullable().optional(),
+  started_at: datetimeSchema,
+  released_at: datetimeSchema.nullable().optional(),
+  released_by: idSchema.nullable().optional(),
+  release_reason: z.string().nullable().optional(),
+  evidence_ids: z.array(z.unknown()).default([]),
+  ethical_wall: z.boolean().default(false),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+
+export const retentionRuleSchema = z.object({
+  id: idSchema,
+  data_type: z.string(),
+  retention_days: z.number().int(),
+  action: z.string(),
+  enabled: z.boolean(),
+  updated_by: idSchema.nullable().optional(),
+  note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+
+export const applicableLawSchema = z.object({
+  law_code: z.string(),
+  law_name: z.string(),
+  applies: z.boolean(),
+  confidence: z.number(),
+  reason: z.string(),
+  citation_url: z.string().nullable().optional(),
+});
+
+export const evidenceHitSchema = z.object({
+  article_id: z.number().int(),
+  title: z.string(),
+  source_url: z.string().nullable().optional(),
+  excerpt: z.string(),
+  law_tags: z.array(z.string()).default([]),
+  score: z.number(),
+  source_verified: z.boolean(),
+});
+
+// ===========================================================================
 // 基底スキーマ
 // ===========================================================================
 

@@ -56,7 +56,7 @@ NPM_MODERATE="$(json_value "${NPM_AUDIT_JSON}" "j => (j.metadata && j.metadata.v
 
 [ "${NPM_HIGH}" = "0" ] && pass "npm audit high vulnerabilities are 0" || fail "npm audit high vulnerabilities are ${NPM_HIGH}"
 [ "${NPM_CRITICAL}" = "0" ] && pass "npm audit critical vulnerabilities are 0" || fail "npm audit critical vulnerabilities are ${NPM_CRITICAL}"
-[ "${NPM_MODERATE}" = "4" ] && pass "npm audit moderate vulnerabilities are documented as 4" || fail "npm audit moderate vulnerabilities are ${NPM_MODERATE}; expected documented 4"
+[ "${NPM_MODERATE}" = "0" ] && pass "npm audit moderate vulnerabilities are 0" || fail "npm audit moderate vulnerabilities are ${NPM_MODERATE}; expected 0 (dependencies updated 2026-08-05)"
 
 contains_file "scripts/pre_deploy_check.sh" "npm audit --audit-level=high" && pass "Pre-deploy gate runs npm audit high+" || fail "Pre-deploy gate missing npm audit high+"
 contains_file ".github/workflows/security.yml" "pip-audit -r resolved-requirements.txt --strict" && pass "Security workflow runs strict project-scoped pip-audit" || fail "Security workflow missing strict pip-audit"
@@ -89,7 +89,7 @@ else
 fi
 
 contains_file "docs/RELEASE_EVIDENCE_MATRIX.md" "npm audit high/critical 0" && pass "Evidence matrix records npm audit high/critical result" || fail "Evidence matrix missing npm audit high/critical result"
-contains_file "docs/RELEASE_EVIDENCE_MATRIX.md" "moderate 4" && pass "Evidence matrix records npm moderate known risk" || fail "Evidence matrix missing npm moderate known risk"
+contains_file "docs/RELEASE_EVIDENCE_MATRIX.md" "moderate 0" && pass "Evidence matrix records npm moderate result (0)" || fail "Evidence matrix missing npm moderate 0 result"
 contains_file "docs/RELEASE_EVIDENCE_MATRIX.md" "pip-audit" && pass "Evidence matrix records pip-audit evidence" || fail "Evidence matrix missing pip-audit evidence"
 contains_file "docs/FINAL_RELEASE_STOP_REPORT.md" "npm audit high/critical 0" && pass "Final report records npm audit high/critical result" || fail "Final report missing npm audit high/critical result"
 

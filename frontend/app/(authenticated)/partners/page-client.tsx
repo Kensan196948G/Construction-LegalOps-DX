@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AlertTriangle, Building2, RefreshCw, Search, ShieldCheck } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -21,6 +30,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { partnersApi } from "@/lib/api";
+import type { Partner, PartnerSummary } from "@/lib/api/schemas";
+import { AiDisclaimerBanner } from "@/components/layout/ai-disclaimer-banner";
 import { PARTNERS, type RiskLevel } from "@/lib/mock-data";
 
 const RISK_VARIANT: Record<RiskLevel, "default" | "secondary" | "destructive" | "outline"> = {
@@ -37,65 +49,212 @@ const RISK_LABELS: Record<RiskLevel, string> = {
   critical: "重大",
 };
 
+const TYPE_LABELS = ["元請", "下請", "専門工事", "材料", "輸送", "その他"];
+
 const PARTNER_TYPES = Array.from(new Set(PARTNERS.map((p) => p.type)));
 
+interface PartnerRow {
+  id: string;
+  name: string;
+  type: string;
+  permitNumber: string;
+  permitExpiry: string;
+  antiSocialCheck: string;
+  insurance: string;
+  riskLevel: RiskLevel;
+  lastTransaction: string;
+}
+
+function toRow(p: Partner): PartnerRow {
+  return {
+    id: String(p.id),
+    name: p.name,
+    type: p.partner_type,
+    permitNumber: p.permit_number ?? "—",
+    permitExpiry: p.permit_expiry ?? "—",
+    antiSocialCheck: p.anti_social_check === "confirmed" ? "確認済" : p.anti_social_check === "pending" ? "確認中" : "未確認",
+    insurance: p.social_insurance_joined === true ? "加入済" : p.social_insurance_joined === false ? "未加入" : "未確認",
+    riskLevel: (p.risk_level as RiskLevel) ?? "low",
+    lastTransaction: p.last_transaction ?? "—",
+  };
+}
+
+function toMockRow(p: (typeof PARTNERS)[number]): PartnerRow {
+  return {
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    permitNumber: p.permitNumber,
+    permitExpiry: p.permitExpiry,
+    antiSocialCheck: p.antiSocialCheck,
+    insurance: p.insurance,
+    riskLevel: p.riskLevel,
+    lastTransaction: p.lastTransaction,
+  };
+}
+
 export default function PartnersPage() {
+  const [rows, setRows] = useState<PartnerRow[]>(() => PARTNERS.map(toMockRow));
+  const [summary, setSummary] = useState<PartnerSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [riskFilter, setRiskFilter] = useState<RiskLevel | "all">("all");
+  const [riskFilter, setRiskFilter] = useState<"all" | RiskLevel>("all");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    partner_type: "下請",
+    permit_number: "",
+    permit_expiry: "",
+    social_insurance_joined: "unknown",
+    anti_social_check: "unconfirmed",
+    risk_level: "low",
+    notes: "",
+  });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [list, sum] = await Promise.all([
+        partnersApi.list({ page: 1, size: 100 }),
+        partnersApi.summary(),
+      ]);
+      setRows(list.items.map(toRow));
+      setSummary(sum);
+      setOffline(false);
+    } catch {
+      setRows(PARTNERS.map(toMockRow));
+      setOffline(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const filtered = useMemo(() => {
-    return PARTNERS.filter((p) => {
+    return rows.filter((p) => {
       if (search && !p.name.includes(search) && !p.permitNumber.includes(search)) return false;
       if (typeFilter !== "all" && p.type !== typeFilter) return false;
       if (riskFilter !== "all" && p.riskLevel !== riskFilter) return false;
       return true;
     });
-  }, [search, typeFilter, riskFilter]);
+  }, [rows, search, typeFilter, riskFilter]);
 
-  const unverified = PARTNERS.filter((p) => p.antiSocialCheck === "未確認").length;
-  const expiringPermit = PARTNERS.filter((p) => {
-    const days = Math.ceil((new Date(p.permitExpiry.replace(/\//g, "-")).getTime() - new Date("2026-05-16").getTime()) / 86400000);
-    return days <= 90;
-  }).length;
+  const unverified = summary?.antisocial_unconfirmed ??
+    rows.filter((p) => p.antiSocialCheck === "未確認").length;
+  const expiringPermit = summary?.permit_expiring_within_90d ??
+    rows.filter((p) => {
+      if (p.permitExpiry === "—") return false;
+      const days = Math.ceil(
+        (new Date(p.permitExpiry.replace(/\//g, "-")).getTime() - new Date("2026-05-16").getTime()) /
+          86400000,
+      );
+      return days <= 90;
+    }).length;
+  const highRisk = rows.filter((p) => p.riskLevel === "high" || p.riskLevel === "critical").length;
+
+  const createPartner = async () => {
+    try {
+      const created = await partnersApi.create({
+        name: form.name,
+        partner_type: form.partner_type as Partner["partner_type"],
+        permit_number: form.permit_number || undefined,
+        permit_expiry: form.permit_expiry || undefined,
+        social_insurance_joined:
+          form.social_insurance_joined === "unknown" ? undefined : form.social_insurance_joined === "yes",
+        anti_social_check: form.anti_social_check as Partner["anti_social_check"],
+        risk_level: form.risk_level as Partner["risk_level"],
+        notes: form.notes || undefined,
+      });
+      setRows((prev) => [toRow(created), ...prev]);
+      setCreateOpen(false);
+      setForm({
+        name: "",
+        partner_type: "下請",
+        permit_number: "",
+        permit_expiry: "",
+        social_insurance_joined: "unknown",
+        anti_social_check: "unconfirmed",
+        risk_level: "low",
+        notes: "",
+      });
+    } catch {
+      setOffline(true);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-foreground">取引先・協力会社管理</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          元請・下請業者の許可情報・反社確認・保険加入状況を管理します
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">取引先・協力会社管理</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            建設業許可・社会保険・CCUS・反社確認・リスクを一元管理します
+          </p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>協力会社登録</Button>
       </header>
 
-      {(unverified > 0 || expiringPermit > 0) && (
-        <div className="flex gap-3">
-          {unverified > 0 && (
-            <Card className="flex-1 border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30">
-              <CardContent className="flex items-center gap-2 pt-3 pb-3">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-                <p className="text-sm font-medium text-destructive">
-                  反社チェック未実施: {unverified} 社
-                </p>
-              </CardContent>
-            </Card>
-          )}
-          {expiringPermit > 0 && (
-            <Card className="flex-1 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-              <CardContent className="flex items-center gap-2 pt-3 pb-3">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                  90日以内に許可期限: {expiringPermit} 社
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+      <AiDisclaimerBanner variant="inline" />
+
+      {offline && (
+        <Badge variant="outline" className="border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950">
+          オフライン表示（モックデータ）
+        </Badge>
       )}
 
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-4">
+            <Building2 className="h-8 w-8 text-primary" />
+            <div>
+              <p className="text-2xl font-bold">{loading ? "—" : summary?.total ?? rows.length}</p>
+              <p className="text-sm text-muted-foreground">登録会社数</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-4">
+            <ShieldCheck className="h-8 w-8 text-destructive" />
+            <div>
+              <p className="text-2xl font-bold">{loading ? "—" : unverified}</p>
+              <p className="text-sm text-muted-foreground">反社確認 未確認</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-4">
+            <AlertTriangle className="h-8 w-8 text-amber-500" />
+            <div>
+              <p className="text-2xl font-bold">{loading ? "—" : expiringPermit}</p>
+              <p className="text-sm text-muted-foreground">許可期限 90日以内</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-3 pt-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/10">
+              <span className="text-lg font-bold text-destructive">!</span>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{loading ? "—" : highRisk}</p>
+              <p className="text-sm text-muted-foreground">高リスク会社</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle>取引先一覧</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>協力会社一覧</CardTitle>
+          <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
+            <RefreshCw className={`mr-1 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            更新
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex flex-wrap gap-3">
@@ -109,23 +268,23 @@ export default function PartnersPage() {
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="区分" />
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="種別" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべての区分</SelectItem>
-                {PARTNER_TYPES.map((t) => (
+                <SelectItem value="all">すべての種別</SelectItem>
+                {[...new Set([...PARTNER_TYPES, ...TYPE_LABELS])].map((t) => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={riskFilter} onValueChange={(v) => setRiskFilter(v as RiskLevel | "all")}>
-              <SelectTrigger className="w-28">
+            <Select value={riskFilter} onValueChange={(v) => setRiskFilter(v as "all" | RiskLevel)}>
+              <SelectTrigger className="w-32">
                 <SelectValue placeholder="リスク" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">すべて</SelectItem>
-                {(Object.entries(RISK_LABELS) as [RiskLevel, string][]).map(([v, l]) => (
+                {Object.entries(RISK_LABELS).map(([v, l]) => (
                   <SelectItem key={v} value={v}>{l}</SelectItem>
                 ))}
               </SelectContent>
@@ -137,73 +296,130 @@ export default function PartnersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>会社名</TableHead>
-                  <TableHead className="w-28">区分</TableHead>
-                  <TableHead>建設業許可</TableHead>
-                  <TableHead className="w-24">許可期限</TableHead>
+                  <TableHead className="w-28">種別</TableHead>
+                  <TableHead className="w-52">建設業許可番号</TableHead>
+                  <TableHead className="w-28">許可期限</TableHead>
                   <TableHead className="w-24">反社確認</TableHead>
-                  <TableHead className="w-20">保険</TableHead>
-                  <TableHead className="w-16 text-right">契約数</TableHead>
+                  <TableHead className="w-20">社会保険</TableHead>
                   <TableHead className="w-20">リスク</TableHead>
+                  <TableHead className="w-24">最終取引</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
-                      該当する取引先がありません
+                      該当する協力会社がありません
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((p) => {
-                    const permitDays = Math.ceil((new Date(p.permitExpiry.replace(/\//g, "-")).getTime() - new Date("2026-05-16").getTime()) / 86400000);
-                    const permitWarning = permitDays <= 90;
-                    return (
-                      <TableRow key={p.id} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell>
-                          <p className="text-sm font-medium">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">最終取引: {p.lastTransaction}</p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">{p.type}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{p.permitNumber}</TableCell>
-                        <TableCell>
-                          <span className={`font-mono text-xs ${permitWarning ? "font-semibold text-amber-600 dark:text-amber-400" : ""}`}>
-                            {p.permitExpiry}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {p.antiSocialCheck === "確認済" ? (
-                            <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> 確認済
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 text-xs text-destructive">
-                              <AlertTriangle className="h-3.5 w-3.5" /> 未確認
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {p.insurance === "加入済" ? (
-                            <span className="text-xs text-emerald-600 dark:text-emerald-400">加入済</span>
-                          ) : (
-                            <span className="text-xs text-destructive">未確認</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">{p.contractCount}</TableCell>
-                        <TableCell>
-                          <Badge variant={RISK_VARIANT[p.riskLevel]}>{RISK_LABELS[p.riskLevel]}</Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
+                  filtered.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="text-sm font-medium">{p.name}</TableCell>
+                      <TableCell className="text-sm">{p.type}</TableCell>
+                      <TableCell className="max-w-[220px] truncate font-mono text-xs">{p.permitNumber}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {p.permitExpiry === "—" ? "—" : p.permitExpiry}
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{p.antiSocialCheck}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{p.insurance}</TableCell>
+                      <TableCell>
+                        <Badge variant={RISK_VARIANT[p.riskLevel] ?? "outline"}>
+                          {RISK_LABELS[p.riskLevel] ?? p.riskLevel}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{p.lastTransaction}</TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{filtered.length} 社表示</p>
         </CardContent>
       </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>協力会社登録</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div>
+              <Label>会社名 *</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>種別</Label>
+                <Select value={form.partner_type} onValueChange={(v) => setForm({ ...form, partner_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TYPE_LABELS.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>リスク</Label>
+                <Select value={form.risk_level} onValueChange={(v) => setForm({ ...form, risk_level: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(RISK_LABELS).map(([v, l]) => (
+                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>建設業許可番号</Label>
+                <Input value={form.permit_number} onChange={(e) => setForm({ ...form, permit_number: e.target.value })} />
+              </div>
+              <div>
+                <Label>許可期限</Label>
+                <Input type="date" value={form.permit_expiry} onChange={(e) => setForm({ ...form, permit_expiry: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>社会保険加入</Label>
+                <Select
+                  value={form.social_insurance_joined}
+                  onValueChange={(v) => setForm({ ...form, social_insurance_joined: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unknown">未確認</SelectItem>
+                    <SelectItem value="yes">加入済</SelectItem>
+                    <SelectItem value="no">未加入</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>反社確認</Label>
+                <Select value={form.anti_social_check} onValueChange={(v) => setForm({ ...form, anti_social_check: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="confirmed">確認済</SelectItem>
+                    <SelectItem value="unconfirmed">未確認</SelectItem>
+                    <SelectItem value="pending">確認中</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>備考</Label>
+              <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>キャンセル</Button>
+            <Button onClick={() => void createPartner()} disabled={!form.name}>登録</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

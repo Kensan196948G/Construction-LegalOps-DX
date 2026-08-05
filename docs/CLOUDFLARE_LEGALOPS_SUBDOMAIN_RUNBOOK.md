@@ -1,6 +1,6 @@
 # ☁️ Cloudflare Runbook — `legalops.mirai-dx-platform.com`
 
-> **状態: Cloudflare edge 適用済み / 本番 deploy 承認待ち (2026-07-20 Loop 108 + PR #69 / Issue #63 close)**
+> **状態: Cloudflare edge 適用済み / 本番 deploy 承認待ち (2026-07-20 Loop 108 + PR #69 / Issue #63 close) / Loop 109 (2026-08-05: 外部評価最終対応は edge に無影響)**
 > 本書は Cloudflare 側の実作業を安全に進めるための手順書です。`legalops` サブドメインの新規作成要件と、取得済みドメイン `mirai-dx-platform.com` の利用要件は反映済みです。DNS / Access / Tunnel は人間または外部操作で作成済みとして read-only 確認しました。CTO/Supervisor は DNS 作成、Access 作成、Tunnel 作成、本番デプロイを実行していません。
 
 ---
