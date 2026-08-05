@@ -3788,31 +3788,6 @@
     "edge": "Cloudflare edge 適用済み (CNAME + Access + Tunnel)",
     "consolidation": "preview 用 legalops-preview を削除し単一サブドメインへ一本化完了 (2026-08-01)"
   },
-  "demo_data": {
-    "seeded_at": "2026-08-01T14:45:00Z",
-    "purpose": "Standalone WebUI (http://192.168.0.185:38100/) と同じダミーデータを本番サイトへ掲載（後日ユーザー確認後に削除依頼予定）",
-    "counts": {
-      "contracts": 22,
-      "legal_reviews": 15,
-      "risk_items": 41,
-      "workflow_definitions": 1,
-      "workflow_steps": 30,
-      "knowledge_articles": 5,
-      "notifications": 5,
-      "departments_created": 6
-    },
-    "identifiers": {
-      "contract_no": "CTR-2026-%",
-      "workflow_code": "DEMO-LEGAL-001",
-      "notification_body": "[DEMO]%",
-      "knowledge_tags": "[\"デモ\", ...]",
-      "risk_items": "デモ契約 CTR-2026-* に紐付く行",
-      "legal_reviews": "デモ契約 CTR-2026-* に紐付く行",
-      "workflow_steps": "デモ契約 CTR-2026-* に紐付く行"
-    },
-    "delete_command": "docker exec -i -w /app construction-legalops-dx-backend-1 python - < scripts/seed_demo_data.py --delete",
-    "note": "監査ログ（append-only）にはデモデータを投入していない。部署マスタ 6 件はデモ用に作成したが汎用マスタとして残置可。"
-  },
   "neon": {
     "project": "Construction-LegalOps-DX (snowy-sound-99973684)",
     "region_pg": "aws-ap-southeast-1 / PG16",
