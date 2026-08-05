@@ -848,7 +848,7 @@ Copyright (c) 2026 Construction-LegalOps-DX Contributors
 >
 > 🖥️ 検証用 WebUI: 内部運用環境で `/healthz` = `ok`、systemd active を確認済み（内部 URL は運用証跡を参照）／ 🌐 Web: `https://legalops.mirai-dx-platform.com`
 > 🎯 本番リリース **2026-11-16** 残課題: Vault secrets 投入(P0) / CSP enforce(P0) — コードブロッカー 0 / 本番 deploy 未実行 / Cloudflare edge（本番 Tunnel / Access / `legalops` CNAME）適用済み・サブドメインは `legalops.mirai-dx-platform.com` に一本化済み（preview 用 `legalops-preview` CNAME/tunnel は 2026-08-01 削除済み）
-> 📌 **Loop 109（2026-08-05）: 外部評価 67/100 への最終対応完了** — P0-6（RLS/ACL/Legal Hold/保存期間/WORM/Sentinel）・高優先業務機能（変更契約/文書パッケージ/支払/協力会社/紛争）・AI 機能（適用法令判定/一次情報 RAG/改正影響分析）を実装し、PG16 実 DB で pytest 1,057 passed・frontend typecheck/lint/Jest 40 passed を確認。
+> 📌 **Loop 109（2026-08-05）: 外部評価 67/100 への最終対応完了** — P0-6（RLS/ACL/Legal Hold/保存期間/WORM/Sentinel）・高優先業務機能（変更契約/文書パッケージ/支払/協力会社/紛争）・AI 機能（適用法令判定/一次情報 RAG/改正影響分析）を実装し、pytest 1,083 passed（SQLite 全件）・CI 全 7 ジョブ GREEN・frontend typecheck/lint/Jest 40 passed を確認。
 > 📖 次セッション引継ぎ: [`docs/HANDOVER.md`](./docs/HANDOVER.md) ／ リリースチェックリスト: [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md) ／ 承認パケット: [`docs/PRODUCTION_APPROVAL_PACKET.md`](./docs/PRODUCTION_APPROVAL_PACKET.md) ／ 証拠表: [`docs/RELEASE_EVIDENCE_MATRIX.md`](./docs/RELEASE_EVIDENCE_MATRIX.md) ／ 最終停止報告: [`docs/FINAL_RELEASE_STOP_REPORT.md`](./docs/FINAL_RELEASE_STOP_REPORT.md)
 
 ---

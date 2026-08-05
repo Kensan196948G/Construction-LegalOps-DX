@@ -497,6 +497,7 @@ class EvidenceHitOut(BaseModel):
     law_tags: list[str] = Field(default_factory=list)
     score: float = 0.0
     source_verified: bool = False
+    source_kind: str = "knowledge"
 
 
 class EvidenceLookupOut(BaseModel):
@@ -508,6 +509,7 @@ class EvidenceLookupOut(BaseModel):
 class LawChangeImpactOut(BaseModel):
     effective_date: str
     law_changes: list[str] = Field(default_factory=list)
+    law_change_details: list[dict[str, Any]] = Field(default_factory=list)
     contracts_checked: int
     impacted_contracts: list[dict[str, Any]] = Field(default_factory=list)
     impacted_count: int

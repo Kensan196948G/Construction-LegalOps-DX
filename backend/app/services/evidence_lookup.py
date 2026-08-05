@@ -15,6 +15,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.knowledge_article import KnowledgeArticle
+from app.services.legal_rag import corpus_search
 
 # AI レビュー (ai_review.py) の許可リストと同期する
 CITATION_ALLOWLIST: tuple[str, ...] = (
@@ -24,6 +25,7 @@ CITATION_ALLOWLIST: tuple[str, ...] = (
     "mlit.go.jp",
     "moj.go.jp",
     "nta.go.jp",
+    "ppc.go.jp",
     "pca.go.jp",
     "mhlw.go.jp",
     "courts.go.jp",
@@ -51,6 +53,7 @@ class EvidenceHit:
     excerpt: str
     law_tags: list[str] = field(default_factory=list)
     score: float = 0.0
+    source_kind: str = "knowledge"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -61,6 +64,7 @@ class EvidenceHit:
             "law_tags": self.law_tags,
             "score": self.score,
             "source_verified": validate_citation_url(self.source_url),
+            "source_kind": self.source_kind,
         }
 
 
@@ -84,7 +88,11 @@ async def search_primary_sources(
     query: str,
     limit: int = 8,
 ) -> list[EvidenceHit]:
-    """ナレッジベースの一次情報記事から関連根拠を検索する。"""
+    """一次情報に限定した根拠検索.
+
+    1. ナレッジベース（knowledge_articles）を検索
+    2. 不足分はローカル一次情報コーパス（data/legal_sources）で補完
+    """
     terms = [t.strip() for t in query.replace("、", " ").replace("，", " ").split() if t.strip()]
     if not terms:
         return []
@@ -127,6 +135,27 @@ async def search_primary_sources(
             )
         )
     hits.sort(key=lambda h: h.score, reverse=True)
+    if len(hits) >= limit:
+        return hits[:limit]
+
+    # コーパスで不足分を補完（article_id は疑似負値、source_kind=corpus）
+    seen_urls = {h.source_url for h in hits}
+    for doc in corpus_search(query, limit=limit - len(hits)):
+        if doc.source_url and doc.source_url in seen_urls:
+            continue
+        hits.append(
+            EvidenceHit(
+                article_id=-len(hits) - 1,
+                title=doc.title,
+                source_url=doc.source_url,
+                excerpt=doc.body[:240],
+                law_tags=doc.law_tags,
+                score=0.5,
+                source_kind="corpus",
+            )
+        )
+        if doc.source_url:
+            seen_urls.add(doc.source_url)
     return hits[:limit]
 
 

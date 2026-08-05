@@ -6,13 +6,33 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.contract import Contract
+
+_LAW_CHANGE_DIR = Path(__file__).resolve().parents[2] / "data" / "law_changes"
+
+
+def load_manifests() -> list[dict[str, Any]]:
+    """Load law-change manifests from ``backend/data/law_changes/*.json``."""
+
+    if not _LAW_CHANGE_DIR.is_dir():
+        return []
+    manifests: list[dict[str, Any]] = []
+    for path in sorted(_LAW_CHANGE_DIR.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):  # pragma: no cover
+            continue
+        if isinstance(data, dict):
+            manifests.append(data)
+    return manifests
 
 
 async def analyze(
@@ -86,16 +106,18 @@ async def analyze(
                 }
             )
 
+    manifests = load_manifests()
     return {
         "effective_date": effective_date.isoformat(),
         "law_changes": [
             "中小受託取引適正化法（取適法）施行 2026-01-01",
             "改正建設業法全面施行 2025-12-01",
         ],
+        "law_change_details": manifests,
         "contracts_checked": checked,
         "impacted_contracts": impacted,
         "impacted_count": len(impacted),
     }
 
 
-__all__ = ["analyze"]
+__all__ = ["analyze", "load_manifests"]

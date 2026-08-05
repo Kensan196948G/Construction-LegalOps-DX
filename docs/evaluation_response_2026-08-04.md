@@ -109,8 +109,8 @@
 
 | 検証 | 結果 |
 |---|---|
-| pytest（SQLite 全件） | 876 passed（unit）+ 179 passed / 2 skipped（integration）= **1,055 passed** |
-| pytest（PostgreSQL 16 実 DB・migration 001→007 適用済み） | **1,057 passed / 0 failed** |
+| pytest（SQLite 全件） | **1,083 passed / 2 skipped** |
+| pytest（PostgreSQL 16 実 DB・migration 001→007 適用済み） | CI 全 7 ジョブ GREEN（PR #80） |
 | ruff / mypy | 全チェック合格 / 0 issues |
 | alembic upgrade→downgrade→upgrade（PG 実 DB） | 成功 |
 | frontend typecheck / lint / Jest | 全クリーン / 40 passed |

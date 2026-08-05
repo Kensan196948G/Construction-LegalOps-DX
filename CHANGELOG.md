@@ -43,8 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   検証（`/ai/evidence` + `/verify`）。
 - **📅 法令改正影響分析（AI 機能 #2）**: 取適法施行日を軸に既存契約の影響（従業員数基準・
   手形禁止・60 日超・労務費内訳欠落）を抽出（`/compliance/law-change-impact`）。
-- **🧪 検証**: バックエンド pytest 1,057 passed（PostgreSQL 16 実 DB・マイグレーション
-  001→007 適用済み）、ruff / mypy クリーン、フロントエンド typecheck / lint / Jest 40 passed。
+- **🧪 検証**: バックエンド pytest 1,083 passed（SQLite 全件）＋ PostgreSQL 16 実 DB /
+  マイグレーション 001→007 は CI 全ジョブ GREEN、ruff / mypy クリーン、
+  フロントエンド typecheck / lint / Jest 40 passed。
 
 ### Added / Changed (2026-08-04: 外部評価 P0 対応)
 
