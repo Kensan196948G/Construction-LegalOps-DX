@@ -76,7 +76,9 @@ async def revoke_access(session: AsyncSession, *, grant_id: int, actor_id: int) 
         .where(ContractAccessGrant.id == grant_id, ContractAccessGrant.revoked_at.is_(None))
         .values(revoked_at=datetime.now(UTC))
     )
-    return bool(result.rowcount)
+    # SQLAlchemy 2.0.51 の型定義では rowcount が Result に無いため CI の
+    # mypy 2.3.0 向けに明示 ignore（実行時は CursorResult が返る）。
+    return bool(result.rowcount)  # type: ignore[attr-defined]
 
 
 async def list_grants(session: AsyncSession, *, contract_id: int) -> list[ContractAccessGrant]:
