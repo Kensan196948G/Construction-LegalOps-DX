@@ -11,6 +11,8 @@
     "last_loop_completed": 109,
     "loops_total": 109,
     "current_version": "0.1.12",
+    "pr80_merged_at": "2026-08-05T02:18:51Z",
+    "pr80_merge_commit": "5d4d65d0df765f3c509a5f5ea4cfb56cb646db89",
     "cto_release_assessment": "phase1_complete_production_ready_pending_human_actions",
     "cto_assessment_date": "2026-07-20",
     "deployment_blockers": [
@@ -20,7 +22,7 @@
       "PR #70 merge remains human approval pending"
     ],
     "deploy_ready": false,
-    "last_session_summary": "Loop 109: 外部評価（67/100・条件付き導入推奨）への最終対応を完了。P0-1〜P0-5（取適法・改正建設業法・19条チェック・AI根拠強制・プロンプトインジェクション）は前回実装を精査し、P0-6（PostgreSQL RLS 13テーブル・案件単位ACL・倫理壁・Legal Hold・AI保存期間・WORM外部出力・Sentinel転送）と高優先業務機能（変更契約・文書パッケージ・支払コンプライアンス・協力会社台帳・紛争管理）およびAI機能（適用法令自動判定・一次情報RAG・法令改正影響分析）を実装。migration 006/007 を新設し PG 16 実DBで 001→007 適用、pytest 1,057 passed / 0 failed（PG）、SQLite 1,055 passed、ruff/mypy クリーン、frontend typecheck/lint/Jest 40 passed、alembic roundtrip 成功。README/CHANGELOG/要件・設計・セキュリティ文書を更新。PR #80 作成済み・CI 全 7 ジョブ GREEN（mergeState CLEAN）。本番 deploy・秘密情報投入・Cloudflare/Neon 変更は従来どおり人間ゲート（#23/#24/#50）。"
+    "last_session_summary": "Loop 109: 外部評価（67/100・条件付き導入推奨）への最終対応を完了。P0-1〜P0-5（取適法・改正建設業法・19条チェック・AI根拠強制・プロンプトインジェクション）は前回実装を精査し、P0-6（PostgreSQL RLS 13テーブル・案件単位ACL・倫理壁・Legal Hold・AI保存期間・WORM外部出力・Sentinel転送）と高優先業務機能（変更契約・文書パッケージ・支払コンプライアンス・協力会社台帳・紛争管理）およびAI機能（適用法令自動判定・一次情報RAG・法令改正影響分析）を実装。migration 006/007 を新設し PG 16 実DBで 001→007 適用、pytest 1,083 passed / 2 skipped（SQLite 全件）・PG 統合 181 passed、ruff/mypy クリーン、frontend typecheck/lint/Jest 40 passed、alembic roundtrip 成功。README/CHANGELOG/要件・設計・セキュリティ文書を更新。PR #80 は CI 全 7 ジョブ GREEN（mergeState CLEAN）を確認後、2026-08-05T02:18:51Z に main へマージ済み（merge commit 5d4d65d）。本番 deploy・秘密情報投入・Cloudflare/Neon 変更は従来どおり人間ゲート（#23/#24/#50）。"
   },
   "goal": "外部評価（67/100）への最終対応完了 — P0-1〜P0-6・高優先業務機能・AI機能を実装・検証済み。残りは PR 作成/マージと #23/#24/#50 の人間ゲート。",
   "phase": "Verify",
