@@ -73,8 +73,7 @@ class NotificationService:
         self._mode = (mode or os.getenv("NOTIFY_MODE", "stub") or "stub").lower()
         if self._mode not in {"stub", "real", "queued", "disabled"}:
             raise RuntimeError(
-                "NOTIFY_MODE must be 'stub', 'real', 'queued', or 'disabled', "
-                f"got {self._mode!r}"
+                f"NOTIFY_MODE must be 'stub', 'real', 'queued', or 'disabled', got {self._mode!r}"
             )
         if settings.is_production and self._mode == "stub":
             raise RuntimeError(
@@ -309,7 +308,7 @@ class NotificationService:
             }
         ).encode("utf-8")
         # 接続先は Microsoft 固定エンドポイントのみ（ユーザー入力 URL は不使用）
-        req = urllib.request.Request(
+        req = urllib.request.Request(  # noqa: S310
             token_url,
             data=body,
             method="POST",

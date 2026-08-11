@@ -27,7 +27,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python -m venv "${VIRTUAL_ENV}" \
-    && pip install --upgrade pip setuptools wheel
+    && pip install --upgrade pip wheel "setuptools>=78.1.1"   # CVE-2025-47273 fix
 
 WORKDIR /build
 
