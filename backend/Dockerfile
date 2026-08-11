@@ -27,16 +27,16 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python -m venv "${VIRTUAL_ENV}" \
-    && pip install --upgrade pip setuptools wheel
+    && pip install --upgrade pip wheel "setuptools>=78.1.1"   # CVE-2025-47273 fix
 
 WORKDIR /build
 
 # Copy only dependency manifests first for better layer caching.
+# pyproject.toml references README.md (required by hatchling).  We create a
+# minimal stub here so the Docker build does not depend on the host checkout
+# containing the exact source-tree README.
 COPY pyproject.toml ./
-
-# pyproject.toml references ../README.md (WORKDIR=/build → ../README.md = /README.md).
-# Create a stub so hatchling metadata generation succeeds in Docker context.
-RUN echo "# Construction-LegalOps-DX" > /README.md
+RUN echo "# Construction-LegalOps-DX — Backend" > README.md
 
 # Install into the virtualenv. Hatchling needs the package to exist for the
 # editable install, so we generate a minimal layout and install runtime deps.

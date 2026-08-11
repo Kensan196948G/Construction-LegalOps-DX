@@ -2,7 +2,7 @@
 name = "construction-legalops-dx-backend"
 version = "0.1.12"
 description = "Construction-LegalOps-DX backend — Japanese construction industry legal operations support platform"
-readme = "../README.md"
+readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Construction-LegalOps-DX Contributors" }]
@@ -31,6 +31,7 @@ dependencies = [
     "prometheus-client>=0.21.0",
     "tenacity>=9.0.0",
     "cryptography>=43.0.3",
+    "msgpack>=1.2.1",     # GHSA-6v7p-g79w-8964 fix (transitive via CacheControl/locust)
 ]
 
 [project.optional-dependencies]

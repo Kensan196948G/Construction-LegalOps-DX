@@ -73,8 +73,7 @@ class NotificationService:
         self._mode = (mode or os.getenv("NOTIFY_MODE", "stub") or "stub").lower()
         if self._mode not in {"stub", "real", "queued", "disabled"}:
             raise RuntimeError(
-                "NOTIFY_MODE must be 'stub', 'real', 'queued', or 'disabled', "
-                f"got {self._mode!r}"
+                f"NOTIFY_MODE must be 'stub', 'real', 'queued', or 'disabled', got {self._mode!r}"
             )
         if settings.is_production and self._mode == "stub":
             raise RuntimeError(
