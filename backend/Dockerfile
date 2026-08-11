@@ -32,9 +32,11 @@ RUN python -m venv "${VIRTUAL_ENV}" \
 WORKDIR /build
 
 # Copy only dependency manifests first for better layer caching.
-# README.md lives in backend/ and is referenced by pyproject.toml (hatchling
-# requires the readme path to be within the project directory).
-COPY pyproject.toml README.md ./
+# pyproject.toml references README.md (required by hatchling).  We create a
+# minimal stub here so the Docker build does not depend on the host checkout
+# containing the exact source-tree README.
+COPY pyproject.toml ./
+RUN echo "# Construction-LegalOps-DX — Backend" > README.md
 
 # Install into the virtualenv. Hatchling needs the package to exist for the
 # editable install, so we generate a minimal layout and install runtime deps.
