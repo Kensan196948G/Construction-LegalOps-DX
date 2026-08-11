@@ -308,7 +308,7 @@ class NotificationService:
             }
         ).encode("utf-8")
         # 接続先は Microsoft 固定エンドポイントのみ（ユーザー入力 URL は不使用）
-        req = urllib.request.Request(  # noqa: S310
+        req = urllib.request.Request(
             token_url,
             data=body,
             method="POST",
