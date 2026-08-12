@@ -7,6 +7,7 @@ structured logging middleware, Prometheus metrics, and the v1 router.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -38,6 +39,7 @@ from app.core.logging import (
     set_request_context,
 )
 from app.db.session import dispose_engine, get_db, update_pool_metrics
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.middleware.sensitive_masking import SensitiveMaskingMiddleware
 from app.observability.operational_metrics import update_operational_metrics
@@ -219,6 +221,19 @@ def create_app() -> FastAPI:
     #
     # so add them in reverse, ending with CORS.
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(
+        RateLimitMiddleware,
+        # 本番は常時有効。開発/テスト環境では RATE_LIMIT_ENABLED=1 の明示指定時のみ有効化し、
+        # CI やローカルの大量リクエストが 429 で壊れるのを防ぐ。
+        # ミドルウェア自体の検証は unit test で直接実施する。
+        enabled=settings.rate_limit_enabled
+        and (
+            settings.app_env == "production"
+            or os.getenv("RATE_LIMIT_ENABLED", "").strip().lower() in {"1", "true", "yes"}
+        ),
+        general_per_minute=settings.rate_limit_general_per_minute,
+        auth_per_minute=settings.rate_limit_auth_per_minute,
+    )
     app.add_middleware(SensitiveMaskingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(

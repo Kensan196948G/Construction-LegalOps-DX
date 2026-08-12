@@ -1,7 +1,18 @@
 "use client";
 
-import * as React from "react";
-import { Bell, Sun, Moon, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Bell,
+  Sun,
+  Moon,
+  User,
+  LogOut,
+  Settings,
+  ChevronDown,
+  CheckCheck,
+  Loader2,
+  Menu,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { signOut } from "next-auth/react";
 
@@ -14,13 +25,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { notificationsApi } from "@/lib/api/endpoints";
+import { useCurrentUser } from "@/hooks/use-users";
 
-const MOCK_NOTIFICATIONS = [
-  { id: "n1", text: "契約 CTR-2026-0003 の承認期限が3日後です", type: "warning", time: "2時間前" },
-  { id: "n2", text: "AIレビュー REV-0005 が完了しました", type: "info", time: "4時間前" },
-  { id: "n3", text: "鈴木花子さんがワークフロー WF-0002 を承認しました", type: "success", time: "昨日" },
-  { id: "n4", text: "契約 CTR-2026-0008 の期限が30日後に迫っています", type: "warning", time: "昨日" },
-];
+interface NotificationRow {
+  id: number | string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read_at: string | null;
+  created_at: string;
+}
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -38,7 +53,47 @@ function ThemeToggle() {
 }
 
 function NotificationsDropdown() {
-  const unread = MOCK_NOTIFICATIONS.filter((n) => n.type === "warning").length;
+  const [items, setItems] = useState<NotificationRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const result = await notificationsApi.list({ page: 1, page_size: 10 });
+      setItems(
+        result.items.map((n) => ({
+          id: n.id,
+          title: n.title,
+          body: n.body ?? null,
+          link: n.link ?? null,
+          read_at: n.read_at ?? null,
+          created_at: n.created_at,
+        })),
+      );
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const unread = items.filter((n) => !n.read_at).length;
+
+  const markAllRead = async () => {
+    try {
+      await notificationsApi.markAllAsRead();
+      setItems((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString() })));
+    } catch {
+      // 失敗時は何もしない（次回取得で実状態に追随）
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -55,40 +110,81 @@ function NotificationsDropdown() {
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-3 py-2">
           <p className="text-sm font-semibold">通知</p>
-          {unread > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {unread} 件未読
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {unread > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {unread} 件未読
+              </Badge>
+            )}
+            {unread > 0 && (
+              <button
+                type="button"
+                onClick={() => void markAllRead()}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <CheckCheck className="h-3 w-3" aria-hidden="true" />
+                全て既読
+              </button>
+            )}
+          </div>
         </div>
         <DropdownMenuSeparator />
-        {MOCK_NOTIFICATIONS.map((n) => (
-          <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 px-3 py-2.5">
-            <span className="text-sm leading-snug">{n.text}</span>
-            <span className="text-xs text-muted-foreground">{n.time}</span>
-          </DropdownMenuItem>
-        ))}
+        {loading && (
+          <div className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            読み込み中…
+          </div>
+        )}
+        {!loading && error && (
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            通知を取得できませんでした
+          </p>
+        )}
+        {!loading && !error && items.length === 0 && (
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            通知はありません
+          </p>
+        )}
+        {!loading &&
+          !error &&
+          items.map((n) => (
+            <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-0.5 px-3 py-2.5">
+              <span className="text-sm leading-snug">{n.title}</span>
+              {n.body && (
+                <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {new Date(n.created_at).toLocaleString("ja-JP")}
+              </span>
+            </DropdownMenuItem>
+          ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 function UserMenu() {
+  const { data: me } = useCurrentUser();
+  const name = me?.display_name ?? me?.email?.split("@")[0] ?? "ユーザー";
+  const roleLabel = me?.role ?? "";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 px-2" aria-label="ユーザーメニュー">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-            田
+            {name.slice(0, 1)}
           </span>
-          <span className="hidden text-sm font-medium sm:inline">田中 太郎</span>
+          <span className="hidden text-sm font-medium sm:inline">{name}</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <div className="px-3 py-2">
-          <p className="text-sm font-medium">田中 太郎</p>
-          <p className="text-xs text-muted-foreground">法務部 / 法務リード</p>
+          <p className="text-sm font-medium">{name}</p>
+          <p className="text-xs text-muted-foreground">{me?.email ?? ""}</p>
+          {roleLabel && (
+            <p className="mt-0.5 text-xs text-muted-foreground">ロール: {roleLabel}</p>
+          )}
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
@@ -112,10 +208,21 @@ function UserMenu() {
   );
 }
 
-export function AppHeader(_: Record<string, unknown>) {
+export function AppHeader({ onMenuClick }: { onMenuClick?: () => void }) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b bg-card px-4 lg:px-6">
       <div className="flex items-center gap-2">
+        {onMenuClick && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={onMenuClick}
+            aria-label="メニューを開く"
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </Button>
+        )}
         <p className="text-sm font-medium text-muted-foreground">
           Construction-LegalOps-DX
         </p>
