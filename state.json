@@ -4702,7 +4702,7 @@
       "date": "2026-08-12",
       "name": "フォローアップ: 残モック 3 画面実 API 化 + 契約種別マスタ統合 + 承認依頼",
       "summary": "PR #84 を main へマージ。承認依頼を #23/#24/#50 に投稿（パイロット計画 docs/PILOT_DEPLOYMENT_PLAN_2026-08-12.md 参照）。契約申請・稟議（GET /workflows/applications 新設）、建設業法務チェック（compliance API 接続）、レポート・分析（dashboard/risks/compliance 実データ）を実装。契約種別を正準値（工事請負契約等）へ統一し、旧名称を API 境界で正規化（migration 008）。",
-      "verification": "backend pytest 1108 passed / 2 skipped（RLS は PG 限定）、ruff/mypy clean、frontend lint/typecheck clean、Jest 43 passed、alembic roundtrip（008 含む）passed。",
+      "verification": "backend pytest 1108 passed / 2 skipped（RLS は PG 限定）、ruff/mypy clean、frontend lint/typecheck clean、Jest 43 passed、alembic roundtrip（008 含む）passed。PR #85 は GitHub Actions 全 7 ジョブ PASS（CodeRabbit pass・マージは人間承認待ち）。",
       "blockers": [
         "#23 Vault secrets",
         "#24 CSP enforce",
