@@ -1,0 +1,19 @@
+{
+  "name": "Construction-LegalOps-DX",
+  "short_name": "LegalOps",
+  "description": "建設業向け法務 DX プラットフォーム — 契約レビュー・承認ワークフロー・リスク管理を一元化",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "ja",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

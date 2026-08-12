@@ -816,7 +816,8 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 ### 16.7 適用法令・根拠検索（AI 第 1 優先）
 
 - `GET /compliance/applicable-laws?contract_id=` — 適用法令自動判定
-- `GET /ai/evidence/search?query=` — 一次情報限定 RAG（許可ホスト検証付き）
+- `GET /ai/evidence?q=<キーワード>&limit=<1..20>` — 一次情報限定 RAG（許可ホスト検証付き）。
+  ※ 2026-08-12 にフロントエンド契約を本エンドポイントへ統一（旧契約の `POST /ai/evidence` は存在しない）
 - `POST /ai/evidence/verify` — 引用 URL の一次情報検証
 - `GET /ai/law-change-impact?effective_date=` — 法令改正影響分析
 
@@ -824,14 +825,24 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 
 ## 17. レート制限
 
-| ルート                         | 制限                   |
-| ------------------------------ | ---------------------- |
-| `POST /contracts/{id}/reviews` | 1 ユーザー 30 req/h    |
-| `POST /uploads/init`           | 1 ユーザー 60 req/h    |
-| `POST /uploads/complete`       | 1 ユーザー 60 req/h    |
-| 既定                           | 1 ユーザー 600 req/min |
+実装済みのレート制限（2026-08-12 時点）:
 
-超過時 `429 Too Many Requests` + `Retry-After` ヘッダ。
+1. **nginx（リバースプロキシ層）**: `auth_limit`（`/api/auth/*` 10 req/min, burst 5）と
+   `api_limit`（`/api/*` 120 req/min, burst 60）
+2. **アプリ層（ASGI ミドルウェア）**: クライアント IP 単位のスライディングウィンドウ。
+   既定値は認証系 60 req/min・一般 600 req/min（環境変数で変更可）。本番は常時有効、
+   開発/テストでは `RATE_LIMIT_ENABLED=1` の明示指定時のみ有効。ヘルス・メトリクス・
+   ドキュメントは除外。超過時は `429` + `Retry-After: 60` を返す。
+
+未実装（バックログ）:
+
+| ルート                         | 想定制限              |
+| ------------------------------ | --------------------- |
+| `POST /contracts/{id}/reviews` | 1 ユーザー 30 req/h   |
+| `POST /uploads/init`           | 1 ユーザー 60 req/h   |
+| `POST /uploads/complete`       | 1 ユーザー 60 req/h   |
+
+多レプリカ構成では Redis 共有カウンタ方式への移行を推奨（ADR 0006）。
 
 ---
 
@@ -861,3 +872,4 @@ API 契約を維持するため決定論的 fallback を使い、501 ではな�
 | ---------- | ---- | -------- |
 | 2026-05-16 | v1.0 | 初版作成 |
 | 2026-08-05 | v0.2 | 高優先業務機能 API（紛争/変更契約/協力会社/支払/文書パッケージ）と P0-6 ガバナンス API を追加 |
+| 2026-08-12 | v0.3 | 根拠検索 API の契約統一（GET /ai/evidence）、アプリ層レート制限の実装内容を反映、ADR 台帳を追加 |

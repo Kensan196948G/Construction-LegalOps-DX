@@ -54,6 +54,17 @@ class Settings(BaseSettings):
         alias="TRUSTED_HOSTS",
     )
 
+    # ----- Application-layer rate limiting -----
+    # Edge/nginx limits stay primary; these values protect direct backend
+    # access. Per-client, per-60s sliding window.
+    rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
+    rate_limit_general_per_minute: int = Field(
+        default=600, alias="RATE_LIMIT_GENERAL_PER_MINUTE", ge=1
+    )
+    rate_limit_auth_per_minute: int = Field(
+        default=60, alias="RATE_LIMIT_AUTH_PER_MINUTE", ge=1
+    )
+
     # ----- Database -----
     db_url: SecretStr = Field(
         default=SecretStr("postgresql+asyncpg://legalops:legalops_dev@postgres:5432/legalops"),

@@ -525,6 +525,12 @@ export const notificationsApi = {
   markAsRead: (id: number | string) =>
     apiClient.post(`/notifications/${id}/read`).then(() => undefined),
 
+  /** 全件既読（POST /notifications/read-all） */
+  markAllAsRead: () =>
+    apiClient
+      .post("/notifications/read-all")
+      .then((res) => res.data as { updated: number }),
+
   /** バッジ用カウント取得 */
   unreadCount: async (): Promise<number> => {
     const result = await notificationsApi.list({ status: "unread", page: 1, page_size: 1 });
@@ -720,17 +726,24 @@ export const legalAiApi = {
       data,
     ),
 
-  /** 一次情報限定根拠検索（POST /ai/evidence） */
-  evidence: (data: { query: string; max_results?: number }) =>
-    postParsed(
-      z.object({
-        query: z.string(),
-        hits: z.array(evidenceHitSchema).default([]),
-        citation_verification: z.record(z.string(), z.unknown()).default({}),
-      }),
-      "/ai/evidence",
-      data,
-    ),
+  /** 一次情報限定根拠検索（GET /ai/evidence?q=...&limit=...） */
+  evidence: (data: { query: string; limit?: number }) =>
+    apiClient
+      .get("/ai/evidence", {
+        params: {
+          q: data.query,
+          limit: data.limit ?? 8,
+        },
+      })
+      .then((res) =>
+        z
+          .object({
+            query: z.string(),
+            hits: z.array(evidenceHitSchema).default([]),
+            citation_verification: z.record(z.string(), z.unknown()).default({}),
+          })
+          .parse(res.data),
+      ),
 };
 
 // ===========================================================================

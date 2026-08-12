@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     shortcut: "/favicon.svg",
     apple: "/favicon.svg",
   },
+  manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
 };
 

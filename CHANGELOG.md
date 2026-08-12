@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-08-12: 総合評価・改善 Loop 110)
+
+- **✏️ 契約編集フォーム実装**: `contracts/[id]/edit` のスタブ（notFound）を解消し、
+  楽観ロック（version）付き PATCH `/contracts/{id}` へ接続。編集内容は監査ログに記録。
+- **🔍 法務相談を一次情報 RAG に置換**: 疑似キーワード応答を廃止し、`GET /ai/evidence` の
+  根拠検索（一次情報確認済みバッジ・引用リンク・関連度表示）へ接続。
+- **📅 契約期限・更新管理を実データ化**: モックを廃止し、契約台帳の `end_date` から
+  期限切れ/30 日以内/60 日以内を算出表示。
+- **🛡️ アプリ層レート制限追加**: nginx に加え、ASGI ミドルウェアでクライアント IP 単位の
+  スライディングウィンドウ制限（認証系 60 req/min・一般 600 req/min、環境変数で変更可）。
+  429 + Retry-After 応答。単体テスト 5 件追加（ADR 0006）。
+- **🔧 evidence API 契約統一**: フロントエンドの誤った `POST /ai/evidence` 呼び出しを
+  `GET /ai/evidence?q=&limit=` に修正し、API 契約の回帰テスト 3 件を追加。
+- **👥 ユーザー設定パネル・通知・ユーザーメニューを実 API 化**: `GET /users`・
+  `GET/POST /notifications`・`GET /auth/me` に接続し、モック表示を廃止。
+- **📱 モバイルナビ + PWA manifest**: ハンバーガーメニューによるドロワーと
+  `manifest.webmanifest` を追加（オフライン対応は今後のロードマップ）。
+- **📚 ADR 台帳新設**: 6 件（Web スタック / AI 人間承認 / 監査ハッシュチェーン /
+  RLS+ACL / Cloudflare Access / レート制限）を `docs/adr/` に追加。
+- **📄 文書更新**: `docs/api_design.md` の実装乖離（evidence・レート制限）を修正し、
+  総合評価・改善報告書 `docs/EVALUATION_IMPROVEMENT_REPORT_2026-08-12.md` を新規作成。
+- **🧪 検証**: backend pytest 1,089 passed / 2 skipped（RLS は PG 限定）、ruff/mypy clean、
+  frontend lint/typecheck clean、Jest 40 passed。
+
 ### Added / Changed (2026-08-05: 外部評価 67/100 への最終対応)
 
 - **🔐 P0-6 内部統制の実装完了（DB RLS / ACL / Legal Hold / Retention / WORM / Sentinel）**:
