@@ -17,11 +17,11 @@
 
 | 項目 | 結果 |
 | --- | --- |
-| 🔬 backend pytest（SQLite 全件） | ✅ 1,083 passed / 2 skipped（改善前）→ 1089 passed / 2 skipped（改善後・別途再実行） |
+| 🔬 backend pytest（SQLite 全件） | ✅ 1,083 passed / 2 skipped（改善前）→ 1091 passed / 2 skipped（改善後） |
 | 🔬 backend ruff / mypy | ✅ 全ソース clean（137 files） |
 | 🖥️ frontend lint（next lint） | ✅ 0 error / 0 warning |
 | 🖥️ frontend typecheck（tsc --noEmit） | ✅ clean |
-| 🧪 frontend Jest | ✅ 40/40 passed（6 suites） |
+| 🧪 frontend Jest | ✅ 43/43 passed（7 suites・期限管理テスト 3 件追加） |
 | 🧪 追加テスト | ✅ レート制限 unit 5件 / 根拠検索API integration 3件 |
 | 📊 既存評価書 | `docs/EVALUATION_REPORT_2026-08-12.md`（75.2 / 条件付き利用可）をベースラインとして採用 |
 | 🌐 競合公式情報 | LegalOn（legalontech.com/pricing）、METI・JPX 公開資料（ContractS）、MUFG IP / Global Brain（MNTSQ）、Procore 公式サポート、CloudSign 公式ヘルプ |
@@ -261,11 +261,11 @@ backend:
   mypy app                              → Success: no issues found in 137 source files
   pytest tests/unit/test_rate_limit_middleware.py → 5 passed
   pytest tests/integration/test_legal_ai_api.py  → 3 passed
-  pytest（全件・改善後）                → 1089 passed / 2 skipped（RLS は PG 限定）
+  pytest（全件・改善後）                → 1091 passed / 2 skipped（RLS は PG 限定）
 frontend:
   npm run lint                          → No ESLint warnings or errors
   npm run typecheck                     → clean
-  npm test -- --runInBand               → 6 suites / 40 passed
+  npm test -- --runInBand               → 7 suites / 43 passed
 ```
 
 > ⚠️ 全件 pytest で Cloudflare Access 認証の 2 件がテスト順序依存で失敗する事象を検出し、テスト環境ではレート制限を自動無効化して解決。再実行で全 green を確認する（下記 Verify）。
@@ -391,9 +391,9 @@ e-BISC/GECS 連携 / 施工体制台帳+社会保険確認 / 帳票出力（履�
 
 ### 10.7 commit・PR・CI・デプロイ状況
 
-- **branch**: `feat/evaluation-improvements-20260812`（本セッション作成）
-- **commit / push / PR**: 本報告書作成時点で未 push・未 PR（検証完了後に push し PR を作成）
-- **CI**: ローカル相当ゲート（ruff/mypy/pytest/Jest/typecheck/lint）は green。PR 作成後に GitHub Actions 7 ジョブを確認
+- **branch**: `feat/evaluation-improvements-20260812`
+- **commit / push / PR**: commit `6ec22d9` を push 済み。**PR #84** を作成済み（OPEN / MERGEABLE）
+- **CI**: ローカル相当ゲート（ruff/mypy/pytest/Jest/typecheck/lint）は green。PR #84 の GitHub Actions 7 ジョブを確認中
 - **デプロイ**: 本セッションでは実施しない（人間ゲート #23/#24/#50 対象）
 
 ### 10.8 残課題
