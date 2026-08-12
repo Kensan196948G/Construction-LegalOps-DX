@@ -16,7 +16,7 @@ from __future__ import annotations
 
 _CONTRACT_BODY = {
     "title": "リスク・コンプライアンス テスト契約",
-    "contract_type": "ukeoi",
+    "contract_type": "工事請負契約",
     "counterparty": "テスト建設株式会社",
     "department_id": 1,
 }

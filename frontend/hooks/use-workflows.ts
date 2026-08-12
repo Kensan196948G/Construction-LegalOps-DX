@@ -15,7 +15,12 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { workflowsApi } from "@/lib/api/endpoints";
 import { queryKeys } from "@/lib/api/query-keys";
-import type { Paginated, Workflow, WorkflowStep } from "@/lib/api/schemas";
+import type {
+  Paginated,
+  Workflow,
+  WorkflowApplication,
+  WorkflowStep,
+} from "@/lib/api/schemas";
 
 export function useWorkflows(
   params?: { page?: number; page_size?: number; q?: string },
@@ -24,6 +29,20 @@ export function useWorkflows(
   return useQuery<Paginated<Workflow>, ApiError>({
     queryKey: queryKeys.workflows.list(params),
     queryFn: () => workflowsApi.list(params),
+    ...options,
+  });
+}
+
+export function useApplications(
+  params?: { page?: number; page_size?: number; status?: string },
+  options?: Omit<
+    UseQueryOptions<Paginated<WorkflowApplication>, ApiError>,
+    "queryKey" | "queryFn"
+  >,
+) {
+  return useQuery<Paginated<WorkflowApplication>, ApiError>({
+    queryKey: queryKeys.workflows.applications(params),
+    queryFn: () => workflowsApi.applications(params),
     ...options,
   });
 }

@@ -31,7 +31,7 @@ _WF_DEF = {
 
 _CONTRACT_BODY = {
     "title": "ワークフロー CRUD テスト契約",
-    "contract_type": "ukeoi",
+    "contract_type": "工事請負契約",
     "counterparty": "CRUD テスト建設",
     "department_id": 1,
 }
@@ -83,6 +83,52 @@ async def test_list_workflow_definitions_requires_auth(client):
     """GET /workflows without auth → 401."""
     r = await client.get("/api/v1/workflows")
     assert r.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# GET /workflows/applications — 稟議一覧（workflow_step × contract 結合ビュー）
+# ---------------------------------------------------------------------------
+
+
+async def test_list_applications_returns_workflow_steps(
+    client, auth_headers_admin, auth_headers_legal
+):
+    """GET /workflows/applications returns started workflows as 稟議 rows."""
+    wf_id = await _create_wf_definition(client, auth_headers_admin)
+    cid = await _create_contract(client, auth_headers_legal)
+    await _start_instance(client, cid, wf_id, auth_headers_admin)
+
+    r = await client.get("/api/v1/workflows/applications", headers=auth_headers_admin)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "items" in body
+    assert body["total"] >= 1
+    row = next((i for i in body["items"] if i["contract_id"] == cid), None)
+    assert row is not None
+    assert row["contract_id"] == cid
+    assert row["title"] == _CONTRACT_BODY["title"]
+    assert row["step_name"] == "承認"
+    assert row["status"] == "in_progress"
+
+
+async def test_list_applications_requires_auth(client):
+    """GET /workflows/applications without auth → 401."""
+    r = await client.get("/api/v1/workflows/applications")
+    assert r.status_code == 401
+
+
+async def test_list_applications_status_filter(client, auth_headers_admin, auth_headers_legal):
+    """status フィルタで step 状態を絞り込める."""
+    wf_id = await _create_wf_definition(client, auth_headers_admin)
+    cid = await _create_contract(client, auth_headers_legal)
+    await _start_instance(client, cid, wf_id, auth_headers_admin)
+
+    r = await client.get(
+        "/api/v1/workflows/applications?status=approved",
+        headers=auth_headers_admin,
+    )
+    assert r.status_code == 200
+    assert all(item["status"] == "approved" for item in r.json()["items"])
 
 
 # ---------------------------------------------------------------------------

@@ -63,6 +63,7 @@ import {
   userSyncJobSchema,
   versionSchema,
   workflowInstanceSchema,
+  workflowApplicationSchema,
   workflowSchema,
   workflowStepSchema,
   idSchema,
@@ -294,6 +295,12 @@ export const workflowsApi = {
   /** ワークフロー実行インスタンスを取得。instance_id = contract_id */
   getInstance: (instanceId: number | string) =>
     getParsed(apiResponse(workflowInstanceSchema), `/workflows/${instanceId}`),
+
+  /** 稟議一覧（承認ワークフロー結合ビュー） */
+  applications: (params?: ListParams & { status?: string }) =>
+    getParsed(paginatedSchema(workflowApplicationSchema), "/workflows/applications", {
+      params: buildParams(params),
+    }),
 
   create: (data: {
     code: string;

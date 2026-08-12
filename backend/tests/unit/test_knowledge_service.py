@@ -45,7 +45,7 @@ def _make_contract(
     contract_no: str = "C-0001",
     title: str = "テスト請負契約",
     counterparty: str = "株式会社テスト",
-    contract_type: str = "請負",
+    contract_type: str = "工事請負契約",
     drafter_id: int = 1,
     deleted_at: datetime | None = None,
 ) -> MagicMock:
@@ -228,7 +228,7 @@ class TestSearch:
         session.execute = AsyncMock(side_effect=[ka_result, count_result])
 
         items, total = await knowledge_service.search(
-            session, q="請負", viewer=viewer, contract_type="請負"
+            session, q="請負", viewer=viewer, contract_type="工事請負契約"
         )
 
         assert total == 0
@@ -436,7 +436,8 @@ class TestCreateArticle:
         assert result.id == 100
         assert result.title == "瑕疵担保条項の解説"
         assert result.tags == ["瑕疵担保", "品質"]
-        assert result.contract_type == "請負"
+        # 旧名称（請負）は正準値（工事請負契約）へ正規化される
+        assert result.contract_type == "工事請負契約"
         assert result.citations == ["建設業法40条の3"]
 
     @pytest.mark.asyncio

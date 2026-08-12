@@ -8,6 +8,7 @@ template steps strongly typed.
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
@@ -124,6 +125,28 @@ class WorkflowStepOut(WorkflowStepRead):
     """Step row returned by ``GET /workflows/{id}/steps``."""
 
 
+class WorkflowApplicationOut(BaseModel):
+    """稟議一覧ビュー（workflow_step × contract × drafter）.
+
+    ``applications`` 画面は専用テーブルを持たず、承認ワークフローの実体
+    （contract に紐づく workflow_step）を稟議として表示する。
+    """
+
+    step_id: int
+    contract_id: int
+    contract_no: str | None = None
+    title: str
+    contract_type: str
+    counterparty: str | None = None
+    amount: Decimal | None = None
+    applicant: str | None = None
+    step_name: str
+    step_type: str
+    status: str
+    due_at: datetime | None = None
+    submitted_at: datetime
+
+
 class WorkflowActionRequest(WorkflowAction):
     """Body of approve / reject / send-back / delegate endpoints."""
 
@@ -132,6 +155,7 @@ __all__ = [
     "WorkflowAction",
     "WorkflowActionRequest",
     "WorkflowActionResult",
+    "WorkflowApplicationOut",
     "WorkflowCreate",
     "WorkflowDefinition",
     "WorkflowDefinitionCreate",

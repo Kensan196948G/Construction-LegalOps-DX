@@ -22,7 +22,7 @@ from tests.conftest import _headers_for  # type: ignore[import]
 
 _CONTRACT_BODY = {
     "title": "RBAC 拡張テスト契約",
-    "contract_type": "ukeoi",
+    "contract_type": "工事請負契約",
     "counterparty": "テスト建設株式会社",
     "department_id": 1,
 }

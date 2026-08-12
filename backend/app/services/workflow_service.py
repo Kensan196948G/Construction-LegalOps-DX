@@ -13,13 +13,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.contract import Contract
 from app.models.enums import WorkflowStepStatus
+from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
+from app.schemas.workflow import WorkflowApplicationOut
+from app.services.contract_type import normalize_contract_type
 
 _FULL_ACCESS_ROLES = {"admin", "legal", "auditor", "reviewer", "approver"}
 
@@ -147,7 +152,7 @@ async def create_definition(
         code=data.code,
         name=data.name,
         description=getattr(data, "description", None),
-        contract_type=getattr(data, "contract_type", None),
+        contract_type=normalize_contract_type(getattr(data, "contract_type", None)),
         is_active=getattr(data, "is_active", True),
         definition=definition_dict,
     )
@@ -258,6 +263,63 @@ async def get_instance(
         if contract is None or contract.drafter_id != viewer.db_id:
             return None
     return _compute_instance(steps)
+
+
+async def list_applications(
+    session: AsyncSession,
+    *,
+    viewer: Any,
+    status: str | None = None,
+    page: int = 1,
+    size: int = 20,
+) -> tuple[list[WorkflowApplicationOut], int]:
+    """稟議一覧（workflow_step × contract × drafter の結合ビュー）."""
+    stmt = (
+        select(WorkflowStep, Contract, User)
+        .join(Contract, Contract.id == WorkflowStep.contract_id)
+        .outerjoin(User, User.id == Contract.drafter_id)
+        .where(
+            WorkflowStep.deleted_at.is_(None),
+            Contract.deleted_at.is_(None),
+        )
+    )
+    if not _is_full_access(viewer):
+        stmt = stmt.where(Contract.drafter_id == viewer.db_id)
+    if status:
+        stmt = stmt.where(WorkflowStep.status == status)
+
+    count_stmt = stmt.with_only_columns(func.count(WorkflowStep.id)).order_by(None)
+    total = (await session.execute(count_stmt)).scalar() or 0
+
+    stmt = (
+        stmt.order_by(WorkflowStep.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+    )
+    rows = (await session.execute(stmt)).all()
+
+    items: list[WorkflowApplicationOut] = []
+    for step, contract, drafter in rows:
+        items.append(
+            WorkflowApplicationOut(
+                step_id=step.id,
+                contract_id=contract.id,
+                contract_no=contract.contract_no,
+                title=contract.title,
+                contract_type=contract.contract_type,
+                counterparty=contract.counterparty,
+                amount=(
+                    Decimal(str(contract.amount)) if contract.amount is not None else None
+                ),
+                applicant=drafter.display_name if drafter is not None else None,
+                step_name=step.name,
+                step_type=step.step_type,
+                status=step.status,
+                due_at=step.due_at,
+                submitted_at=step.created_at,
+            )
+        )
+    return items, total
 
 
 async def list_steps(

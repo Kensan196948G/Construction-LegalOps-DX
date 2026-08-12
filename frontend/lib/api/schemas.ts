@@ -83,12 +83,16 @@ export const contractStatusEnum = z.enum([
 export type ContractStatus = z.infer<typeof contractStatusEnum>;
 
 export const contractTypeEnum = z.enum([
-  "請負",
-  "業務委託",
-  "売買",
-  "賃貸借",
-  "秘密保持",
+  "工事請負契約",
+  "業務委託契約",
+  "資材購入契約",
+  "下請契約",
+  "設計監理契約",
+  "賃貸借契約",
+  "秘密保持契約",
+  "売買契約",
   "覚書",
+  "JV",
   "その他",
 ]);
 export type ContractType = z.infer<typeof contractTypeEnum>;
@@ -774,6 +778,23 @@ export const workflowInstanceSchema = z.object({
   completed_at: datetimeSchema.optional().nullable(),
 });
 export type WorkflowInstance = z.infer<typeof workflowInstanceSchema>;
+
+export const workflowApplicationSchema = z.object({
+  step_id: idSchema,
+  contract_id: idSchema,
+  contract_no: z.string().nullable().optional(),
+  title: z.string(),
+  contract_type: z.string(),
+  counterparty: z.string().nullable().optional(),
+  amount: z.number().nullable().optional(),
+  applicant: z.string().nullable().optional(),
+  step_name: z.string(),
+  step_type: z.string(),
+  status: workflowStepStatusEnum.or(z.string()),
+  due_at: datetimeSchema.nullable().optional(),
+  submitted_at: datetimeSchema,
+});
+export type WorkflowApplication = z.infer<typeof workflowApplicationSchema>;
 
 // ---------------------------------------------------------------------------
 // Compliance

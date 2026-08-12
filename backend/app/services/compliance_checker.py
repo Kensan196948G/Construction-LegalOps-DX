@@ -180,7 +180,7 @@ class ComplianceChecker:
         self, snapshot: ContractSnapshot, text: str
     ) -> list[ComplianceFinding]:
         ct = snapshot.contract_type
-        if ct not in (ContractType.UKEOI, "請負"):
+        if ct not in (ContractType.UKEOI, ContractType.KOUJI_UKEOI, ContractType.SHITAKE, "請負"):
             return []
 
         all_text = self._all_text(snapshot, text)
@@ -277,7 +277,7 @@ class ComplianceChecker:
     ) -> list[ComplianceFinding]:
         """改正建設業法（2025-12 全面施行）の労務費等ルール."""
         ct = snapshot.contract_type
-        if ct not in (ContractType.UKEOI, "請負"):
+        if ct not in (ContractType.UKEOI, ContractType.KOUJI_UKEOI, ContractType.SHITAKE, "請負"):
             return []
 
         all_text = self._all_text(snapshot, text)
@@ -714,9 +714,9 @@ class ComplianceChecker:
     @staticmethod
     def _infer_transaction_kind(snapshot: ContractSnapshot) -> str | None:
         ct = snapshot.contract_type
-        if ct in (ContractType.UKEOI, "請負"):
+        if ct in (ContractType.UKEOI, ContractType.KOUJI_UKEOI, ContractType.SHITAKE, "請負"):
             return "construction"
-        if ct in (ContractType.ITAKU, "委託", "業務委託"):
+        if ct in (ContractType.ITAKU, ContractType.GYOMU_ITAKU, "委託", "業務委託"):
             return "service"
         return None
 

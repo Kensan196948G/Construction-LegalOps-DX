@@ -21,7 +21,7 @@ async def test_full_review_flow(client, auth_headers_legal, monkeypatch):
         "/api/v1/contracts",
         json={
             "title": "AI レビュー対象契約",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "テスト建設",
             "department_id": 1,
         },

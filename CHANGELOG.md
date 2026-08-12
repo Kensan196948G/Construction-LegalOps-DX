@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-08-12: フォローアップ実装 Loop 111)
+
+- **📝 契約申請・稟議画面を実データ化**: `GET /workflows/applications` を新設し、
+  承認ワークフロー（workflow_step × contract × drafter）を稟議として表示。
+  モック（CONTRACT_APPLICATIONS）を廃止。
+- **🏗️ 建設業法務チェック画面を実データ化**: チェックリスト定義（正本マスタ）と
+  契約単位の機械チェック実行・結果表示（`/compliance/checklists`・`/checks/{id}`）に接続。
+  モック（CONSTRUCTION_CHECKS）を廃止。
+- **📊 レポート・分析画面を実データ化**: ダッシュボード集計（summary/trends）・
+  リスク分布・コンプライアンス定義数から表示。固定値（QUARTERLY_STATS 等）を廃止。
+- **🗂️ 契約種別マスタ統合**: 正準値（工事請負契約 / 業務委託契約 / 資材購入契約 /
+  下請契約 / 設計監理契約 / 賃貸借契約 / 秘密保持契約 / 売買契約 / 覚書 / JV / その他）を
+  `app.models.enums.ContractType` と `app.services.contract_type` に定義し、
+  API 境界で旧名称（`ukeoi` / `itaku` / `請負` / `委託` 等）を正規化。
+  migration 008 で既存データを正準値へ更新。frontend enum・UI 選択肢も統一。
+- **🧪 検証**: 種別正規化 unit 5 件 + 稟議 API integration 3 件を追加。
+  backend pytest 全件 green（件数は最終確認）、ruff/mypy clean、frontend 43 passed。
+
 ### Added / Changed (2026-08-12: 総合評価・改善 Loop 110)
 
 - **✏️ 契約編集フォーム実装**: `contracts/[id]/edit` のスタブ（notFound）を解消し、

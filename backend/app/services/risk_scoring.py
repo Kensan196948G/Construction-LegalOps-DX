@@ -86,9 +86,15 @@ ISSUE_WEIGHTS: Final[dict[str, int]] = {
 # Base score per contract type (policy §3).
 _CONTRACT_TYPE_BASE: Final[dict[ContractType, int]] = {
     ContractType.UKEOI: 25,  # default to 公共; 民間小口は下で減点扱い
+    ContractType.KOUJI_UKEOI: 25,
+    ContractType.SHITAKE: 25,
     ContractType.ITAKU: 15,
+    ContractType.GYOMU_ITAKU: 15,
     ContractType.JV: 30,
     ContractType.CHINSHAKU: 10,
+    ContractType.SHIZAI_KOUNYUU: 10,
+    ContractType.SEKKEI_KANRI: 10,
+    ContractType.OBOEGAKI: 10,
     ContractType.NDA: 5,
     ContractType.BAIBAI: 10,
     ContractType.OTHER: 10,

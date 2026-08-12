@@ -225,7 +225,7 @@ async def test_list_definitions_with_contract_type_filter():
     rows_result.scalars.return_value = []
     session.execute = AsyncMock(side_effect=[count_result, rows_result])
 
-    items, total = await workflow_service.list_definitions(session, contract_type="ukeoi")
+    items, total = await workflow_service.list_definitions(session, contract_type="工事請負契約")
     assert total == 0
     assert items == []
 

@@ -47,7 +47,7 @@ async def test_upload_init_complete_get_and_delete(client: Any, test_engine: Any
         headers=headers,
         json={
             "title": "Upload flow contract",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "Upload建設",
             "department_id": 1,
         },

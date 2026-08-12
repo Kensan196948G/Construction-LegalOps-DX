@@ -41,7 +41,7 @@
     "same_error_limit": 2,
     "phase": "Verify",
     "last_session_summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS (Error 0.00%・SLO 達成) + migrations ゲート常設。Loop 28: 新 Goal (リリース後検証・CF/Neon 安定化) に対し Monitor 全数調査で『本番デプロイ実績なし』を確定 (git tag 0 / GitHub Deployments 0 / DNS 未設定 / CD 経路なし / CF・Neon 採用証跡ゼロ、現行設計は Docker Compose オンプレ)。指示に従い legalops.mirai-dx-platform.com を候補として CLOUDFLARE_NEON_MIGRATION_PLAN.md に文書化 (DNS 変更等は未実行)。欠落していた運用文書 4 本 (OPERATIONS / INCIDENT_RESPONSE / MONITORING / BACKUP_RESTORE) を実体 grounding で新規整備。Issue #50 (CF/Neon 採否判断・人間) / #51 (運用基盤ギャップ P2) 起票。Loop 26-27: 8 PR merge (#27/#37/#44/#42/#36/#46/#47/#38)・Issue 5 件クローズ (#19/#35/#40/#43/#45)・CI 全ゲート fail-closed 化完遂・PG 統合 151 passed 真 green・deploy_ready 復帰。Loop 27: Issue #45 根治 (JIT プロビジョニング、対抗レビュー 2 系統で Critical 2/High 2 検出→全反映) + PR #38 完遂。Loop 26 詳細: 5 PR merge + P1 本番欠陥 2 系統発見。(1) weekly security scan 赤化 (pip-audit) を根本分析 — ecdsa PYSEC-2026-1325 は upstream won't-fix + 到達不能 (RS256 のみ使用) のため文書化 suppress (PR #42)、main で全 5 ジョブ TRUE GREEN 確認 (run 29296717568)、恒久対応 PyJWT 移行は Issue #41。(2) date bomb 発見・修正 — Claude dormancy gate (2026-07-01) 通過で test_ai_settings 2 テストが決定論的に赤化 (全 PR の CI をブロック)、monkeypatch 日付固定 + post-gate fail-closed テスト追加 (PR #44、ローカル 901 passed)。(3) OPEN PR triage — #27 RS256 (7/7 GREEN・STABLE N=5) / #37 Jest hard-gate / #36 k6 (conflict 解消後) を検証の上 merge。(4) PR #38 修復 3 巡 — NullPool 化で asyncpg ループ跨ぎ根絶 → departments/users マスタシード + mypy 修正で FK 違反 0 件 (143→12 failed) → 残存は本番欠陥 Issue #45 (JWT subject email を BIGINT id として使用する identity マッピング欠陥が contract/review/knowledge/dashboard/risk 各サービスに存在 + GET /users の lazy-load MissingGreenlet 500 + clause_library RecursionError) のため Error Control (修復 3 回) で Blocked 化。docs PR で CHANGELOG/README/state.json 更新。",
-    "last_stop_at": "2026-08-11T21:20:52.051Z",
+    "last_stop_at": "2026-08-12T10:20:01.656Z",
     "current_session_start_at": "2026-08-12T09:44:53.771Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
@@ -261,6 +261,17 @@
   "learning": {
     "failure_patterns": [
       {
+        "at": "2026-08-12T10:20:02.359Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+      },
+      {
         "at": "2026-08-11T21:20:52.084Z",
         "reasons": [
           "verify_subagent_missing",
@@ -460,17 +471,6 @@
       },
       {
         "at": "2026-08-01T14:07:07.888Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-01T14:05:31.590Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -3611,6 +3611,41 @@
         "backend/app/models/payment_record.py"
       ],
       "truncated": true
+    },
+    {
+      "at": "2026-08-12T10:20:01.657Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-08-12T10:20:02.359Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 16 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/core/config.py",
+        "backend/app/middleware/rate_limit.py",
+        "backend/app/services/notification_service.py",
+        "backend/tests/integration/test_legal_ai_api.py",
+        "backend/tests/unit/test_rate_limit_middleware.py",
+        "frontend/app/(authenticated)/consultations/page-client.tsx",
+        "frontend/app/(authenticated)/contracts/[id]/edit/page.tsx",
+        "frontend/app/(authenticated)/deadlines/page-client.tsx",
+        "frontend/app/(authenticated)/deadlines/page.tsx",
+        "frontend/app/(authenticated)/layout.tsx",
+        "frontend/app/layout.tsx",
+        "frontend/components/contracts/contract-edit-form.tsx",
+        "frontend/components/layout/app-header.tsx",
+        "frontend/components/layout/authenticated-shell.tsx",
+        "frontend/components/settings/users-settings-panel.tsx",
+        "frontend/lib/api/endpoints.ts"
+      ],
+      "truncated": false
     }
   ],
   "compact": {
@@ -4659,9 +4694,23 @@
   "status": {
     "current_phase": "verify",
     "stable": false,
-    "next_action": "Loop 110 (2026-08-12 総合評価・改善): 契約編集・法務相談RAG・期限実データ・アプリ層レート制限・evidence API契約修正・ユーザー/通知実API・モバイル/PWA・ADRを実装。PR 作成後 CI 全ジョブ確認。本番ゲート #23/#24/#50 は従来どおり人間承認待ち。"
+    "next_action": "Loop 111 (2026-08-12 フォローアップ): PR #84 マージ済み。#23/#24/#50 に承認依頼を投稿。申請・建設業法チェック・レポートを実 API 化し、契約種別マスタ統合（migration 008・正規化）を実装。PR 作成後 CI 全ジョブ確認。パイロット展開は docs/PILOT_DEPLOYMENT_PLAN_2026-08-12.md の人間ゲート待ち。"
   },
   "history": [
+    {
+      "loop": 111,
+      "date": "2026-08-12",
+      "name": "フォローアップ: 残モック 3 画面実 API 化 + 契約種別マスタ統合 + 承認依頼",
+      "summary": "PR #84 を main へマージ。承認依頼を #23/#24/#50 に投稿（パイロット計画 docs/PILOT_DEPLOYMENT_PLAN_2026-08-12.md 参照）。契約申請・稟議（GET /workflows/applications 新設）、建設業法務チェック（compliance API 接続）、レポート・分析（dashboard/risks/compliance 実データ）を実装。契約種別を正準値（工事請負契約等）へ統一し、旧名称を API 境界で正規化（migration 008）。",
+      "verification": "backend pytest 1108 passed / 2 skipped（RLS は PG 限定）、ruff/mypy clean、frontend lint/typecheck clean、Jest 43 passed、alembic roundtrip（008 含む）passed。",
+      "blockers": [
+        "#23 Vault secrets",
+        "#24 CSP enforce",
+        "#50 Cloudflare/Neon production resources",
+        "PITR drill"
+      ],
+      "safety": "No production deploy, secret injection, Cloudflare/Neon mutation, push by session, rebase, merge, tag, release, deployment, billing change, or destructive migration executed."
+    },
     {
       "loop": 110,
       "date": "2026-08-12",

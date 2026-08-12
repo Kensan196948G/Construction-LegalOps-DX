@@ -16,7 +16,7 @@ async def test_contract_lifecycle_post_get_patch_delete(
     # Arrange
     body = {
         "title": "請負契約 - サンプル",
-        "contract_type": "ukeoi",
+        "contract_type": "工事請負契約",
         "counterparty": "サンプル建設株式会社",
         "amount": 12_345_000,
         "department_id": 1,
@@ -57,6 +57,24 @@ async def test_contract_lifecycle_post_get_patch_delete(
     assert r_after.status_code in (404, 410)
 
 
+async def test_create_contract_normalizes_legacy_contract_type(
+    client, auth_headers_legal
+) -> None:
+    """Legacy ``ukeoi`` is normalized to the canonical 工事請負契約 value."""
+    r = await client.post(
+        "/api/v1/contracts",
+        json={
+            "title": "種別正規化テスト契約",
+            "contract_type": "ukeoi",
+            "counterparty": "テスト建設",
+            "department_id": 1,
+        },
+        headers=auth_headers_legal,
+    )
+    assert r.status_code in (200, 201), r.text
+    assert r.json()["contract_type"] == "工事請負契約"
+
+
 async def test_soft_delete_visible_to_auditor(client, auth_headers_admin, auth_headers_legal):
     """Arrange: create + delete. Act: admin reads. Assert: still visible."""
     # Arrange
@@ -64,7 +82,7 @@ async def test_soft_delete_visible_to_auditor(client, auth_headers_admin, auth_h
         "/api/v1/contracts",
         json={
             "title": "監査対象",
-            "contract_type": "itaku",
+            "contract_type": "業務委託契約",
             "counterparty": "X",
             "department_id": 1,
         },
@@ -100,7 +118,7 @@ async def test_submit_contract_moves_draft_to_review(client, auth_headers_legal)
         "/api/v1/contracts",
         json={
             "title": "提出テスト契約",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "提出テスト建設",
             "amount": 4_000_000,
             "department_id": 1,
@@ -128,7 +146,7 @@ async def test_submit_contract_rejects_second_submit(client, auth_headers_legal)
         "/api/v1/contracts",
         json={
             "title": "二重提出テスト契約",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "二重提出テスト建設",
             "department_id": 1,
         },
@@ -150,7 +168,7 @@ async def test_contract_versions_returns_current_snapshot(client, auth_headers_l
         "/api/v1/contracts",
         json={
             "title": "バージョン履歴テスト契約",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "履歴テスト建設",
             "department_id": 1,
         },
@@ -177,7 +195,7 @@ async def test_contract_clauses_returns_db_rows(client, db_session, auth_headers
         "/api/v1/contracts",
         json={
             "title": "条項一覧テスト契約",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "条項テスト建設",
             "department_id": 1,
         },

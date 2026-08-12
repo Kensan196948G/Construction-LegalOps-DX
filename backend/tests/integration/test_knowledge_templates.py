@@ -18,7 +18,7 @@ from __future__ import annotations
 
 _CONTRACT_BODY = {
     "title": "知識・テンプレート テスト工事請負契約",
-    "contract_type": "ukeoi",
+    "contract_type": "工事請負契約",
     "counterparty": "サンプル建設株式会社",
     "department_id": 1,
 }
@@ -88,7 +88,7 @@ async def test_knowledge_create_article(client, auth_headers_admin):
         "title": "建設業法 第19条 書面要件 解説",
         "body": "建設業法第19条は、請負契約の書面化を義務付けています。",
         "tags": ["建設業法", "契約書面"],
-        "contract_type": "請負",
+        "contract_type": "工事請負契約",
     }
     r = await client.post("/api/v1/knowledge", json=payload, headers=auth_headers_admin)
     assert r.status_code == 201

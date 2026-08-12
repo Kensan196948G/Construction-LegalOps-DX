@@ -21,6 +21,7 @@ from app.deps import CurrentUser, get_current_user, require_role
 from app.schemas.common import Page
 from app.schemas.workflow import (
     WorkflowActionRequest,
+    WorkflowApplicationOut,
     WorkflowDefinitionCreate,
     WorkflowDefinitionOut,
     WorkflowInstanceOut,
@@ -30,6 +31,32 @@ from app.schemas.workflow import (
 from app.services import audit_service, workflow_service
 
 router = APIRouter(tags=["workflows"])
+
+
+@router.get(
+    "/workflows/applications",
+    response_model=Page[WorkflowApplicationOut],
+    summary="稟議一覧（承認ワークフロー結合ビュー）",
+    description=(
+        "契約に紐づく workflow_step を稟議として一覧表示する。"
+        " admin/legal/auditor/reviewer/approver は全件、それ以外は自身が起案した契約のみ。"
+    ),
+)
+async def list_applications(
+    status_: str | None = Query(default=None, alias="status"),
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=20, ge=1, le=200),
+    session: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> Page[WorkflowApplicationOut]:
+    items, total = await workflow_service.list_applications(
+        session,
+        viewer=current_user,
+        status=status_,
+        page=page,
+        size=size,
+    )
+    return Page[WorkflowApplicationOut](items=items, total=total, page=page, size=size)
 
 
 @router.get(
