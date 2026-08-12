@@ -266,9 +266,20 @@ frontend:
   npm run lint                          → No ESLint warnings or errors
   npm run typecheck                     → clean
   npm test -- --runInBand               → 7 suites / 43 passed
+CI（PR #84）:
+  Backend (pytest / ruff / mypy)        → pass
+  Backend (pytest / PostgreSQL 16)      → pass
+  Backend (alembic roundtrip / PG 16)   → pass
+  Frontend (eslint / tsc / jest)        → pass
+  E2E (Playwright smoke)                → pass
+  Docker build                          → pass
+  Security (bandit / trivy)             → pass
+  CodeRabbit                            → review in progress（外部）
 ```
 
-> ⚠️ 全件 pytest で Cloudflare Access 認証の 2 件がテスト順序依存で失敗する事象を検出し、テスト環境ではレート制限を自動無効化して解決。再実行で全 green を確認する（下記 Verify）。
+> ⚠️ 全件 pytest で Cloudflare Access 認証の 2 件がテスト順序依存で 429 になる事象を検出し、
+> レート制限を「本番常時有効・開発/テストは RATE_LIMIT_ENABLED 明示時のみ有効」に変更して解決。
+> ローカル `next build` は実行環境の WebAssembly メモリ上限で OOM するため、Docker build を CI で検証した（pass）。
 
 ---
 
@@ -393,7 +404,7 @@ e-BISC/GECS 連携 / 施工体制台帳+社会保険確認 / 帳票出力（履�
 
 - **branch**: `feat/evaluation-improvements-20260812`
 - **commit / push / PR**: commit `6ec22d9` を push 済み。**PR #84** を作成済み（OPEN / MERGEABLE）
-- **CI**: ローカル相当ゲート（ruff/mypy/pytest/Jest/typecheck/lint）は green。PR #84 の GitHub Actions 7 ジョブを確認中
+- **CI**: PR #84 の GitHub Actions **全 7 ジョブ PASS**（backend / backend-PG / migrations / frontend / E2E / Docker build / security）。CodeRabbit はレビュー中
 - **デプロイ**: 本セッションでは実施しない（人間ゲート #23/#24/#50 対象）
 
 ### 10.8 残課題

@@ -4667,7 +4667,7 @@
       "date": "2026-08-12",
       "name": "総合評価・改善（18次元再評価・代替率65%・条件付き継続）",
       "summary": "前回評価（75.2・61%）を追試し、重大/高優先の改善を実装: 契約編集フォーム（スタブ解消）、法務相談の一次情報RAG化（疑似応答廃止）、期限管理の契約実データ化、アプリ層レート制限（ASGIミドルウェア）、evidence API契約のGET統一、ユーザー/通知の実API化、モバイルナビ+PWA manifest、ADR 6件、api_design修正。評価書 docs/EVALUATION_IMPROVEMENT_REPORT_2026-08-12.md を作成。",
-      "verification": "backend pytest 1091 passed / 2 skipped（改善後）、rate limit unit 5 passed、legal-ai API integration 3 passed、ruff/mypy clean、frontend lint/typecheck clean、Jest 43 passed。PR #84 作成・CI 確認中。",
+      "verification": "backend pytest 1091 passed / 2 skipped（改善後）、rate limit unit 5 passed、legal-ai API integration 3 passed、ruff/mypy clean、frontend lint/typecheck clean、Jest 43 passed。PR #84 は GitHub Actions 全 7 ジョブ PASS（CodeRabbit はレビュー中）。",
       "blockers": [
         "#23 Vault secrets",
         "#24 CSP enforce",
