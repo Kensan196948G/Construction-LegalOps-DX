@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-08-12: 本番ゲート準備 Loop 112)
+
+- **🧩 PR #85 マージ**（Loop 111 の実装を main へ反映）
+- **🛡️ CSP enforce 適用ヘルパー**: `scripts/apply_csp_enforce.sh`（Report-Only → enforce 置換・nginx -t 検証・冪等）と
+  `scripts/verify_csp_enforce.sh`（適用状態検証）を追加（#24 の人間実行を 1 コマンド化）
+- **🔐 Vault 秘密情報投入ランブック**: `docs/VAULT_SECRETS_RUNBOOK.md`（HashiCorp / Azure Key Vault・投入対象・完了条件・ロールバック）
+- **💾 PITR ドリル手順書**: `docs/PITR_DRILL_RUNBOOK.md`（Neon PITR 手順 + ローカル論理バックアップ復旧ドリル）
+- **👥 Entra ID パイロットグループ作成手順書**: `docs/ENTRA_PILOT_GROUPS_RUNBOOK.md`（Graph PowerShell・ロール割当・検証）
+- **🧪 パイロットスモークテストチェックリスト**: `docs/PILOT_SMOKE_TEST_CHECKLIST.md`（11 項目・2 週間スケジュール・KPI）
+- **🐛 backup_db.sh 修正**: 復旧時の alembic 実行を backend ディレクトリ + PYTHONPATH 設定で解決
+  （ローカル復旧ドリルで `ModuleNotFoundError: No module named 'app'` を検出して修正）
+- **🧪 検証**: ローカル PostgreSQL 16 でバックアップ→DROP→リストア→データ検証→migration 001→008 適用を成功。
+  verify_backup_restore_docs.sh 36 passed。
+
 ### Added / Changed (2026-08-12: フォローアップ実装 Loop 111)
 
 - **📝 契約申請・稟議画面を実データ化**: `GET /workflows/applications` を新設し、

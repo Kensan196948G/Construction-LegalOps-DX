@@ -424,9 +424,9 @@ e-BISC/GECS 連携 / 施工体制台帳+社会保険確認 / 帳票出力（履�
 
 ### 10.7 commit・PR・CI・デプロイ状況
 
-- **branch**: `feat/evaluation-improvements-20260812`（Loop 110・**PR #84 マージ済み**）→ `feat/post-evaluation-followups-20260812`（Loop 111）
-- **commit / push / PR**: PR #84 は 2026-08-12 にマージ（main `98bbc19`）。Loop 111 は commit `397a44f` を push し **PR #85** を作成
-- **CI**: PR #85 の GitHub Actions **全 7 ジョブ PASS**（backend / backend-PG / migrations / frontend / E2E / Docker build / security）+ CodeRabbit pass。マージは人間承認待ち
+- **branch**: Loop 110（PR #84）→ Loop 111（PR #85）→ Loop 112（本番ゲート準備）
+- **commit / push / PR**: PR #84（main `98bbc19`）・**PR #85（main `b61e157`）ともマージ済み**。Loop 112 は CSP enforce ヘルパー・Vault/PITR/Entra/スモーク手順書・backup_db.sh 修正を PR 予定
+- **CI**: PR #84・#85 とも GitHub Actions **全 7 ジョブ PASS** + CodeRabbit pass。Loop 112 の PR で同様に確認予定
 - **デプロイ**: 本セッションでは実施しない（人間ゲート #23/#24/#50 対象）
 
 ### 10.8 残課題

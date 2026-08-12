@@ -3,6 +3,17 @@
 > 本計画は「条件付き利用可」の本番導入を、法務部門 5〜10 名のパイロットから段階的に進めるための手順書です。
 > **本番デプロイ・秘密情報投入・DNS/Cloudflare/Neon 変更は人間が実行**し、本計画はその準備と判定基準を定めます。
 
+## 📎 関連手順書（2026-08-12 整備）
+
+| 前提 | 手順書 |
+| --- | --- |
+| P-2 | [Vault 秘密情報投入ランブック](VAULT_SECRETS_RUNBOOK.md)（#23） |
+| P-3 | `scripts/apply_csp_enforce.sh`（#24・config 適用と検証） |
+| P-4 | `docs/CLOUDFLARE_NEON_MIGRATION_PLAN.md`（#50・人間判断 4 点） |
+| P-5 | [パイロット開始前スモークテストチェックリスト](PILOT_SMOKE_TEST_CHECKLIST.md) |
+| P-6 | [PITR / バックアップ復旧ドリル手順書](PITR_DRILL_RUNBOOK.md) |
+| P-7 | [Entra ID パイロットグループ作成手順書](ENTRA_PILOT_GROUPS_RUNBOOK.md) |
+
 ---
 
 ## 📋 1. 目的と対象

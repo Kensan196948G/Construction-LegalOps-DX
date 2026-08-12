@@ -20,6 +20,8 @@
 # ============================================================
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 # ---- Configuration ----
 PGUSER="${POSTGRES_USER:-legalops}"
 PGDB="${POSTGRES_DB:-legalops}"
@@ -105,7 +107,10 @@ do_restore() {
     gunzip -c "$RESTORE_FILE" | psql -d "$PGDB"
 
     log "Restore complete. Running migrations..."
-    alembic -c backend/alembic.ini upgrade head
+    (
+        cd "${REPO_ROOT}/backend"
+        PYTHONPATH="${REPO_ROOT}/backend" alembic -c alembic.ini upgrade head
+    )
 
     log "Restore finished successfully."
 }
