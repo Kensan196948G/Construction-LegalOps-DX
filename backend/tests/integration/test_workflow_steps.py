@@ -29,7 +29,7 @@ def _unique_code(prefix: str = "wf_steps_test") -> str:
 
 _CONTRACT_BODY = {
     "title": "ワークフローステップテスト契約",
-    "contract_type": "ukeoi",
+    "contract_type": "工事請負契約",
     "counterparty": "ステップテスト建設",
     "department_id": 1,
 }
@@ -183,7 +183,7 @@ async def test_create_workflow_definition_success(client, auth_headers_admin):
             "code": code,
             "name": "作成テストフロー",
             "description": "テスト用の承認フロー",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "is_active": True,
             "definition": {
                 "steps": [

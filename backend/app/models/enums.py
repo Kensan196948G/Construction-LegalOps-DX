@@ -33,15 +33,30 @@ class ContractType(StrEnum):
 
     The DB column is open VARCHAR(64) since organisations may add bespoke
     types, but the values below cover the canonical taxonomy.
+
+    2026-08-12: UI 表示と API 保存値を統一するため、正準値（表示名）を追加した。
+    旧値（UKEOI="請負" 等）は後方互換エイリアスとして維持し、
+    ``app.services.contract_type.normalize`` で正準値へ正規化する。
     """
 
+    # --- 正準値（UI 表示と一致） ---
+    KOUJI_UKEOI = "工事請負契約"
+    GYOMU_ITAKU = "業務委託契約"
+    SHIZAI_KOUNYUU = "資材購入契約"
+    SHITAKE = "下請契約"
+    SEKKEI_KANRI = "設計監理契約"
+    CHINSHAKU = "賃貸借契約"
+    NDA = "秘密保持契約"
+    BAIBAI = "売買契約"
+    OBOEGAKI = "覚書"
+    JV = "JV"
+    OTHER = "その他"
+
+    # --- 後方互換エイリアス（新規作成は不可・正規化で正準値へ） ---
     UKEOI = "請負"
     ITAKU = "委託"
-    JV = "JV"
-    CHINSHAKU = "賃借"
-    NDA = "秘密保持"
-    BAIBAI = "売買"
-    OTHER = "その他"
+    CHINSHAKU_LEGACY = "賃借"
+    NDA_LEGACY = "秘密保持"
 
 
 class ContractStatus(StrEnum):

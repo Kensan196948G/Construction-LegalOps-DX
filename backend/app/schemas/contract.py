@@ -12,7 +12,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Any
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.enums import Confidentiality, ContractStatus
 
@@ -62,6 +62,15 @@ class ContractBase(BaseModel):
     ethical_wall: bool = False
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("contract_type")
+    @classmethod
+    def _normalize_contract_type(cls, value: str) -> str:
+        from app.services.contract_type import normalize_contract_type
+
+        normalized = normalize_contract_type(value)
+        assert normalized is not None
+        return normalized
 
     @model_validator(mode="after")
     def _check_date_order(self) -> ContractBase:
@@ -128,6 +137,13 @@ class ContractUpdate(BaseModel):
     version: int = Field(..., description="Optimistic-lock token (current row version)")
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @field_validator("contract_type")
+    @classmethod
+    def _normalize_contract_type(cls, value: str | None) -> str | None:
+        from app.services.contract_type import normalize_contract_type
+
+        return normalize_contract_type(value)
 
     @model_validator(mode="after")
     def _check_date_order(self) -> ContractUpdate:

@@ -27,6 +27,7 @@ from app.schemas.knowledge import (
     KnowledgeSearchResult,
     SimilarContractOut,
 )
+from app.services.contract_type import normalize_contract_type
 from app.services.similarity_search import CorpusEntry, SimilaritySearchService
 
 # ---------------------------------------------------------------------------
@@ -303,7 +304,11 @@ async def create_article(
     article = KnowledgeArticle(
         title=data.title,
         body=data.body,
-        contract_type=data.contract_type,
+        contract_type=(
+            normalize_contract_type(data.contract_type)
+            if data.contract_type is not None
+            else None
+        ),
         tags=data.tags,
         citations=data.citations,
         author_id=creator.db_id,

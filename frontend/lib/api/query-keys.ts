@@ -57,6 +57,7 @@ export const queryKeys = {
     details: () => ["workflows", "detail"] as const,
     detail: (id: number | string) => ["workflows", "detail", id] as const,
     step: (stepId: number | string) => ["workflows", "step", stepId] as const,
+    applications: (params?: unknown) => ["workflows", "applications", params] as const,
   },
 
   risks: {

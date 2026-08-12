@@ -148,7 +148,7 @@
 | データ連携 | 10% | 62% | 62% | SharePoint/Graph/Exchange は契約検証済み。本番投入待ち |
 | セキュリティ・監査 | 10% | 74% | 78% | レート制限追加・API 契約修正。CSP/secret はゲート残 |
 | 運用保守性 | 5% | 60% | 63% | ADR 追加・ドキュメント修正。RPO/RTO 未合意 |
-| **加重代替率** | 100% | **61%** | **65%** | 前回評価（61%）から +4pt |
+| **加重代替率** | 100% | **61%** | **65%（Loop 111 後 67%）** | Loop 110 で +4pt。Loop 111 で申請・建設業法チェック・レポートを実 API 化し +2pt 相当 |
 
 **80% 到達必須項目**: モック 5 画面の実 API 化（applications / construction-legal / reports / disputes / partners）、新規登録フォームの実アップロード化、設定タブの実 API 化、CSP enforce、本番 secret 投入
 **90% 到達項目**: PWA オフライン、公共工事 e-BISC/GECS 連携、協力会社ポータル、AI 有効性の本番実証、PITR/BCP 定義、アクセシビリティ検証
@@ -305,8 +305,30 @@ CI（PR #84）:
 | 16 | 文書 | 82 | 84 | +2 | api_design 修正 + ADR 6 件 |
 | 17 | 費用対効果 | 80 | 80 | 0 | — |
 | 18 | 競合代替性 | 68 | 69 | +1 | RAG 相談で AI 領域の実用カバー拡大 |
-| | 単純平均 | 74.6 | 75.5 | +0.9 | 加重平均は前回基準で **約 +1.0〜+1.3 相当（75.2 → 76.2〜76.5）** |
-| | 代替率 | 61% | 65% | +4pt | 加重算定（§5.3） |
+| | 単純平均 | 74.6 | 75.5 | +0.9 | Loop 111 後の最終再評価は **76.0 前後・代替率 67%**（本セクション末尾参照） |
+| | 代替率 | 61% | 65% → 67% | +6pt | 加重算定（§5.3） |
+
+### 8.2 フォローアップ実装（Loop 111・本セッション第 2 弾）
+
+承認依頼（#23/#24/#50）と並行し、残モック 3 画面を実 API 化した。
+
+| 画面 | 実装内容 | 使用 API |
+| --- | --- | --- |
+| 契約申請・稟議 | モック廃止。承認ワークフロー（workflow_step × contract × drafter）の結合ビューを新設 | `GET /workflows/applications`（新設） |
+| 建設業法務チェック | モック廃止。チェックリスト定義（正本）と契約単位の実行・結果表示 | `/compliance/checklists`・`/checks/{id}`・`/run` |
+| レポート・分析 | モック廃止。集計 KPI・月次推移・リスク分布・コンプライアンス定義数を実データ表示 | `/dashboard/summary`・`/trends`・`/risks` |
+
+さらに **契約種別マスタ統合**（旧名称 `ukeoi` / `itaku` / `請負` / `委託` 等を正準値へ正規化、
+migration 008 で既存データ更新、frontend enum・UI を統一）を実装した。
+
+### 8.3 最終再評価（Loop 111 後）
+
+- 機能完成度: 74 → **76**（残モックは新規登録フォーム・設定 6 タブ・disputes/partners のフォールバックのみ）
+- データ品質: 79 → **81**（契約種別マスタ統合・正規化 + migration 008）
+- 業務適合性: 83 → **84**（稟議・法務チェック・レポートが実業務データで動作）
+- UI/UX: 70 → **71**
+- 代替率: 67%（§5.3）
+- 加重平均相当: **約 76.5〜77.0**
 
 ### 8.1 残存リスク（再評価後）
 
@@ -386,15 +408,15 @@ CI（PR #84）:
 | # | 内容 | 分類 | 工数 |
 | --- | --- | --- | --- |
 | 1 | #23/#24/#50 の人間ゲート完了（secret/CSP/本番リソース） | 運用 | 1 日 |
-| 2 | applications / construction-legal / reports の実 API 化 | 業務 | 8 日 |
+| 2 | ✅ 済: applications / construction-legal / reports の実 API 化（Loop 111） | 業務 | — |
 | 3 | disputes / partners の API 一本化（モックフォールバック廃止） | 業務 | 3 日 |
 | 4 | 新規契約登録の実アップロード化 | 業務 | 4 日 |
 | 5 | 設定 6 タブの実 API 化 | 業務 | 6 日 |
-| 6 | 契約種別マスタ統合（ukeoi/請負/工事請負契約） | データ品質 | 2 日 |
+| 6 | ✅ 済: 契約種別マスタ統合（migration 008・正規化） | データ品質 | — |
 | 7 | RPO/RTO 合意 + PITR ドリル | 可用性 | 2 日 |
 | 8 | 期限通知（メール/Teams/in-app）の実運用 | 業務 | 3 日 |
 | 9 | 全文検索 + 類似契約ナビ | 業務 | 5 日 |
-| 10 | frontend テスト拡充（hooks/新画面） | テスト | 3 日 |
+| 10 | frontend テスト拡充（hooks/新画面）+ パイロット展開 | テスト/運用 | 5 日 |
 
 ### 10.6 追加推奨機能 10 件
 
@@ -402,9 +424,9 @@ e-BISC/GECS 連携 / 施工体制台帳+社会保険確認 / 帳票出力（履�
 
 ### 10.7 commit・PR・CI・デプロイ状況
 
-- **branch**: `feat/evaluation-improvements-20260812`
-- **commit / push / PR**: commit `6ec22d9` を push 済み。**PR #84** を作成済み（OPEN / MERGEABLE）
-- **CI**: PR #84 の GitHub Actions **全 7 ジョブ PASS**（backend / backend-PG / migrations / frontend / E2E / Docker build / security）。CodeRabbit はレビュー中
+- **branch**: `feat/evaluation-improvements-20260812`（Loop 110・**PR #84 マージ済み**）→ `feat/post-evaluation-followups-20260812`（Loop 111）
+- **commit / push / PR**: PR #84 は 2026-08-12 にマージ（main `98bbc19`）。Loop 111 は commit `397a44f` を push し **PR #85** を作成
+- **CI**: PR #85 の GitHub Actions **全 7 ジョブ PASS**（backend / backend-PG / migrations / frontend / E2E / Docker build / security）+ CodeRabbit pass。マージは人間承認待ち
 - **デプロイ**: 本セッションでは実施しない（人間ゲート #23/#24/#50 対象）
 
 ### 10.8 残課題

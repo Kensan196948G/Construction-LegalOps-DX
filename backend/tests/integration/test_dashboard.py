@@ -31,7 +31,7 @@ async def test_dashboard_counts_match_db(client, auth_headers_admin, auth_header
             "/api/v1/contracts",
             json={
                 "title": f"集計 {i}",
-                "contract_type": "ukeoi",
+                "contract_type": "工事請負契約",
                 "counterparty": "Z建設",
                 "department_id": 1,
             },

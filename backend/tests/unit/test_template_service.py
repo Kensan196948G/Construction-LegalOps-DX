@@ -88,17 +88,21 @@ class TestListTemplates:
     async def test_filter_by_contract_type(self) -> None:
         """list_templates() filters by contract_type exactly."""
         session = _make_session()
-        items, total = await template_service.list_templates(session, contract_type="請負")
-        assert total == 2
-        assert all(t.contract_type == "請負" for t in items)
+        items, total = await template_service.list_templates(
+            session, contract_type="工事請負契約"
+        )
+        assert total == 1
+        assert all(t.contract_type == "工事請負契約" for t in items)
 
     @pytest.mark.asyncio
     async def test_filter_by_contract_type_itaku(self) -> None:
-        """list_templates() returns only 委託 templates when filtered."""
+        """list_templates() returns only 業務委託 templates when filtered."""
         session = _make_session()
-        items, total = await template_service.list_templates(session, contract_type="委託")
+        items, total = await template_service.list_templates(
+            session, contract_type="業務委託契約"
+        )
         assert total == 1
-        assert items[0].contract_type == "委託"
+        assert items[0].contract_type == "業務委託契約"
 
     @pytest.mark.asyncio
     async def test_filter_by_is_active_true(self) -> None:
@@ -215,7 +219,7 @@ class TestCreateTemplate:
             obj.id = 50  # type: ignore[attr-defined]
             obj.code = "TMPL-NEW-001"  # type: ignore[attr-defined]
             obj.name = "新規テンプレート"  # type: ignore[attr-defined]
-            obj.contract_type = "請負"  # type: ignore[attr-defined]
+            obj.contract_type = "工事請負契約"  # type: ignore[attr-defined]
             obj.description = None  # type: ignore[attr-defined]
             obj.body = "本文"  # type: ignore[attr-defined]
             obj.is_active = True  # type: ignore[attr-defined]
@@ -227,7 +231,7 @@ class TestCreateTemplate:
         data = TemplateCreate(
             code="TMPL-NEW-001",
             name="新規テンプレート",
-            contract_type="請負",
+            contract_type="工事請負契約",
             body="本文",
         )
         result = await template_service.create_template(session, data=data, creator=creator)
@@ -253,7 +257,7 @@ class TestCreateTemplate:
         data = TemplateCreate(
             code="TMPL-BODY-001",
             name="本文確認",
-            contract_type="委託",
+            contract_type="業務委託契約",
             description="説明",
             body="テンプレート本文",
             is_active=False,

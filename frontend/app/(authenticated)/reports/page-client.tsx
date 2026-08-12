@@ -1,149 +1,194 @@
 "use client";
 
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  FileSearch,
-  ShieldAlert,
-  TrendingUp,
-  CheckCircle2,
-  AlertTriangle,
-  XCircle,
-} from "lucide-react";
+import { AlertCircle, FileText, FileSearch, ShieldAlert, Clock, ListTodo } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDashboardSummary, useDashboardTrends } from "@/hooks/use-dashboard";
+import { useRisks } from "@/hooks/use-risks";
+import { useComplianceChecklists } from "@/hooks/use-compliance";
 
-const QUARTERLY_STATS = {
-  totalContracts: 22,
-  newContracts: 8,
-  completedReviews: 12,
-  avgReviewDays: 2.3,
-  highRiskResolved: 3,
-  complianceRate: 94,
+const SEVERITY_LABELS: Record<string, string> = {
+  low: "低リスク",
+  medium: "中リスク",
+  high: "高リスク",
+  critical: "重大リスク",
 };
 
-const MONTHLY_REVIEWS = [
-  { month: "1月", count: 3 },
-  { month: "2月", count: 5 },
-  { month: "3月", count: 4 },
-  { month: "4月", count: 7 },
-  { month: "5月（現在）", count: 2 },
-];
+const SEVERITY_COLORS: Record<string, string> = {
+  low: "bg-emerald-500",
+  medium: "bg-amber-500",
+  high: "bg-orange-500",
+  critical: "bg-red-500",
+};
 
-const RISK_DISTRIBUTION = [
-  { level: "low", label: "低リスク", count: 8, color: "bg-emerald-500" },
-  { level: "medium", label: "中リスク", count: 7, color: "bg-amber-500" },
-  { level: "high", label: "高リスク", count: 5, color: "bg-orange-500" },
-  { level: "critical", label: "重大リスク", count: 2, color: "bg-red-500" },
-];
+const STATUS_LABELS: Record<string, string> = {
+  draft: "下書き",
+  in_review: "審査中",
+  approved: "承認済み",
+  rejected: "却下",
+  canceled: "取消",
+};
 
-const TOP_ISSUES = [
-  { law: "下請法", item: "支払期日（60日ルール）", count: 4, trend: "up" },
-  { law: "建設業法", item: "主任技術者の配置", count: 2, trend: "stable" },
-  { law: "建設業法", item: "一括下請負の禁止", count: 1, trend: "down" },
-  { law: "公共工事入札適正化法", item: "施工体制台帳", count: 3, trend: "up" },
-];
-
-const COMPLIANCE_OVERVIEW = [
-  { status: "compliant", label: "適合", count: 5, icon: CheckCircle2, color: "text-emerald-500" },
-  { status: "warning", label: "要確認", count: 2, icon: AlertTriangle, color: "text-amber-500" },
-  { status: "non_compliant", label: "不適合", count: 1, icon: XCircle, color: "text-destructive" },
-];
-
-function MiniBarChart({ data, maxCount }: { data: typeof MONTHLY_REVIEWS; maxCount: number }) {
+function MiniBarChart({ data }: { data: Array<{ label: string; value: number }> }) {
+  const max = Math.max(1, ...data.map((d) => d.value));
   return (
-    <div className="flex items-end gap-2 h-24">
+    <div className="flex h-24 items-end gap-2">
       {data.map((d) => (
-        <div key={d.month} className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-xs font-medium text-foreground">{d.count}</span>
+        <div key={d.label} className="flex flex-1 flex-col items-center gap-1">
+          <span className="text-xs font-medium text-foreground">{d.value}</span>
           <div
             className="w-full rounded-t bg-primary/80"
-            style={{ height: `${(d.count / maxCount) * 80}px`, minHeight: "4px" }}
+            style={{ height: `${Math.max(4, (d.value / max) * 80)}px` }}
           />
-          <span className="text-[10px] text-muted-foreground text-center leading-tight">{d.month}</span>
+          <span className="text-[10px] text-muted-foreground text-center leading-tight">
+            {d.label}
+          </span>
         </div>
       ))}
     </div>
   );
 }
 
-function RiskBar({ level, count, total, color }: { level: string; label: string; count: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  return (
-    <div className="flex items-center gap-3">
-      <span className="w-16 text-xs text-muted-foreground">{level}</span>
-      <div className="flex-1 rounded-full bg-muted h-2">
-        <div className={`${color} h-2 rounded-full`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="w-8 text-right text-xs font-medium">{count}</span>
-    </div>
-  );
-}
-
 export default function ReportsPage() {
-  const totalRisk = RISK_DISTRIBUTION.reduce((s, d) => s + d.count, 0);
-  const maxReviews = Math.max(...MONTHLY_REVIEWS.map((m) => m.count));
+  const summary = useDashboardSummary();
+  const trends = useDashboardTrends({ interval: "month", weeks: 6 });
+  const risks = useRisks({ page: 1, page_size: 200 });
+  const checklists = useComplianceChecklists();
+
+  const s = summary.data;
+
+  const trendData = useMemo(() => {
+    const series = trends.data?.series;
+    if (!series) return [];
+    const key = series.reviews ? "reviews" : Object.keys(series)[0];
+    if (!key) return [];
+    return (series[key] ?? []).map((p) => ({
+      label: p.bucket.slice(5).replace("-", "/"),
+      value: p.value,
+    }));
+  }, [trends.data]);
+
+  const riskDistribution = useMemo(() => {
+    const counts: Record<string, number> = { low: 0, medium: 0, high: 0, critical: 0 };
+    for (const r of risks.data?.items ?? []) {
+      counts[r.severity] = (counts[r.severity] ?? 0) + 1;
+    }
+    return counts;
+  }, [risks.data]);
+
+  const statusDistribution = useMemo(() => {
+    const entries = Object.entries(s?.contracts_by_status ?? {});
+    return entries.map(([status, count]) => ({
+      status,
+      label: STATUS_LABELS[status] ?? status,
+      count,
+    }));
+  }, [s]);
+
+  const checklistCounts = useMemo(() => {
+    const list = checklists.data ?? [];
+    return {
+      total: list.length,
+      construction_law: list.filter((c) => c.category === "construction_law").length,
+      subcontract_act: list.filter((c) => c.category === "subcontract_act").length,
+      others: list.filter((c) => c.category === "others").length,
+    };
+  }, [checklists.data]);
+
+  const kpis = [
+    { icon: FileText, label: "未レビュー", value: s?.pending_review, unit: "件" },
+    { icon: FileSearch, label: "承認待ち", value: s?.pending_approval, unit: "件" },
+    { icon: Clock, label: "期限切れ", value: s?.overdue, unit: "件" },
+    { icon: ShieldAlert, label: "高リスク", value: s?.high_risk, unit: "件" },
+    { icon: FileSearch, label: "直近完了", value: s?.recent_completed, unit: "件" },
+    { icon: ListTodo, label: "自分宛タスク", value: s?.my_tasks, unit: "件" },
+  ];
 
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-bold text-foreground">レポート・分析</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          2026年度 Q1–Q2（4月〜9月）の法務活動サマリー
+          ダッシュボード集計・リスク・コンプライアンスの実データを表示します
         </p>
       </header>
 
-      {/* KPI Row */}
+      {summary.isError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" aria-hidden="true" />
+          <AlertDescription>
+            レポートデータを取得できませんでした。権限を確認するか、時間をおいて再試行してください。
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        {[
-          { icon: FileText, label: "契約総件数", value: QUARTERLY_STATS.totalContracts, unit: "件" },
-          { icon: FileText, label: "新規契約", value: QUARTERLY_STATS.newContracts, unit: "件" },
-          { icon: FileSearch, label: "完了レビュー", value: QUARTERLY_STATS.completedReviews, unit: "件" },
-          { icon: TrendingUp, label: "平均レビュー日数", value: QUARTERLY_STATS.avgReviewDays, unit: "日" },
-          { icon: ShieldAlert, label: "高リスク解消", value: QUARTERLY_STATS.highRiskResolved, unit: "件" },
-          { icon: CheckCircle2, label: "コンプライアンス率", value: QUARTERLY_STATS.complianceRate, unit: "%" },
-        ].map((kpi) => (
+        {kpis.map((kpi) => (
           <Card key={kpi.label}>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">{kpi.label}</span>
                 <kpi.icon className="h-4 w-4 text-muted-foreground" />
               </div>
-              <p className="mt-2 text-2xl font-bold">
-                {kpi.value}
-                <span className="ml-1 text-sm font-normal text-muted-foreground">{kpi.unit}</span>
-              </p>
+              {summary.isLoading ? (
+                <Skeleton className="mt-2 h-8 w-16" />
+              ) : (
+                <p className="mt-2 text-2xl font-bold">
+                  {kpi.value ?? 0}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">{kpi.unit}</span>
+                </p>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Monthly Reviews Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>月次 AI レビュー件数</CardTitle>
+            <CardTitle>月次レビュー件数推移</CardTitle>
           </CardHeader>
           <CardContent>
-            <MiniBarChart data={MONTHLY_REVIEWS} maxCount={maxReviews} />
+            {trends.isLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : trendData.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                集計データがありません
+              </p>
+            ) : (
+              <MiniBarChart data={trendData} />
+            )}
           </CardContent>
         </Card>
 
-        {/* Risk Distribution */}
         <Card>
           <CardHeader>
             <CardTitle>リスクレベル分布</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {RISK_DISTRIBUTION.map((d) => (
-              <RiskBar
-                key={d.level}
-                level={d.label}
-                label={d.label}
-                count={d.count}
-                total={totalRisk}
-                color={d.color}
-              />
-            ))}
+            {risks.isLoading ? (
+              <Skeleton className="h-24 w-full" />
+            ) : (
+              Object.entries(SEVERITY_LABELS).map(([level, label]) => {
+                const count = riskDistribution[level] ?? 0;
+                const total = Math.max(1, Object.values(riskDistribution).reduce((a, b) => a + b, 0));
+                return (
+                  <div key={level} className="flex items-center gap-3">
+                    <span className="w-20 text-xs text-muted-foreground">{label}</span>
+                    <div className="h-2 flex-1 rounded-full bg-muted">
+                      <div
+                        className={`h-2 rounded-full ${SEVERITY_COLORS[level]}`}
+                        style={{ width: `${Math.round((count / total) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="w-8 text-right text-xs font-medium">{count}</span>
+                  </div>
+                );
+              })
+            )}
             <p className="mt-2 text-xs text-muted-foreground">
               AI リスクスコアは参考値です。最終判断は法務担当者が行います。
             </p>
@@ -152,61 +197,50 @@ export default function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Top Issues */}
         <Card>
           <CardHeader>
-            <CardTitle>頻出法的指摘事項 Top 4</CardTitle>
+            <CardTitle>契約ステータス内訳</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {TOP_ISSUES.map((issue, i) => (
-                <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                  <div>
-                    <p className="text-sm font-medium">{issue.item}</p>
-                    <p className="text-xs text-muted-foreground">{issue.law}</p>
+            {statusDistribution.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                契約データがありません
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {statusDistribution.map((d) => (
+                  <div key={d.status} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                    <span className="text-sm font-medium">{d.label}</span>
+                    <span className="text-sm font-semibold">{d.count} 件</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{issue.count} 件</span>
-                    {issue.trend === "up" && <TrendingUp className="h-4 w-4 text-destructive" />}
-                    {issue.trend === "down" && <TrendingUp className="h-4 w-4 rotate-180 text-emerald-500" />}
-                    {issue.trend === "stable" && <span className="h-4 w-4 text-muted-foreground">→</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Compliance Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>コンプライアンス概況</CardTitle>
+            <CardTitle>コンプライアンスチェック定義</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="mb-4 flex gap-4">
-              {COMPLIANCE_OVERVIEW.map((c) => (
-                <div key={c.status} className="flex-1 text-center">
-                  <c.icon className={`mx-auto h-8 w-8 ${c.color}`} />
-                  <p className="mt-1 text-xl font-bold">{c.count}</p>
-                  <p className="text-xs text-muted-foreground">{c.label}</p>
-                </div>
-              ))}
-            </div>
-            <div className="flex h-4 overflow-hidden rounded-full">
-              {COMPLIANCE_OVERVIEW.map((c) => {
-                const total = COMPLIANCE_OVERVIEW.reduce((s, x) => s + x.count, 0);
-                const pct = (c.count / total) * 100;
-                const bg = c.status === "compliant" ? "bg-emerald-500" : c.status === "warning" ? "bg-amber-400" : "bg-red-500";
-                return <div key={c.status} className={bg} style={{ width: `${pct}%` }} />;
-              })}
-            </div>
-            <div className="mt-2 flex justify-between text-xs text-muted-foreground">
-              <span>不適合 12.5%</span>
-              <span className="font-medium text-emerald-600 dark:text-emerald-400">適合率 62.5%</span>
+              <div className="flex-1 text-center">
+                <p className="text-xl font-bold">{checklistCounts.construction_law}</p>
+                <p className="text-xs text-muted-foreground">建設業法</p>
+              </div>
+              <div className="flex-1 text-center">
+                <p className="text-xl font-bold">{checklistCounts.subcontract_act}</p>
+                <p className="text-xs text-muted-foreground">下請法（取適法）</p>
+              </div>
+              <div className="flex-1 text-center">
+                <p className="text-xl font-bold">{checklistCounts.others}</p>
+                <p className="text-xs text-muted-foreground">その他法令</p>
+              </div>
             </div>
             <div className="mt-4 flex justify-center">
               <Badge variant="outline" className="text-xs">
-                コンプライアンス総合スコア: {QUARTERLY_STATS.complianceRate}%
+                チェックリスト定義総数: {checklistCounts.total} 件
               </Badge>
             </div>
           </CardContent>

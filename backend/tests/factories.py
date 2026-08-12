@@ -98,7 +98,7 @@ class ContractFactory(_BaseFactory):
         model = Contract
 
     title = factory.LazyFunction(lambda: fake.bs() + "業務委託契約書")
-    contract_type = "請負"
+    contract_type = "工事請負契約"
     status = "draft"
     counterparty_name = factory.LazyFunction(lambda: fake.company())
     contract_amount = factory.LazyFunction(

@@ -19,7 +19,7 @@ async def test_audit_log_created_on_contract_create(client, auth_headers_legal, 
         "/api/v1/contracts",
         json={
             "title": "監査テスト",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "監査建設",
             "department_id": 1,
         },
@@ -72,7 +72,7 @@ async def test_hash_chain_is_continuous(client, auth_headers_admin):
             "/api/v1/contracts",
             json={
                 "title": f"連鎖テスト {i}",
-                "contract_type": "ukeoi",
+                "contract_type": "工事請負契約",
                 "counterparty": "Y建設",
                 "department_id": 1,
             },

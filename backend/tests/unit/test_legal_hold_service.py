@@ -30,7 +30,7 @@ async def _seed_contract(db_session) -> int:
         contract_no=f"C-{uuid4().hex[:10]}",
         title="テスト契約",
         counterparty="株式会社テスト",
-        contract_type="請負",
+        contract_type="工事請負契約",
         department_id=dept.id,
         drafter_id=user.id,
     )

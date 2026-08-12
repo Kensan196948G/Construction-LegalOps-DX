@@ -26,6 +26,7 @@ from app.schemas.template import (
     ClauseLibraryUpdate,
     TemplateCreate,
 )
+from app.services.contract_type import normalize_contract_type
 
 # ---------------------------------------------------------------------------
 # Baseline timestamp used for all seeded records.
@@ -94,7 +95,7 @@ _TEMPLATES: list[SimpleNamespace] = [
         id=1,
         code="TMPL-UKEOI-001",
         name="工事請負契約書（標準）",
-        contract_type="請負",
+        contract_type="工事請負契約",
         description="建設業法第18条に基づく工事請負契約の標準ひな形。",
         body=(
             "工事請負契約書\n\n"
@@ -109,7 +110,7 @@ _TEMPLATES: list[SimpleNamespace] = [
         id=2,
         code="TMPL-SHITAUKE-001",
         name="下請契約書（専門工事）",
-        contract_type="請負",
+        contract_type="下請契約",
         description="専門工事業者との下請契約ひな形。建設業法第24条の2以下の規定を考慮済み。",
         body=(
             "下請契約書\n\n"
@@ -124,7 +125,7 @@ _TEMPLATES: list[SimpleNamespace] = [
         id=3,
         code="TMPL-ITAKU-001",
         name="業務委託契約書（設計業務）",
-        contract_type="委託",
+        contract_type="業務委託契約",
         description="建築設計・監理業務を委託するためのひな形。",
         body=(
             "業務委託契約書\n\n"
@@ -138,7 +139,7 @@ _TEMPLATES: list[SimpleNamespace] = [
         id=4,
         code="TMPL-NDA-001",
         name="秘密保持契約書",
-        contract_type="秘密保持",
+        contract_type="秘密保持契約",
         description="入札前・設計前の機密情報開示に際して締結する NDA ひな形。",
         body=(
             "秘密保持契約書\n\n"
@@ -383,7 +384,7 @@ async def create_template(
     template = ContractTemplate(
         code=data.code,
         name=data.name,
-        contract_type=data.contract_type,
+        contract_type=normalize_contract_type(data.contract_type) or data.contract_type,
         description=data.description,
         body=data.body,
         is_active=data.is_active,

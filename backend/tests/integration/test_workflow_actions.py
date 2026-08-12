@@ -56,7 +56,7 @@ async def _create_contract(client, headers) -> int:
         "/api/v1/contracts",
         json={
             "title": "ワークフロー対象",
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "ABC建設",
             "department_id": 1,
         },

@@ -102,7 +102,7 @@ async def test_contract_drafter_id_is_provisioned_users_id(client: Any, test_eng
         headers=headers,
         json={
             "title": title,
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "JIT建設",
             "department_id": 1,
         },
@@ -137,7 +137,7 @@ async def test_drafter_sees_own_contract_in_scoped_list(client: Any) -> None:
         headers=headers,
         json={
             "title": title,
-            "contract_type": "ukeoi",
+            "contract_type": "工事請負契約",
             "counterparty": "JITスコープ建設",
             "department_id": 1,
         },
