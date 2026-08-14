@@ -60,7 +60,7 @@ services:
       APP_ENV: staging
       AUTH_DEV_BYPASS: "true"
       DEV_USER_ID: 00000000-0000-0000-0000-000000000001
-      DEV_USER_EMAIL: demo@legalops-mvp.example.invalid
+      DEV_USER_EMAIL: demo@legalops-mvp.example.com
       DEV_USER_ROLE: admin
       JWT_SECRET: ${MVP_JWT_SECRET:-mvp-demo-jwt-secret-not-for-production}
       JWT_ALGORITHM: HS256
@@ -111,7 +111,7 @@ services:
       APP_ENV: staging
       AUTH_DEV_BYPASS: "true"
       DEV_USER_ID: 00000000-0000-0000-0000-000000000001
-      DEV_USER_EMAIL: demo@legalops-mvp.example.invalid
+      DEV_USER_EMAIL: demo@legalops-mvp.example.com
       DEV_USER_ROLE: admin
       JWT_SECRET: ${MVP_JWT_SECRET:-mvp-demo-jwt-secret-not-for-production}
       DB_URL: postgresql+asyncpg://legalops:legalops_mvp@postgres:5432/legalops

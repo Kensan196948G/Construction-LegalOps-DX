@@ -184,6 +184,7 @@ class Settings(BaseSettings):
         default="https://api.perplexity.ai", alias="PERPLEXITY_BASE_URL"
     )
     perplexity_timeout_seconds: int = Field(default=45, alias="PERPLEXITY_TIMEOUT_SECONDS")
+    deepseek_timeout_seconds: int = Field(default=45, alias="DEEPSEEK_TIMEOUT_SECONDS")
 
     # ----- Settings-at-rest encryption -----
     # Fernet key used to encrypt provider API keys before they touch the DB.

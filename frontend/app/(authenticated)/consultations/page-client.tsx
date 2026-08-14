@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -113,6 +113,12 @@ export default function ConsultationsPage() {
       setLoading(false);
     }
   };
+
+  // デモ初期表示: 最初の相談例を自動検索し、ダミーデータを画面に即時表示する。
+  useEffect(() => {
+    void search(SUGGESTED_QUESTIONS[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const hitCountLabel = useMemo(() => {
     if (!result) return null;

@@ -59,7 +59,7 @@ from app.schemas.settings import (
 logger = logging.getLogger(__name__)
 
 # Providers the panel always renders (a stable two-row UI), in display order.
-_PROVIDERS: Final[tuple[AiProvider, ...]] = ("perplexity", "claude")
+_PROVIDERS: Final[tuple[AiProvider, ...]] = ("perplexity", "deepseek")
 
 # Claude API key is unavailable until this date; tests return "unavailable".
 _CLAUDE_AVAILABLE_FROM: Final[date] = date(2026, 7, 1)
@@ -68,11 +68,13 @@ _CLAUDE_AVAILABLE_FROM: Final[date] = date(2026, 7, 1)
 _MASK_VISIBLE: Final[int] = 4
 
 # SSRF guard: the Perplexity probe carries a Bearer key, so it may only ever be
-# sent to an explicitly trusted host over TLS. ``perplexity_base_url`` is an
-# operator-configurable setting, so we pin the destination here rather than
-# trusting config blindly — an attacker who could flip the base URL must not be
-# able to exfiltrate the key to an arbitrary / internal endpoint.
-_PERPLEXITY_ALLOWED_HOSTS: Final[frozenset[str]] = frozenset({"api.perplexity.ai"})
+# sent to an explicitly trusted host over TLS. The probe destinations are
+# pinned here rather than trusting operator configuration — an attacker who
+# could flip a base URL must not be able to exfiltrate the key to an arbitrary
+# / internal endpoint.
+_PROBE_ALLOWED_HOSTS: Final[frozenset[str]] = frozenset(
+    {"api.perplexity.ai", "api.deepseek.com"}
+)
 
 
 def _utcnow() -> datetime:
@@ -326,6 +328,8 @@ class SettingsService:
 
         if provider == "claude":
             status, message = self._probe_claude(row)
+        elif provider == "deepseek":
+            status, message = await self._probe_deepseek(row)
         else:
             api_key = self._row_plaintext_key(row)
             if api_key is None:
@@ -410,7 +414,7 @@ class SettingsService:
         if not host:
             return "missing host"
         host = host.lower()
-        if host not in _PERPLEXITY_ALLOWED_HOSTS:
+        if host not in _PROBE_ALLOWED_HOSTS:
             return f"host not in allowlist: {host!r}"
         # Defense in depth: if the allowlisted name were ever an IP literal,
         # make sure it is not an internal address.
@@ -482,6 +486,58 @@ class SettingsService:
         code = response.status_code
         if code == 200:
             return "ok", "Perplexity API へ正常に接続できました。"
+        if code in (401, 403):
+            return "failed", "認証に失敗しました（APIキーを確認してください）。"
+        if code == 429:
+            return "failed", "レート制限に達しました（キーは有効な可能性があります）。"
+        return "failed", f"接続に失敗しました（HTTP {code}）。"
+
+    async def _probe_deepseek(
+        self, row: AiProviderSetting | None
+    ) -> tuple[str, str]:
+        """Live DeepSeek auth probe (no confidential text sent).
+
+        Same fixed-ping contract as the Perplexity probe; the stored key is
+        decrypted only from the row and the destination is hard-coded to the
+        official DeepSeek endpoint (no operator-controlled URL, so no SSRF).
+        """
+        api_key = self._row_plaintext_key(row)
+        if api_key is None:
+            return "failed", "APIキーが未設定です。先に保存してください。"
+
+        url = "https://api.deepseek.com/v1/chat/completions"
+        guard_error = self._validate_probe_url(url)
+        if guard_error is not None:
+            logger.warning("deepseek probe blocked: %s (url=%s)", guard_error, url)
+            return "failed", "接続先設定が不正です（許可されたエンドポイントではありません）。"
+
+        payload = {
+            "model": row.model if row and row.model else "deepseek-chat",
+            # Trivial ping — intentionally carries NO contract content.
+            "messages": [{"role": "user", "content": "ping"}],
+            "max_tokens": 1,
+        }
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        owns_client = self._http_client is None
+        client = self._http_client or httpx.AsyncClient(
+            timeout=app_settings.deepseek_timeout_seconds
+        )
+        try:
+            response = await client.post(url, json=payload, headers=headers)
+        except httpx.HTTPError as exc:
+            logger.info("deepseek probe transport error: %s", exc)
+            return "failed", f"接続エラー: {type(exc).__name__}"
+        finally:
+            if owns_client:
+                await client.aclose()
+
+        code = response.status_code
+        if code == 200:
+            return "ok", "DeepSeek API へ正常に接続できました。"
         if code in (401, 403):
             return "failed", "認証に失敗しました（APIキーを確認してください）。"
         if code == 429:

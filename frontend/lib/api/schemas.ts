@@ -1022,7 +1022,7 @@ export const versionSchema = z.object({
 // 表示用タイムスタンプは SQLite の naive datetime でも壊れないよう緩く受ける。
 // ---------------------------------------------------------------------------
 
-export const aiProviderEnum = z.enum(["perplexity", "claude"]);
+export const aiProviderEnum = z.enum(["perplexity", "claude", "deepseek"]);
 export type AiProvider = z.infer<typeof aiProviderEnum>;
 
 /** ok=疎通+認証成功 / failed=到達したがエラー / unavailable=意図的に休眠 */
