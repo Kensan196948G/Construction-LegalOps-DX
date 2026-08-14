@@ -20,10 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const SUGGESTED_QUESTIONS = [
-  "下請法の支払期日（60日ルール）",
+  "下請法 支払期日（60日ルール）",
   "一括下請負の禁止と例外",
-  "主任技術者・監理技術者の配置要件",
-  "建設工事の契約書に必要な記載事項",
+  "主任技術者 専任要件",
+  "建設業法 第19条 契約書面",
 ];
 
 interface EvidenceHit {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -78,6 +78,16 @@ export default function ConstructionLegalPage() {
     onSuccess: () => undefined,
   });
   const resultQuery = useComplianceRun(selectedId || null);
+
+  // デモ初期表示: 先頭の契約を自動選択して機械チェックを1回実行する。
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    const first = contracts?.items?.[0];
+    if (!first || autoStarted.current) return;
+    autoStarted.current = true;
+    setSelectedId(String(first.id));
+    run.mutate({ contractId: String(first.id) });
+  }, [contracts, run]);
 
   const items = useMemo(() => {
     const list = checklists ?? [];

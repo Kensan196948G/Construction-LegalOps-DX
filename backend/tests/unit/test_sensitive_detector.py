@@ -87,3 +87,13 @@ def test_detector_does_not_flag_other_digit_runs():
     hits = detector.detect(text) if hasattr(detector, "detect") else []
     # Assert
     assert all(h.get("kind") != "my_number" for h in hits)
+
+
+def test_mask_sensitive_preserves_uuid_identifiers():
+    """UUIDs are identifiers, not PII — the phone regex must not corrupt them."""
+    # Arrange
+    hyphenated = "253dc024-2795-428b-b450-9632f9d1a2c2"
+    hex_form = "85042173c45359e882b539db3e7ac9c2"
+    # Act / Assert
+    assert security.mask_sensitive(hyphenated) == hyphenated
+    assert security.mask_sensitive(hex_form) == hex_form
