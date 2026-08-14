@@ -9,7 +9,7 @@
 | 🎯 用途 | 🌐 URL | 📌 状態 |
 |---|---|---|
 | 🏭 本番 | `https://legalops.mirai-dx-platform.com` | Cloudflare Access 保護で運用中（人間ゲート #23/#24/#50） |
-| 🧪 MVP 公開予定 | `https://legalops-mvp.mirai-dx-platform.com` | 計画済み。Cloudflare API トークン発行と人間承認後に `scripts/apply_mvp_legalops_after_approval.sh` で作成（→ 下記） |
+| 🧪 MVP 公開 | `https://legalops-mvp.mirai-dx-platform.com` | ✅ 稼働中（Cloudflare Tunnel `legalops-mvp` + Cloudflare proxy。削除後の再作成は `scripts/apply_mvp_legalops_after_approval.sh`） |
 | 🖥️ MVP 即時確認（UI + API） | `http://127.0.0.1:8412/` | `docker-compose.mvp.yml` スタック（nginx 経由。UI は `/`、API は `/api/v1/*`） |
 | 🖥️ Standalone WebUI | `http://192.168.0.185:38100/` | systemd: `construction-legalops-standalone-webui.service`（単一 HTML デモ） |
 
@@ -37,6 +37,7 @@ cd /home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX
 docker compose -f infra/docker/docker-compose.mvp.yml up -d --build
 # seed サービスが migration + ダミーデータ投入を自動実行する
 curl -fsS http://127.0.0.1:8412/healthz   # → ok
+curl -fsS http://127.0.0.1:8412/readyz    # → ok (DB/依存サービスの deep check)
 ```
 
 再投入（冪等・既存行スキップ）:
