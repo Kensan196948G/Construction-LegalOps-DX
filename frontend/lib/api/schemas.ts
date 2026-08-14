@@ -107,7 +107,7 @@ export const riskStatusEnum = z.enum(["open", "in_progress", "mitigated", "accep
 export type RiskStatus = z.infer<typeof riskStatusEnum>;
 
 export const reviewStatusEnum = z.enum([
-  "queued",
+  "pending",
   "running",
   "completed",
   "failed",
@@ -599,7 +599,12 @@ export const contractSchema = z.object({
   title: z.string(),
   counterparty: z.string().optional().nullable(),
   contract_type: contractTypeEnum.or(z.string()),
-  amount: z.number().nullable().optional(),
+  // backend は Decimal を文字列で返す（例 "3500000.00"）ため数値へ正規化する
+  amount: z
+    .union([z.number(), z.string()])
+    .transform((value) => (typeof value === "string" ? Number(value) : value))
+    .nullable()
+    .optional(),
   currency: z.string().length(3).default("JPY").optional(),
   status: contractStatusEnum,
   confidentiality: confidentialityEnum.optional(),
@@ -817,7 +822,12 @@ export const workflowApplicationSchema = z.object({
   title: z.string(),
   contract_type: z.string(),
   counterparty: z.string().nullable().optional(),
-  amount: z.number().nullable().optional(),
+  // backend は Decimal を文字列で返すため数値へ正規化する
+  amount: z
+    .union([z.number(), z.string()])
+    .transform((value) => (typeof value === "string" ? Number(value) : value))
+    .nullable()
+    .optional(),
   applicant: z.string().nullable().optional(),
   step_name: z.string(),
   step_type: z.string(),
