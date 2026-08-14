@@ -49,6 +49,8 @@ export default function PaymentsPage() {
     try {
       const list = await contractsApi.list({ page: 1, size: 100 });
       setContracts(list.items);
+      // デモ初期表示: 先頭の契約を自動選択し、判定結果を即時表示する。
+      setSelectedId((prev) => prev || (list.items[0] ? String(list.items[0].id) : ""));
       setOffline(false);
     } catch {
       setOffline(true);
