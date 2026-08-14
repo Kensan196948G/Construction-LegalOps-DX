@@ -1,4 +1,6 @@
-import { MOCK_AUDIT_LOGS } from "@/lib/mock-data";
+"use client";
+
+import type { AuditLog } from "@/lib/api/schemas";
 
 const ACTION_LABELS: Record<string, string> = {
   "contract.create": "契約を作成",
@@ -13,26 +15,48 @@ const ACTION_LABELS: Record<string, string> = {
   "user.login": "ログイン",
 };
 
-interface Props { contractId: string; }
+interface Props {
+  contractId: string;
+  logs?: AuditLog[];
+  forbidden?: boolean;
+}
 
-export function ContractActivityLog({ contractId }: Props) {
-  const logs = MOCK_AUDIT_LOGS
-    .filter(l => l.resourceId === contractId || l.resourceId.startsWith("CTR"))
-    .slice(0, 8);
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+export function ContractActivityLog({ contractId: _, logs = [], forbidden = false }: Props) {
+  if (forbidden) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        監査証跡は監査者・管理者権限でのみ表示されます。
+      </p>
+    );
+  }
 
   if (logs.length === 0) {
     return <p className="py-6 text-center text-sm text-muted-foreground">アクティビティはありません</p>;
   }
 
   return (
-    <ol className="relative border-l border-border pl-4 space-y-4">
-      {logs.map(log => (
+    <ol className="relative space-y-4 border-l border-border pl-4">
+      {logs.map((log) => (
         <li key={log.id} className="relative">
           <div className="absolute -left-[1.15rem] mt-1 h-2.5 w-2.5 rounded-full border bg-background" />
-          <p className="text-xs text-muted-foreground font-mono">{log.occurredAt.replace("T", " ").slice(0, 16)}</p>
+          <p className="text-xs text-muted-foreground font-mono">{formatDate(log.occurred_at)}</p>
           <p className="mt-0.5 text-sm">
-            <span className="font-medium">{log.actor.name}</span>
-            {"（"}{log.actor.role}{"）が "}
+            <span className="font-medium">{log.actor?.display_name ?? "システム"}</span>
+            {log.actor ? <span className="text-muted-foreground">（{log.actor_role ?? "—"}）が </span> : " が "}
             {ACTION_LABELS[log.action] ?? log.action}
           </p>
         </li>

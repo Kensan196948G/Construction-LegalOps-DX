@@ -181,7 +181,7 @@ export default async function WorkflowDetailPage({ params }: WorkflowDetailPageP
           <CardTitle>履歴</CardTitle>
         </CardHeader>
         <CardContent>
-          <WorkflowHistory workflowId={workflow.id} />
+          <WorkflowHistory workflowId={workflow.id} steps={workflow.steps} />
         </CardContent>
       </Card>
     </div>
