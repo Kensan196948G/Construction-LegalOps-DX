@@ -39,7 +39,7 @@ FastAPI + Next.js + PostgreSQL(RLS) + Cloudflare 基盤で実装され、主要�
 | 監査ログ（ハッシュチェーン・エクスポート） | ✅ 実装済み | `audit-logs` 200・demo フラグ分離・`audit_hash_chain` テスト |
 | 帳票（CSV/Excel/PDF） | 🟡 部分実装 | 監査 CSV エクスポートあり。履行報告・3条書面等は将来 backlog |
 | レート制限 / CORS / CSP / セキュリティヘッダー | ✅ 実装済み | `middleware/rate_limit.py`・nginx security-headers・CSP Report-Only（enforce は #24） |
-| ヘルスチェック / readiness | ✅ 実装済み | `/healthz`・`/readyz`・公開 URL で 200 |
+| ヘルスチェック / readiness | ✅ 実装済み | `/healthz`・`/readyz`（nginx 公開は follow-up で追加）・公開 URL で 200 |
 | モック残存 | ✅ 解消済み | Loop 111 で残モック 3 画面を実 API 化。`mock-data.ts` はフォールバック/候補表示のみ |
 | テスト / CI（7 ジョブ） | ✅ 実装済み | `.github/workflows/ci.yml`（pytest/ruff/mypy/Jest/build/security） |
 
@@ -86,6 +86,7 @@ backend : ruff 0.16.1 All checks passed / mypy 2.3.0 138 files clean
 frontend: typecheck / lint clean、Jest 43 passed（7 suites）
           Docker build OK（node:20.18.0-alpine = CI 同一）
 公開 URL: /healthz 200・/ 200
+          /readyz 200（follow-up で mvp.conf にプロキシ追加）
           API: contracts(22) partners(12) disputes(6) change-orders(6)
           reviews(15) risks(41) templates(10) knowledge(5) notifications(5)
           GET /contracts/{id} 200・payment-compliance 200
