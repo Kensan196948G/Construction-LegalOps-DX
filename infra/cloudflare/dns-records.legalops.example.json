@@ -8,11 +8,21 @@
       "ttl": 1,
       "proxied": true,
       "comment": "Construction-LegalOps-DX production candidate. Create only after Cloudflare Access and Tunnel are approved."
+    },
+    {
+      "type": "CNAME",
+      "name": "legalops-mvp",
+      "content": "<MVP_TUNNEL_ID>.cfargotunnel.com",
+      "ttl": 1,
+      "proxied": true,
+      "comment": "Construction-LegalOps-DX MVP/Prototype preview. Create only via scripts/apply_mvp_legalops_after_approval.sh after human approval."
     }
   ],
   "validation": {
     "expected_hostname": "legalops.mirai-dx-platform.com",
     "expected_health_url": "https://legalops.mirai-dx-platform.com/healthz",
-    "rollback": "Delete or disable the legalops CNAME, then stop the Tunnel connector."
+    "expected_mvp_hostname": "legalops-mvp.mirai-dx-platform.com",
+    "expected_mvp_health_url": "https://legalops-mvp.mirai-dx-platform.com/healthz",
+    "rollback": "Delete or disable the affected CNAME (legalops or legalops-mvp), then stop the corresponding Tunnel connector."
   }
 }

@@ -93,6 +93,44 @@ def _cloudflare_access_required() -> bool:
     )
 
 
+def _dev_bypass_enabled() -> bool:
+    """Fail-closed staging/demo authentication bypass.
+
+    Active only when *both* guards hold:
+
+    * ``APP_ENV`` is a non-production demo environment (``development`` /
+      ``staging``) — never ``production``;
+    * ``AUTH_DEV_BYPASS`` is explicitly ``1`` / ``true``.
+
+    Used by the MVP/preview environment so stakeholders can operate the
+    application without configuring Cloudflare Access or Entra ID. The
+    bypass never activates in production, and the default (flag absent)
+    keeps the JWT path intact.
+    """
+    app_env = (os.getenv("APP_ENV", settings.app_env) or "").lower()
+    flag = (os.getenv("AUTH_DEV_BYPASS", "") or "").strip().lower()
+    return app_env in {"development", "staging"} and flag in {"1", "true", "yes", "on"}
+
+
+def _dev_bypass_claims() -> dict[str, object]:
+    """Build deterministic demo-principal claims from ``DEV_USER_*`` env."""
+    raw_id = (os.getenv("DEV_USER_ID", "") or "").strip()
+    email = (os.getenv("DEV_USER_EMAIL", "") or "dev-user@example.invalid").strip().lower()
+    role = (os.getenv("DEV_USER_ROLE", "") or ROLE_ADMIN).strip().lower()
+    if role not in ALL_ROLES:
+        logger.warning("dev_bypass.invalid_role role=%s -> admin", role)
+        role = ROLE_ADMIN
+    if not raw_id:
+        raise UnauthorizedError("AUTH_DEV_BYPASS is enabled but DEV_USER_ID is not set.")
+    return {
+        "sub": raw_id,
+        "email": email,
+        "role": role,
+        "department_ids": [],
+        "dev_bypass": True,
+    }
+
+
 def _role_from_claims(claims: dict[str, object]) -> Role:
     role_claim = claims.get("role") or claims.get("roles")
     if isinstance(role_claim, list):
@@ -319,6 +357,10 @@ async def get_current_user(
             assertion=cf_access_jwt_assertion,
             authenticated_email=cf_access_authenticated_user_email,
         )
+    elif credentials is None and _dev_bypass_enabled():
+        # MVP / preview environment only: synthesize the demo principal when
+        # no bearer token was supplied. Never reachable in production.
+        claims = _dev_bypass_claims()
     elif credentials is None or credentials.scheme.lower() != "bearer":
         raise UnauthorizedError("Missing or malformed Authorization header.")
     else:

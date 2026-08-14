@@ -192,7 +192,14 @@ if ! command -v cloudflared >/dev/null 2>&1; then
   exit 2
 fi
 
-./scripts/verify_cloudflare_legalops.sh
+# The production preflight hard-codes `legalops.mirai-dx-platform.com`, so it
+# runs only for that hostname. MVP / prototype hostnames (e.g.
+# legalops-mvp.mirai-dx-platform.com) skip it and rely on the fail-closed
+# guards below: approval phrase, concrete UUID, existing-record check, and
+# Cloudflare API CNAME post-check.
+if [ "${LEGALOPS_HOSTNAME}" = "legalops.mirai-dx-platform.com" ]; then
+  ./scripts/verify_cloudflare_legalops.sh
+fi
 
 record_summary_before="$(cloudflare_dns_record_summary)"
 record_count_before="$(echo "${record_summary_before}" | awk -F= '/^record_count=/{print $2; exit}')"
