@@ -58,6 +58,12 @@ flowchart LR
     Gate --> Secrets["🔐 Vault secrets<br/>Not injected yet"]
 ```
 
+> 🧪 **MVP / Prototype は実動作済み**（2026-08-14）: 評価用 Standalone WebUI・Backend API・
+> PostgreSQL を本番 overlay と分離して稼働し、架空のダミーデータ（契約 22 / 協力会社 12 /
+> 紛争 6 / 支払 32 / 変更契約 6 等）を投入済み。URL 構成・再構築手順・デモシナリオ・
+> MVP 公開 URL（`legalops-mvp.mirai-dx-platform.com`）の作成ゲートは
+> [`docs/MVP_DEPLOYMENT.md`](./docs/MVP_DEPLOYMENT.md) を参照。
+
 ---
 
 ## 📚 目次
@@ -630,6 +636,21 @@ docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade h
 | `http://localhost:3010`         | 🖼️ Frontend (直接)          |
 | `http://localhost:8010`         | 🚀 Backend (直接)           |
 | `http://localhost:8410/healthz` | 💓 ヘルスチェック           |
+
+### 🧪 MVP / Prototype（評価用・ダミーデータ投入済み）
+
+関係者が直ちに操作・評価できる MVP 環境を本番 overlay と分離して起動しています。
+構築手順・URL・デモシナリオ・ダミーデータ構成・MVP 公開 URL の作成ゲートは
+[`docs/MVP_DEPLOYMENT.md`](docs/MVP_DEPLOYMENT.md) を参照してください。
+
+| 🌐 URL                                | 📝 用途                                            |
+| ------------------------------------- | -------------------------------------------------- |
+| `https://legalops-mvp.mirai-dx-platform.com` | 🧪 MVP 公開 URL（計画済み・人間ゲート） |
+| `http://127.0.0.1:8412/`              | 🧪 MVP ローカル origin（UI + API、架空データ投入済み） |
+| `http://192.168.0.185:38100/`         | 🖥️ Standalone WebUI（静的デモ・補助）              |
+
+🎭 ダミーデータはすべて架空値で、`scripts/seed_demo_data.py` により再生成・削除が
+可能です（契約 22 / 協力会社 12 / 紛争 6 / 支払 32 / 変更契約 6 / レビュー 15 等）。
 
 ### 🖥️ Standalone WebUI（SSH先Linux / systemd運用）
 
