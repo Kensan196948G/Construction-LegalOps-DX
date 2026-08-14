@@ -395,6 +395,9 @@ _PHONE_RE: Final[re.Pattern[str]] = re.compile(
 _EMAIL_RE: Final[re.Pattern[str]] = re.compile(
     r"([A-Za-z0-9._%+\-]+)@([A-Za-z0-9.\-]+\.[A-Za-z]{2,})"
 )
+_UUID_RE: Final[re.Pattern[str]] = re.compile(
+    r"^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}|[0-9a-fA-F]{32})$"
+)
 
 
 def _mask_my_number(match: re.Match[str]) -> str:
@@ -423,6 +426,10 @@ def mask_sensitive(text: str) -> str:
     Designed for log output: never raise; pass through on non-string.
     """
     if not isinstance(text, str) or not text:
+        return text
+    # UUIDs (hyphenated or 32-hex) are identifiers, not PII — the phone
+    # regex can otherwise false-positive on digit runs inside them.
+    if _UUID_RE.match(text):
         return text
     masked = _MY_NUMBER_RE.sub(_mask_my_number, text)
     masked = _PHONE_RE.sub(_mask_phone, masked)
