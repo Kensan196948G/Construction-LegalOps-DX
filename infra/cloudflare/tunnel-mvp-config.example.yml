@@ -1,0 +1,15 @@
+# cloudflared ingress config for the legalops-mvp tunnel (MVP / Prototype).
+#
+# The credentials file is a secret and is bind-mounted from the host at deploy
+# time (see infra/docker/docker-compose.mvp.yml); it is never committed.
+# Replace <MVP_TUNNEL_UUID> with the tunnel id created by
+# `cloudflared tunnel create legalops-mvp`.
+
+tunnel: <MVP_TUNNEL_UUID>
+credentials-file: /etc/cloudflared/creds.json
+
+ingress:
+  - hostname: legalops-mvp.mirai-dx-platform.com
+    service: http://nginx:80
+  # Everything else is refused rather than silently served.
+  - service: http_status:404

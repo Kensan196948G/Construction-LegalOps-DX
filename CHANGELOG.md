@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-08-14: MVP / Prototype 自律完成 Loop 113)
+
+- **🧪 MVP 公開環境を本番と分離して構築**: `https://legalops-mvp.mirai-dx-platform.com`
+  （Cloudflare Tunnel `legalops-mvp` + 独立 Compose プロジェクト `construction-legalops-mvp`）。
+  本番の DNS・Neon DB・Secrets・コンテナには未着手。
+  - `infra/docker/docker-compose.mvp.yml`（postgres/redis/backend/seed/frontend/nginx/cloudflared）
+  - `infra/nginx/mvp.conf` / `infra/cloudflare/tunnel-mvp-config.example.yml`
+  - `scripts/apply_mvp_legalops_after_approval.sh`（UUID 明示 + CNAME post-check の再作成ゲート）
+- **🔑 MVP 用開発認証バイパス（fail-closed）**: `AUTH_DEV_BYPASS=true` かつ
+  `APP_ENV ∈ {development, staging}` の時のみ有効。production では構造的に発動しない。
+  `backend/tests/unit/test_dev_bypass.py`（5 件）で保護条件を担保。
+- **🎭 ダミーデータを全主要テーブルへ拡充・架空値へ統一**: 契約 22 / レビュー 15 / リスク 41 /
+  ワークフロー 30 ステップ / 協力会社 12 / 紛争 6 / 支払 32 / 変更契約 6 / テンプレート 10 /
+  ナレッジ 5 / 通知 5。企業名・案件名・許可番号はすべて架空（例: みらい建設工業(株)・
+  みらい北幹線道路補修工事）。監査ログは `demo=true` フラグで実監査と分離。
+- **🎫 Issue クローズ**: #60（compliance 未実行チェックの neutral 表示）と
+  #64（Cloudflare 適用スクリプトの tunnel UUID 解決）を検証の上クローズ。
+- **🔧 依存・ビルド健全化**: `js-yaml@3` を 3.15.1 に override、backend Dockerfile の
+  Trivy SBOM 誤検知ガード、MVP 用クレデンシャルの環境変数上書き対応、scan_secrets 許可リスト更新。
+- **🧪 検証**: backend pytest 1113 passed / 2 skipped（SQLite・PG 専用 RLS のみスキップ）、
+  ruff 0.16.1 / mypy 2.3.0 clean、frontend typecheck/lint/Jest 43 passed、
+  Docker ビルド成功（node:20.18.0-alpine）、公開 URL smoke（healthz/root/API 一覧・詳細・
+  支払コンプライアンス 200）。
+
 ### Added / Changed (2026-08-12: 本番ゲート準備 Loop 112)
 
 - **🧩 PR #85 マージ**（Loop 111 の実装を main へ反映）

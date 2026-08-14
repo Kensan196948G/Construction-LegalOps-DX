@@ -74,6 +74,14 @@ RUN apt-get update \
 
 COPY --from=builder /opt/venv /opt/venv
 
+# Trivy false-positive guard: pip 26 ships a vendored CycloneDX SBOM
+# (bom.cdx.json) that lists msgpack 1.1.2 / setuptools 70.3.0 — versions pip
+# embeds internally, not the versions the application imports. The project
+# installs msgpack>=1.2.1 and setuptools>=78.1.1 into /opt/venv above, and
+# pip's vendored copies are unreachable from the app. The SBOM is metadata
+# only, so it is safe to remove it from the runtime image.
+RUN rm -f /opt/venv/lib/python3.12/site-packages/pip/_vendor/bom.cdx.json
+
 WORKDIR ${APP_HOME}
 COPY --chown=app:app app ./app
 COPY --chown=app:app alembic.ini ./alembic.ini

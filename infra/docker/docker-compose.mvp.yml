@@ -1,0 +1,213 @@
+# ============================================================
+# Construction-LegalOps-DX — MVP / Prototype stack
+#
+# 用途: 本番（APP_ENV=production + Neon 実DB）と完全分離した、関係者レビュー用
+# MVP 環境。架空ダミーデータのみを投入し、staging 限定の dev 認証バイパスで
+# 即時操作できる。本番 DB・Secrets・DNS（legalops.*）には一切触れない。
+#
+# 起動:
+#   docker compose -f infra/docker/docker-compose.mvp.yml up -d --build
+# ローカル確認: http://127.0.0.1:8412/healthz
+#
+# 注意: 本 compose の認証情報はすべて「MVP 専用ダミー値」であり秘密ではない。
+# ============================================================
+name: construction-legalops-mvp
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: legalops
+      POSTGRES_PASSWORD: ${MVP_PG_PASSWORD:-legalops_mvp}
+      POSTGRES_DB: legalops
+      TZ: Asia/Tokyo
+    volumes:
+      - mvp-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U legalops -d legalops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks: [mvp-net]
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "allkeys-lru"]
+    environment:
+      TZ: Asia/Tokyo
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks: [mvp-net]
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: construction-legalops-dx/backend:mvp
+    restart: unless-stopped
+    environment:
+      APP_ENV: staging
+      AUTH_DEV_BYPASS: "true"
+      DEV_USER_ID: 00000000-0000-0000-0000-000000000001
+      DEV_USER_EMAIL: demo@legalops-mvp.example.invalid
+      DEV_USER_ROLE: admin
+      JWT_SECRET: ${MVP_JWT_SECRET:-mvp-demo-jwt-secret-not-for-production}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: 480
+      DB_URL: postgresql+asyncpg://legalops:legalops_mvp@postgres:5432/legalops
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      NOTIFY_MODE: disabled
+      FEATURE_AI_REVIEW: "true"
+      AI_REVIEW_STUB: "1"
+      LOG_LEVEL: info
+      TZ: Asia/Tokyo
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen(''http://localhost:8000/healthz'',timeout=3).status==200 else 1)"',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [mvp-net]
+    security_opt:
+      - no-new-privileges:true
+
+  seed:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: construction-legalops-dx/backend:mvp
+    restart: "no"
+    command:
+      [
+        "sh",
+        "-c",
+        "alembic upgrade head && python /scripts/seed_demo_data.py",
+      ]
+    environment:
+      APP_ENV: staging
+      AUTH_DEV_BYPASS: "true"
+      DEV_USER_ID: 00000000-0000-0000-0000-000000000001
+      DEV_USER_EMAIL: demo@legalops-mvp.example.invalid
+      DEV_USER_ROLE: admin
+      JWT_SECRET: ${MVP_JWT_SECRET:-mvp-demo-jwt-secret-not-for-production}
+      DB_URL: postgresql+asyncpg://legalops:legalops_mvp@postgres:5432/legalops
+      LOG_LEVEL: warning
+      TZ: Asia/Tokyo
+    volumes:
+      - ../../backend/alembic:/app/alembic
+      - ../../scripts:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [mvp-net]
+    security_opt:
+      - no-new-privileges:true
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    image: construction-legalops-dx/frontend:mvp
+    restart: unless-stopped
+    environment:
+      APP_ENV: staging
+      AUTH_DEV_BYPASS: "true"
+      AUTH_SECRET: ${MVP_AUTH_SECRET:-mvp-demo-auth-secret-not-for-production}
+      NEXTAUTH_SECRET: ${MVP_AUTH_SECRET:-mvp-demo-auth-secret-not-for-production}
+      # サーバーコンポーネントは内部ネットワーク経由、ブラウザは同一オリジン
+      # (/api/v1 → nginx) を利用する。
+      API_INTERNAL_URL: http://backend:8000/api/v1
+      # NEXT_PUBLIC_API_URL 未設定 → ビルド時既定 "/api/v1"（同オリジン nginx 経由）
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      TZ: Asia/Tokyo
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3000/api/health >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    init: true
+    networks: [mvp-net]
+    security_opt:
+      - no-new-privileges:true
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8412:80"
+    volumes:
+      - ../nginx/mvp.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../nginx/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks: [mvp-net]
+    security_opt:
+      - no-new-privileges:true
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.7.3
+    restart: unless-stopped
+    # Run as the host user that owns the mounted credentials file (mode 0400),
+    # otherwise the default nonroot image user cannot read the tunnel creds.
+    user: "${CLOUDFLARE_MVP_TUNNEL_UID:-1000}:${CLOUDFLARE_MVP_TUNNEL_GID:-1000}"
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    environment:
+      TZ: Asia/Tokyo
+    volumes:
+      - ${CLOUDFLARE_MVP_TUNNEL_CREDENTIALS:-/home/kensan/.cloudflared/e86543a8-5383-4035-9125-bdb9725d3796.json}:/etc/cloudflared/creds.json:ro
+      - ${CLOUDFLARE_MVP_TUNNEL_CONFIG:-/home/kensan/.cloudflared/legalops-mvp-config.yml}:/etc/cloudflared/config.yml:ro
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks: [mvp-net]
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  mvp-net:
+    driver: bridge
+
+volumes:
+  mvp-pgdata:

@@ -1,34 +1,72 @@
-import { MOCK_AUDIT_LOGS } from "@/lib/mock-data";
+"use client";
 
-const ACTION_LABELS: Record<string, string> = {
-  "workflow.approve": "承認",
-  "workflow.reject": "却下",
-  "workflow.return": "差戻し",
-  "review.complete": "レビュー完了",
-  "contract.upload": "書類アップロード",
+import { Badge } from "@/components/ui/badge";
+
+export interface WorkflowHistoryStep {
+  id: string;
+  order: number;
+  label: string;
+  assigneeName: string | null;
+  status: "pending" | "in_progress" | "approved" | "rejected" | "returned" | "skipped";
+  decidedAt: string | null;
+}
+
+const STATUS_LABEL: Record<WorkflowHistoryStep["status"], string> = {
+  pending: "待機中",
+  in_progress: "処理中",
+  approved: "承認済み",
+  rejected: "却下",
+  returned: "差戻し",
+  skipped: "スキップ",
 };
 
-interface Props { workflowId: string; }
+interface Props {
+  workflowId: string;
+  steps?: WorkflowHistoryStep[];
+}
 
-export function WorkflowHistory({ workflowId: _ }: Props) {
-  const logs = MOCK_AUDIT_LOGS
-    .filter(l => l.action.startsWith("workflow.") || l.action.startsWith("review."))
-    .slice(0, 6);
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+export function WorkflowHistory({ workflowId: _, steps = [] }: Props) {
+  const doneSteps = steps.filter((s) => s.decidedAt !== null || s.status !== "pending");
+
+  if (doneSteps.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        承認履歴はまだありません。
+      </p>
+    );
+  }
 
   return (
-    <ol className="relative border-l border-border pl-4 space-y-4">
-      {logs.map(log => (
-        <li key={log.id} className="relative">
-          <div className="absolute -left-[1.15rem] mt-1 h-2.5 w-2.5 rounded-full border-2 bg-background border-border" />
-          <p className="text-xs text-muted-foreground font-mono">{log.occurredAt.replace("T", " ").slice(0, 16)}</p>
+    <ol className="relative space-y-4 border-l border-border pl-4">
+      {doneSteps.map((step) => (
+        <li key={step.id} className="relative">
+          <div className="absolute -left-[1.15rem] mt-1 h-2.5 w-2.5 rounded-full border-2 border-border bg-background" />
+          <p className="text-xs text-muted-foreground font-mono">{formatDate(step.decidedAt)}</p>
           <p className="mt-0.5 text-sm">
-            <span className="font-medium">{log.actor.name}</span>
-            <span className="text-muted-foreground">（{log.actor.role}）が </span>
-            {ACTION_LABELS[log.action] ?? log.action}
+            <span className="font-medium">{step.label}</span>
+            <span className="text-muted-foreground">
+              {" "}
+              · {step.assigneeName ?? "未割当"} · {STATUS_LABEL[step.status]}
+            </span>
           </p>
-          {log.resourceId && (
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">対象: {log.resourceId}</p>
-          )}
+          <Badge variant={step.status === "approved" ? "secondary" : "outline"} className="mt-1 text-xs">
+            {STATUS_LABEL[step.status]}
+          </Badge>
         </li>
       ))}
     </ol>

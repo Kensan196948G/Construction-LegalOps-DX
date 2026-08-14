@@ -14,7 +14,10 @@ import { ReviewSuggestionsPanel } from "@/components/reviews/review-suggestions-
 import { ReviewAuditTrail } from "@/components/reviews/review-audit-trail";
 import { LawyerConfirmationCheckbox } from "@/components/reviews/lawyer-confirmation-checkbox";
 import { bindServerSession } from "@/lib/auth/session-bridge.server";
-import { reviewsApi } from "@/lib/api/endpoints";
+import { ApiError } from "@/lib/api/client";
+import { auditLogsApi, reviewsApi, risksApi } from "@/lib/api/endpoints";
+import type { AuditLog, ReviewFinding, RiskItem } from "@/lib/api/schemas";
+import type { ReviewSuggestedAction } from "@/components/reviews/review-suggestions-panel";
 
 export const metadata: Metadata = {
   title: "レビュー詳細",
@@ -34,6 +37,11 @@ interface ReviewDetail {
   startedAt: string | null;
   completedAt: string | null;
   summary: string;
+  findings: ReviewFinding[];
+  suggestedActions: ReviewSuggestedAction[];
+  risks: RiskItem[];
+  auditLogs: AuditLog[];
+  auditForbidden: boolean;
 }
 
 type RiskLevel = "low" | "medium" | "high" | "critical";
@@ -59,8 +67,37 @@ function formatDate(iso: string | null | undefined): string | null {
 async function getReview(id: string): Promise<ReviewDetail | null> {
   const cleanup = await bindServerSession();
   try {
-    const r = await reviewsApi.get(id);
+    const [rResult, risksResult, auditResult] = await Promise.allSettled([
+      reviewsApi.get(id),
+      reviewsApi.get(id).then((r) =>
+        risksApi.list({ contract_id: r.contract_id, page: 1, page_size: 50 }),
+      ),
+      auditLogsApi.list({
+        target_type: "reviews",
+        target_id: id,
+        page: 1,
+        size: 20,
+      }),
+    ]);
+    if (rResult.status === "rejected") {
+      return null;
+    }
+    const r = rResult.value;
     const confirmed = r.status === "accepted" || r.status === "rejected";
+    const risks = risksResult.status === "fulfilled" ? risksResult.value.items : [];
+    let auditLogs: AuditLog[] = [];
+    let auditForbidden = false;
+    if (auditResult.status === "fulfilled") {
+      auditLogs = auditResult.value.items;
+    } else {
+      auditForbidden = auditResult.reason instanceof ApiError && auditResult.reason.status === 403;
+    }
+    const suggestedActions: ReviewSuggestedAction[] = (r.suggested_actions ?? []).map((a) => ({
+      action: a.action,
+      target_clause_seq: a.target_clause_seq ?? null,
+      description: a.description,
+      replacement_text: a.replacement_text ?? null,
+    }));
     return {
       id: String(r.id),
       contractId: String(r.contract_id),
@@ -75,6 +112,11 @@ async function getReview(id: string): Promise<ReviewDetail | null> {
       startedAt: formatDate(r.started_at),
       completedAt: formatDate(r.finished_at),
       summary: r.summary ?? `AI レビュー (リスク: ${r.overall_risk ?? "未評価"})。詳細は各タブでご確認ください。\n\n※ この要約は AI による参考情報です。法的判断は必ず法務担当者・顧問弁護士が行ってください。`,
+      findings: r.findings ?? [],
+      suggestedActions,
+      risks,
+      auditLogs,
+      auditForbidden,
     };
   } catch {
     return null;
@@ -142,16 +184,20 @@ export default async function ReviewDetailPage({ params }: ReviewDetailPageProps
         </TabsList>
 
         <TabsContent value="issues">
-          <ReviewIssuesPanel reviewId={review.id} />
+          <ReviewIssuesPanel reviewId={review.id} findings={review.findings} />
         </TabsContent>
         <TabsContent value="risks">
-          <ReviewRisksPanel reviewId={review.id} />
+          <ReviewRisksPanel reviewId={review.id} risks={review.risks} />
         </TabsContent>
         <TabsContent value="suggestions">
-          <ReviewSuggestionsPanel reviewId={review.id} />
+          <ReviewSuggestionsPanel reviewId={review.id} suggestions={review.suggestedActions} />
         </TabsContent>
         <TabsContent value="audit">
-          <ReviewAuditTrail reviewId={review.id} />
+          <ReviewAuditTrail
+            reviewId={review.id}
+            logs={review.auditLogs}
+            forbidden={review.auditForbidden}
+          />
         </TabsContent>
       </Tabs>
 

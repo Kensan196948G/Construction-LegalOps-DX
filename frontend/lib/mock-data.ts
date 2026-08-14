@@ -6,9 +6,9 @@ export const CONTRACT_TYPES = [
 ];
 
 export const COMPANIES = [
-  "大成建設工業(株)", "鈴木土木(株)", "(株)山田設計事務所", "東日本資材(株)",
-  "(株)佐藤組", "中央コンサルタント(株)", "北関東電設(株)", "(株)高橋建材",
-  "西部工業(株)", "(株)渡辺設備", "太平洋セメント(株)", "(株)田中工務店",
+  "みらい建設工業(株)", "さくら土木(株)", "(株)やまびこ設計事務所", "ひかり資材(株)",
+  "(株)つばさ組", "あおぞらコンサルタント(株)", "北信電設(株)", "(株)はるか建材",
+  "西陵工業(株)", "(株)きさらぎ設備", "みらいセメント商事(株)", "(株)ほしぞら工務店",
 ];
 
 export const DEPARTMENTS = ["法務部", "工事部", "管理部", "営業部", "設計部", "総務部"];
@@ -41,14 +41,14 @@ export interface ContractApplication {
 }
 
 export const CONTRACT_APPLICATIONS: ContractApplication[] = [
-  { id: "APP-2026-0001", type: "新規契約", title: "工事請負契約（大成建設工業(株)）", applicant: "田中 太郎", dept: "法務部", amount: 120000000, urgency: "緊急", status: "submitted", submittedAt: "2026/05/10", projectName: "東名高速道路補修工事" },
-  { id: "APP-2026-0002", type: "変更契約", title: "業務委託契約（鈴木土木(株)）", applicant: "鈴木 花子", dept: "法務部", amount: 35000000, urgency: "緊急", status: "under_review", submittedAt: "2026/05/08", projectName: "新宿駅再開発" },
-  { id: "APP-2026-0003", type: "契約更新", title: "資材購入契約（東日本資材(株)）", applicant: "佐藤 一郎", dept: "工事部", amount: 8900000, urgency: "通常", status: "approved", submittedAt: "2026/05/05", projectName: "横浜港防波堤改修" },
-  { id: "APP-2026-0004", type: "契約解除", title: "下請契約（(株)佐藤組）", applicant: "山田 美咲", dept: "工事部", amount: 25000000, urgency: "通常", status: "draft", submittedAt: "2026/05/03", projectName: "多摩川橋梁架替" },
-  { id: "APP-2026-0005", type: "緊急レビュー", title: "設計監理契約（(株)山田設計事務所）", applicant: "高橋 健二", dept: "管理部", amount: 15000000, urgency: "通常", status: "submitted", submittedAt: "2026/05/01", projectName: "首都圏トンネル補強" },
-  { id: "APP-2026-0006", type: "顧問弁護士確認", title: "賃貸借契約（関東リース(株)）", applicant: "伊藤 直美", dept: "総務部", amount: 3500000, urgency: "低", status: "rejected", submittedAt: "2026/04/28", projectName: "東名高速道路補修工事" },
-  { id: "APP-2026-0007", type: "新規契約", title: "秘密保持契約（東京法律事務所）", applicant: "渡辺 誠", dept: "法務部", amount: 1200000, urgency: "低", status: "approved", submittedAt: "2026/04/25", projectName: "新宿駅再開発" },
-  { id: "APP-2026-0008", type: "変更契約", title: "工事請負契約（横浜建設(株)）", applicant: "中村 裕子", dept: "営業部", amount: 48000000, urgency: "低", status: "under_review", submittedAt: "2026/04/22", projectName: "横浜港防波堤改修" },
+  { id: "APP-2026-0001", type: "新規契約", title: "工事請負契約（みらい建設工業(株)）", applicant: "田中 太郎", dept: "法務部", amount: 120000000, urgency: "緊急", status: "submitted", submittedAt: "2026/05/10", projectName: "みらい北幹線道路補修工事" },
+  { id: "APP-2026-0002", type: "変更契約", title: "業務委託契約（さくら土木(株)）", applicant: "鈴木 花子", dept: "法務部", amount: 35000000, urgency: "緊急", status: "under_review", submittedAt: "2026/05/08", projectName: "ひかり町駅前再開発" },
+  { id: "APP-2026-0003", type: "契約更新", title: "資材購入契約（ひかり資材(株)）", applicant: "佐藤 一郎", dept: "工事部", amount: 8900000, urgency: "通常", status: "approved", submittedAt: "2026/05/05", projectName: "あおば港防波堤改修" },
+  { id: "APP-2026-0004", type: "契約解除", title: "下請契約（(株)つばさ組）", applicant: "山田 美咲", dept: "工事部", amount: 25000000, urgency: "通常", status: "draft", submittedAt: "2026/05/03", projectName: "こまくさ川橋梁架替" },
+  { id: "APP-2026-0005", type: "緊急レビュー", title: "設計監理契約（(株)やまびこ設計事務所）", applicant: "高橋 健二", dept: "管理部", amount: 15000000, urgency: "通常", status: "submitted", submittedAt: "2026/05/01", projectName: "みらい都市トンネル補強" },
+  { id: "APP-2026-0006", type: "顧問弁護士確認", title: "賃貸借契約（みらいリース(株)）", applicant: "伊藤 直美", dept: "総務部", amount: 3500000, urgency: "低", status: "rejected", submittedAt: "2026/04/28", projectName: "みらい北幹線道路補修工事" },
+  { id: "APP-2026-0007", type: "新規契約", title: "秘密保持契約（みらい中央法律事務所）", applicant: "渡辺 誠", dept: "法務部", amount: 1200000, urgency: "低", status: "approved", submittedAt: "2026/04/25", projectName: "ひかり町駅前再開発" },
+  { id: "APP-2026-0008", type: "変更契約", title: "工事請負契約（みなと建設(株)）", applicant: "中村 裕子", dept: "営業部", amount: 48000000, urgency: "低", status: "under_review", submittedAt: "2026/04/22", projectName: "あおば港防波堤改修" },
 ];
 
 export type ConstructionLegalStatus = "ok" | "warning" | "ng";
@@ -70,15 +70,15 @@ export interface ConstructionCheck {
 }
 
 export const CONSTRUCTION_CHECKS: ConstructionCheck[] = [
-  { id: "cl1", law: "建設業法", item: "第22条 — 一括下請負の禁止", target: "下請契約書（鈴木土木）", status: "ok", detail: "一括下請負に該当しないことを確認", checkedAt: "2026/05/14", checker: "田中 太郎" },
-  { id: "cl2", law: "建設業法", item: "第19条 — 契約書面の交付義務", target: "工事請負契約（大成建設工業）", status: "ok", detail: "書面交付済み、要件充足を確認", checkedAt: "2026/05/13", checker: "鈴木 花子" },
-  { id: "cl3", law: "下請法", item: "第2条の4 — 支払期日（60日ルール）", target: "下請契約書（佐藤組）", status: "warning", detail: "支払期日が納品後75日に設定。60日ルール抵触の可能性", checkedAt: "2026/05/12", checker: "田中 太郎" },
-  { id: "cl4", law: "建設業法", item: "第26条 — 主任技術者の配置", target: "東名高速道路補修工事", status: "ng", detail: "主任技術者の配置届が未提出", checkedAt: "2026/05/12", checker: "佐藤 一郎" },
-  { id: "cl5", law: "労働安全衛生法", item: "第30条 — 特定元方事業者の義務", target: "新宿駅再開発工事", status: "ok", detail: "統括安全衛生責任者を選任済み", checkedAt: "2026/05/11", checker: "佐藤 一郎" },
-  { id: "cl6", law: "建設業法", item: "第19条の3 — 不当な使用資材等の購入強制の禁止", target: "資材購入契約（東日本資材）", status: "warning", detail: "特定メーカー指定条項あり、該当性を要確認", checkedAt: "2026/05/10", checker: "田中 太郎" },
-  { id: "cl7", law: "下請法", item: "第4条 — 書面の交付義務", target: "下請契約書（中村組）", status: "ok", detail: "3条書面の交付済みを確認", checkedAt: "2026/05/09", checker: "鈴木 花子" },
-  { id: "cl8", law: "建設業法", item: "第24条の5 — 特定建設業者の下請代金の支払", target: "横浜港防波堤改修工事", status: "ok", detail: "引渡し後50日以内の支払を確認", checkedAt: "2026/05/08", checker: "田中 太郎" },
-  { id: "cl9", law: "公共工事入札契約適正化法", item: "第15条 — 施工体制台帳の提出", target: "多摩川橋梁架替工事", status: "warning", detail: "二次下請の記載が不完全、要修正", checkedAt: "2026/05/07", checker: "佐藤 一郎" },
+  { id: "cl1", law: "建設業法", item: "第22条 — 一括下請負の禁止", target: "下請契約書（さくら土木）", status: "ok", detail: "一括下請負に該当しないことを確認", checkedAt: "2026/05/14", checker: "田中 太郎" },
+  { id: "cl2", law: "建設業法", item: "第19条 — 契約書面の交付義務", target: "工事請負契約（みらい建設工業）", status: "ok", detail: "書面交付済み、要件充足を確認", checkedAt: "2026/05/13", checker: "鈴木 花子" },
+  { id: "cl3", law: "下請法", item: "第2条の4 — 支払期日（60日ルール）", target: "下請契約書（つばさ組）", status: "warning", detail: "支払期日が納品後75日に設定。60日ルール抵触の可能性", checkedAt: "2026/05/12", checker: "田中 太郎" },
+  { id: "cl4", law: "建設業法", item: "第26条 — 主任技術者の配置", target: "みらい北幹線道路補修工事", status: "ng", detail: "主任技術者の配置届が未提出", checkedAt: "2026/05/12", checker: "佐藤 一郎" },
+  { id: "cl5", law: "労働安全衛生法", item: "第30条 — 特定元方事業者の義務", target: "ひかり町駅前再開発工事", status: "ok", detail: "統括安全衛生責任者を選任済み", checkedAt: "2026/05/11", checker: "佐藤 一郎" },
+  { id: "cl6", law: "建設業法", item: "第19条の3 — 不当な使用資材等の購入強制の禁止", target: "資材購入契約（ひかり資材）", status: "warning", detail: "特定メーカー指定条項あり、該当性を要確認", checkedAt: "2026/05/10", checker: "田中 太郎" },
+  { id: "cl7", law: "下請法", item: "第4条 — 書面の交付義務", target: "下請契約書（こまくさ組）", status: "ok", detail: "3条書面の交付済みを確認", checkedAt: "2026/05/09", checker: "鈴木 花子" },
+  { id: "cl8", law: "建設業法", item: "第24条の5 — 特定建設業者の下請代金の支払", target: "あおば港防波堤改修工事", status: "ok", detail: "引渡し後50日以内の支払を確認", checkedAt: "2026/05/08", checker: "田中 太郎" },
+  { id: "cl9", law: "公共工事入札契約適正化法", item: "第15条 — 施工体制台帳の提出", target: "こまくさ川橋梁架替工事", status: "warning", detail: "二次下請の記載が不完全、要修正", checkedAt: "2026/05/07", checker: "佐藤 一郎" },
 ];
 
 export interface ContractDeadline {
@@ -95,14 +95,14 @@ export interface ContractDeadline {
 }
 
 export const CONTRACT_DEADLINES: ContractDeadline[] = [
-  { id: "CTR-2026-0001", title: "工事請負契約（大成建設工業(株)）", type: "工事請負契約", counterparty: "大成建設工業(株)", expiresAt: "2026/05/20", daysLeft: 4, autoRenew: false, guaranteePeriod: "2年", owner: "田中 太郎", riskLevel: "high" },
-  { id: "CTR-2026-0002", title: "業務委託契約（鈴木土木(株)）", type: "業務委託契約", counterparty: "鈴木土木(株)", expiresAt: "2026/06/01", daysLeft: 16, autoRenew: true, guaranteePeriod: "—", owner: "鈴木 花子", riskLevel: "medium" },
-  { id: "CTR-2026-0003", title: "資材購入契約（東日本資材(株)）", type: "資材購入契約", counterparty: "東日本資材(株)", expiresAt: "2026/06/15", daysLeft: 30, autoRenew: false, guaranteePeriod: "—", owner: "佐藤 一郎", riskLevel: "low" },
-  { id: "CTR-2026-0004", title: "下請契約（(株)佐藤組）", type: "下請契約", counterparty: "(株)佐藤組", expiresAt: "2026/07/01", daysLeft: 46, autoRenew: true, guaranteePeriod: "2年", owner: "山田 美咲", riskLevel: "medium" },
-  { id: "CTR-2026-0005", title: "設計監理契約（(株)山田設計事務所）", type: "設計監理契約", counterparty: "(株)山田設計事務所", expiresAt: "2026/08/01", daysLeft: 77, autoRenew: false, guaranteePeriod: "—", owner: "高橋 健二", riskLevel: "low" },
-  { id: "CTR-2026-0006", title: "賃貸借契約（関東リース(株)）", type: "賃貸借契約", counterparty: "関東リース(株)", expiresAt: "2026/09/01", daysLeft: 108, autoRenew: true, guaranteePeriod: "—", owner: "伊藤 直美", riskLevel: "low" },
-  { id: "CTR-2026-0007", title: "秘密保持契約（東京法律事務所）", type: "秘密保持契約", counterparty: "東京法律事務所", expiresAt: "2026/11/01", daysLeft: 169, autoRenew: false, guaranteePeriod: "—", owner: "渡辺 誠", riskLevel: "low" },
-  { id: "CTR-2026-0008", title: "工事請負契約（横浜建設(株)）", type: "工事請負契約", counterparty: "横浜建設(株)", expiresAt: "2026/12/31", daysLeft: 229, autoRenew: true, guaranteePeriod: "2年", owner: "中村 裕子", riskLevel: "medium" },
+  { id: "CTR-2026-0001", title: "工事請負契約（みらい建設工業(株)）", type: "工事請負契約", counterparty: "みらい建設工業(株)", expiresAt: "2026/05/20", daysLeft: 4, autoRenew: false, guaranteePeriod: "2年", owner: "田中 太郎", riskLevel: "high" },
+  { id: "CTR-2026-0002", title: "業務委託契約（さくら土木(株)）", type: "業務委託契約", counterparty: "さくら土木(株)", expiresAt: "2026/06/01", daysLeft: 16, autoRenew: true, guaranteePeriod: "—", owner: "鈴木 花子", riskLevel: "medium" },
+  { id: "CTR-2026-0003", title: "資材購入契約（ひかり資材(株)）", type: "資材購入契約", counterparty: "ひかり資材(株)", expiresAt: "2026/06/15", daysLeft: 30, autoRenew: false, guaranteePeriod: "—", owner: "佐藤 一郎", riskLevel: "low" },
+  { id: "CTR-2026-0004", title: "下請契約（(株)つばさ組）", type: "下請契約", counterparty: "(株)つばさ組", expiresAt: "2026/07/01", daysLeft: 46, autoRenew: true, guaranteePeriod: "2年", owner: "山田 美咲", riskLevel: "medium" },
+  { id: "CTR-2026-0005", title: "設計監理契約（(株)やまびこ設計事務所）", type: "設計監理契約", counterparty: "(株)やまびこ設計事務所", expiresAt: "2026/08/01", daysLeft: 77, autoRenew: false, guaranteePeriod: "—", owner: "高橋 健二", riskLevel: "low" },
+  { id: "CTR-2026-0006", title: "賃貸借契約（みらいリース(株)）", type: "賃貸借契約", counterparty: "みらいリース(株)", expiresAt: "2026/09/01", daysLeft: 108, autoRenew: true, guaranteePeriod: "—", owner: "伊藤 直美", riskLevel: "low" },
+  { id: "CTR-2026-0007", title: "秘密保持契約（みらい中央法律事務所）", type: "秘密保持契約", counterparty: "みらい中央法律事務所", expiresAt: "2026/11/01", daysLeft: 169, autoRenew: false, guaranteePeriod: "—", owner: "渡辺 誠", riskLevel: "low" },
+  { id: "CTR-2026-0008", title: "工事請負契約（みなと建設(株)）", type: "工事請負契約", counterparty: "みなと建設(株)", expiresAt: "2026/12/31", daysLeft: 229, autoRenew: true, guaranteePeriod: "2年", owner: "中村 裕子", riskLevel: "medium" },
 ];
 
 export interface Partner {
@@ -120,18 +120,18 @@ export interface Partner {
 }
 
 export const PARTNERS: Partner[] = [
-  { id: "PTR-0001", name: "大成建設工業(株)", type: "元請", permitNumber: "国土交通大臣許可（般-2024）第010000号", permitExpiry: "2026/09/15", antiSocialCheck: "確認済", antiSocialDate: "2026/01/10", insurance: "加入済", contractCount: 8, riskLevel: "low", lastTransaction: "2026/05/10" },
-  { id: "PTR-0002", name: "鈴木土木(株)", type: "元請", permitNumber: "国土交通大臣許可（般-2025）第010137号", permitExpiry: "2026/11/20", antiSocialCheck: "確認済", antiSocialDate: "2026/02/05", insurance: "加入済", contractCount: 5, riskLevel: "low", lastTransaction: "2026/05/08" },
-  { id: "PTR-0003", name: "(株)山田設計事務所", type: "元請", permitNumber: "国土交通大臣許可（般-2024）第010274号", permitExpiry: "2027/03/10", antiSocialCheck: "確認済", antiSocialDate: "2026/03/15", insurance: "加入済", contractCount: 3, riskLevel: "low", lastTransaction: "2026/04/20" },
-  { id: "PTR-0004", name: "東日本資材(株)", type: "元請", permitNumber: "国土交通大臣許可（般-2025）第010411号", permitExpiry: "2026/07/01", antiSocialCheck: "確認済", antiSocialDate: "2026/01/20", insurance: "加入済", contractCount: 7, riskLevel: "medium", lastTransaction: "2026/05/12" },
-  { id: "PTR-0005", name: "(株)佐藤組", type: "下請（一次）", permitNumber: "東京都知事許可（般-2024）第010548号", permitExpiry: "2026/10/05", antiSocialCheck: "確認済", antiSocialDate: "2025/12/01", insurance: "加入済", contractCount: 4, riskLevel: "low", lastTransaction: "2026/04/15" },
-  { id: "PTR-0006", name: "中央コンサルタント(株)", type: "下請（一次）", permitNumber: "東京都知事許可（般-2025）第010685号", permitExpiry: "2027/01/15", antiSocialCheck: "確認済", antiSocialDate: "2026/02/28", insurance: "加入済", contractCount: 2, riskLevel: "low", lastTransaction: "2026/03/20" },
-  { id: "PTR-0007", name: "北関東電設(株)", type: "下請（一次）", permitNumber: "埼玉県知事許可（般-2024）第010822号", permitExpiry: "2026/08/20", antiSocialCheck: "確認済", antiSocialDate: "2026/01/05", insurance: "加入済", contractCount: 6, riskLevel: "medium", lastTransaction: "2026/05/01" },
-  { id: "PTR-0008", name: "(株)高橋建材", type: "下請（一次）", permitNumber: "神奈川県知事許可（般-2025）第010959号", permitExpiry: "2027/02/28", antiSocialCheck: "確認済", antiSocialDate: "2026/03/01", insurance: "加入済", contractCount: 3, riskLevel: "low", lastTransaction: "2026/04/08" },
-  { id: "PTR-0009", name: "西部工業(株)", type: "下請（二次）", permitNumber: "千葉県知事許可（般-2023）第011096号", permitExpiry: "2026/06/10", antiSocialCheck: "確認済", antiSocialDate: "2025/11/15", insurance: "加入済", contractCount: 1, riskLevel: "low", lastTransaction: "2026/03/15" },
-  { id: "PTR-0010", name: "(株)渡辺設備", type: "下請（二次）", permitNumber: "群馬県知事許可（般-2024）第011233号", permitExpiry: "2026/05/30", antiSocialCheck: "未確認", antiSocialDate: null, insurance: "未確認", contractCount: 2, riskLevel: "high", lastTransaction: "2026/04/30" },
-  { id: "PTR-0011", name: "太平洋セメント(株)", type: "下請（二次）", permitNumber: "国土交通大臣許可（般-2025）第011370号", permitExpiry: "2027/04/15", antiSocialCheck: "確認済", antiSocialDate: "2026/04/01", insurance: "加入済", contractCount: 1, riskLevel: "low", lastTransaction: "2026/02/10" },
-  { id: "PTR-0012", name: "(株)田中工務店", type: "下請（二次）", permitNumber: "東京都知事許可（般-2024）第011507号", permitExpiry: "2026/09/30", antiSocialCheck: "確認済", antiSocialDate: "2026/03/20", insurance: "加入済", contractCount: 1, riskLevel: "low", lastTransaction: "2026/01/25" },
+  { id: "PTR-0001", name: "みらい建設工業(株)", type: "元請", permitNumber: "国土交通大臣許可（般-2024）第010000号", permitExpiry: "2026/09/15", antiSocialCheck: "確認済", antiSocialDate: "2026/01/10", insurance: "加入済", contractCount: 8, riskLevel: "low", lastTransaction: "2026/05/10" },
+  { id: "PTR-0002", name: "さくら土木(株)", type: "元請", permitNumber: "国土交通大臣許可（般-2025）第010137号", permitExpiry: "2026/11/20", antiSocialCheck: "確認済", antiSocialDate: "2026/02/05", insurance: "加入済", contractCount: 5, riskLevel: "low", lastTransaction: "2026/05/08" },
+  { id: "PTR-0003", name: "(株)やまびこ設計事務所", type: "元請", permitNumber: "国土交通大臣許可（般-2024）第010274号", permitExpiry: "2027/03/10", antiSocialCheck: "確認済", antiSocialDate: "2026/03/15", insurance: "加入済", contractCount: 3, riskLevel: "low", lastTransaction: "2026/04/20" },
+  { id: "PTR-0004", name: "ひかり資材(株)", type: "元請", permitNumber: "国土交通大臣許可（般-2025）第010411号", permitExpiry: "2026/07/01", antiSocialCheck: "確認済", antiSocialDate: "2026/01/20", insurance: "加入済", contractCount: 7, riskLevel: "medium", lastTransaction: "2026/05/12" },
+  { id: "PTR-0005", name: "(株)つばさ組", type: "下請（一次）", permitNumber: "東京都知事許可（般-2024）第010548号", permitExpiry: "2026/10/05", antiSocialCheck: "確認済", antiSocialDate: "2025/12/01", insurance: "加入済", contractCount: 4, riskLevel: "low", lastTransaction: "2026/04/15" },
+  { id: "PTR-0006", name: "あおぞらコンサルタント(株)", type: "下請（一次）", permitNumber: "東京都知事許可（般-2025）第010685号", permitExpiry: "2027/01/15", antiSocialCheck: "確認済", antiSocialDate: "2026/02/28", insurance: "加入済", contractCount: 2, riskLevel: "low", lastTransaction: "2026/03/20" },
+  { id: "PTR-0007", name: "北信電設(株)", type: "下請（一次）", permitNumber: "埼玉県知事許可（般-2024）第010822号", permitExpiry: "2026/08/20", antiSocialCheck: "確認済", antiSocialDate: "2026/01/05", insurance: "加入済", contractCount: 6, riskLevel: "medium", lastTransaction: "2026/05/01" },
+  { id: "PTR-0008", name: "(株)はるか建材", type: "下請（一次）", permitNumber: "神奈川県知事許可（般-2025）第010959号", permitExpiry: "2027/02/28", antiSocialCheck: "確認済", antiSocialDate: "2026/03/01", insurance: "加入済", contractCount: 3, riskLevel: "low", lastTransaction: "2026/04/08" },
+  { id: "PTR-0009", name: "西陵工業(株)", type: "下請（二次）", permitNumber: "千葉県知事許可（般-2023）第011096号", permitExpiry: "2026/06/10", antiSocialCheck: "確認済", antiSocialDate: "2025/11/15", insurance: "加入済", contractCount: 1, riskLevel: "low", lastTransaction: "2026/03/15" },
+  { id: "PTR-0010", name: "(株)きさらぎ設備", type: "下請（二次）", permitNumber: "群馬県知事許可（般-2024）第011233号", permitExpiry: "2026/05/30", antiSocialCheck: "未確認", antiSocialDate: null, insurance: "未確認", contractCount: 2, riskLevel: "high", lastTransaction: "2026/04/30" },
+  { id: "PTR-0011", name: "みらいセメント商事(株)", type: "下請（二次）", permitNumber: "国土交通大臣許可（般-2025）第011370号", permitExpiry: "2027/04/15", antiSocialCheck: "確認済", antiSocialDate: "2026/04/01", insurance: "加入済", contractCount: 1, riskLevel: "low", lastTransaction: "2026/02/10" },
+  { id: "PTR-0012", name: "(株)ほしぞら工務店", type: "下請（二次）", permitNumber: "東京都知事許可（般-2024）第011507号", permitExpiry: "2026/09/30", antiSocialCheck: "確認済", antiSocialDate: "2026/03/20", insurance: "加入済", contractCount: 1, riskLevel: "low", lastTransaction: "2026/01/25" },
 ];
 
 export const DISPUTE_TYPES = ["工期遅延", "追加工事費用", "品質不良", "近隣クレーム", "下請トラブル", "未払い・支払遅延"];
@@ -158,14 +158,14 @@ export interface Dispute {
 }
 
 export const DISPUTES: Dispute[] = [
-  { id: "DSP-2026-0001", type: "工期遅延", title: "工期延長に伴う追加費用 — 東名高速補修", counterparty: "大成建設工業(株)", status: "open", amount: 15000000, registeredAt: "2026/04/01", assignee: "田中 太郎", priority: "高", description: "工期延長に伴う追加費用の請求。発注者との費用分担について協議中。" },
-  { id: "DSP-2026-0002", type: "追加工事費用", title: "施工品質に関する是正要求 — 新宿駅再開発", counterparty: "鈴木土木(株)", status: "escalated", amount: 8000000, registeredAt: "2026/04/10", assignee: "鈴木 花子", priority: "高", description: "施工品質に関する是正要求。顧問弁護士と対応方針を協議。" },
-  { id: "DSP-2026-0003", type: "品質不良", title: "近隣住民からの騒音苦情 — 横浜港防波堤", counterparty: "(株)山田設計事務所", status: "investigating", amount: 2500000, registeredAt: "2026/04/20", assignee: "佐藤 一郎", priority: "中", description: "近隣住民からの騒音苦情。防音対策の実施と補償交渉を並行して進める。" },
-  { id: "DSP-2026-0004", type: "近隣クレーム", title: "下請代金の支払条件 — 多摩川橋梁", counterparty: "東日本資材(株)", status: "open", amount: null, registeredAt: "2026/04/25", assignee: "田中 太郎", priority: "中", description: "下請代金の支払条件に関する協議。60日ルール遵守を確認中。" },
-  { id: "DSP-2026-0005", type: "下請トラブル", title: "追加工事費用負担 — 首都圏トンネル", counterparty: "(株)佐藤組", status: "resolved", amount: 5000000, registeredAt: "2026/03/15", assignee: "鈴木 花子", priority: "中", description: "追加工事の費用負担に関する紛争。2026/05/10に和解合意。" },
-  { id: "DSP-2026-0006", type: "未払い・支払遅延", title: "工事遅延による損害賠償 — 品川再開発", counterparty: "中央コンサルタント(株)", status: "investigating", amount: null, registeredAt: "2026/03/01", assignee: "佐藤 一郎", priority: "低", description: "工事遅延による損害賠償請求。過失割合を調査中。" },
-  { id: "DSP-2026-0007", type: "工期遅延", title: "品質検査不合格による手戻り — 渋谷地下道", counterparty: "北関東電設(株)", status: "resolved", amount: 1200000, registeredAt: "2026/02/20", assignee: "渡辺 誠", priority: "低", description: "品質検査不合格による手戻り費用の分担について解決済み。" },
-  { id: "DSP-2026-0008", type: "未払い・支払遅延", title: "支払遅延に対する督促 — 大手町ビル", counterparty: "(株)高橋建材", status: "open", amount: 3500000, registeredAt: "2026/04/30", assignee: "田中 太郎", priority: "低", description: "支払遅延に対する督促。支払計画書の提出を依頼中。" },
+  { id: "DSP-2026-0001", type: "工期遅延", title: "工期延長に伴う追加費用 — みらい北幹線補修", counterparty: "みらい建設工業(株)", status: "open", amount: 15000000, registeredAt: "2026/04/01", assignee: "田中 太郎", priority: "高", description: "工期延長に伴う追加費用の請求。発注者との費用分担について協議中。" },
+  { id: "DSP-2026-0002", type: "追加工事費用", title: "施工品質に関する是正要求 — ひかり町駅前再開発", counterparty: "さくら土木(株)", status: "escalated", amount: 8000000, registeredAt: "2026/04/10", assignee: "鈴木 花子", priority: "高", description: "施工品質に関する是正要求。顧問弁護士と対応方針を協議。" },
+  { id: "DSP-2026-0003", type: "品質不良", title: "近隣住民からの騒音苦情 — 横浜港防波堤", counterparty: "(株)やまびこ設計事務所", status: "investigating", amount: 2500000, registeredAt: "2026/04/20", assignee: "佐藤 一郎", priority: "中", description: "近隣住民からの騒音苦情。防音対策の実施と補償交渉を並行して進める。" },
+  { id: "DSP-2026-0004", type: "近隣クレーム", title: "下請代金の支払条件 — 多摩川橋梁", counterparty: "ひかり資材(株)", status: "open", amount: null, registeredAt: "2026/04/25", assignee: "田中 太郎", priority: "中", description: "下請代金の支払条件に関する協議。60日ルール遵守を確認中。" },
+  { id: "DSP-2026-0005", type: "下請トラブル", title: "追加工事費用負担 — 首都圏トンネル", counterparty: "(株)つばさ組", status: "resolved", amount: 5000000, registeredAt: "2026/03/15", assignee: "鈴木 花子", priority: "中", description: "追加工事の費用負担に関する紛争。2026/05/10に和解合意。" },
+  { id: "DSP-2026-0006", type: "未払い・支払遅延", title: "工事遅延による損害賠償 — はるか町再開発", counterparty: "あおぞらコンサルタント(株)", status: "investigating", amount: null, registeredAt: "2026/03/01", assignee: "佐藤 一郎", priority: "低", description: "工事遅延による損害賠償請求。過失割合を調査中。" },
+  { id: "DSP-2026-0007", type: "工期遅延", title: "品質検査不合格による手戻り — つばさ市地下道", counterparty: "北信電設(株)", status: "resolved", amount: 1200000, registeredAt: "2026/02/20", assignee: "渡辺 誠", priority: "低", description: "品質検査不合格による手戻り費用の分担について解決済み。" },
+  { id: "DSP-2026-0008", type: "未払い・支払遅延", title: "支払遅延に対する督促 — みらいビル", counterparty: "(株)はるか建材", status: "open", amount: 3500000, registeredAt: "2026/04/30", assignee: "田中 太郎", priority: "低", description: "支払遅延に対する督促。支払計画書の提出を依頼中。" },
 ];
 
 // ============================================================
@@ -184,21 +184,21 @@ export interface MockContract {
 }
 
 export const MOCK_CONTRACTS: MockContract[] = [
-  { id: "CTR-2026-0001", title: "工事請負契約（大成建設工業(株)）", counterparty: "大成建設工業(株)", contractType: "工事請負契約", amount: 120000000, status: "approved", riskLevel: "high", updatedAt: "2026/05/14" },
-  { id: "CTR-2026-0002", title: "業務委託契約（鈴木土木(株)）", counterparty: "鈴木土木(株)", contractType: "業務委託契約", amount: 35000000, status: "in_review", riskLevel: "medium", updatedAt: "2026/05/13" },
-  { id: "CTR-2026-0003", title: "資材購入契約（東日本資材(株)）", counterparty: "東日本資材(株)", contractType: "資材購入契約", amount: 8900000, status: "pending_approval", riskLevel: "low", updatedAt: "2026/05/12" },
-  { id: "CTR-2026-0004", title: "下請契約（(株)佐藤組）", counterparty: "(株)佐藤組", contractType: "下請契約", amount: 25000000, status: "in_review", riskLevel: "critical", updatedAt: "2026/05/11" },
-  { id: "CTR-2026-0005", title: "設計監理契約（(株)山田設計事務所）", counterparty: "(株)山田設計事務所", contractType: "設計監理契約", amount: 15000000, status: "approved", riskLevel: "low", updatedAt: "2026/05/10" },
-  { id: "CTR-2026-0006", title: "賃貸借契約（関東リース(株)）", counterparty: "関東リース(株)", contractType: "賃貸借契約", amount: 3500000, status: "draft", riskLevel: "low", updatedAt: "2026/05/09" },
-  { id: "CTR-2026-0007", title: "秘密保持契約（東京法律事務所）", counterparty: "東京法律事務所", contractType: "秘密保持契約", amount: 1200000, status: "approved", riskLevel: "low", updatedAt: "2026/05/08" },
-  { id: "CTR-2026-0008", title: "工事請負契約（横浜建設(株)）", counterparty: "横浜建設(株)", contractType: "工事請負契約", amount: 48000000, status: "in_review", riskLevel: "medium", updatedAt: "2026/05/07" },
-  { id: "CTR-2026-0009", title: "業務委託契約（中央コンサルタント(株)）", counterparty: "中央コンサルタント(株)", contractType: "業務委託契約", amount: 12000000, status: "pending_approval", riskLevel: "medium", updatedAt: "2026/05/06" },
-  { id: "CTR-2026-0010", title: "資材購入契約（太平洋セメント(株)）", counterparty: "太平洋セメント(株)", contractType: "資材購入契約", amount: 7500000, status: "approved", riskLevel: "low", updatedAt: "2026/05/05" },
-  { id: "CTR-2026-0011", title: "下請契約（(株)中村組）", counterparty: "(株)中村組", contractType: "下請契約", amount: 18000000, status: "expired", riskLevel: "high", updatedAt: "2026/04/30" },
-  { id: "CTR-2026-0012", title: "工事請負契約（(株)田中工務店）", counterparty: "(株)田中工務店", contractType: "工事請負契約", amount: 250000000, status: "approved", riskLevel: "medium", updatedAt: "2026/04/28" },
-  { id: "CTR-2026-0013", title: "設計監理契約（(株)伊藤測量）", counterparty: "(株)伊藤測量", contractType: "設計監理契約", amount: 9800000, status: "archived", riskLevel: "low", updatedAt: "2026/04/20" },
-  { id: "CTR-2026-0014", title: "業務委託契約（北関東電設(株)）", counterparty: "北関東電設(株)", contractType: "業務委託契約", amount: 22000000, status: "in_review", riskLevel: "high", updatedAt: "2026/05/15" },
-  { id: "CTR-2026-0015", title: "資材購入契約（(株)高橋建材）", counterparty: "(株)高橋建材", contractType: "資材購入契約", amount: 5500000, status: "draft", riskLevel: "low", updatedAt: "2026/05/16" },
+  { id: "CTR-2026-0001", title: "工事請負契約（みらい建設工業(株)）", counterparty: "みらい建設工業(株)", contractType: "工事請負契約", amount: 120000000, status: "approved", riskLevel: "high", updatedAt: "2026/05/14" },
+  { id: "CTR-2026-0002", title: "業務委託契約（さくら土木(株)）", counterparty: "さくら土木(株)", contractType: "業務委託契約", amount: 35000000, status: "in_review", riskLevel: "medium", updatedAt: "2026/05/13" },
+  { id: "CTR-2026-0003", title: "資材購入契約（ひかり資材(株)）", counterparty: "ひかり資材(株)", contractType: "資材購入契約", amount: 8900000, status: "pending_approval", riskLevel: "low", updatedAt: "2026/05/12" },
+  { id: "CTR-2026-0004", title: "下請契約（(株)つばさ組）", counterparty: "(株)つばさ組", contractType: "下請契約", amount: 25000000, status: "in_review", riskLevel: "critical", updatedAt: "2026/05/11" },
+  { id: "CTR-2026-0005", title: "設計監理契約（(株)やまびこ設計事務所）", counterparty: "(株)やまびこ設計事務所", contractType: "設計監理契約", amount: 15000000, status: "approved", riskLevel: "low", updatedAt: "2026/05/10" },
+  { id: "CTR-2026-0006", title: "賃貸借契約（みらいリース(株)）", counterparty: "みらいリース(株)", contractType: "賃貸借契約", amount: 3500000, status: "draft", riskLevel: "low", updatedAt: "2026/05/09" },
+  { id: "CTR-2026-0007", title: "秘密保持契約（みらい中央法律事務所）", counterparty: "みらい中央法律事務所", contractType: "秘密保持契約", amount: 1200000, status: "approved", riskLevel: "low", updatedAt: "2026/05/08" },
+  { id: "CTR-2026-0008", title: "工事請負契約（みなと建設(株)）", counterparty: "みなと建設(株)", contractType: "工事請負契約", amount: 48000000, status: "in_review", riskLevel: "medium", updatedAt: "2026/05/07" },
+  { id: "CTR-2026-0009", title: "業務委託契約（あおぞらコンサルタント(株)）", counterparty: "あおぞらコンサルタント(株)", contractType: "業務委託契約", amount: 12000000, status: "pending_approval", riskLevel: "medium", updatedAt: "2026/05/06" },
+  { id: "CTR-2026-0010", title: "資材購入契約（みらいセメント商事(株)）", counterparty: "みらいセメント商事(株)", contractType: "資材購入契約", amount: 7500000, status: "approved", riskLevel: "low", updatedAt: "2026/05/05" },
+  { id: "CTR-2026-0011", title: "下請契約（(株)こまくさ組）", counterparty: "(株)こまくさ組", contractType: "下請契約", amount: 18000000, status: "expired", riskLevel: "high", updatedAt: "2026/04/30" },
+  { id: "CTR-2026-0012", title: "工事請負契約（(株)ほしぞら工務店）", counterparty: "(株)ほしぞら工務店", contractType: "工事請負契約", amount: 250000000, status: "approved", riskLevel: "medium", updatedAt: "2026/04/28" },
+  { id: "CTR-2026-0013", title: "設計監理契約（(株)みさき測量）", counterparty: "(株)みさき測量", contractType: "設計監理契約", amount: 9800000, status: "archived", riskLevel: "low", updatedAt: "2026/04/20" },
+  { id: "CTR-2026-0014", title: "業務委託契約（北信電設(株)）", counterparty: "北信電設(株)", contractType: "業務委託契約", amount: 22000000, status: "in_review", riskLevel: "high", updatedAt: "2026/05/15" },
+  { id: "CTR-2026-0015", title: "資材購入契約（(株)はるか建材）", counterparty: "(株)はるか建材", contractType: "資材購入契約", amount: 5500000, status: "draft", riskLevel: "low", updatedAt: "2026/05/16" },
 ];
 
 export type ReviewStatus = "completed" | "in_progress" | "pending_confirmation";
@@ -213,14 +213,14 @@ export interface MockReview {
 }
 
 export const MOCK_REVIEWS: MockReview[] = [
-  { id: "REV-0001", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 4, status: "completed", reviewerConfirmed: true, completedAt: "2026/05/14" },
-  { id: "REV-0002", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（鈴木土木(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 2, status: "in_progress", reviewerConfirmed: false, completedAt: null },
-  { id: "REV-0003", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", aiModel: "claude-opus-4-7", riskLevel: "critical", issuesCount: 6, status: "completed", reviewerConfirmed: false, completedAt: "2026/05/11" },
-  { id: "REV-0004", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（横浜建設(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 3, status: "pending_confirmation", reviewerConfirmed: false, completedAt: "2026/05/07" },
-  { id: "REV-0005", contractId: "CTR-2026-0009", contractTitle: "業務委託契約（中央コンサルタント(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 2, status: "completed", reviewerConfirmed: true, completedAt: "2026/05/06" },
-  { id: "REV-0006", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)中村組）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 5, status: "completed", reviewerConfirmed: true, completedAt: "2026/04/29" },
-  { id: "REV-0007", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 1, status: "completed", reviewerConfirmed: true, completedAt: "2026/04/27" },
-  { id: "REV-0008", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 4, status: "in_progress", reviewerConfirmed: false, completedAt: null },
+  { id: "REV-0001", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（みらい建設工業(株)）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 4, status: "completed", reviewerConfirmed: true, completedAt: "2026/05/14" },
+  { id: "REV-0002", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（さくら土木(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 2, status: "in_progress", reviewerConfirmed: false, completedAt: null },
+  { id: "REV-0003", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)つばさ組）", aiModel: "claude-opus-4-7", riskLevel: "critical", issuesCount: 6, status: "completed", reviewerConfirmed: false, completedAt: "2026/05/11" },
+  { id: "REV-0004", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（みなと建設(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 3, status: "pending_confirmation", reviewerConfirmed: false, completedAt: "2026/05/07" },
+  { id: "REV-0005", contractId: "CTR-2026-0009", contractTitle: "業務委託契約（あおぞらコンサルタント(株)）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 2, status: "completed", reviewerConfirmed: true, completedAt: "2026/05/06" },
+  { id: "REV-0006", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)こまくさ組）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 5, status: "completed", reviewerConfirmed: true, completedAt: "2026/04/29" },
+  { id: "REV-0007", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)ほしぞら工務店）", aiModel: "claude-opus-4-7", riskLevel: "medium", issuesCount: 1, status: "completed", reviewerConfirmed: true, completedAt: "2026/04/27" },
+  { id: "REV-0008", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北信電設(株)）", aiModel: "claude-opus-4-7", riskLevel: "high", issuesCount: 4, status: "in_progress", reviewerConfirmed: false, completedAt: null },
 ];
 
 export type WorkflowStatus = "in_progress" | "approved" | "rejected" | "returned" | "withdrawn";
@@ -236,14 +236,14 @@ export interface MockWorkflow {
 }
 
 export const MOCK_WORKFLOWS: MockWorkflow[] = [
-  { id: "WF-0001", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", route: "A2", currentStep: "部門長承認", waitingFor: "佐藤 一郎", status: "in_progress", requiresOutsideCounsel: true, dueDate: "2026/05/20", updatedAt: "2026/05/14" },
-  { id: "WF-0002", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（東日本資材(株)）", route: "B1", currentStep: "法務リード承認", waitingFor: "田中 太郎", status: "in_progress", requiresOutsideCounsel: false, dueDate: "2026/05/18", updatedAt: "2026/05/12" },
-  { id: "WF-0003", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)山田設計事務所）", route: "B2", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: false, dueDate: null, updatedAt: "2026/05/10" },
-  { id: "WF-0004", contractId: "CTR-2026-0009", contractTitle: "業務委託契約（中央コンサルタント(株)）", route: "C1", currentStep: "法務担当レビュー", waitingFor: "鈴木 花子", status: "in_progress", requiresOutsideCounsel: false, dueDate: "2026/05/22", updatedAt: "2026/05/06" },
-  { id: "WF-0005", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", route: "A1", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: true, dueDate: null, updatedAt: "2026/04/28" },
-  { id: "WF-0006", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", route: "D1", currentStep: "弁護士確認", waitingFor: "外部弁護士", status: "in_progress", requiresOutsideCounsel: true, dueDate: "2026/05/25", updatedAt: "2026/05/11" },
-  { id: "WF-0007", contractId: "CTR-2026-0007", contractTitle: "秘密保持契約（東京法律事務所）", route: "C2", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: false, dueDate: null, updatedAt: "2026/05/08" },
-  { id: "WF-0008", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", route: "B1", currentStep: "法務リード承認", waitingFor: "田中 太郎", status: "returned", requiresOutsideCounsel: false, dueDate: "2026/05/19", updatedAt: "2026/05/15" },
+  { id: "WF-0001", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（みらい建設工業(株)）", route: "A2", currentStep: "部門長承認", waitingFor: "佐藤 一郎", status: "in_progress", requiresOutsideCounsel: true, dueDate: "2026/05/20", updatedAt: "2026/05/14" },
+  { id: "WF-0002", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（ひかり資材(株)）", route: "B1", currentStep: "法務リード承認", waitingFor: "田中 太郎", status: "in_progress", requiresOutsideCounsel: false, dueDate: "2026/05/18", updatedAt: "2026/05/12" },
+  { id: "WF-0003", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)やまびこ設計事務所）", route: "B2", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: false, dueDate: null, updatedAt: "2026/05/10" },
+  { id: "WF-0004", contractId: "CTR-2026-0009", contractTitle: "業務委託契約（あおぞらコンサルタント(株)）", route: "C1", currentStep: "法務担当レビュー", waitingFor: "鈴木 花子", status: "in_progress", requiresOutsideCounsel: false, dueDate: "2026/05/22", updatedAt: "2026/05/06" },
+  { id: "WF-0005", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)ほしぞら工務店）", route: "A1", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: true, dueDate: null, updatedAt: "2026/04/28" },
+  { id: "WF-0006", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)つばさ組）", route: "D1", currentStep: "弁護士確認", waitingFor: "外部弁護士", status: "in_progress", requiresOutsideCounsel: true, dueDate: "2026/05/25", updatedAt: "2026/05/11" },
+  { id: "WF-0007", contractId: "CTR-2026-0007", contractTitle: "秘密保持契約（みらい中央法律事務所）", route: "C2", currentStep: "完了", waitingFor: "—", status: "approved", requiresOutsideCounsel: false, dueDate: null, updatedAt: "2026/05/08" },
+  { id: "WF-0008", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北信電設(株)）", route: "B1", currentStep: "法務リード承認", waitingFor: "田中 太郎", status: "returned", requiresOutsideCounsel: false, dueDate: "2026/05/19", updatedAt: "2026/05/15" },
 ];
 
 export type RiskItemStatus = "open" | "mitigated" | "accepted" | "closed";
@@ -259,16 +259,16 @@ export interface MockRisk {
 }
 
 export const MOCK_RISKS: MockRisk[] = [
-  { id: "RSK-0001", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)佐藤組）", category: "下請法", level: "critical", score: 88, description: "支払期日が納品後75日に設定されており、下請法第2条の4（60日ルール）に抵触する可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/11", probability: 4, impact: 4 },
-  { id: "RSK-0002", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "建設業法", level: "high", score: 72, description: "第7条の解除条項が発注者に一方的に有利であり、建設業法第19条の3に抵触する恐れがあります。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/14", probability: 3, impact: 4 },
-  { id: "RSK-0003", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（大成建設工業(株)）", category: "損害賠償", level: "high", score: 65, description: "損害賠償の上限条項が設定されておらず、過大なリスク負担となる可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/14", probability: 3, impact: 3 },
-  { id: "RSK-0004", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（鈴木土木(株)）", category: "工期", level: "medium", score: 45, description: "工期延長条件が不明確で、天候不順・不可抗力時の対応が未定義です。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/13", probability: 3, impact: 2 },
-  { id: "RSK-0005", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)中村組）", category: "建設業法", level: "high", score: 70, description: "主任技術者の配置届が未提出であり、建設業法第26条違反の可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/04/30", probability: 4, impact: 3 },
-  { id: "RSK-0006", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（横浜建設(株)）", category: "秘密保持", level: "medium", score: 38, description: "秘密情報の定義が過度に広範であり、実務上の適用が困難です。", status: "accepted", owner: "渡辺 誠", detectedAt: "2026/05/07", probability: 2, impact: 2 },
-  { id: "RSK-0007", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)山田設計事務所）", category: "検査・引渡し", level: "medium", score: 42, description: "検査期間が7日間と設定されており、工事規模に対して不十分な可能性があります。", status: "mitigated", owner: "田中 太郎", detectedAt: "2026/05/10", probability: 2, impact: 3 },
-  { id: "RSK-0008", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)田中工務店）", category: "下請法", level: "low", score: 22, description: "支払条件の記載が一部不明確ですが、口頭での合意があることを確認しました。", status: "closed", owner: "鈴木 花子", detectedAt: "2026/04/28", probability: 1, impact: 2 },
-  { id: "RSK-0009", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北関東電設(株)）", category: "建設業法", level: "high", score: 68, description: "施工体制台帳の二次下請記載が不完全で、公共工事入札適正化法第15条に抵触する可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/05/15", probability: 3, impact: 3 },
-  { id: "RSK-0010", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（東日本資材(株)）", category: "独占禁止法", level: "low", score: 18, description: "特定メーカー指定条項の該当性を確認中。現時点では軽微と判断。", status: "accepted", owner: "田中 太郎", detectedAt: "2026/05/12", probability: 1, impact: 1 },
+  { id: "RSK-0001", contractId: "CTR-2026-0004", contractTitle: "下請契約（(株)つばさ組）", category: "下請法", level: "critical", score: 88, description: "支払期日が納品後75日に設定されており、下請法第2条の4（60日ルール）に抵触する可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/11", probability: 4, impact: 4 },
+  { id: "RSK-0002", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（みらい建設工業(株)）", category: "建設業法", level: "high", score: 72, description: "第7条の解除条項が発注者に一方的に有利であり、建設業法第19条の3に抵触する恐れがあります。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/14", probability: 3, impact: 4 },
+  { id: "RSK-0003", contractId: "CTR-2026-0001", contractTitle: "工事請負契約（みらい建設工業(株)）", category: "損害賠償", level: "high", score: 65, description: "損害賠償の上限条項が設定されておらず、過大なリスク負担となる可能性があります。", status: "open", owner: "田中 太郎", detectedAt: "2026/05/14", probability: 3, impact: 3 },
+  { id: "RSK-0004", contractId: "CTR-2026-0002", contractTitle: "業務委託契約（さくら土木(株)）", category: "工期", level: "medium", score: 45, description: "工期延長条件が不明確で、天候不順・不可抗力時の対応が未定義です。", status: "open", owner: "鈴木 花子", detectedAt: "2026/05/13", probability: 3, impact: 2 },
+  { id: "RSK-0005", contractId: "CTR-2026-0011", contractTitle: "下請契約（(株)こまくさ組）", category: "建設業法", level: "high", score: 70, description: "主任技術者の配置届が未提出であり、建設業法第26条違反の可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/04/30", probability: 4, impact: 3 },
+  { id: "RSK-0006", contractId: "CTR-2026-0008", contractTitle: "工事請負契約（みなと建設(株)）", category: "秘密保持", level: "medium", score: 38, description: "秘密情報の定義が過度に広範であり、実務上の適用が困難です。", status: "accepted", owner: "渡辺 誠", detectedAt: "2026/05/07", probability: 2, impact: 2 },
+  { id: "RSK-0007", contractId: "CTR-2026-0005", contractTitle: "設計監理契約（(株)やまびこ設計事務所）", category: "検査・引渡し", level: "medium", score: 42, description: "検査期間が7日間と設定されており、工事規模に対して不十分な可能性があります。", status: "mitigated", owner: "田中 太郎", detectedAt: "2026/05/10", probability: 2, impact: 3 },
+  { id: "RSK-0008", contractId: "CTR-2026-0012", contractTitle: "工事請負契約（(株)ほしぞら工務店）", category: "下請法", level: "low", score: 22, description: "支払条件の記載が一部不明確ですが、口頭での合意があることを確認しました。", status: "closed", owner: "鈴木 花子", detectedAt: "2026/04/28", probability: 1, impact: 2 },
+  { id: "RSK-0009", contractId: "CTR-2026-0014", contractTitle: "業務委託契約（北信電設(株)）", category: "建設業法", level: "high", score: 68, description: "施工体制台帳の二次下請記載が不完全で、公共工事入札適正化法第15条に抵触する可能性があります。", status: "open", owner: "佐藤 一郎", detectedAt: "2026/05/15", probability: 3, impact: 3 },
+  { id: "RSK-0010", contractId: "CTR-2026-0003", contractTitle: "資材購入契約（ひかり資材(株)）", category: "独占禁止法", level: "low", score: 18, description: "特定メーカー指定条項の該当性を確認中。現時点では軽微と判断。", status: "accepted", owner: "田中 太郎", detectedAt: "2026/05/12", probability: 1, impact: 1 },
 ];
 
 export type KnowledgeSource = "internal_doc" | "precedent" | "faq" | "playbook";
@@ -380,7 +380,7 @@ export const MOCK_COMPLIANCE_ITEMS: ComplianceItem[] = [
   { id: "cp5", law: "電子帳簿保存法", item: "第7条 — 電子取引データの保存", status: "compliant", lastCheck: "2026/05/01", detail: "電子データの適切な保存を確認。" },
   { id: "cp6", law: "電子帳簿保存法", item: "検索要件の充足", status: "compliant", lastCheck: "2026/05/01", detail: "取引年月日・取引金額・取引先の検索条件を契約台帳と保存証跡で確認済み。月次監査で継続確認。" },
   { id: "cp7", law: "個人情報保護法", item: "第23条 — 第三者提供の制限", status: "compliant", lastCheck: "2026/04/25", detail: "個人情報の第三者提供は適切な同意のもとで実施。" },
-  { id: "cp8", law: "建設業法", item: "第26条 — 主任技術者の配置", status: "non_compliant", lastCheck: "2026/05/12", detail: "東名高速補修工事で主任技術者の配置届が未提出。至急対応要。" },
+  { id: "cp8", law: "建設業法", item: "第26条 — 主任技術者の配置", status: "non_compliant", lastCheck: "2026/05/12", detail: "みらい北幹線補修工事で主任技術者の配置届が未提出。至急対応要。" },
 ];
 
 export const MOCK_COMPLIANCE_FRAMEWORKS = [

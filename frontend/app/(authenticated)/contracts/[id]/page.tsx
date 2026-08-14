@@ -12,7 +12,9 @@ import { ContractAttachmentsList } from "@/components/contracts/contract-attachm
 import { ContractActivityLog } from "@/components/contracts/contract-activity-log";
 import { RiskBadge } from "@/components/risks/risk-badge";
 import { bindServerSession } from "@/lib/auth/session-bridge.server";
+import { ApiError } from "@/lib/api/client";
 import { contractsApi } from "@/lib/api/endpoints";
+import type { AuditLog, Clause, ContractDocument } from "@/lib/api/schemas";
 
 export const metadata: Metadata = {
   title: "契約詳細",
@@ -32,6 +34,14 @@ interface ContractDetail {
   summary: string;
 }
 
+interface ContractDetailData {
+  contract: ContractDetail;
+  clauses: Clause[];
+  documents: ContractDocument[];
+  activityLogs: AuditLog[];
+  activityForbidden: boolean;
+}
+
 function formatDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
   try {
@@ -45,24 +55,51 @@ function formatDate(iso: string | null | undefined): string | null {
   }
 }
 
-async function getContract(id: string): Promise<ContractDetail | null> {
+async function getContract(id: string): Promise<ContractDetailData | null> {
   const cleanup = await bindServerSession();
   try {
-    const c = await contractsApi.get(id);
+    const [c, clausesResult, documentsResult, auditResult] = await Promise.allSettled([
+      contractsApi.get(id),
+      contractsApi.clauses(id),
+      contractsApi.documents(id),
+      contractsApi.auditTrail(id, { page: 1, size: 20 }),
+    ]);
+    if (c.status === "rejected") {
+      console.error("contract-detail.primary-fetch-rejected", c.reason);
+      return null;
+    }
+    const contract = c.value;
+    const clauses = clausesResult.status === "fulfilled" ? clausesResult.value : [];
+    const documents = documentsResult.status === "fulfilled" ? documentsResult.value : [];
+    let activityLogs: AuditLog[] = [];
+    let activityForbidden = false;
+    if (auditResult.status === "fulfilled") {
+      activityLogs = auditResult.value.items;
+    } else {
+      const reason = auditResult.reason;
+      activityForbidden = reason instanceof ApiError && reason.status === 403;
+    }
     return {
-      id: String(c.id),
-      title: c.title,
-      counterparty: c.counterparty ?? "—",
-      contractType: c.contract_type,
-      amount: c.amount ?? null,
-      currency: c.currency ?? "JPY",
-      startDate: formatDate(c.start_date),
-      endDate: formatDate(c.end_date),
-      status: c.status,
-      riskLevel: "low",
-      summary: `${c.contract_type}に関する契約書。相手方 ${c.counterparty ?? "—"} との合意事項を記載。最終的な法的判断は法務担当者・顧問弁護士が行います。`,
+      contract: {
+        id: String(contract.id),
+        title: contract.title,
+        counterparty: contract.counterparty ?? "—",
+        contractType: contract.contract_type,
+        amount: contract.amount ?? null,
+        currency: contract.currency ?? "JPY",
+        startDate: formatDate(contract.start_date),
+        endDate: formatDate(contract.end_date),
+        status: contract.status,
+        riskLevel: "low",
+        summary: `${contract.contract_type}に関する契約書。相手方 ${contract.counterparty ?? "—"} との合意事項を記載。最終的な法的判断は法務担当者・顧問弁護士が行います。`,
+      },
+      clauses,
+      documents,
+      activityLogs,
+      activityForbidden,
     };
-  } catch {
+  } catch (error) {
+    console.error("contract-detail.fetch-failed", error);
     return null;
   } finally {
     cleanup();
@@ -75,11 +112,12 @@ interface ContractDetailPageProps {
 
 export default async function ContractDetailPage({ params }: ContractDetailPageProps) {
   const { id } = await params;
-  const contract = await getContract(id);
+  const data = await getContract(id);
 
-  if (!contract) {
+  if (!data) {
     notFound();
   }
+  const { contract, clauses, documents, activityLogs, activityForbidden } = data;
 
   return (
     <div className="space-y-6">
@@ -119,7 +157,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
               <CardTitle>条項一覧</CardTitle>
             </CardHeader>
             <CardContent>
-              <ContractClausesViewer contractId={contract.id} />
+              <ContractClausesViewer contractId={contract.id} clauses={clauses} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -130,7 +168,7 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
               <CardTitle>添付ファイル</CardTitle>
             </CardHeader>
             <CardContent>
-              <ContractAttachmentsList contractId={contract.id} />
+              <ContractAttachmentsList contractId={contract.id} documents={documents} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -141,7 +179,11 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
               <CardTitle>アクティビティ履歴</CardTitle>
             </CardHeader>
             <CardContent>
-              <ContractActivityLog contractId={contract.id} />
+              <ContractActivityLog
+                contractId={contract.id}
+                logs={activityLogs}
+                forbidden={activityForbidden}
+              />
             </CardContent>
           </Card>
         </TabsContent>

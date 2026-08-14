@@ -35,6 +35,7 @@ import {
   complianceRunSchema,
   connectionTestSchema,
   contractSchema,
+  contractDocumentSchema,
   contractCreateSchema,
   contractUpdateSchema,
   dashboardSummarySchema,
@@ -230,6 +231,9 @@ export const contractsApi = {
 
   clauses: (id: number | string) =>
     getParsed(z.array(clauseSchema), `/contracts/${id}/clauses`),
+
+  documents: (id: number | string) =>
+    getParsed(z.array(contractDocumentSchema), `/contracts/${id}/documents`),
 
   auditTrail: (id: number | string, params?: { page?: number; size?: number }) =>
     getParsed(paginatedSchema(auditLogSchema), `/contracts/${id}/audit-trail`, {

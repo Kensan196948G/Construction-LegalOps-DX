@@ -1,33 +1,73 @@
+"use client";
+
 import { FileText, FileImage, File } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import type { ContractDocument } from "@/lib/api/schemas";
 
-const MOCK_ATTACHMENTS = [
-  { id: "a1", name: "工事請負契約書_v3.pdf", type: "pdf", size: "2.4 MB", uploadedBy: "田中 太郎", uploadedAt: "2026/05/10" },
-  { id: "a2", name: "工事内訳明細書.xlsx", type: "xlsx", size: "856 KB", uploadedBy: "鈴木 花子", uploadedAt: "2026/05/11" },
-  { id: "a3", name: "現場写真_着工前.jpg", type: "image", size: "3.1 MB", uploadedBy: "山田 美咲", uploadedAt: "2026/05/12" },
-  { id: "a4", name: "施工体系図.pdf", type: "pdf", size: "1.2 MB", uploadedBy: "佐藤 一郎", uploadedAt: "2026/05/13" },
-  { id: "a5", name: "安全衛生計画書.pdf", type: "pdf", size: "980 KB", uploadedBy: "田中 太郎", uploadedAt: "2026/05/14" },
-];
+interface Props {
+  contractId: string;
+  documents?: ContractDocument[];
+}
 
-const FileIcon = ({ type }: { type: string }) => {
-  if (type === "image") return <FileImage className="h-5 w-5 text-blue-400" />;
-  if (type === "pdf") return <FileText className="h-5 w-5 text-red-400" />;
-  return <File className="h-5 w-5 text-muted-foreground" />;
+const FileIcon = ({ docType }: { docType: string }) => {
+  if (docType === "photo" || docType === "image") {
+    return <FileImage className="h-5 w-5 text-blue-400" aria-hidden="true" />;
+  }
+  if (docType === "contract" || docType === "spec" || docType === "site_rule") {
+    return <FileText className="h-5 w-5 text-red-400" aria-hidden="true" />;
+  }
+  return <File className="h-5 w-5 text-muted-foreground" aria-hidden="true" />;
 };
 
-interface Props { contractId: string; }
+function docTypeLabel(docType: string): string {
+  switch (docType) {
+    case "contract":
+      return "契約書";
+    case "spec":
+      return "仕様書";
+    case "site_rule":
+      return "施工要領";
+    default:
+      return docType;
+  }
+}
 
-export function ContractAttachmentsList({ contractId: _ }: Props) {
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return value;
+  }
+}
+
+export function ContractAttachmentsList({ contractId: _, documents = [] }: Props) {
+  if (documents.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        契約パッケージ文書はまだ登録されていません。文書のアップロードから登録できます。
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-2">
-      {MOCK_ATTACHMENTS.map(a => (
-        <div key={a.id} className="flex items-center gap-3 rounded-md border p-3 hover:bg-muted/50">
-          <FileIcon type={a.type} />
+      {documents.map((d) => (
+        <div key={d.id} className="flex items-center gap-3 rounded-md border p-3 hover:bg-muted/50">
+          <FileIcon docType={d.doc_type} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{a.name}</p>
-            <p className="text-xs text-muted-foreground">{a.size} • {a.uploadedBy} • {a.uploadedAt}</p>
+            <p className="truncate text-sm font-medium">{d.title}</p>
+            <p className="text-xs text-muted-foreground">
+              {formatDate(d.doc_date)} • v{d.version}
+            </p>
           </div>
-          <Badge variant="outline" className="shrink-0 text-xs uppercase">{a.type}</Badge>
+          <Badge variant="outline" className="shrink-0 text-xs">
+            {docTypeLabel(d.doc_type)}
+          </Badge>
         </div>
       ))}
     </div>

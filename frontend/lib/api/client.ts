@@ -184,7 +184,11 @@ async function defaultClientSignOut(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export const API_BASE_URL =
-  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) || "/api/v1";
+  (typeof window === "undefined" &&
+    typeof process !== "undefined" &&
+    process.env?.API_INTERNAL_URL) ||
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) ||
+  "/api/v1";
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

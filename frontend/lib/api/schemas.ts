@@ -644,11 +644,12 @@ export type ContractUpdate = z.infer<typeof contractUpdateSchema>;
 
 export const reviewFindingSchema = z.object({
   clause_seq: z.number().int().nonnegative().optional(),
-  title: z.string(),
+  title: z.string().optional().nullable(),
   risk_level: riskLevelEnum,
   comment: z.string(),
   suggestion: z.string().optional().nullable(),
   citations: z.array(z.string()).optional(),
+  verdict: z.string().optional(),
 });
 export type ReviewFinding = z.infer<typeof reviewFindingSchema>;
 
@@ -659,15 +660,45 @@ export const legalReviewSchema = z.object({
   status: reviewStatusEnum,
   ai_model: z.string().optional().nullable(),
   overall_risk: riskLevelEnum.optional().nullable(),
+  risk_score: z.number().int().min(0).max(100).optional().nullable(),
   summary: z.string().optional().nullable(),
   scope: z.string().optional(),
   options: z.record(z.string(), z.unknown()).optional().nullable(),
   findings: z.array(reviewFindingSchema).optional(),
+  suggested_actions: z
+    .array(
+      z.object({
+        action: z.string(),
+        target_clause_seq: z.number().int().optional().nullable(),
+        description: z.string(),
+        replacement_text: z.string().optional().nullable(),
+      }),
+    )
+    .optional(),
+  result: z.record(z.string(), z.unknown()).optional().nullable(),
   disclaimer: z.string().optional(),
   started_at: datetimeSchema.optional().nullable(),
   finished_at: datetimeSchema.optional().nullable(),
   created_at: datetimeSchema.optional(),
 });
+
+export const contractDocumentSchema = z.object({
+  id: idSchema,
+  contract_id: idSchema,
+  doc_type: z.string(),
+  title: z.string(),
+  priority: z.number().int(),
+  doc_date: z.string().optional().nullable(),
+  amount_jpy: z.number().optional().nullable(),
+  start_date: z.string().optional().nullable(),
+  end_date: z.string().optional().nullable(),
+  content: z.string().optional().nullable(),
+  source_attachment_id: idSchema.optional().nullable(),
+  version: z.number().int(),
+  created_at: datetimeSchema.optional(),
+  updated_at: datetimeSchema.optional(),
+});
+export type ContractDocument = z.infer<typeof contractDocumentSchema>;
 export type LegalReview = z.infer<typeof legalReviewSchema>;
 
 export const reviewCreateSchema = z.object({
@@ -901,7 +932,15 @@ export type KnowledgeArticle = z.infer<typeof knowledgeArticleSchema>;
 export const auditLogSchema = z.object({
   id: idSchema,
   occurred_at: datetimeSchema,
-  actor: userRefSchema.optional().nullable(),
+  actor: z
+    .object({
+      id: idSchema,
+      display_name: z.string().optional().nullable(),
+    })
+    .optional()
+    .nullable(),
+  actor_id: idSchema.optional().nullable(),
+  actor_role: z.string().optional().nullable(),
   action: auditActionEnum,
   target_type: z.string(),
   target_id: idSchema.optional().nullable(),

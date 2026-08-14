@@ -81,7 +81,7 @@ export function ContractUploadForm() {
         <div className="space-y-1.5">
           <label className="text-sm font-medium">相手方名称 *</label>
           <Input
-            placeholder="例: 大成建設工業(株)"
+            placeholder="例: みらい建設工業(株)"
             value={counterparty}
             onChange={e => setCounterparty(e.target.value)}
           />
