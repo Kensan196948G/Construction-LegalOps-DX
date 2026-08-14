@@ -11,7 +11,7 @@ def _env(app_env: str, bypass: str = "true") -> dict[str, str]:
         "APP_ENV": app_env,
         "AUTH_DEV_BYPASS": bypass,
         "DEV_USER_ID": "00000000-0000-0000-0000-000000000001",
-        "DEV_USER_EMAIL": "dev-user@example.invalid",
+        "DEV_USER_EMAIL": "demo@legalops-mvp.example.com",
         "DEV_USER_ROLE": "admin",
     }
 
@@ -36,7 +36,7 @@ def test_dev_bypass_active_in_staging_with_explicit_flag(monkeypatch) -> None:
     assert deps._dev_bypass_enabled() is True
     claims = deps._dev_bypass_claims()
     assert claims["sub"] == "00000000-0000-0000-0000-000000000001"
-    assert claims["email"] == "dev-user@example.invalid"
+    assert claims["email"] == "demo@legalops-mvp.example.com"
     assert claims["role"] == "admin"
 
 
