@@ -65,6 +65,7 @@ async function getContract(id: string): Promise<ContractDetailData | null> {
       contractsApi.auditTrail(id, { page: 1, size: 20 }),
     ]);
     if (c.status === "rejected") {
+      console.error("contract-detail.primary-fetch-rejected", c.reason);
       return null;
     }
     const contract = c.value;
