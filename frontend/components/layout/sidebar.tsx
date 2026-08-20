@@ -25,6 +25,9 @@ import {
   FileDiff,
   ReceiptText,
   BarChart3,
+  BriefcaseBusiness,
+  Radar,
+  Files,
   type LucideIcon,
 } from "lucide-react";
 
@@ -52,6 +55,9 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { label: "契約期限・更新管理", href: "/deadlines", icon: CalendarClock, group: "legal" },
   { label: "取引先・協力会社管理", href: "/partners", icon: Building2, group: "legal" },
   { label: "紛争・クレーム管理", href: "/disputes", icon: Swords, group: "legal" },
+  { label: "知財台帳", href: "/ip-assets", icon: BriefcaseBusiness, group: "ip" },
+  { label: "競合出願ウォッチ", href: "/ip-watch", icon: Radar, group: "ip" },
+  { label: "審査書類・AI解析", href: "/ip-documents", icon: Files, group: "ip" },
   { label: "コンプライアンスチェック", href: "/compliance", icon: ClipboardCheck, group: "quality" },
   { label: "ひな形管理", href: "/templates", icon: FileText, group: "quality" },
   { label: "ナレッジベース", href: "/knowledge", icon: BookOpen, group: "quality" },

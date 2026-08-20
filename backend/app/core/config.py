@@ -228,10 +228,29 @@ class Settings(BaseSettings):
         default=3650, alias="RETENTION_ATTACHMENT_DAYS"
     )
 
+    # ----- JPO 特許情報取得API（知財管理・競合ウォッチ・審査書類収集） -----
+    # mode=demo の場合は ID/PW 不要で決定的なデモデータを返す（MVP 既定）。
+    # mode=live にするには特許庁への利用登録で発行された ID/PW が必要。
+    jpo_api_mode: str = Field(default="demo", alias="JPO_API_MODE")
+    jpo_api_id: SecretStr = Field(default=SecretStr(""), alias="JPO_API_ID")
+    jpo_api_password: SecretStr = Field(default=SecretStr(""), alias="JPO_API_PASSWORD")
+    jpo_api_base_url: str = Field(
+        default="https://ip-data.jpo.go.jp", alias="JPO_API_BASE_URL"
+    )
+    # 国内 API の 1 分あたり上限（特許庁の利用条件: 10 回/分）。
+    jpo_api_max_calls_per_minute: int = Field(
+        default=10, alias="JPO_API_MAX_CALLS_PER_MINUTE", ge=1, le=60
+    )
+    # 同期 1 回あたりに JPO API を呼ぶ最大回数（日次上限を尊重するための安全弁）。
+    jpo_api_max_sync_calls: int = Field(
+        default=30, alias="JPO_API_MAX_SYNC_CALLS", ge=1, le=200
+    )
+
     # ----- Feature flags -----
     feature_ai_review: bool = Field(default=True, alias="FEATURE_AI_REVIEW")
     feature_sharepoint_sync: bool = Field(default=False, alias="FEATURE_SHAREPOINT_SYNC")
     feature_desknet_sync: bool = Field(default=False, alias="FEATURE_DESKNET_SYNC")
+    feature_ip_management: bool = Field(default=True, alias="FEATURE_IP_MANAGEMENT")
 
     # ----- Validators / computed -----
 
