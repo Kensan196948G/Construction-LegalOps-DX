@@ -42,6 +42,9 @@ from .enums import (
     WorkflowStepStatus,
     WorkflowStepType,
 )
+from .ip_asset import IpAsset
+from .ip_document import IpDocument
+from .ip_watch import IpWatchEvent, IpWatchTarget
 from .knowledge_article import KnowledgeArticle
 from .legal_hold import LegalHoldCase
 from .legal_review import LegalReview
@@ -83,6 +86,10 @@ __all__ = [
     "DisputeTimelineEvent",
     "DocumentConsistencyResult",
     "ExternalForwardEvent",
+    "IpAsset",
+    "IpDocument",
+    "IpWatchEvent",
+    "IpWatchTarget",
     "KnowledgeArticle",
     "LegalHold",
     "LegalHoldCase",

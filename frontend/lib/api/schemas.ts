@@ -1084,3 +1084,174 @@ export interface Paginated<T> {
   total: number;
   items: T[];
 }
+
+// ===========================================================================
+// 知財管理・競合ウォッチ・審査書類 (JPO 特許情報取得API)
+// ===========================================================================
+
+export const ipTypeEnum = z.enum(["patent", "design", "trademark"]);
+export type IpType = z.infer<typeof ipTypeEnum>;
+
+export const ipDocTypeEnum = z.enum([
+  "refusal_reason",
+  "opinion_amendment",
+  "decision",
+  "citation",
+]);
+export type IpDocType = z.infer<typeof ipDocTypeEnum>;
+
+export const ipAssetSchema = z.object({
+  id: idSchema,
+  application_number: z.string(),
+  ip_type: ipTypeEnum,
+  invention_title: z.string().nullable().optional(),
+  filing_date: dateSchema.nullable().optional(),
+  applicants: z
+    .array(
+      z.object({
+        applicantAttorneyCd: z.string().optional(),
+        name: z.string().optional(),
+        applicantAttorneyClass: z.string().optional(),
+      })
+    )
+    .default([]),
+  publication_number: z.string().nullable().optional(),
+  registration_number: z.string().nullable().optional(),
+  status: z.string(),
+  progress_data: z.record(z.string(), z.unknown()).default({}),
+  registration_data: z.record(z.string(), z.unknown()).default({}),
+  jplatpat_url: z.string().nullable().optional(),
+  last_synced_at: datetimeSchema.nullable().optional(),
+  watch_target_id: idSchema.nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  deleted_at: datetimeSchema.nullable().optional(),
+});
+export type IpAsset = z.infer<typeof ipAssetSchema>;
+
+export const ipAssetCreateSchema = z.object({
+  application_number: z.string().min(6).max(16),
+  ip_type: ipTypeEnum.default("patent"),
+  watch_target_id: idSchema.nullable().optional(),
+  notes: z.string().max(4000).nullable().optional(),
+});
+export type IpAssetCreate = z.infer<typeof ipAssetCreateSchema>;
+
+export const ipAssetSyncResultSchema = z.object({
+  asset_id: z.number().int(),
+  application_number: z.string(),
+  api_calls: z.number().int(),
+  events_created: z.number().int(),
+  updated: z.boolean(),
+  message: z.string(),
+});
+export type IpAssetSyncResult = z.infer<typeof ipAssetSyncResultSchema>;
+
+export const ipWatchTargetSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  applicant_code: z.string().nullable().optional(),
+  ip_types: z.array(ipTypeEnum).default(["patent"]),
+  status: z.enum(["active", "paused"]),
+  notes: z.string().nullable().optional(),
+  asset_count: z.number().int().default(0),
+  unread_event_count: z.number().int().default(0),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  deleted_at: datetimeSchema.nullable().optional(),
+});
+export type IpWatchTarget = z.infer<typeof ipWatchTargetSchema>;
+
+export const ipWatchTargetCreateSchema = z.object({
+  name: z.string().min(1).max(256),
+  applicant_code: z.string().max(16).nullable().optional(),
+  ip_types: z.array(ipTypeEnum).default(["patent"]),
+  status: z.enum(["active", "paused"]).default("active"),
+  notes: z.string().max(4000).nullable().optional(),
+});
+export type IpWatchTargetCreate = z.infer<typeof ipWatchTargetCreateSchema>;
+
+export const ipWatchTargetSyncResultSchema = z.object({
+  target_id: z.number().int(),
+  name: z.string(),
+  api_calls: z.number().int(),
+  events_created: z.number().int(),
+  scanned_assets: z.number().int(),
+  message: z.string(),
+});
+export type IpWatchTargetSyncResult = z.infer<typeof ipWatchTargetSyncResultSchema>;
+
+export const ipWatchEventSchema = z.object({
+  id: idSchema,
+  watch_target_id: idSchema,
+  ip_asset_id: idSchema.nullable().optional(),
+  application_number: z.string().nullable().optional(),
+  event_type: z.string(),
+  event_code: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  event_data: z.record(z.string(), z.unknown()).default({}),
+  is_read: z.boolean().default(false),
+  detected_at: datetimeSchema,
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  deleted_at: datetimeSchema.nullable().optional(),
+});
+export type IpWatchEvent = z.infer<typeof ipWatchEventSchema>;
+
+export const ipDocumentSchema = z.object({
+  id: idSchema,
+  ip_asset_id: idSchema,
+  doc_type: ipDocTypeEnum,
+  doc_name: z.string().nullable().optional(),
+  fetched_at: datetimeSchema,
+  content_text: z.string().nullable().optional(),
+  ai_summary: z.string().nullable().optional(),
+  ai_findings: z
+    .object({
+      issues: z
+        .array(
+          z.object({
+            severity: z.string().optional(),
+            title: z.string().optional(),
+            description: z.string().optional(),
+            law: z.string().optional(),
+          })
+        )
+        .default([]),
+      suggested_actions: z.array(z.string()).default([]),
+      deadline: z.string().nullable().optional(),
+      disclaimer: z.string().optional(),
+    })
+    .default({}),
+  ai_model: z.string().nullable().optional(),
+  analyzed_at: datetimeSchema.nullable().optional(),
+  error: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  deleted_at: datetimeSchema.nullable().optional(),
+});
+export type IpDocument = z.infer<typeof ipDocumentSchema>;
+
+export const ipDashboardSchema = z.object({
+  total_assets: z.number().int(),
+  by_type: z.record(z.string(), z.number().int()).default({}),
+  by_status: z.record(z.string(), z.number().int()).default({}),
+  total_watch_targets: z.number().int(),
+  active_watch_targets: z.number().int(),
+  unread_events: z.number().int(),
+  recent_events: z.array(ipWatchEventSchema).default([]),
+  documents_total: z.number().int(),
+  documents_analyzed: z.number().int(),
+  api_mode: z.string(),
+  api_configured: z.boolean(),
+});
+export type IpDashboard = z.infer<typeof ipDashboardSchema>;
+
+export const jpoStatusSchema = z.object({
+  mode: z.string(),
+  configured: z.boolean(),
+  base_url: z.string(),
+  max_calls_per_minute: z.number().int(),
+});
+export type JpoStatus = z.infer<typeof jpoStatusSchema>;

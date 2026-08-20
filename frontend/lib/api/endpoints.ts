@@ -68,6 +68,16 @@ import {
   workflowSchema,
   workflowStepSchema,
   idSchema,
+  ipAssetCreateSchema,
+  ipAssetSchema,
+  ipAssetSyncResultSchema,
+  ipDashboardSchema,
+  ipDocumentSchema,
+  ipWatchEventSchema,
+  ipWatchTargetCreateSchema,
+  ipWatchTargetSchema,
+  ipWatchTargetSyncResultSchema,
+  jpoStatusSchema,
   type AiProvider,
   type AiSettingsUpdate,
   type ChangeOrderCreate,
@@ -75,6 +85,8 @@ import {
   type ContractUpdate,
   type Dispute,
   type DisputeEvidence,
+  type IpAssetCreate,
+  type IpWatchTargetCreate,
   type Paginated,
   type Partner,
   type PaymentFinding,
@@ -770,6 +782,124 @@ export const metaApi = {
 // ===========================================================================
 // 単一エクスポート — まとめて参照したい場合
 // ===========================================================================
+// ===========================================================================
+// 知財管理・競合ウォッチ・審査書類 (JPO 特許情報取得API)
+// ===========================================================================
+
+export interface IpAssetListParams extends ListParams {
+  ip_type?: string;
+  status?: string;
+  watch_target_id?: number | string;
+}
+
+export const ipAssetsApi = {
+  list: (params?: IpAssetListParams) =>
+    getParsed(paginatedSchema(ipAssetSchema), "/ip-assets", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(ipAssetSchema), `/ip-assets/${id}`),
+
+  create: (data: IpAssetCreate) =>
+    postParsed(apiResponse(ipAssetSchema), "/ip-assets", ipAssetCreateSchema.parse(data)),
+
+  update: (id: number | string, data: { notes?: string | null }) =>
+    patchParsed(apiResponse(ipAssetSchema), `/ip-assets/${id}`, data),
+
+  delete: (id: number | string) =>
+    apiClient.delete(`/ip-assets/${id}`).then(() => undefined),
+
+  sync: (id: number | string) =>
+    postParsed(
+      apiResponse(ipAssetSyncResultSchema),
+      `/ip-assets/${id}/sync`
+    ),
+
+  documents: (id: number | string) =>
+    getParsed(z.array(ipDocumentSchema), `/ip-assets/${id}/documents`),
+
+  fetchDocuments: (
+    id: number | string,
+    docTypes: Array<"refusal_reason" | "opinion_amendment" | "decision" | "citation">
+  ) =>
+    postParsed(
+      apiResponse(
+        z.object({
+          asset_id: z.number().int(),
+          application_number: z.string(),
+          fetched: z.array(z.record(z.string(), z.string())).default([]),
+          errors: z.array(z.record(z.string(), z.string())).default([]),
+        })
+      ),
+      `/ip-assets/${id}/documents/fetch`,
+      { doc_types: docTypes }
+    ),
+};
+
+export const ipWatchTargetsApi = {
+  list: (params?: ListParams) =>
+    getParsed(paginatedSchema(ipWatchTargetSchema), "/ip-watch-targets", {
+      params: buildParams(params),
+    }),
+
+  create: (data: IpWatchTargetCreate) =>
+    postParsed(
+      apiResponse(ipWatchTargetSchema),
+      "/ip-watch-targets",
+      ipWatchTargetCreateSchema.parse(data)
+    ),
+
+  update: (id: number | string, data: Partial<IpWatchTargetCreate>) =>
+    patchParsed(apiResponse(ipWatchTargetSchema), `/ip-watch-targets/${id}`, data),
+
+  delete: (id: number | string) =>
+    apiClient.delete(`/ip-watch-targets/${id}`).then(() => undefined),
+
+  sync: (id: number | string) =>
+    postParsed(
+      apiResponse(ipWatchTargetSyncResultSchema),
+      `/ip-watch-targets/${id}/sync`
+    ),
+};
+
+export const ipWatchEventsApi = {
+  list: (params?: { watch_target_id?: number | string; unread_only?: boolean; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(ipWatchEventSchema), "/ip-watch-events", {
+      params: buildParams(params),
+    }),
+
+  markRead: (id: number | string) =>
+    patchParsed(apiResponse(ipWatchEventSchema), `/ip-watch-events/${id}/read`, {}),
+};
+
+export const ipDocumentsApi = {
+  get: (id: number | string) =>
+    getParsed(apiResponse(ipDocumentSchema), `/ip-documents/${id}`),
+
+  analyze: (id: number | string) =>
+    postParsed(
+      apiResponse(
+        z.object({
+          document_id: z.number().int(),
+          doc_type: z.string(),
+          ai_model: z.string(),
+          summary: z.string(),
+          findings: z.record(z.string(), z.unknown()),
+          analyzed_at: z.string(),
+        })
+      ),
+      `/ip-documents/${id}/analyze`
+    ),
+};
+
+export const ipDashboardApi = {
+  get: () => getParsed(apiResponse(ipDashboardSchema), "/ip-dashboard"),
+};
+
+export const ipMetaApi = {
+  jpoStatus: () => getParsed(apiResponse(jpoStatusSchema), "/ip/jpo-status"),
+};
 
 export const api = {
   auth: authApi,
@@ -793,4 +923,11 @@ export const api = {
   governance: governanceApi,
   legalAi: legalAiApi,
   meta: metaApi,
+  ipAssets: ipAssetsApi,
+  ipWatchTargets: ipWatchTargetsApi,
+  ipWatchEvents: ipWatchEventsApi,
+  ipDocuments: ipDocumentsApi,
+  ipDashboard: ipDashboardApi,
+  ipMeta: ipMetaApi,
 } as const;
+
