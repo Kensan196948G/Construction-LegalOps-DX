@@ -4,7 +4,8 @@ Persists per-provider AI integration settings (API key ciphertext, model id,
 activation flag, last connection-test result) for the hybrid AI review stack:
 
 * ``perplexity`` — Agent ① contract research (web-grounded, public sources only)
-* ``claude``     — Agents ②/③ contract reading-summary + drafting
+* ``deepseek``   — Agents ②/③ contract reading-summary + drafting (Claude 代替)
+* ``claude``     — legacy slot (kept for back-compat; not exposed in the MVP UI)
 
 SECURITY: ``api_key_encrypted`` stores **Fernet ciphertext only** — the plaintext
 API key never touches the database. Encryption/decryption is owned by
@@ -32,7 +33,7 @@ from ._mixins import IntPKMixin, TimestampMixin
 
 # Allowed provider identifiers. Mirrors the hybrid AI architecture; enforced both
 # in the API/schema layer and at the DB layer (defence in depth / fail-closed).
-_ALLOWED_PROVIDER = ",".join(f"'{p}'" for p in ("perplexity", "claude"))
+_ALLOWED_PROVIDER = ",".join(f"'{p}'" for p in ("perplexity", "claude", "deepseek"))
 
 
 class AiProviderSetting(IntPKMixin, TimestampMixin, Base):

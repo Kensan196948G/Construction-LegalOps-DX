@@ -26,9 +26,10 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 
 from app.db.session import AsyncSessionLocal
+from app.models.app_settings import AiProviderSetting
 from app.models.change_order import ChangeOrder
 from app.models.clause import Clause
 from app.models.contract import Contract
@@ -95,6 +96,15 @@ DEPARTMENTS = [
     ("SALES", "営業部"),
     ("DESIGN", "設計部"),
     ("GENERAL", "総務部"),
+]
+DEMO_USERS = [
+    ("admin", "00000000-0000-0000-0000-000000000001", "田中 太郎"),
+    ("viewer", "00000000-0000-0000-0000-000000000002", "鈴木 花子"),
+    ("drafter", "00000000-0000-0000-0000-000000000003", "佐藤 一郎"),
+    ("reviewer", "00000000-0000-0000-0000-000000000004", "山田 美咲"),
+    ("approver", "00000000-0000-0000-0000-000000000005", "高橋 健二"),
+    ("auditor", "00000000-0000-0000-0000-000000000006", "伊藤 直美"),
+    ("guest", "00000000-0000-0000-0000-000000000007", "中村 裕子"),
 ]
 AMOUNTS = [1200000, 3500000, 8900000, 15000000, 25000000, 48000000, 75000000, 120000000, 250000000, 500000000]
 
@@ -240,6 +250,10 @@ KNOWLEDGE_ITEMS = [
     ("電子帳簿保存法 — 契約書の電子保存要件", "電子帳簿保存法", "電子取引データの保存要件と検索要件を整理します。"),
     ("工事請負契約のリスクチェックリスト", "社内規程", "工事請負契約のレビュー時に確認すべき項目のチェックリストです。"),
     ("反社会的勢力排除条項の標準文言", "コンプライアンス", "反社会的勢力排除条項の標準的な文言と導入時の注意点です。"),
+    ("【相談事例】下請契約の検収時期と支払期日の起算", "下請法", "下請契約における検収の実施時期と、60日ルール上の支払期日の起算点に関する相談事例です。"),
+    ("【相談事例】一括下請負の禁止と例外の判断", "建設業法", "一括下請負の禁止規定と、例外的に認められるケースの判断基準を整理した相談事例です。"),
+    ("【相談事例】契約不適合責任の期間制限", "民法", "契約不適合責任を追及できる期間と、契約書の特約による伸長の可否に関する相談事例です。"),
+    ("【相談事例】主任技術者の専任要件と兼務の可否", "建設業法", "現場ごとの主任技術者専任要件と、兼務が認められる範囲に関する相談事例です。"),
 ]
 
 NOTIFICATIONS = [
@@ -328,7 +342,7 @@ async def _ensure_demo_user(session, departments) -> User:
     entra_oid = UUID(DEV_USER_ID) で作成する。
     """
     raw_id = (os.getenv("DEV_USER_ID", "") or "00000000-0000-0000-0000-000000000001").strip()
-    email = (os.getenv("DEV_USER_EMAIL", "") or "dev-user@example.invalid").strip().lower()
+    email = (os.getenv("DEV_USER_EMAIL", "") or "demo@legalops-mvp.example.com").strip().lower()
     role = (os.getenv("DEV_USER_ROLE", "") or "admin").strip().lower()
     allowed_roles = {r.value for r in UserRole}
     if role not in allowed_roles:
@@ -355,6 +369,49 @@ async def _ensure_demo_user(session, departments) -> User:
     session.add(user)
     await session.flush()
     return user
+
+
+async def _repair_invalid_demo_emails(session) -> int:
+    """Fix JIT/dev-bypass rows whose reserved-domain email fails EmailStr.
+
+    The original dev bypass default ``*.example.invalid`` is a reserved domain
+    rejected by pydantic ``EmailStr``, which made ``GET /users`` 500 on the MVP.
+    Rewrite legacy rows to a valid, clearly fictional domain.
+    """
+    rows = (
+        await session.execute(select(User).where(User.email.like("%.invalid")))
+    ).scalars().all()
+    for row in rows:
+        local = (row.role or "user").lower()
+        row.email = f"{local}@legalops-mvp.example.com"
+    return len(rows)
+
+
+async def ensure_demo_users(session, departments) -> dict[str, User]:
+    """Seed one fictional user per RBAC role so the settings/users tab is operable."""
+    by_oid: dict[str, User] = {}
+    for idx, (role, raw_oid, name) in enumerate(DEMO_USERS):
+        oid = uuid.UUID(raw_oid)
+        existing = (
+            await session.execute(select(User).where(User.entra_oid == oid))
+        ).scalar_one_or_none()
+        if existing is None:
+            dept = departments[DEPARTMENTS[idx % len(DEPARTMENTS)][1]]
+            existing = User(
+                entra_oid=oid,
+                email=f"{role}@legalops-mvp.example.com",
+                display_name=name,
+                department_id=dept.id,
+                role=role,
+                is_active=True,
+                attributes={"demo": True},
+            )
+            session.add(existing)
+            await session.flush()
+        elif existing.email and existing.email.endswith(".invalid"):
+            existing.email = f"{role}@legalops-mvp.example.com"
+        by_oid[raw_oid] = existing
+    return by_oid
 
 
 async def ensure_departments(session) -> dict[str, Department]:
@@ -390,6 +447,25 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
     departments = await ensure_departments(session)
     legal_dept = departments["法務部"]
     user = await _ensure_demo_user(session, departments)
+    await _repair_invalid_demo_emails(session)
+    await ensure_demo_users(session, departments)
+
+    existing_providers = set(
+        (await session.execute(select(AiProviderSetting.provider))).scalars()
+    )
+    provider_count = 0
+    for provider, model in (("perplexity", "sonar"), ("deepseek", "deepseek-chat")):
+        if provider in existing_providers:
+            continue
+        session.add(
+            AiProviderSetting(
+                provider=provider,
+                model=model,
+                is_active=True,
+            )
+        )
+        provider_count += 1
+    counts["ai_provider_settings"] = provider_count
 
     # PG 16 の RLS を管理者権限で適用（SQLite では no-op）。
     try:
@@ -506,7 +582,7 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
             contract_id=contract.id,
             review_type="hybrid",
             status=REVIEW_STATUS_MAP[mock_status],
-            ai_model="demo-ai-model",
+            ai_model="deepseek-chat",
             summary="本契約について、下請法・建設業法の観点から指摘事項が検出されました。",
             overall_risk=risk_level,
             risk_score=risk_score,
@@ -523,6 +599,12 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         reviews.append(review)
     await session.flush()
     counts["reviews"] = len(reviews)
+    # 旧シード行（demo-ai-model）を DeepSeek 表記へ更新（冪等 fix-up）。
+    await session.execute(
+        update(LegalReview)
+        .where(LegalReview.ai_model == "demo-ai-model")
+        .values(ai_model="deepseek-chat")
+    )
 
     risk_count = 0
     for idx, review in enumerate(reviews):

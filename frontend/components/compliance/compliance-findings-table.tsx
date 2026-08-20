@@ -67,22 +67,27 @@ export function ComplianceFindingsTable({ items, total, defaultFilters }: Props)
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
-                <TableHead className="w-36">法令</TableHead>
-                <TableHead>チェック項目</TableHead>
-                <TableHead className="w-20">状態</TableHead>
-                <TableHead className="w-24">確認日</TableHead>
+                <TableHead className="w-40">法令</TableHead>
+                <TableHead className="min-w-[280px]">チェック項目・指摘内容</TableHead>
+                <TableHead className="w-28">状態</TableHead>
+                <TableHead className="w-28">確認日</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map(f => (
                 <TableRow key={f.id} className="hover:bg-muted/50">
                   <TableCell><StatusIcon s={f.status} /></TableCell>
-                  <TableCell className="text-xs font-medium">{f.law}</TableCell>
-                  <TableCell className="max-w-xs">
-                    <p className="text-sm font-medium truncate">{f.item}</p>
+                  <TableCell className="whitespace-nowrap text-xs font-medium">{f.law}</TableCell>
+                  <TableCell>
+                    <p className="text-sm font-medium">{f.item}</p>
+                    {f.detail ? (
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {f.detail}
+                      </p>
+                    ) : null}
                   </TableCell>
                   <TableCell><Badge variant={STATUS_V[f.status]}>{STATUS_LABEL[f.status]}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{f.lastCheck}</TableCell>
+                  <TableCell className="whitespace-nowrap font-mono text-xs text-muted-foreground">{f.lastCheck}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

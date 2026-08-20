@@ -183,8 +183,8 @@ async def test_get_view_synthesises_both_providers_when_empty(
     # Act
     view = await service.get_view(fresh_session)
 
-    # Assert — exactly perplexity then claude, both keyless
-    assert [p.provider for p in view.providers] == ["perplexity", "claude"]
+    # Assert — exactly perplexity then deepseek, both keyless
+    assert [p.provider for p in view.providers] == ["perplexity", "deepseek"]
     assert all(p.has_key is False for p in view.providers)
     assert all(p.key_masked is None for p in view.providers)
 
@@ -232,9 +232,12 @@ async def test_claude_probe_is_dormant_and_persists(
     # Assert 2 — outcome reflects saved key and is written back to last_test_*
     assert saved.status == "unavailable"
     assert "キーは保存済み" in saved.message
-    view = await service.get_view(fresh_session)
-    claude = next(p for p in view.providers if p.provider == "claude")
-    assert claude.last_test_status == "unavailable"
+    row = (
+        await fresh_session.execute(
+            select(AiProviderSetting).where(AiProviderSetting.provider == "claude")
+        )
+    ).scalar_one()
+    assert row.last_test_status == "unavailable"
 
 
 async def test_claude_probe_post_gate_is_fail_closed(
@@ -339,7 +342,7 @@ async def test_admin_get_returns_two_masked_providers(
     # Assert
     assert resp.status_code == 200
     providers = resp.json()["providers"]
-    assert {p["provider"] for p in providers} == {"perplexity", "claude"}
+    assert {p["provider"] for p in providers} == {"perplexity", "deepseek"}
 
 
 async def test_admin_put_then_get_shows_masked_never_plaintext(

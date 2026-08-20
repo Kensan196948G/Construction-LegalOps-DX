@@ -28,7 +28,7 @@ from pydantic import BaseModel, Field, SecretStr
 from .common import ORMModel
 
 # Provider discriminator — mirrors the DB CheckConstraint and the ORM model.
-AiProvider = Literal["perplexity", "claude"]
+AiProvider = Literal["perplexity", "claude", "deepseek"]
 # Connection-probe ("設定テスト") outcome vocabulary.
 #   ok          — provider reachable and the key authenticated
 #   failed      — provider reachable but auth/other error

@@ -578,3 +578,34 @@ async def test_get_active_provider_key_perplexity_not_gated(
 
     with pytest.raises(AttributeError):
         await _svc().get_active_provider_key(None, "perplexity")  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_probe_deepseek_without_key_is_failed_not_error() -> None:
+    """DeepSeek probe without a stored key reports 'failed' (never raises)."""
+    row = AiProviderSetting(provider="deepseek", api_key_encrypted=None, is_active=True)
+    status, message = await _svc()._probe_deepseek(row)
+    assert status == "failed"
+    assert "未設定" in message
+
+
+@pytest.mark.asyncio
+async def test_probe_deepseek_auth_failure_maps_to_failed() -> None:
+    """DeepSeek probe maps 401 to 'failed' without leaking the request body."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert "Authorization" in request.headers
+        assert request.url.host == "api.deepseek.com"
+        return httpx.Response(401, json={"error": "unauthorized"})
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        svc = _svc(http_client=client)
+        row = AiProviderSetting(
+            provider="deepseek",
+            api_key_encrypted=svc.encrypt(_PROBE_KEY),
+            is_active=True,
+            model="deepseek-chat",
+        )
+        status, message = await svc._probe_deepseek(row)
+    assert status == "failed"
+    assert "認証に失敗" in message

@@ -5,7 +5,7 @@
  *
  * Manages provider keys for the approved hybrid AI review architecture:
  *   (1) Perplexity Sonar  ... contract-research agent (web-grounded, live from day one)
- *   (2)/(3) Claude        ... contract-reading/summary & issue-drafting agents (dormant until 2026-07-01)
+ *   (2)/(3) DeepSeek      ... contract-reading/summary & issue-drafting agents (Claude 代替)
  *
  * Security policy (fail-closed):
  *   - API keys are never stored as plaintext in the DB (Fernet-encrypted on the backend).
@@ -72,20 +72,25 @@ const PROVIDER_META: Record<AiProvider, ProviderMeta> = {
     keyPlaceholder: "pplx-xxxxxxxxxxxxxxxx",
     modelPlaceholder: "sonar",
   },
-  claude: {
-    label: "Anthropic Claude",
+  deepseek: {
+    label: "DeepSeek",
     agentRole: "② 契約読解・要約 / ③ 論点整理・文案 Agent",
     description:
       "機密本文を扱う前に PII マスキングを行います。出力は必ず「草案・たたき台」ラベル付きで、最終判断は法務・顧問弁護士が行います。",
+    keyPlaceholder: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    modelPlaceholder: "deepseek-chat",
+  },
+  claude: {
+    label: "Anthropic Claude（旧）",
+    agentRole: "（設定画面では非表示）",
+    description: "DeepSeek への移行に伴い、MVP の設定画面では表示しません。",
     keyPlaceholder: "sk-ant-xxxxxxxxxxxxxxxx",
     modelPlaceholder: "claude-opus-4-7",
-    gatedNotice:
-      "Claude API キーは 2026-07-01 まで利用できません。キーの保存は可能ですが、それまで Claude 系 Agent は休眠し、「設定テスト」は『利用不可（unavailable）』を返します。",
   },
 };
 
-/** Display order (Perplexity first, since it is live from day one). */
-const PROVIDER_ORDER: readonly AiProvider[] = ["perplexity", "claude"];
+/** Display order (Perplexity research agent first, then the DeepSeek review agents). */
+const PROVIDER_ORDER: readonly AiProvider[] = ["perplexity", "deepseek"];
 
 function emptyConfig(provider: AiProvider): AiProviderConfig {
   return {

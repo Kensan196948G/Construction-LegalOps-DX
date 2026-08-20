@@ -115,7 +115,7 @@ def _dev_bypass_enabled() -> bool:
 def _dev_bypass_claims() -> dict[str, object]:
     """Build deterministic demo-principal claims from ``DEV_USER_*`` env."""
     raw_id = (os.getenv("DEV_USER_ID", "") or "").strip()
-    email = (os.getenv("DEV_USER_EMAIL", "") or "dev-user@example.invalid").strip().lower()
+    email = (os.getenv("DEV_USER_EMAIL", "") or "demo@legalops-mvp.example.com").strip().lower()
     role = (os.getenv("DEV_USER_ROLE", "") or ROLE_ADMIN).strip().lower()
     if role not in ALL_ROLES:
         logger.warning("dev_bypass.invalid_role role=%s -> admin", role)
