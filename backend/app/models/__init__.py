@@ -42,12 +42,12 @@ from .enums import (
     WorkflowStepStatus,
     WorkflowStepType,
 )
-from .knowledge_article import KnowledgeArticle
-from .legal_hold import LegalHoldCase
-from .legal_review import LegalReview
 from .ip_asset import IpAsset
 from .ip_document import IpDocument
 from .ip_watch import IpWatchEvent, IpWatchTarget
+from .knowledge_article import KnowledgeArticle
+from .legal_hold import LegalHoldCase
+from .legal_review import LegalReview
 from .notification import Notification
 from .partner import Partner
 from .payment_record import PaymentRecord
