@@ -41,7 +41,7 @@
     "same_error_limit": 2,
     "phase": "Verify",
     "last_session_summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/development 限定で fail-closed。backend pytest 1113 passed / ruff 0.16.1 / mypy 2.3.0 clean、frontend 43 passed、Docker build OK、公開 URL smoke 200。#60/#64 を検証の上クローズ。残は PR/CI/merge と #23/#24/#50 の本番人間ゲート。",
-    "last_stop_at": "2026-08-13T23:43:06.073Z",
+    "last_stop_at": "2026-08-14T02:39:13.203Z",
     "current_session_start_at": "2026-08-13T23:37:42.778Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
@@ -261,6 +261,61 @@
   "learning": {
     "failure_patterns": [
       {
+        "at": "2026-08-14T02:39:13.221Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-08-14T02:35:29.006Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-08-14T02:11:39.788Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-08-14T01:44:10.437Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-08-14T01:09:42.958Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
         "at": "2026-08-13T23:43:06.158Z",
         "reasons": [
           "verify_subagent_missing",
@@ -416,61 +471,6 @@
       },
       {
         "at": "2026-08-11T19:24:14.495Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T19:20:33.656Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T19:17:12.612Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-05T02:51:33.052Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-05T02:48:10.944Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-05T02:45:32.233Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -3989,6 +3989,196 @@
         "backend/tests/unit/test_contract_type_master.py"
       ],
       "truncated": true
+    },
+    {
+      "at": "2026-08-14T01:09:42.878Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-08-14T01:09:42.958Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 19 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/deps.py",
+        "backend/tests/unit/test_dev_bypass.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/reviews/[id]/page.tsx",
+        "frontend/app/(authenticated)/workflows/[id]/page.tsx",
+        "frontend/components/contracts/contract-activity-log.tsx",
+        "frontend/components/contracts/contract-attachments-list.tsx",
+        "frontend/components/contracts/contract-clauses-viewer.tsx",
+        "frontend/components/contracts/contract-upload-form.tsx",
+        "frontend/components/reviews/review-audit-trail.tsx",
+        "frontend/components/reviews/review-issues-panel.tsx",
+        "frontend/components/reviews/review-risks-panel.tsx",
+        "frontend/components/reviews/review-suggestions-panel.tsx",
+        "frontend/components/workflows/workflow-history.tsx",
+        "frontend/lib/api/client.ts",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/schemas.ts",
+        "frontend/lib/mock-data.ts",
+        "scripts/seed_demo_data.py"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-08-14T01:44:10.419Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-08-14T01:44:10.437Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 19 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/deps.py",
+        "backend/tests/unit/test_dev_bypass.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/reviews/[id]/page.tsx",
+        "frontend/app/(authenticated)/workflows/[id]/page.tsx",
+        "frontend/components/contracts/contract-activity-log.tsx",
+        "frontend/components/contracts/contract-attachments-list.tsx",
+        "frontend/components/contracts/contract-clauses-viewer.tsx",
+        "frontend/components/contracts/contract-upload-form.tsx",
+        "frontend/components/reviews/review-audit-trail.tsx",
+        "frontend/components/reviews/review-issues-panel.tsx",
+        "frontend/components/reviews/review-risks-panel.tsx",
+        "frontend/components/reviews/review-suggestions-panel.tsx",
+        "frontend/components/workflows/workflow-history.tsx",
+        "frontend/lib/api/client.ts",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/schemas.ts",
+        "frontend/lib/mock-data.ts",
+        "scripts/seed_demo_data.py"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-08-14T02:11:39.630Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-08-14T02:11:39.787Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 19 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/deps.py",
+        "backend/tests/unit/test_dev_bypass.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/reviews/[id]/page.tsx",
+        "frontend/app/(authenticated)/workflows/[id]/page.tsx",
+        "frontend/components/contracts/contract-activity-log.tsx",
+        "frontend/components/contracts/contract-attachments-list.tsx",
+        "frontend/components/contracts/contract-clauses-viewer.tsx",
+        "frontend/components/contracts/contract-upload-form.tsx",
+        "frontend/components/reviews/review-audit-trail.tsx",
+        "frontend/components/reviews/review-issues-panel.tsx",
+        "frontend/components/reviews/review-risks-panel.tsx",
+        "frontend/components/reviews/review-suggestions-panel.tsx",
+        "frontend/components/workflows/workflow-history.tsx",
+        "frontend/lib/api/client.ts",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/schemas.ts",
+        "frontend/lib/mock-data.ts",
+        "scripts/seed_demo_data.py"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-08-14T02:35:27.666Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-08-14T02:35:29.006Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 19 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/deps.py",
+        "backend/tests/unit/test_dev_bypass.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/reviews/[id]/page.tsx",
+        "frontend/app/(authenticated)/workflows/[id]/page.tsx",
+        "frontend/components/contracts/contract-activity-log.tsx",
+        "frontend/components/contracts/contract-attachments-list.tsx",
+        "frontend/components/contracts/contract-clauses-viewer.tsx",
+        "frontend/components/contracts/contract-upload-form.tsx",
+        "frontend/components/reviews/review-audit-trail.tsx",
+        "frontend/components/reviews/review-issues-panel.tsx",
+        "frontend/components/reviews/review-risks-panel.tsx",
+        "frontend/components/reviews/review-suggestions-panel.tsx",
+        "frontend/components/workflows/workflow-history.tsx",
+        "frontend/lib/api/client.ts",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/schemas.ts",
+        "frontend/lib/mock-data.ts",
+        "scripts/seed_demo_data.py"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-08-14T02:39:13.204Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-08-14T02:39:13.221Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 19 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/app/deps.py",
+        "backend/tests/unit/test_dev_bypass.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/reviews/[id]/page.tsx",
+        "frontend/app/(authenticated)/workflows/[id]/page.tsx",
+        "frontend/components/contracts/contract-activity-log.tsx",
+        "frontend/components/contracts/contract-attachments-list.tsx",
+        "frontend/components/contracts/contract-clauses-viewer.tsx",
+        "frontend/components/contracts/contract-upload-form.tsx",
+        "frontend/components/reviews/review-audit-trail.tsx",
+        "frontend/components/reviews/review-issues-panel.tsx",
+        "frontend/components/reviews/review-risks-panel.tsx",
+        "frontend/components/reviews/review-suggestions-panel.tsx",
+        "frontend/components/workflows/workflow-history.tsx",
+        "frontend/lib/api/client.ts",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/schemas.ts",
+        "frontend/lib/mock-data.ts",
+        "scripts/seed_demo_data.py"
+      ],
+      "truncated": false
     }
   ],
   "compact": {

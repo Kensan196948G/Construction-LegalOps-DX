@@ -18,6 +18,7 @@ from app.api.v1 import (
     dashboard,
     governance,
     health,
+    ip,
     knowledge,
     legal_ai,
     notifications,
@@ -58,6 +59,7 @@ api_router.include_router(governance.retention_router)
 api_router.include_router(governance.anchor_router)
 api_router.include_router(governance.admin_router)
 api_router.include_router(security.router)
+api_router.include_router(ip.ip_router)
 api_router.include_router(legal_ai.applicable_laws_router)
 api_router.include_router(legal_ai.evidence_router)
 api_router.include_router(legal_ai.impact_router)

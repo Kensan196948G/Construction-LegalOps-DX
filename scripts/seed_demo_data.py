@@ -38,6 +38,9 @@ from app.models.contract_template import ContractTemplate
 from app.models.department import Department
 from app.models.dispute import Dispute
 from app.models.enums import UserRole
+from app.models.ip_asset import IpAsset
+from app.models.ip_document import IpDocument
+from app.models.ip_watch import IpWatchEvent, IpWatchTarget
 from app.models.knowledge_article import KnowledgeArticle
 from app.models.legal_review import LegalReview
 from app.models.notification import Notification
@@ -875,6 +878,159 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         notif_count += 1
     counts["notifications"] = notif_count
 
+    # --- 知財管理（JPO 特許情報取得 API 連携のデモデータ）---
+    existing_apps = set(
+        (await session.execute(select(IpAsset.application_number))).scalars()
+    )
+    ip_assets: list[IpAsset] = []
+    demo_ip_data = [
+        {
+            "application_number": "2026000001",
+            "ip_type": "patent",
+            "invention_title": "建設現場の安全管理システム（デモ）",
+            "filing_date": date(2026, 1, 15),
+            "publication_number": "2026000001",
+            "registration_number": "7000001",
+            "status": "登録",
+            "applicants": [
+                {
+                    "applicantAttorneyCd": "000000001",
+                    "name": "みらい建設工業(株)",
+                    "applicantAttorneyClass": "1",
+                }
+            ],
+            "jplatpat_url": "https://www.j-platpat.inpit.go.jp/c1800/PU/JP-2026-000001/15/ja",
+            "progress_data": {
+                "applicationNumber": "2026000001",
+                "inventionTitle": "建設現場の安全管理システム（デモ）",
+                "progress": [
+                    {"progressCode": "110", "progressDate": "20260115", "progressDetail": "出願"},
+                    {"progressCode": "160", "progressDate": "20260701", "progressDetail": "公開"},
+                    {"progressCode": "210", "progressDate": "20260720", "progressDetail": "審査請求"},
+                    {"progressCode": "400", "progressDate": "20260930", "progressDetail": "登録"},
+                ],
+            },
+            "registration_data": {
+                "applicationNumber": "2026000001",
+                "registrationNumber": "7000001",
+                "registrationDate": "20260930",
+            },
+        },
+        {
+            "application_number": "2026000002",
+            "ip_type": "patent",
+            "invention_title": "建設機械の遠隔監視装置（デモ）",
+            "filing_date": date(2026, 2, 10),
+            "status": "審査請求",
+            "applicants": [
+                {
+                    "applicantAttorneyCd": "000000001",
+                    "name": "みらい建設工業(株)",
+                    "applicantAttorneyClass": "1",
+                }
+            ],
+            "progress_data": {
+                "applicationNumber": "2026000002",
+                "progress": [
+                    {"progressCode": "110", "progressDate": "20260210", "progressDetail": "出願"},
+                    {"progressCode": "210", "progressDate": "20260301", "progressDetail": "審査請求"},
+                ],
+            },
+        },
+    ]
+    for item in demo_ip_data:
+        if item["application_number"] in existing_apps:
+            continue
+        asset = IpAsset(
+            application_number=item["application_number"],
+            ip_type=item["ip_type"],
+            invention_title=item["invention_title"],
+            filing_date=item["filing_date"],
+            applicants=item["applicants"],
+            publication_number=item.get("publication_number"),
+            registration_number=item.get("registration_number"),
+            status=item["status"],
+            progress_data=item["progress_data"],
+            registration_data=item.get("registration_data", {}),
+            jplatpat_url=item.get("jplatpat_url"),
+            last_synced_at=datetime.now(UTC),
+            notes="[DEMO] 架空のデモ出願",
+            created_by=user.id,
+            updated_by=user.id,
+        )
+        session.add(asset)
+        ip_assets.append(asset)
+        existing_apps.add(item["application_number"])
+    await session.flush()
+    counts["ip_assets"] = len(ip_assets)
+
+    ip_docs = 0
+    if ip_assets:
+        target = ip_assets[1] if len(ip_assets) > 1 else ip_assets[0]
+        existing_docs = (
+            await session.execute(
+                select(IpDocument.id).where(IpDocument.ip_asset_id == target.id)
+            )
+        ).scalars().all()
+        if not existing_docs:
+            session.add(
+                IpDocument(
+                    ip_asset_id=target.id,
+                    doc_type="refusal_reason",
+                    doc_name="拒絶理由通知書（デモ）",
+                    fetched_at=datetime.now(UTC),
+                    content_text=(
+                        "拒絶理由通知書（デモ）\n【通知日】2026年9月1日\n"
+                        "【出願番号】2026000002\n"
+                        "特許法第29条第1項第3号（新規性）の拒絶理由が通知された。\n"
+                        "【指定期間】この通知の発送の日から3月以内に意見書又は補正書を提出すること。"
+                    ),
+                    ai_summary="拒絶理由通知書の要点を抽出しました。 期限: 2026-12-01。",
+                    ai_findings={
+                        "issues": [
+                            {
+                                "severity": "high",
+                                "title": "拒絶理由への対応が必要です",
+                                "description": "意見書または補正書の提出を検討してください。",
+                                "law": "特許法第29条",
+                            }
+                        ],
+                        "suggested_actions": ["担当弁理士と対応方針を協議する", "期限をカレンダーに登録する"],
+                        "deadline": "2026-12-01",
+                        "disclaimer": "本 AI 解析結果は参考情報であり、最終判断は法務担当者および顧問弁護士が行ってください。",
+                    },
+                    ai_model="demo-local",
+                    analyzed_at=datetime.now(UTC),
+                )
+            )
+            ip_docs += 1
+    counts["ip_documents"] = ip_docs
+
+    existing_targets = set(
+        (await session.execute(select(IpWatchTarget.name))).scalars()
+    )
+    ip_targets: list[IpWatchTarget] = []
+    for name, code in [
+        ("デモ競合建設工業(株)", "000000009"),
+        ("デモ重機メーカー(株)", "000000010"),
+    ]:
+        if name in existing_targets:
+            continue
+        target = IpWatchTarget(
+            name=name,
+            applicant_code=code,
+            ip_types=["patent"],
+            status="active",
+            notes="[DEMO] 架空の競合ウォッチ対象",
+            created_by=user.id,
+            updated_by=user.id,
+        )
+        session.add(target)
+        ip_targets.append(target)
+        existing_targets.add(name)
+    await session.flush()
+    counts["ip_watch_targets"] = len(ip_targets)
+
     await session.flush()
 
     # --- 監査ログ（デモフラグ付き・append-only）---
@@ -902,6 +1058,12 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         audit_count += 1
     for change_order in change_orders:
         await _log(session, user, "change_order.create", "change_orders", change_order.id, change_no=change_order.change_no)
+        audit_count += 1
+    for asset in ip_assets:
+        await _log(session, user, "ip_asset.create", "ip_assets", asset.id, application_number=asset.application_number)
+        audit_count += 1
+    for target in ip_targets:
+        await _log(session, user, "ip_watch_target.create", "ip_watch_targets", target.id, name=target.name)
         audit_count += 1
     for idx, contract in enumerate(wf_contracts[:7]):
         if contract.id not in existing_steps:
@@ -972,6 +1134,30 @@ async def delete_demo(session) -> dict[str, int]:
         ).rowcount
     counts["workflow_definitions"] = (
         await session.execute(delete(Workflow).where(Workflow.code == "DEMO-LEGAL-001"))
+    ).rowcount
+    demo_asset_ids = [
+        row.id
+        for row in (await session.execute(select(IpAsset.id, IpAsset.notes))).all()
+        if row.notes and "[DEMO]" in row.notes
+    ]
+    if demo_asset_ids:
+        counts["ip_documents"] = (
+            await session.execute(delete(IpDocument).where(IpDocument.ip_asset_id.in_(demo_asset_ids)))
+        ).rowcount
+        counts["ip_watch_events"] = (
+            await session.execute(delete(IpWatchEvent).where(IpWatchEvent.ip_asset_id.in_(demo_asset_ids)))
+        ).rowcount
+        counts["ip_assets"] = (
+            await session.execute(delete(IpAsset).where(IpAsset.id.in_(demo_asset_ids)))
+        ).rowcount
+    else:
+        counts["ip_documents"] = 0
+        counts["ip_watch_events"] = 0
+        counts["ip_assets"] = 0
+    counts["ip_watch_targets"] = (
+        await session.execute(
+            delete(IpWatchTarget).where(IpWatchTarget.notes.like("%[DEMO]%"))
+        )
     ).rowcount
     return counts
 
