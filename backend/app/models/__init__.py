@@ -52,6 +52,7 @@ from .matter import LegalMatter, MatterEvent
 from .negotiation import ClauseNegotiationEvent
 from .notification import Notification
 from .obligation import ContractObligation
+from .outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from .partner import Partner
 from .payment_record import PaymentRecord
 from .retention import ExternalForwardEvent, RetentionRule
@@ -86,6 +87,7 @@ __all__ = [
     "ContractStatus",
     "ContractTemplate",
     "ContractType",
+    "CounselLawyer",
     "Department",
     "Dispute",
     "DisputeEvidence",
@@ -99,6 +101,8 @@ __all__ = [
     "IpWatchEvent",
     "IpWatchTarget",
     "KnowledgeArticle",
+    "LawFirm",
+    "LegalEngagement",
     "LegalHold",
     "LegalHoldCase",
     "LegalMatter",

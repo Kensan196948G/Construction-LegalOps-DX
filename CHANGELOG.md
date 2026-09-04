@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 顧問弁護士依頼・回答管理 Issue #102)
+
+- **👨‍⚖️ 顧問弁護士・外部法律事務所管理を実装（Phase 1 完結・ロードマップ #85〜#96 / Issue #102）**:
+  - 台帳: `law_firms`（#86）・`counsel_lawyers`（#87・事務所帰属検証付き）
+  - `legal_engagements`: 依頼起票（#85/#88・LEG-YYYY-NNNNNN 採番）・質問/回答（#89・
+    open→answered→confirmed/cancelled）・回答期限（#90）・利益相反（#91）・
+    Confidential 分類（#92）・費用見込み（#93）・Matter 連携
+  - API: `/outside-counsel/firms`・`/firms/{id}/lawyers`・`/lawyers`・`/engagements`
+    （CRUD・answer/confirm/cancel・全変更を監査ログへ）
+  - ルール: 回答は open のみ・確認は answered のみ・確定/取消後は更新不可（409）・
+    他事務所弁護士指定 422・不明 firm/matter/lawyer 404
+  - Alembic `014_outside_counsel`（down_revision=013_matters）
+  - 検証: backend pytest 1202 passed / 2 skipped（+5 件）・PG モード 5 passed・
+    ruff / mypy clean・ローカル PG（legalops / legalops_test）へ 014 適用済み
+
 ### Added / Changed (2026-09-05: Legal Matter Management Issue #101)
 
 - **⚖️ Legal Matter Management を実装（Phase 1・ロードマップ #71〜#84 / Issue #101）**:
