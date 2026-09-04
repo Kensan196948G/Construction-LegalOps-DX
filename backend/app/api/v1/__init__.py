@@ -25,6 +25,7 @@ from app.api.v1 import (
     reviews,
     risks,
     security,
+    signing,
     templates,
     uploads,
     users,
@@ -43,6 +44,7 @@ api_router.include_router(workflows.router)
 api_router.include_router(risks.router)
 api_router.include_router(compliance.router)
 api_router.include_router(templates.router)
+api_router.include_router(signing.router)
 api_router.include_router(knowledge.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(uploads.router)
