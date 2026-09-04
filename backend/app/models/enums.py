@@ -383,3 +383,12 @@ class MatterEventType(StrEnum):
     LEGAL_HOLD_LINKED = "legal_hold_linked"
     LEGAL_HOLD_UNLINKED = "legal_hold_unlinked"
     NOTE = "note"
+
+
+class EngagementStatus(StrEnum):
+    """顧問弁護士依頼（エンゲージメント）の状態（ロードマップ #85〜#96 / Issue #102）."""
+
+    OPEN = "open"  # 依頼・回答待ち
+    ANSWERED = "answered"  # 回答受領
+    CONFIRMED = "confirmed"  # 確認完了（確定）
+    CANCELLED = "cancelled"
