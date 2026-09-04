@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
-
 from typing import Any
 
 import structlog
