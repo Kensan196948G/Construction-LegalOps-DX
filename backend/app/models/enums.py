@@ -229,3 +229,43 @@ class AuditAction(StrEnum):
     DOCUMENT_UPDATE = "document.update"
     DOCUMENT_DELETE = "document.delete"
     PAYMENT_COMPLIANCE_RUN = "payment_compliance.run"
+
+
+class SigningStatus(StrEnum):
+    """電子署名エンベロープの状態（ロードマップ #2 電子署名ステータス管理）.
+
+    遷移規則は ``app.services.signing_service`` の状態機械が唯一の正とする。
+    draft → sent → viewed → signed → completed、および draft/sent/viewed → cancelled。
+    """
+
+    DRAFT = "draft"
+    SENT = "sent"
+    VIEWED = "viewed"
+    SIGNED = "signed"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class SigningMethod(StrEnum):
+    """契約締結方法.
+
+    ``electronic`` は建設業法 19 条の電子書面交付に該当し、相手方の承諾
+    （電磁的方法による交付の承諾）の証跡を要する（ロードマップ #3）。
+    """
+
+    ELECTRONIC = "electronic"
+    PAPER = "paper"
+
+
+class SigningProviderId(StrEnum):
+    """外部電子契約サービス（ロードマップ #1 電子契約連携）.
+
+    実資格情報が未設定の場合は ``demo`` ／ ``manual`` のみ利用可能
+    （fail-closed）。``app.services.signing_provider`` が唯一の正。
+    """
+
+    CLOUDSIGN = "cloudsign"
+    DOCUSIGN = "docusign"
+    DEMO = "demo"
+    MANUAL = "manual"
+
