@@ -659,17 +659,17 @@ Legal Risk Intelligence → Exposure → KPI → 経営判断支援
 
 ## 9. GitHub Issue 化計画（Issue 駆動開発・AGENTS §14 準拠）
 
-Phase 1 は次の 6 Issue に分解し、各 Issue に Completion Criteria・影響範囲・検証方法を記載する
-（作成済み Issue 番号は各 Issue 参照）。
+Phase 1 は次の 6 Issue に分解済み（2026-09-04 起票）。各 Issue 本文に Completion Criteria・
+影響範囲・検証方法を記載済み。
 
-| Issue | タイトル（案） | 対象カタログ | 備考 |
+| Issue | タイトル | 対象カタログ | 起票 |
 | --- | --- | --- | --- |
-| E-1 | 電子契約・電子署名ステータス管理（承諾証跡対応） | #1-4 | CloudSign/DocuSign はデモモード＋アダプタ IF |
-| E-2 | 契約交渉・Redline 管理 | #5-8 | 条項単位ステータス（既存 `clause` 拡張） |
-| E-3 | 契約義務・Obligations Calendar | #9-13 | 期限カレンダーはルールエンジンで算出 |
-| E-4 | 契約全文検索・類似契約検索の製品化 | #5（下位） | 既存 trgm / similarity_search を UI まで |
-| E-5 | Legal Matter Management（Matter 台帳・昇格・Legal Hold 連動） | #71-84 | 案件 ACL は既存基盤を流用 |
-| E-6 | 顧問弁護士依頼・回答管理 | #85-96 | 外部アクセス ACL（既存設計）を前提 |
+| E-1 | 電子契約・電子署名ステータス管理（承諾証跡対応） | #1-4 | [#97](https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/97) |
+| E-2 | 契約交渉・Redline 管理 | #5-8 | [#98](https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/98) |
+| E-3 | 契約義務・Obligations Calendar | #9-13 | [#99](https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/99) |
+| E-4 | 契約全文検索・類似契約検索の製品化 | #5（下位） | [#100](https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/100) |
+| E-5 | Legal Matter Management（Matter 台帳・昇格・Legal Hold 連動） | #71-84 | [#101](https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/101) |
+| E-6 | 顧問弁護士依頼・回答管理 | #85-96 | [#102](https://github.com/Kensan196948G/Construction-LegalOps-DX/issues/102) |
 
 ---
 
