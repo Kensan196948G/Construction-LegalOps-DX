@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: DB をローカル PostgreSQL へ変更・移行)
+
+- **🐘 DB 既定をローカル PostgreSQL（127.0.0.1:5432 / legalops / legalops_dev）へ変更**:
+  `backend/app/core/config.py` の `db_url` 既定値が `@postgres`（旧 Docker Compose サービス名）→
+  `@127.0.0.1` へ。Docker Compose 実行時は compose ファイルが DB_URL を上書き、
+  systemd 運用は `/etc/legalops/*.env` が上書きするため実環境への影響なし
+- **移行手順・ドキュメント整備**: `.env.example`（ローカル/Compose の使い分けコメント）・
+  README「🐘 DB をローカル PostgreSQL で使う（既定・DB 移行）」を追加
+  （role/DB 作成 → `alembic upgrade head` → `scripts/seed_demo_data.py` → PG 統合テスト）
+- **実績（ローカル PG 16.14）**: role `legalops` / DB `legalops`・`legalops_test` 作成。
+  `legalops` へ Alembic 001→010 適用＋デモデータ投入（契約 22・条項 108 等）。
+  `legalops_test` で `PYTEST_USE_POSTGRES=1` の RLS 統合 2 件 pass（従来 SQLite でスキップ分）。
+
 ### Added / Changed (2026-09-05: 電子契約・電子署名ステータス管理 Issue #97)
 
 - **✍️ 電子契約・電子署名ステータス管理を実装（Phase 1・ロードマップ #1〜#4 / Issue #97）**:
