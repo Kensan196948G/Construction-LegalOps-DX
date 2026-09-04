@@ -392,3 +392,20 @@ class EngagementStatus(StrEnum):
     ANSWERED = "answered"  # 回答受領
     CONFIRMED = "confirmed"  # 確認完了（確定）
     CANCELLED = "cancelled"
+
+
+class LaborWorkType(StrEnum):
+    """労務費基準の工種（ロードマップ #17 工種別基準値管理・#16〜#20 / Issue #111）.
+
+    国交省『労務費に関する基準』の職種区分に倣った代表値を保持する。
+    詳細区分の追加はマスタデータ側（labor_wage_standards.work_type は
+    CHECK 制約なしの拡張可能な varchar）で行い、本 enum は UI の代表値。
+    """
+
+    DOBOKU = "土木"
+    TOBI_DOBOU = "とび・土工"
+    HOSOU = "舗装"
+    KAITAI = "解体"
+    TEKKIN = "鉄筋"
+    KONKURIITO = "コンクリート"
+    OTHER = "その他"
