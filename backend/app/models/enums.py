@@ -269,3 +269,43 @@ class SigningProviderId(StrEnum):
     DEMO = "demo"
     MANUAL = "manual"
 
+
+
+class ClauseNegotiationStatus(StrEnum):
+    """条項の交渉ステータス（ロードマップ #7 条項ステータス）.
+
+    遷移規則は ``app.services.negotiation_service`` が唯一の正。
+    原則 accepted / rejected は negotiating 経由を推奨するが、実務上の
+    再交渉（accepted→negotiating 等）も許容する。
+    """
+
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    NEGOTIATING = "negotiating"
+
+
+class ClauseNegotiationAction(StrEnum):
+    """条項単位の交渉イベント種別（ロードマップ #5/#6）.
+
+    - ``redline``: 修正提案（proposed_text を伴う）
+    - ``demand`` / ``concession``: 要求・譲歩の記録
+    - ``comment``: コメント
+    - ``status_change`` / ``owner_change``: 状態・担当変更（サービス内部利用）
+    """
+
+    DEMAND = "demand"
+    CONCESSION = "concession"
+    COMMENT = "comment"
+    REDLINE = "redline"
+    STATUS_CHANGE = "status_change"
+    OWNER_CHANGE = "owner_change"
+
+
+class ClauseOwner(StrEnum):
+    """条項オーナー（ロードマップ #8 条項オーナー管理）."""
+
+    LEGAL = "法務"
+    ENGINEERING = "工事"
+    SALES = "営業"
+    PURCHASING = "購買"
+    OTHER = "その他"

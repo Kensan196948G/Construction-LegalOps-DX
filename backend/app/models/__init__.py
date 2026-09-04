@@ -48,6 +48,7 @@ from .ip_watch import IpWatchEvent, IpWatchTarget
 from .knowledge_article import KnowledgeArticle
 from .legal_hold import LegalHoldCase
 from .legal_review import LegalReview
+from .negotiation import ClauseNegotiationEvent
 from .notification import Notification
 from .partner import Partner
 from .payment_record import PaymentRecord
@@ -71,6 +72,7 @@ __all__ = [
     "ChangeOrderEvidence",
     "Clause",
     "ClauseLibrary",
+    "ClauseNegotiationEvent",
     "ClauseRecommendation",
     "Comment",
     "CommentVisibility",
