@@ -246,6 +246,9 @@ flowchart LR
 
 📖 詳細: [`docs/HANDOVER.md`](./docs/HANDOVER.md) / [`docs/RELEASE_CHECKLIST.md`](./docs/RELEASE_CHECKLIST.md)
 
+📋 **将来構想（法務部門の業務 OS への拡張計画・Phase 1〜5）**:
+[`docs/LEGALOPS_BUSINESS_OS_ROADMAP_2026-09.md`](./docs/LEGALOPS_BUSINESS_OS_ROADMAP_2026-09.md)
+
 ---
 
 ---

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-04: 業務OS拡張ロードマップ策定)
+
+- **📋 法務部門の業務 OS 化ロードマップを策定**: `docs/LEGALOPS_BUSINESS_OS_ROADMAP_2026-09.md` を新設。
+  既存 22 メニュー・20 API ルーター・Alembic 009 を実測した現状インベントリ（§2）と、
+  272 候補の追加機能カタログ（§5・固定番号 1〜272）を重複除去の上 P0/P1/P2 に優先度付けし、
+  Phase 1〜5 の開発順序（§8）と GitHub Issue 化計画（§9）を定義。
+  Phase 1 = 電子契約 → Redline → Obligations → 全文/類似検索 → Matter → 顧問弁護士管理。
+
 ### Added / Changed (2026-08-14: MVP / Prototype 自律完成 Loop 113)
 
 - **🧪 MVP 公開環境を本番と分離して構築**: `https://legalops-mvp.mirai-dx-platform.com`
