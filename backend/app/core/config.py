@@ -66,8 +66,11 @@ class Settings(BaseSettings):
     )
 
     # ----- Database -----
+    # 既定はローカル PostgreSQL（127.0.0.1）。Docker Compose 実行時は各
+    # compose ファイルが DB_URL でサービス名 "postgres" を渡すため上書きされる
+    # （infra/docker/docker-compose*.yml）。systemd 運用は /etc/legalops/*.env。
     db_url: SecretStr = Field(
-        default=SecretStr("postgresql+asyncpg://legalops:legalops_dev@postgres:5432/legalops"),
+        default=SecretStr("postgresql+asyncpg://legalops:legalops_dev@127.0.0.1:5432/legalops"),
         alias="DB_URL",
     )
     db_pool_size: int = Field(default=10, alias="DB_POOL_SIZE")
