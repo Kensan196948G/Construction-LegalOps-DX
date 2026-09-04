@@ -50,6 +50,7 @@ from .legal_hold import LegalHoldCase
 from .legal_review import LegalReview
 from .negotiation import ClauseNegotiationEvent
 from .notification import Notification
+from .obligation import ContractObligation
 from .partner import Partner
 from .payment_record import PaymentRecord
 from .retention import ExternalForwardEvent, RetentionRule
@@ -80,6 +81,7 @@ __all__ = [
     "Contract",
     "ContractAccessGrant",
     "ContractDocument",
+    "ContractObligation",
     "ContractStatus",
     "ContractTemplate",
     "ContractType",

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 契約義務・Obligations Calendar Issue #99)
+
+- **🗓️ 契約義務管理（Phase 1・ロードマップ #9〜#13 / Issue #99）**:
+  - `contract_obligations`（報告/通知/提出/保険/更新/条件/終了チェック等・
+    open/in_progress/completed/waived）を追加
+  - **Obligations Calendar（#10）**: due_date 基準の期限バケット
+    （overdue / within_30 / within_60 / future）をルールエンジンで動的判定
+  - **自動更新判定（#12）**: `contracts` に `auto_renewal` / `renewal_notice_days` を追加し、
+    解約通知期限（end_date - notice_days）と状態（notice_overdue/upcoming/ok/expired）を導出
+  - API: `GET/PATCH /obligations`・`POST /obligations/{id}/complete|waive`・
+    `GET /obligations/renewal-check`・`POST /contracts/{id}/obligations`
+    （全変更を監査ログへ・二重完了/完了後更新は 409・不明 assignee 404・不正種別 422）
+  - Alembic `012_obligations`（down_revision=011_negotiation）
+  - 検証: backend pytest 1181 passed / 2 skipped（+9 件）・PG モード 8 passed・
+    ruff / mypy clean・ローカル PG（legalops / legalops_test）へ 012 適用済み
+
 ### Added / Changed (2026-09-05: 契約交渉・Redline 管理 Issue #98)
 
 - **📝 契約交渉・Redline 管理を実装（Phase 1・ロードマップ #5〜#8 / Issue #98）**:

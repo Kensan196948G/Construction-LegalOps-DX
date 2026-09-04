@@ -90,6 +90,13 @@ class Contract(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     sharepoint_item_id: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # --- 自動更新判定（ロードマップ #12 / Issue #99） ---
+    auto_renewal: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    renewal_notice_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60, server_default="60"
+    )
     # --- 法令適用・支払コンプライアンスの正本項目（評価 P0-1/P0-2/P0-3 対応） ---
     order_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     receipt_date: Mapped[date | None] = mapped_column(Date, nullable=True)
