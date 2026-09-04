@@ -621,6 +621,35 @@ cp .env.example .env
 | `CLAUDE_API_KEY`                                              | Claude API                                               | Anthropic Console      |
 | `SHAREPOINT_SITE_URL` / `SHAREPOINT_DRIVE_ID`                 | SharePoint 連携                                          | M365 管理センター      |
 
+### 🐘 DB をローカル PostgreSQL で使う（既定・DB 移行）
+
+`DB_URL` 未設定時、backend は**ローカル PostgreSQL**（`127.0.0.1:5432`・
+ユーザー/パスワード `legalops` / `legalops_dev`・DB `legalops`）へ接続します
+（`backend/app/core/config.py` の `db_url` 既定値。Docker Compose 内は
+compose ファイルがサービス名 `postgres` を渡すため影響なし）。
+
+初回構築・既存データの移行手順（backend ディレクトリで実行）:
+
+```bash
+# 1) ロール・DB 作成（ローカル PostgreSQL 管理者で 1 回）
+psql -d postgres -c "CREATE ROLE legalops LOGIN PASSWORD 'legalops_dev';"
+psql -d postgres -c "CREATE DATABASE legalops OWNER legalops;"
+psql -d postgres -c "CREATE DATABASE legalops_test OWNER legalops;"
+
+# 2) スキーマ移行（001 → 最新 010 まで適用・ローカル PG 上で roundtrip 検証済み）
+DB_URL=postgresql+asyncpg://legalops:legalops_dev@127.0.0.1:5432/legalops \
+  python3 -m alembic upgrade head
+
+# 3) デモデータ投入（任意・MVP と同一のダミーデータ）
+PYTHONPATH=backend DB_URL=postgresql+asyncpg://legalops:legalops_dev@127.0.0.1:5432/legalops \
+  python3 scripts/seed_demo_data.py
+
+# 4) PostgreSQL 統合テスト（RLS 等 PG 専用アサーションを含む）
+PYTEST_USE_POSTGRES=1 \
+  PYTEST_DATABASE_URL=postgresql+asyncpg://legalops:legalops_dev@127.0.0.1:5432/legalops_test \
+  python3 -m pytest tests -q
+```
+
 ### 2️⃣ Docker Compose で一括起動
 
 ```bash
