@@ -24,7 +24,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import ArrayTextType, Base, JsonType
 
 from ._mixins import AuditedByMixin, IntPKMixin, TimestampMixin
-from .enums import ClauseRecommendation, RiskLevel
+from .enums import (
+    ClauseNegotiationStatus,
+    ClauseOwner,
+    ClauseRecommendation,
+    RiskLevel,
+)
 
 if TYPE_CHECKING:
     from .contract import Contract
@@ -32,6 +37,8 @@ if TYPE_CHECKING:
 
 _ALLOWED_RISK = ",".join(f"'{r.value}'" for r in RiskLevel)
 _ALLOWED_RECOM = ",".join(f"'{r.value}'" for r in ClauseRecommendation)
+_ALLOWED_NEGO_STATUS = ",".join(f"'{s.value}'" for s in ClauseNegotiationStatus)
+_ALLOWED_OWNER = ",".join(f"'{o.value}'" for o in ClauseOwner)
 
 
 class ClauseLibrary(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
@@ -104,6 +111,10 @@ class Clause(IntPKMixin, TimestampMixin, Base):
     ai_findings: Mapped[dict[str, Any]] = mapped_column(
         JsonType, nullable=False, default=dict, server_default="'{}'::jsonb"
     )
+    # --- 交渉・Redline 管理（ロードマップ #5〜#8 / Issue #98） ---
+    negotiation_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    clause_owner: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    negotiated_text: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     contract: Mapped[Contract] = relationship("Contract", back_populates="clauses")
     library_clause: Mapped[ClauseLibrary | None] = relationship(
@@ -116,6 +127,14 @@ class Clause(IntPKMixin, TimestampMixin, Base):
             f"risk_level IS NULL OR risk_level IN ({_ALLOWED_RISK})",
             name="ck_clauses_risk_level",
         ),
+        CheckConstraint(
+            f"negotiation_status IS NULL OR negotiation_status IN ({_ALLOWED_NEGO_STATUS})",
+            name="ck_clauses_negotiation_status",
+        ),
+        CheckConstraint(
+            f"clause_owner IS NULL OR clause_owner IN ({_ALLOWED_OWNER})",
+            name="ck_clauses_clause_owner",
+        ),
         Index(
             "ix_clauses_contract",
             "contract_id",
@@ -124,6 +143,11 @@ class Clause(IntPKMixin, TimestampMixin, Base):
         Index(
             "ix_clauses_risk",
             "risk_level",
+            postgresql_where="deleted_at IS NULL",
+        ),
+        Index(
+            "ix_clauses_nego_status",
+            "negotiation_status",
             postgresql_where="deleted_at IS NULL",
         ),
     )

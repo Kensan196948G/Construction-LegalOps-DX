@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 契約交渉・Redline 管理 Issue #98)
+
+- **📝 契約交渉・Redline 管理を実装（Phase 1・ロードマップ #5〜#8 / Issue #98）**:
+  - `clauses` に `negotiation_status`（accepted / rejected / negotiating）・
+    `clause_owner`（法務/工事/営業/購買/その他）・`negotiated_text`（最新修正案）を追加
+  - `clause_negotiation_events`（追記専用）で交渉履歴を証跡化:
+    redline（proposed_text）・demand / concession / comment・status_change・owner_change
+  - API: `POST/GET /contracts/{id}/negotiations`・
+    `POST /contracts/{id}/clauses/{clause_id}/status`・`/owner`
+    （全変更を監査ログへ記録・同一状態/オーナーは 409・未所属条項は 404）
+  - Alembic `011_negotiation`（down_revision=010_signing）
+  - 検証: backend pytest 1172 passed / 2 skipped（+11 件）・PG モード 9 passed・
+    ruff / mypy clean・ローカル PG（legalops / legalops_test）へ 011 適用済み
+
 ### Added / Changed (2026-09-05: DB をローカル PostgreSQL へ変更・移行)
 
 - **🐘 DB 既定をローカル PostgreSQL（127.0.0.1:5432 / legalops / legalops_dev）へ変更**:
