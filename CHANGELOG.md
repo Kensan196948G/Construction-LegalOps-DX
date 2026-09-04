@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 契約書全文検索・類似検索の製品化 Issue #100)
+
+- **🔍 契約書全文検索 API を新設（Phase 1・ロードマップ #5 / Issue #100）**:
+  - `GET /search?q=&scope=contracts|clauses|documents|all&contract_id=&limit=`
+  - 対象: 契約メタデータ（title/counterparty/contract_no）・**条項本文（clauses.body）**・
+    **契約文書（contract_documents.content）**（既存 /knowledge/search・/knowledge/similar と住み分け）
+  - ヒット位置スニペット（前後 60 文字）＋文字バイグラム Dice 類似度スコア降順
+    （AI 不使用・決定論的・trgm 非依存の DB ポータブル実装）
+- **🐛 契約一覧の決定論的ソートを実装**: `contract_service.list_contracts` が sort 引数を
+  無視し無順序だったため、同時刻更新が多数あるとページング（20 件）が不安定になる問題を修正。
+  許可列のみ受け付け id DESC タイブレークを必ず付与（Integration スイート安定化）
+
 ### Added / Changed (2026-09-05: 契約義務・Obligations Calendar Issue #99)
 
 - **🗓️ 契約義務管理（Phase 1・ロードマップ #9〜#13 / Issue #99）**:

@@ -180,6 +180,28 @@ async def list_contracts(
     total_result = await session.execute(count_stmt)
     total: int = total_result.scalar_one()
 
+    # 決定論的な整列（従来 sort 引数は未使用で無順序のため、同時刻更新が
+    # 多数あるとページングが不安定になった）。許可列のみ受け付け、最後に
+    # id DESC のタイブレークを必ず付与する。
+    _SORTABLE = {
+        "id": Contract.id,
+        "created_at": Contract.created_at,
+        "updated_at": Contract.updated_at,
+        "title": Contract.title,
+        "amount": Contract.amount,
+        "status": Contract.status,
+        "contract_type": Contract.contract_type,
+        "counterparty": Contract.counterparty,
+    }
+    sort_key = (sort or "-updated_at").strip()
+    descending = sort_key.startswith("-")
+    field_name = sort_key.lstrip("-")
+    column = _SORTABLE.get(field_name, Contract.updated_at)
+    stmt = stmt.order_by(
+        column.desc() if descending else column.asc(),
+        Contract.id.desc(),
+    )
+
     offset = (page - 1) * size
     stmt = stmt.offset(offset).limit(size)
     result = await session.execute(stmt)

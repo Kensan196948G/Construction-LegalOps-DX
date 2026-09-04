@@ -14,6 +14,7 @@ from app.api.v1 import (
     auth,
     business,
     compliance,
+    contract_search,
     contracts,
     dashboard,
     governance,
@@ -41,6 +42,7 @@ api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(admin.router)
 api_router.include_router(contracts.router)
+api_router.include_router(contract_search.router)
 api_router.include_router(negotiations.negotiations_router)
 api_router.include_router(negotiations.clauses_router)
 api_router.include_router(reviews.router)
