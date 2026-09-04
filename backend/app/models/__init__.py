@@ -54,6 +54,7 @@ from .payment_record import PaymentRecord
 from .retention import ExternalForwardEvent, RetentionRule
 from .risk_item import RiskItem
 from .security_settings import SecuritySetting
+from .signing import ESignatureEnvelope, ESignatureEvent
 from .user import User
 from .workflow import Workflow, WorkflowStep, WorkflowTemplate
 
@@ -85,6 +86,8 @@ __all__ = [
     "DisputeEvidence",
     "DisputeTimelineEvent",
     "DocumentConsistencyResult",
+    "ESignatureEnvelope",
+    "ESignatureEvent",
     "ExternalForwardEvent",
     "IpAsset",
     "IpDocument",

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 電子契約・電子署名ステータス管理 Issue #97)
+
+- **✍️ 電子契約・電子署名ステータス管理を実装（Phase 1・ロードマップ #1〜#4 / Issue #97）**:
+  締結プロセスを `draft → sent → viewed → signed → completed（+ cancelled）` の
+  ルールエンジンで管理する `esignature_envelopes` / `esignature_events` を追加。
+  - API: `POST /signing`（作成）・send / consent / view / sign / complete / cancel・
+    証跡イベント一覧 `GET /signing/{id}/events`（追記専用・読み取りのみ）
+  - **承諾証跡（建設業法 19 条）**: `electronic` 方式は署名前に相手方の承諾記録
+    （consent_received・consent_* 列）を必須化（422 fail-closed）
+  - **プロバイダアダプタ IF（#1）**: CloudSign / DocuSign は資格情報未設定なら 503
+    （fail-closed）。既定 demo（外部送信なし）・manual 対応
+  - **締結済み正本取込（#4）**: `complete` 時の `attachment_id` 指定で
+    `contract_documents`（doc_type=`signed_original`）へ正本登録
+  - 全遷移を監査ログ（hash chain）＋イベントへ記録。Alembic `010_signing`
+    （down_revision=009_ip_management）・ローカル PG で upgrade/downgrade roundtrip 検証済み
+  - 検証: backend pytest 1161 passed / 2 skipped（SQLite 全件）、PG 統合（RLS 2 件）pass、
+    ruff / mypy clean（署名テスト 12 件追加）
+
 ### Added / Changed (2026-09-04: 業務OS拡張ロードマップ策定)
 
 - **📋 法務部門の業務 OS 化ロードマップを策定**: `docs/LEGALOPS_BUSINESS_OS_ROADMAP_2026-09.md` を新設。
