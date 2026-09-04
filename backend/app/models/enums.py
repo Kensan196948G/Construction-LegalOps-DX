@@ -309,3 +309,35 @@ class ClauseOwner(StrEnum):
     SALES = "営業"
     PURCHASING = "購買"
     OTHER = "その他"
+
+
+class ObligationType(StrEnum):
+    """契約義務の種別（ロードマップ #9〜#13 / Issue #99）.
+
+    - ``report``: 報告義務（工事進捗・完了等）
+    - ``notice``: 通知義務（変更・事故等）
+    - ``submit``: 提出義務（書類・実績等）
+    - ``insurance``: 保険（証券提出・更新等）
+    - ``renewal``: 更新（契約更新手続）
+    - ``condition``: 条件成就（発効条件・支払条件等）
+    - ``closing``: 契約終了チェック（精算・返却・秘密保持残存等）
+    - ``other``: その他
+    """
+
+    REPORT = "report"
+    NOTICE = "notice"
+    SUBMIT = "submit"
+    INSURANCE = "insurance"
+    RENEWAL = "renewal"
+    CONDITION = "condition"
+    CLOSING = "closing"
+    OTHER = "other"
+
+
+class ObligationStatus(StrEnum):
+    """契約義務の状態."""
+
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    WAIVED = "waived"

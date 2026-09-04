@@ -23,6 +23,7 @@ from app.api.v1 import (
     legal_ai,
     negotiations,
     notifications,
+    obligations,
     reviews,
     risks,
     security,
@@ -52,6 +53,8 @@ api_router.include_router(knowledge.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(uploads.router)
 api_router.include_router(notifications.router)
+api_router.include_router(obligations.obligations_router)
+api_router.include_router(obligations.contract_obligations_router)
 api_router.include_router(dashboard.router)
 api_router.include_router(business.change_orders_router)
 api_router.include_router(business.documents_router)
