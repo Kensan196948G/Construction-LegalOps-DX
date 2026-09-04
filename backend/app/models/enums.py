@@ -270,7 +270,6 @@ class SigningProviderId(StrEnum):
     MANUAL = "manual"
 
 
-
 class ClauseNegotiationStatus(StrEnum):
     """条項の交渉ステータス（ロードマップ #7 条項ステータス）.
 
@@ -341,3 +340,46 @@ class ObligationStatus(StrEnum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     WAIVED = "waived"
+
+
+class MatterType(StrEnum):
+    """法務案件（Matter）の類型（ロードマップ #71〜#84 / Issue #101）."""
+
+    CONTRACT = "contract"
+    DISPUTE = "dispute"
+    COMPLIANCE = "compliance"
+    LABOR = "labor"
+    REGULATORY = "regulatory"
+    OTHER = "other"
+
+
+class MatterStatus(StrEnum):
+    """Matter の状態."""
+
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    WAITING = "waiting"
+    ON_HOLD = "on_hold"
+    CLOSED = "closed"
+
+
+class MatterPriority(StrEnum):
+    """Matter の優先度（リスクランクを兼ねる・#75/#76）."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class MatterEventType(StrEnum):
+    """Matter タイムラインのイベント種別（#78）."""
+
+    CREATED = "created"
+    ASSIGNED = "assigned"
+    STATUS_CHANGED = "status_changed"
+    CONTRACT_LINKED = "contract_linked"
+    CONTRACT_UNLINKED = "contract_unlinked"
+    LEGAL_HOLD_LINKED = "legal_hold_linked"
+    LEGAL_HOLD_UNLINKED = "legal_hold_unlinked"
+    NOTE = "note"

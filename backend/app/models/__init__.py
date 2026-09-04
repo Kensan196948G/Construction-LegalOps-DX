@@ -48,6 +48,7 @@ from .ip_watch import IpWatchEvent, IpWatchTarget
 from .knowledge_article import KnowledgeArticle
 from .legal_hold import LegalHoldCase
 from .legal_review import LegalReview
+from .matter import LegalMatter, MatterEvent
 from .negotiation import ClauseNegotiationEvent
 from .notification import Notification
 from .obligation import ContractObligation
@@ -100,7 +101,9 @@ __all__ = [
     "KnowledgeArticle",
     "LegalHold",
     "LegalHoldCase",
+    "LegalMatter",
     "LegalReview",
+    "MatterEvent",
     "Notification",
     "NotificationChannel",
     "NotificationStatus",

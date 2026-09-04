@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: Legal Matter Management Issue #101)
+
+- **⚖️ Legal Matter Management を実装（Phase 1・ロードマップ #71〜#84 / Issue #101）**:
+  - `legal_matters`: Matter 台帳・**ID 採番 MT-YYYY-NNNNNN（#72）**・種別/状態/優先度・
+    担当アサイン（#74）・昇格元記録（#73 source_type/source_id・dispute 存在検証）・
+    Legal Hold 連動（#82）・opened/closed 管理
+  - `matter_events`: 案件タイムライン（#78・追記専用: created/assigned/status_changed/
+    contract_linked/unlinked/legal_hold_linked/unlinked/note）
+  - `matter_contracts`: 関係契約リンク（#79・M2M・async 安全に Core 操作）
+  - 状態遷移ルール: 同一 409・CLOSED は OPEN（再開）のみ・CLOSED 中は担当変更/更新不可
+  - API: `GET/POST /matters`・`PATCH /matters/{id}`・`/status`・`/assign`・`/contracts`(GET/POST/DELETE)・
+    `/legal-hold`・`/events`・`/notes`（全変更を監査ログへ）
+  - Alembic `013_matters`（down_revision=012_obligations）
+  - 検証: backend pytest 1197 passed / 2 skipped（+9 件）・PG モード 8 passed・
+    ruff / mypy clean・ローカル PG（legalops / legalops_test）へ 013 適用済み
+
 ### Added / Changed (2026-09-05: 契約書全文検索・類似検索の製品化 Issue #100)
 
 - **🔍 契約書全文検索 API を新設（Phase 1・ロードマップ #5 / Issue #100）**:

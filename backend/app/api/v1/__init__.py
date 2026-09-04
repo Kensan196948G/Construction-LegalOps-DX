@@ -22,6 +22,7 @@ from app.api.v1 import (
     ip,
     knowledge,
     legal_ai,
+    matters,
     negotiations,
     notifications,
     obligations,
@@ -43,6 +44,7 @@ api_router.include_router(users.router)
 api_router.include_router(admin.router)
 api_router.include_router(contracts.router)
 api_router.include_router(contract_search.router)
+api_router.include_router(matters.router)
 api_router.include_router(negotiations.negotiations_router)
 api_router.include_router(negotiations.clauses_router)
 api_router.include_router(reviews.router)
