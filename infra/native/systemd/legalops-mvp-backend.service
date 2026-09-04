@@ -1,0 +1,22 @@
+# LegalOps mvp API (replaces construction-legalops-mvp-backend-1 container). 2026-09-04
+[Unit]
+Description=LegalOps mvp backend (FastAPI/uvicorn 127.0.0.1:8013)
+After=network.target postgresql.service legalops-redis.service
+Wants=postgresql.service legalops-redis.service
+
+[Service]
+Type=simple
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend
+EnvironmentFile=/etc/legalops/mvp-backend.env
+Environment=PYTHONPATH=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend
+ExecStart=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8013 --proxy-headers --forwarded-allow-ips *
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

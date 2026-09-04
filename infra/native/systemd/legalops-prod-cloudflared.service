@@ -1,0 +1,16 @@
+# Host cloudflared for legalops.mirai-dx-platform.com (replaces the in-compose cloudflared container). 2026-09-04
+[Unit]
+Description=LegalOps prod Cloudflare Tunnel -> 127.0.0.1:8410
+After=network-online.target legalops-nginx.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kensan
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /home/kensan/.cloudflared/legalops-prod-native-config.yml tunnel run
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

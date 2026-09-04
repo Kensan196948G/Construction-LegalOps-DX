@@ -1,5 +1,9 @@
 # 📌 OPERATIONS — 運用手順書
 
+> **2026-09-04 更新（Docker 廃止）**: prod / mvp は host の systemd ユニットで稼働しています。本書の `docker compose` 手順は移行前の記録です。
+> 現行の運用手順は [`infra/native/README.md`](../infra/native/README.md) を参照してください（ユニット一覧、デプロイ `sudo bash infra/native/install.sh --build`、env は `/etc/legalops/*.env`）。
+
+
 > Construction-LegalOps-DX の日常運用手順書。
 > すべてのコマンドはリポジトリの実体 (`infra/docker/docker-compose.yml` / `docker-compose.prod.yml` /
 > `infra/nginx/*.conf` / `backend/app/main.py` / `scripts/`) に基づく。

@@ -1,0 +1,22 @@
+# LegalOps prod Celery worker (replaces construction-legalops-dx-celery-worker-{1,2}). 2026-09-04
+[Unit]
+Description=LegalOps prod Celery worker
+After=network.target postgresql.service legalops-redis.service
+Wants=legalops-redis.service
+
+[Service]
+Type=simple
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend
+EnvironmentFile=/etc/legalops/prod-backend.env
+Environment=PYTHONPATH=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend
+ExecStart=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend/.venv/bin/celery -A app.worker.celery_app worker --loglevel=info --concurrency=4
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

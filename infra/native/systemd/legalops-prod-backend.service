@@ -1,0 +1,22 @@
+# LegalOps prod API (replaces construction-legalops-dx-backend-{1,2} containers). 2026-09-04
+[Unit]
+Description=LegalOps prod backend (FastAPI/uvicorn 127.0.0.1:8011)
+After=network.target postgresql.service legalops-redis.service
+Wants=postgresql.service legalops-redis.service
+
+[Service]
+Type=simple
+User=kensan
+Group=kensan
+WorkingDirectory=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend
+EnvironmentFile=/etc/legalops/prod-backend.env
+Environment=PYTHONPATH=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend
+ExecStart=/home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8011 --workers 2 --proxy-headers --forwarded-allow-ips *
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

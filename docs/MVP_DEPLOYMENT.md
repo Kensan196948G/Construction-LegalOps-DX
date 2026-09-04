@@ -1,5 +1,8 @@
 # 🧪 Construction-LegalOps-DX — MVP / Prototype 運用ガイド
 
+> **2026-09-04 更新（Docker 廃止）**: mvp は `legalops-mvp-backend` / `legalops-mvp-frontend` / `legalops-nginx`（127.0.0.1:8412）/ `legalops-mvp-cloudflared` の systemd ユニットで稼働。手順は [`infra/native/README.md`](../infra/native/README.md)。以下は Compose 時代の記録。
+
+
 > 📌 本番運用は対象外。本ドキュメントは「関係者が直ちに操作・評価できる
 > MVP/Prototype 環境」の URL・構築手順・デモ手順・ダミーデータを定義する。
 > 最終更新: 2026-08-14
