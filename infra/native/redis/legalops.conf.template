@@ -1,0 +1,13 @@
+# LegalOps dedicated Redis (prod DB 0 = cache + Celery broker/result, mvp DB 4). Generated 2026-09-04.
+bind 127.0.0.1
+port 6390
+protected-mode yes
+daemonize no
+supervised systemd
+pidfile /run/redis-legalops/redis.pid
+logfile /var/log/redis/legalops.log
+dir /var/lib/redis/legalops
+appendonly yes
+maxmemory 512mb
+maxmemory-policy allkeys-lru
+requirepass __REDIS_PASSWORD__

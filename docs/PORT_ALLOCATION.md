@@ -24,7 +24,21 @@
 
 ---
 
-## 📋 専用ポート割当表（ホスト公開ポート）
+## 🖥️ Native systemd 構成のポート（2026-09-04 以降の現行）
+
+Docker 廃止後は以下がホストで稼働する（すべて 127.0.0.1 bind。公開は cloudflared 経由のみ）。
+
+| 用途 | prod | mvp |
+|---|---|---|
+| backend (uvicorn) | 8011 | 8013 |
+| frontend (Next standalone) | 3011 | 3013 |
+| nginx (`legalops-nginx`) | 8410 | 8412 |
+| Redis (`legalops-redis`, DB 0-2 / 4-6) | 6390 | 6390 |
+| PostgreSQL (host cluster) | 5432 `legalops_prod` | 5432 `legalops_mvp` |
+
+設定の正: `infra/native/systemd/*.service`、`infra/native/nginx/legalops-main.conf`、`/etc/legalops/*.env`。
+
+## 📋 専用ポート割当表（ホスト公開ポート）（Compose 時代の記録）
 
 > **重要原則**: 専用化するのは **ホスト公開ポート（`HOST:CONTAINER` の左側）のみ**。
 > コンテナ内部ポートと `legalops-net` ブリッジ上のサービス間通信は**不変**（衝突しない）。

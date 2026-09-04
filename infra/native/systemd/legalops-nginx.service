@@ -1,0 +1,18 @@
+# Dedicated nginx for LegalOps prod (127.0.0.1:8410) and mvp (127.0.0.1:8412). Same pattern as civil-it-ops-webui. 2026-09-04
+[Unit]
+Description=LegalOps nginx (prod 127.0.0.1:8410, mvp 127.0.0.1:8412)
+After=network.target legalops-prod-backend.service legalops-prod-frontend.service legalops-mvp-backend.service legalops-mvp-frontend.service
+
+[Service]
+Type=forking
+PIDFile=/run/nginx-legalops.pid
+ExecStartPre=/usr/sbin/nginx -t -c /etc/nginx/legalops-main.conf
+ExecStart=/usr/sbin/nginx -c /etc/nginx/legalops-main.conf
+ExecReload=/usr/sbin/nginx -s reload -c /etc/nginx/legalops-main.conf
+KillSignal=SIGQUIT
+TimeoutStopSec=15
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

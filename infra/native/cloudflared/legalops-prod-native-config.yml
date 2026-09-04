@@ -1,0 +1,7 @@
+# Host cloudflared config for the native LegalOps prod stack (installed to ~/.cloudflared/). Tunnel "legalops-prod".
+tunnel: 3e1bddee-c527-4351-a4e0-8d37f3b9855a
+credentials-file: /home/kensan/.cloudflared/3e1bddee-c527-4351-a4e0-8d37f3b9855a.json
+ingress:
+  - hostname: legalops.mirai-dx-platform.com
+    service: http://127.0.0.1:8410
+  - service: http_status:404

@@ -1,0 +1,7 @@
+# Host cloudflared config for the native LegalOps mvp stack (installed to ~/.cloudflared/). Tunnel "legalops-mvp".
+tunnel: e86543a8-5383-4035-9125-bdb9725d3796
+credentials-file: /home/kensan/.cloudflared/e86543a8-5383-4035-9125-bdb9725d3796.json
+ingress:
+  - hostname: legalops-mvp.mirai-dx-platform.com
+    service: http://127.0.0.1:8412
+  - service: http_status:404

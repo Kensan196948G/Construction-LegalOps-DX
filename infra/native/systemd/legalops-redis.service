@@ -1,0 +1,21 @@
+[Unit]
+Description=LegalOps Redis (127.0.0.1:6390, replaces legalops-redis container)
+After=network.target
+
+[Service]
+Type=notify
+User=redis
+Group=redis
+ExecStart=/usr/bin/redis-server /etc/redis/legalops.conf
+RuntimeDirectory=redis-legalops
+RuntimeDirectoryMode=0750
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/redis/legalops /var/log/redis
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
