@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 労務費基準マスタ・乖離率判定 Issue #111)
+
+- **💰 労務費基準マスタ（Phase 2 起点・ロードマップ #16〜#20 / Issue #111）**:
+  - `labor_wage_standards`: 工種（土木/とび・土工/舗装/解体/鉄筋/コンクリート等）×
+    都道府県 × 適用開始日（effective_from/to）の基準日額を**履歴蓄積**（#16 更新型）
+  - as-of 日時点の最新値解決（#17 工種別・#18 都道府県別）
+  - **乖離率判定（#20）**: 見積単価 vs 基準値で ratio / shortage_rate / status
+    （ok・below=ダンピング確認入力 #21 に接続予定）を決定論的に算出（AI 不使用）
+  - API: `GET/POST /labor-wage/standards`・`GET /standards/latest`・`GET /discrepancy`
+    （登録は監査ログへ）
+  - Alembic `015_labor_wage`（down_revision=014_outside_counsel）
+  - 検証: backend pytest 1208 passed / 2 skipped（+6 件）・PG モード 6 passed・
+    ruff / mypy clean・ローカル PG 適用＋デモ基準 5 件投入
+
 ### Added / Changed (2026-09-05: 顧問弁護士依頼・回答管理 Issue #102)
 
 - **👨‍⚖️ 顧問弁護士・外部法律事務所管理を実装（Phase 1 完結・ロードマップ #85〜#96 / Issue #102）**:

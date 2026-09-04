@@ -21,6 +21,7 @@ from app.api.v1 import (
     health,
     ip,
     knowledge,
+    labor_wage,
     legal_ai,
     matters,
     negotiations,
@@ -55,6 +56,7 @@ api_router.include_router(compliance.router)
 api_router.include_router(templates.router)
 api_router.include_router(signing.router)
 api_router.include_router(knowledge.router)
+api_router.include_router(labor_wage.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(uploads.router)
 api_router.include_router(notifications.router)

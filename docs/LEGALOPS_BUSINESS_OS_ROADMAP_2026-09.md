@@ -605,7 +605,7 @@ Civil-Technology-IP-Intelligence-Platform
 
 ## 8. 開発順序（Phase 1〜5）
 
-### Phase 1: LegalOps 完成（🔴 先行実装）
+### Phase 1: LegalOps 完成（🔴 先行実装）— ✅ **完了（2026-09-05・Issue #97〜#102 / PR #104・#106〜#110）**
 
 ```text
 電子契約 → Redline → Obligations → 全文/類似検索 → Matter → 顧問弁護士管理
@@ -616,7 +616,7 @@ Civil-Technology-IP-Intelligence-Platform
 - 完了条件（DoD）: 各 Issue の Completion Criteria 充足＋backend pytest / ruff / mypy・
   frontend typecheck / lint / Jest 全緑＋監査ログ・RLS/ACL 適用
 
-### Phase 2: 建設業特化を完成（🔴 / 🟠）
+### Phase 2: 建設業特化を完成（🔴 / 🟠）— 🚧 **進行中（Issue #111 労務費基準マスタ 着手）**
 
 ```text
 労務費基準更新 → 公共工事 → JV → 施工体制 → 協力会社Portal
