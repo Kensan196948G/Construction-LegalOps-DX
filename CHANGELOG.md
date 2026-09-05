@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 労務費 #22/#25/#26 — 標準工期・価格転嫁シミュレータ)
+
+- **🏗️ 短工期判定（#22 / migration 017_standard_duration）**:
+  - `standard_work_durations`: 工種 × 請負金額帯 × 適用期間ごとの**標準工期**を
+    更新型で蓄積（労務費基準 #16 と同方針・都道府県別→全国フォールバック）
+  - API: `GET/POST /labor-wage/standard-durations`・
+    `GET /labor-wage/short-duration-check`（実工期 vs 標準工期の**短縮率**から
+    none / watch / warning / critical を決定論的に導出: 10% 以上 = warning・
+    20% 以上 = critical「無理な工期」）
+- **💰 価格転嫁シミュレータ（#26・スライド試算 #25 と同一式）**:
+  - `POST /labor-wage/price-simulator`: 労務費・材料費の変動率と転嫁率から
+    増減額・転嫁額・調整後請負金額を決定論的に計算（DB 不要の純計算・AI 不使用）
+- **🖥️ 価格協議フロント UI（#23/#24・/labor-wage 画面拡張）**:
+  - 「価格協議・見積変更監視」カードを追加: 協議一覧（状態・深刻度・乖離スナップショット）・
+    **協議申出**（単価指定で基準との乖離を自動判定）・**回答**（open→responded）・
+    **取下げ**（open→cancelled）
+- **🧪 `seed_demo_data.py`**: 標準工期デモ 8 件（工種 × 金額帯・source_ref=demo-2026-01）
+  を追加し、delete → 再 seed で復元可能
+- 検証: backend pytest **1226 passed**（+8） / ruff / mypy clean・ローカル PG へ migration
+  017 適用・フロント tsc / lint / Jest 全グリーン
+
 ### Added / Changed (2026-09-05: 労務費 #21/#23/#24 — 価格協議・ダンピング警告)
 
 - **🛡️ 労務費の乖離判定を拡張し、ダンピング警告を導入（Phase 2・#21）**:

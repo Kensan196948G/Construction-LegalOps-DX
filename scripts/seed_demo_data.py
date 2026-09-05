@@ -52,6 +52,7 @@ from app.models.payment_record import PaymentRecord
 from app.models.price_consultation import PriceConsultationLog
 from app.models.risk_item import RiskItem
 from app.models.signing import ESignatureEnvelope, ESignatureEvent
+from app.models.standard_duration import StandardWorkDuration
 from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
 from app.services import audit_service, price_consultation_service
@@ -1365,6 +1366,50 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         wage_count += 1
     counts["labor_wage_standards"] = wage_count
 
+    # ---- 標準工期マスタ（#22 短工期判定 / 画面 /labor-wage）----
+    # 工種 × 請負金額帯 × 標準工期。source_ref=demo-2026-01 で冪等化・削除対象に含める。
+    existing_durations = set(
+        (
+            await session.execute(
+                select(
+                    StandardWorkDuration.work_type,
+                    StandardWorkDuration.prefecture,
+                    StandardWorkDuration.amount_min_jpy,
+                    StandardWorkDuration.amount_max_jpy,
+                )
+            )
+        ).all()
+    )
+    duration_count = 0
+    for wtype, pref, amin, amax, days in [
+        ("土木", None, 0, 50_000_000, 120),
+        ("土木", None, 50_000_000, None, 240),
+        ("とび・土工", None, 0, 20_000_000, 60),
+        ("とび・土工", None, 20_000_000, None, 150),
+        ("舗装", None, 0, 30_000_000, 45),
+        ("解体", None, 0, 30_000_000, 30),
+        ("鉄筋", None, 0, None, 90),
+        ("コンクリート", None, 0, None, 90),
+    ]:
+        key = (wtype, pref, amin, amax)
+        if key in existing_durations:
+            continue
+        session.add(
+            StandardWorkDuration(
+                work_type=wtype,
+                prefecture=pref,
+                amount_min_jpy=amin,
+                amount_max_jpy=amax,
+                standard_days=days,
+                effective_from=date(2026, 1, 1),
+                source_ref="demo-2026-01",
+                created_by=user.id,
+            )
+        )
+        existing_durations.add(key)
+        duration_count += 1
+    counts["standard_durations"] = duration_count
+
     # ---- 労務費価格協議（#24 / ダンピング警告 #21 / 見積変更監視 #23）----
     # サービス層の乖離スナップショット付きで投入する（log_no は自動採番）。
     # 冪等化: summary（協議内容）の重複を確認してスキップする。
@@ -1712,6 +1757,12 @@ async def delete_demo(session) -> dict[str, int]:
     counts["labor_wage_demo"] = (
         await session.execute(
             delete(LaborWageStandard).where(LaborWageStandard.source_ref == "demo-2026-01")
+        )
+    ).rowcount
+    # 標準工期マスタ（同様に source_ref=demo-2026-01 のデモ行のみ）
+    counts["standard_durations"] = (
+        await session.execute(
+            delete(StandardWorkDuration).where(StandardWorkDuration.source_ref == "demo-2026-01")
         )
     ).rowcount
     # 労務費価格協議（デモ summary で判別）

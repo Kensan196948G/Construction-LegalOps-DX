@@ -6,9 +6,12 @@ import {
   BadgeJapaneseYen,
   CheckCircle2,
   Loader2,
+  MessageSquareText,
   Plus,
   RefreshCw,
   Scale,
+  Send,
+  XCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -40,10 +43,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { laborWageApi } from "@/lib/api";
+import { Textarea } from "@/components/ui/textarea";
+import { laborWageApi, priceConsultationApi } from "@/lib/api";
 import type {
   LaborWageDiscrepancy,
   LaborWageStandard,
+  PriceConsultationLog,
 } from "@/lib/api/schemas";
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -54,6 +59,37 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   鉄筋: "鉄筋",
   コンクリート: "コンクリート",
   その他: "その他",
+};
+
+const SEVERITY_LABELS: Record<string, string> = {
+  none: "—",
+  watch: "注視",
+  warning: "要確認",
+  critical: "深刻",
+};
+
+const SEVERITY_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  none: "outline",
+  watch: "secondary",
+  warning: "destructive",
+  critical: "destructive",
+};
+
+const DIRECTION_LABELS: Record<string, string> = {
+  from_subcontractor: "下請→元請（引上げ申出）",
+  to_subcontractor: "元請→下請（価格確認）",
+};
+
+const CONSULTATION_STATUS_LABELS: Record<string, string> = {
+  open: "回答待ち",
+  responded: "回答済",
+  cancelled: "取下げ",
+};
+
+const CONSULTATION_STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  open: "outline",
+  responded: "default",
+  cancelled: "secondary",
 };
 
 const PREFECTURES = [
@@ -136,6 +172,26 @@ export default function LaborWagePage() {
     useState<LaborWageDiscrepancy | null>(null);
   const [checking, setChecking] = useState(false);
 
+  // 価格協議・見積変更監視（#23/#24）
+  const [consultations, setConsultations] = useState<PriceConsultationLog[]>([]);
+  const [consultationsLoading, setConsultationsLoading] = useState(true);
+  const [consultationStatusFilter, setConsultationStatusFilter] = useState("all");
+  const [consultOpen, setConsultOpen] = useState(false);
+  const [consultCreating, setConsultCreating] = useState(false);
+  const [consultForm, setConsultForm] = useState({
+    direction: "from_subcontractor",
+    work_type: "土木",
+    prefecture: "全国",
+    quote_day_jpy: "",
+    summary: "",
+    request_detail: "",
+  });
+  const [respondTarget, setRespondTarget] = useState<PriceConsultationLog | null>(null);
+  const [respondText, setRespondText] = useState("");
+  const [cancelTarget, setCancelTarget] = useState<PriceConsultationLog | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [consultRunning, setConsultRunning] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -153,6 +209,101 @@ export default function LaborWagePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // 価格協議ログ（#23/#24）の読み込み
+  const loadConsultations = useCallback(async () => {
+    setConsultationsLoading(true);
+    try {
+      const result = await priceConsultationApi.list({ page: 1, size: 100 });
+      setConsultations(result.items);
+    } catch {
+      setConsultations([]);
+    } finally {
+      setConsultationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadConsultations();
+  }, [loadConsultations]);
+
+  const filteredConsultations = useMemo(
+    () =>
+      consultationStatusFilter === "all"
+        ? consultations
+        : consultations.filter((c) => c.status === consultationStatusFilter),
+    [consultations, consultationStatusFilter]
+  );
+
+  const createConsultation = async () => {
+    if (!consultForm.summary.trim() || consultCreating) return;
+    setConsultCreating(true);
+    setActionError(null);
+    try {
+      await priceConsultationApi.create({
+        direction: consultForm.direction,
+        work_type: consultForm.work_type,
+        prefecture: consultForm.prefecture === "全国" ? null : consultForm.prefecture,
+        quote_day_jpy: consultForm.quote_day_jpy ? Number(consultForm.quote_day_jpy) : null,
+        summary: consultForm.summary.trim(),
+        request_detail: consultForm.request_detail || null,
+      });
+      setConsultOpen(false);
+      setConsultForm({
+        direction: "from_subcontractor",
+        work_type: "土木",
+        prefecture: "全国",
+        quote_day_jpy: "",
+        summary: "",
+        request_detail: "",
+      });
+      await loadConsultations();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? `協議申出に失敗しました: ${err.message}` : "協議申出に失敗しました。"
+      );
+    } finally {
+      setConsultCreating(false);
+    }
+  };
+
+  const respondConsultation = async () => {
+    if (!respondTarget || !respondText.trim() || consultRunning) return;
+    setConsultRunning(true);
+    setActionError(null);
+    try {
+      await priceConsultationApi.respond(respondTarget.id, {
+        response_summary: respondText.trim(),
+      });
+      setRespondTarget(null);
+      setRespondText("");
+      await loadConsultations();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? `回答に失敗しました: ${err.message}` : "回答に失敗しました。"
+      );
+    } finally {
+      setConsultRunning(false);
+    }
+  };
+
+  const cancelConsultation = async () => {
+    if (!cancelTarget || !cancelReason.trim() || consultRunning) return;
+    setConsultRunning(true);
+    setActionError(null);
+    try {
+      await priceConsultationApi.cancel(cancelTarget.id, { reason: cancelReason.trim() });
+      setCancelTarget(null);
+      setCancelReason("");
+      await loadConsultations();
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? `取下げに失敗しました: ${err.message}` : "取下げに失敗しました。"
+      );
+    } finally {
+      setConsultRunning(false);
+    }
+  };
 
   const filtered = useMemo(
     () =>
@@ -502,6 +653,143 @@ export default function LaborWagePage() {
         </Table>
       </Card>
 
+      {/* 価格協議・見積変更監視（#23/#24） */}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-6 py-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <MessageSquareText className="h-4 w-4 text-primary" aria-hidden="true" />
+            価格協議・見積変更監視（#23/#24・未回答を深刻度付きで管理）
+          </p>
+          <div className="flex items-center gap-2">
+            <Select
+              value={consultationStatusFilter}
+              onValueChange={setConsultationStatusFilter}
+            >
+              <SelectTrigger className="w-36" aria-label="状態で絞り込み">
+                <SelectValue placeholder="状態" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべての状態</SelectItem>
+                {Object.entries(CONSULTATION_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => void loadConsultations()}
+              aria-label="価格協議を再読み込み"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button onClick={() => setConsultOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              協議申出
+            </Button>
+          </div>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-32">協議 No</TableHead>
+              <TableHead>内容</TableHead>
+              <TableHead className="w-40">方向</TableHead>
+              <TableHead className="w-24">単価</TableHead>
+              <TableHead className="w-20">深刻度</TableHead>
+              <TableHead className="w-20">状態</TableHead>
+              <TableHead className="w-36">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {consultationsLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin" aria-hidden="true" />
+                  読み込み中…
+                </TableCell>
+              </TableRow>
+            ) : filteredConsultations.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                  価格協議の記録がありません。「協議申出」から登録してください。
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredConsultations.map((log) => (
+                <TableRow key={String(log.id)}>
+                  <TableCell className="whitespace-nowrap font-mono text-sm">
+                    {log.log_no}
+                  </TableCell>
+                  <TableCell className="max-w-[240px]">
+                    <p className="truncate text-sm font-medium">{log.summary}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {log.work_type}
+                      {log.prefecture ? ` / ${log.prefecture}` : ""}
+                      {log.responded_at ? ` / 回答: ${log.response_summary ?? ""}` : ""}
+                    </p>
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {DIRECTION_LABELS[log.direction] ?? log.direction}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm">
+                    {log.quote_day_jpy !== null && log.quote_day_jpy !== undefined
+                      ? formatYen(log.quote_day_jpy)
+                      : "—"}
+                    {log.standard_day_jpy !== null && log.standard_day_jpy !== undefined && (
+                      <span className="block text-xs text-muted-foreground">
+                        基準 {formatYen(log.standard_day_jpy)}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={SEVERITY_VARIANT[log.severity ?? "none"] ?? "outline"}>
+                      {SEVERITY_LABELS[log.severity ?? "none"] ?? log.severity}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={CONSULTATION_STATUS_VARIANT[log.status] ?? "outline"}>
+                      {CONSULTATION_STATUS_LABELS[log.status] ?? log.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {log.status === "open" && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setRespondTarget(log);
+                            setRespondText("");
+                          }}
+                        >
+                          <Send className="mr-1 h-3 w-3" aria-hidden="true" />
+                          回答
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => {
+                            setCancelTarget(log);
+                            setCancelReason("");
+                          }}
+                        >
+                          <XCircle className="mr-1 h-3 w-3" aria-hidden="true" />
+                          取下げ
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
       {/* 基準値登録ダイアログ */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
@@ -601,6 +889,211 @@ export default function LaborWagePage() {
             >
               {creating && <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />}
               登録
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 価格協議申出ダイアログ（#24） */}
+      <Dialog open={consultOpen} onOpenChange={setConsultOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>価格協議を申出（#24）</DialogTitle>
+            <DialogDescription>
+              労務費に関する価格協議を記録します。単価を指定すると、基準値との乖離率と
+              深刻度（ダンピング警告 #21）が自動で判定・保存されます。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="pc-direction">方向</Label>
+              <Select
+                value={consultForm.direction}
+                onValueChange={(v) => setConsultForm((f) => ({ ...f, direction: v }))}
+              >
+                <SelectTrigger id="pc-direction" aria-label="方向">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="from_subcontractor">下請→元請（引上げ申出）</SelectItem>
+                  <SelectItem value="to_subcontractor">元請→下請（価格確認）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pc-work">工種</Label>
+                <Select
+                  value={consultForm.work_type}
+                  onValueChange={(v) => setConsultForm((f) => ({ ...f, work_type: v }))}
+                >
+                  <SelectTrigger id="pc-work" aria-label="工種">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(WORK_TYPE_LABELS).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pc-pref">都道府県</Label>
+                <Select
+                  value={consultForm.prefecture}
+                  onValueChange={(v) => setConsultForm((f) => ({ ...f, prefecture: v }))}
+                >
+                  <SelectTrigger id="pc-pref" aria-label="都道府県">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PREFECTURES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pc-quote">協議対象単価（円/日・任意）</Label>
+              <Input
+                id="pc-quote"
+                type="number"
+                min={0}
+                value={consultForm.quote_day_jpy}
+                onChange={(e) =>
+                  setConsultForm((f) => ({ ...f, quote_day_jpy: e.target.value }))
+                }
+                placeholder="例: 17500"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pc-summary">協議内容（必須）</Label>
+              <Input
+                id="pc-summary"
+                value={consultForm.summary}
+                onChange={(e) => setConsultForm((f) => ({ ...f, summary: e.target.value }))}
+                placeholder="例: 労務費上昇に伴う単価引上げ協議"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pc-detail">詳細（任意）</Label>
+              <Textarea
+                id="pc-detail"
+                value={consultForm.request_detail}
+                onChange={(e) =>
+                  setConsultForm((f) => ({ ...f, request_detail: e.target.value }))
+                }
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConsultOpen(false)}>
+              キャンセル
+            </Button>
+            <Button
+              onClick={() => void createConsultation()}
+              disabled={!consultForm.summary.trim() || consultCreating}
+            >
+              {consultCreating && (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
+              )}
+              申出を記録
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 価格協議回答ダイアログ（#24・open → responded） */}
+      <Dialog
+        open={respondTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRespondTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>価格協議へ回答</DialogTitle>
+            <DialogDescription>
+              {respondTarget?.log_no} — {respondTarget?.summary}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground">申出内容</p>
+              <p className="mt-1 whitespace-pre-wrap rounded-md border bg-muted/40 p-3 text-sm">
+                {respondTarget?.request_detail ?? respondTarget?.summary}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pc-response">回答内容（必須）</Label>
+              <Textarea
+                id="pc-response"
+                value={respondText}
+                onChange={(e) => setRespondText(e.target.value)}
+                rows={5}
+                placeholder="協議への回答方針・理由を記載してください（最終判断は法務担当者が行います）"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRespondTarget(null)}>
+              キャンセル
+            </Button>
+            <Button
+              onClick={() => void respondConsultation()}
+              disabled={!respondText.trim() || consultRunning}
+            >
+              {consultRunning && (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
+              )}
+              回答を記録
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 価格協議取下げダイアログ（#24・open → cancelled） */}
+      <Dialog
+        open={cancelTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>価格協議を取下げ</DialogTitle>
+            <DialogDescription>
+              {cancelTarget?.log_no} — {cancelTarget?.summary}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="pc-cancel-reason">取下げ理由（必須）</Label>
+            <Textarea
+              id="pc-cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={2}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>
+              戻る
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void cancelConsultation()}
+              disabled={!cancelReason.trim() || consultRunning}
+            >
+              {consultRunning && (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
+              )}
+              取り下げる
             </Button>
           </DialogFooter>
         </DialogContent>

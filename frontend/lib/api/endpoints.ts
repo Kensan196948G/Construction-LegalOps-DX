@@ -73,7 +73,12 @@ import {
   paymentComplianceSchema,
   priceConsultationCreateSchema,
   priceConsultationLogSchema,
+  priceSimulatorInSchema,
+  priceSimulatorOutSchema,
   renewalCheckSchema,
+  shortDurationCheckSchema,
+  standardWorkDurationCreateSchema,
+  standardWorkDurationSchema,
   retentionRuleSchema,
   reviewCreateSchema,
   riskHeatmapSchema,
@@ -1360,6 +1365,65 @@ export const laborWageApi = {
     getParsed(apiResponse(laborWageDiscrepancySchema), "/labor-wage/discrepancy", {
       params: buildParams(params),
     }),
+
+  // --- #22 標準工期マスタ・短工期判定 ---
+  standardDurations: (params?: {
+    work_type?: string;
+    prefecture?: string;
+    as_of?: string;
+    page?: number;
+    size?: number;
+  }) =>
+    getParsed(paginatedSchema(standardWorkDurationSchema), "/labor-wage/standard-durations", {
+      params: buildParams(params),
+    }),
+
+  createStandardDuration: (
+    data: {
+      work_type: string;
+      prefecture?: string | null;
+      amount_min_jpy: number;
+      amount_max_jpy?: number | null;
+      standard_days: number;
+      effective_from: string;
+      effective_to?: string | null;
+      source_ref?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      standardWorkDurationSchema,
+      "/labor-wage/standard-durations",
+      standardWorkDurationCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 短工期判定（#22・標準工期との短縮率から深刻度を導出） */
+  shortDurationCheck: (params: {
+    work_type: string;
+    amount_jpy: number;
+    planned_days: number;
+    prefecture?: string | null;
+    as_of?: string | null;
+  }) =>
+    getParsed(apiResponse(shortDurationCheckSchema), "/labor-wage/short-duration-check", {
+      params: buildParams(params),
+    }),
+
+  // --- #25/#26 価格転嫁シミュレータ ---
+  priceSimulator: (data: {
+    contract_amount_jpy: number;
+    labor_cost_jpy: number;
+    material_cost_jpy: number;
+    labor_change_rate: number;
+    material_change_rate: number;
+    pass_through_rate: number;
+  }) =>
+    postParsed(
+      priceSimulatorOutSchema,
+      "/labor-wage/price-simulator",
+      priceSimulatorInSchema.parse(data),
+    ),
 };
 
 // ===========================================================================
