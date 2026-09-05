@@ -2045,3 +2045,143 @@ export const publicWorksDashboardSchema = z.object({
   consultations_by_type: z.record(z.string(), z.number().int()).default({}),
 });
 export type PublicWorksDashboard = z.infer<typeof publicWorksDashboardSchema>;
+
+// ===========================================================================
+// JV（共同企業体）管理 (ロードマップ #61-#70 / migration 019)
+// ===========================================================================
+
+export const jvStatusEnum = z.enum([
+  "prospecting",
+  "active",
+  "completed",
+  "dissolved",
+]);
+export type JvStatus = z.infer<typeof jvStatusEnum>;
+
+export const jvMemberRoleEnum = z.enum(["representative", "member"]);
+export type JvMemberRole = z.infer<typeof jvMemberRoleEnum>;
+
+export const jvAgreementStatusEnum = z.enum(["draft", "signed", "terminated"]);
+export type JvAgreementStatus = z.infer<typeof jvAgreementStatusEnum>;
+
+export const jvDisputeStatusEnum = z.enum(["open", "responded", "cancelled"]);
+export type JvDisputeStatus = z.infer<typeof jvDisputeStatusEnum>;
+
+export const jvSettlementStatusEnum = z.enum(["pending", "settled"]);
+export type JvSettlementStatus = z.infer<typeof jvSettlementStatusEnum>;
+
+/** #61 JV 台帳 */
+export const jvSchema = z.object({
+  id: idSchema,
+  jv_no: z.string(),
+  name: z.string(),
+  status: jvStatusEnum.or(z.string()),
+  representative_name: z.string().nullable().optional(),
+  works_title: z.string().nullable().optional(),
+  contract_id: idSchema.nullable().optional(),
+  start_date: dateSchema.nullable().optional(),
+  end_date: dateSchema.nullable().optional(),
+  notes: z.string().nullable().optional(),
+  dissolved_at: datetimeSchema.nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type Jv = z.infer<typeof jvSchema>;
+
+export const jvCreateSchema = z.object({
+  name: z.string().min(1).max(256),
+  representative_name: z.string().max(256).nullish(),
+  works_title: z.string().max(256).nullish(),
+  contract_id: idSchema.nullish(),
+  start_date: dateSchema.nullish(),
+  end_date: dateSchema.nullish(),
+  notes: z.string().max(8000).nullish(),
+});
+export type JvCreate = z.infer<typeof jvCreateSchema>;
+
+/** #63/#64/#65 JV 構成員 */
+export const jvMemberSchema = z.object({
+  id: idSchema,
+  jv_id: idSchema,
+  role: jvMemberRoleEnum.or(z.string()),
+  company_name: z.string(),
+  equity_ratio: z.number().nullable().optional(),
+  profit_share_ratio: z.number().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  is_active: z.boolean(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type JvMember = z.infer<typeof jvMemberSchema>;
+
+export const jvMemberCreateSchema = z.object({
+  company_name: z.string().min(1).max(256),
+  role: z.string().max(16).default("member"),
+  equity_ratio: z.number().min(0).max(100).nullish(),
+  profit_share_ratio: z.number().min(0).max(100).nullish(),
+  contact_email: z.string().max(256).nullish(),
+  notes: z.string().max(4000).nullish(),
+});
+export type JvMemberCreate = z.infer<typeof jvMemberCreateSchema>;
+
+/** #62 JV 協定書 */
+export const jvAgreementSchema = z.object({
+  id: idSchema,
+  jv_id: idSchema,
+  agreement_no: z.string(),
+  status: jvAgreementStatusEnum.or(z.string()),
+  title: z.string(),
+  summary: z.string().nullable().optional(),
+  signed_at: dateSchema.nullable().optional(),
+  terminated_at: dateSchema.nullable().optional(),
+  document_url: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type JvAgreement = z.infer<typeof jvAgreementSchema>;
+
+/** #69 JV 内紛争 */
+export const jvDisputeSchema = z.object({
+  id: idSchema,
+  jv_id: idSchema,
+  dispute_no: z.string(),
+  status: jvDisputeStatusEnum.or(z.string()),
+  title: z.string(),
+  claimant_name: z.string().nullable().optional(),
+  respondent_name: z.string().nullable().optional(),
+  amount_claimed_jpy: z.number().int().nullable().optional(),
+  detail: z.string().nullable().optional(),
+  raised_at: dateSchema.nullable().optional(),
+  responded_at: datetimeSchema.nullable().optional(),
+  response_note: z.string().nullable().optional(),
+  cancel_reason: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type JvDispute = z.infer<typeof jvDisputeSchema>;
+
+/** #70 JV 清算 */
+export const jvSettlementSchema = z.object({
+  id: idSchema,
+  jv_id: idSchema,
+  settlement_no: z.string(),
+  status: jvSettlementStatusEnum.or(z.string()),
+  title: z.string(),
+  settled_at: dateSchema.nullable().optional(),
+  settlement_amount_jpy: z.number().int().nullable().optional(),
+  detail: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type JvSettlement = z.infer<typeof jvSettlementSchema>;
+
+/** JV サマリー */
+export const jvDashboardSchema = z.object({
+  jvs_by_status: z.record(z.string(), z.number().int()).default({}),
+  agreements_signed: z.number().int(),
+  disputes_open: z.number().int(),
+  settlements_pending: z.number().int(),
+});
+export type JvDashboard = z.infer<typeof jvDashboardSchema>;

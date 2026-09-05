@@ -50,13 +50,14 @@ from app.models.outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from app.models.partner import Partner
 from app.models.payment_record import PaymentRecord
 from app.models.price_consultation import PriceConsultationLog
+from app.models.joint_venture import JvAgreement, JvDispute, JvMember, JvSettlement, JointVenture
 from app.models.public_works import ContractingAgency, OwnerNotification, PublicWorksConsultation
 from app.models.risk_item import RiskItem
 from app.models.signing import ESignatureEnvelope, ESignatureEvent
 from app.models.standard_duration import StandardWorkDuration
 from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
-from app.services import audit_service, price_consultation_service, public_works_service
+from app.services import audit_service, jv_service, price_consultation_service, public_works_service
 from app.services.rls_context import set_rls_context
 from sqlalchemy import delete, select, update
 
@@ -1552,6 +1553,63 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
     counts["public_works_consultations"] = len(created_consults)
     await session.flush()
 
+    # ---- JV（共同企業体）（#61-#65 / #69 / #70 / 画面 /joint-ventures）----
+    existing_jv_nos = set((await session.execute(select(JointVenture.jv_no))).scalars())
+    created_jvs: list[JointVenture] = []
+    for idx, (name, rep, status) in enumerate(
+        [
+            ("デモ◯◯工事共同企業体", "みらい建設工業(株)", "active"),
+            ("デモ駅前再開発 JV", "さくら土木(株)", "active"),
+        ]
+    ):
+        no = f"JV-DEMO-2026-{idx + 1:03d}"
+        if no in existing_jv_nos:
+            continue
+        jv = JointVenture(
+            jv_no=no,
+            name=name,
+            status=status,
+            representative_name=rep,
+            works_title=PROJECTS[idx % len(PROJECTS)],
+            start_date=BASE_DATE,
+            end_date=BASE_DATE + timedelta(days=365),
+            notes="[DEMO] 架空の JV",
+            created_by=user.id,
+        )
+        session.add(jv)
+        created_jvs.append(jv)
+        existing_jv_nos.add(no)
+    await session.flush()
+    jv_member_count = 0
+    for jv in created_jvs:
+        existing_members = set(
+            (
+                await session.execute(
+                    select(JvMember.company_name).where(JvMember.jv_id == jv.id)
+                )
+            ).scalars()
+        )
+        for mname, role, equity in [
+            (jv.representative_name or "代表（デモ）", "representative", 60.0),
+            ("(株)つばさ組", "member", 40.0),
+        ]:
+            if mname in existing_members:
+                continue
+            session.add(
+                JvMember(
+                    jv_id=jv.id,
+                    role=role,
+                    company_name=mname,
+                    equity_ratio=equity,
+                    profit_share_ratio=equity,
+                    notes="[DEMO] 架空の構成員",
+                    created_by=user.id,
+                )
+            )
+            jv_member_count += 1
+    counts["joint_ventures"] = len(created_jvs)
+    counts["jv_members"] = jv_member_count
+
     # --- 監査ログ（デモフラグ付き・append-only）---
     # 新規投入した行についてのみ記録する（冪等性維持）。
     audit_count = 0
@@ -1675,6 +1733,9 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
             consult.id,
             consultation_no=consult.consultation_no,
         )
+        audit_count += 1
+    for jv in created_jvs:
+        await _log(session, user, "jv.create", "joint_ventures", jv.id, jv_no=jv.jv_no)
         audit_count += 1
     counts["audit_logs"] = audit_count
 
@@ -1929,6 +1990,46 @@ async def delete_demo(session) -> dict[str, int]:
             )
         ).rowcount
         counts["contracting_agencies"] = 0
+    # JV（デモ識別子 JV-DEMO-% で判別）
+    demo_jv_ids = list(
+        (
+            await session.execute(
+                select(JointVenture.id).where(JointVenture.jv_no.like("JV-DEMO-%"))
+            )
+        ).scalars()
+    )
+    if demo_jv_ids:
+        counts["jv_members"] = (
+            await session.execute(
+                delete(JvMember).where(JvMember.jv_id.in_(demo_jv_ids))
+            )
+        ).rowcount
+        counts["jv_settlements"] = (
+            await session.execute(
+                delete(JvSettlement).where(JvSettlement.jv_id.in_(demo_jv_ids))
+            )
+        ).rowcount
+        counts["jv_disputes"] = (
+            await session.execute(
+                delete(JvDispute).where(JvDispute.jv_id.in_(demo_jv_ids))
+            )
+        ).rowcount
+        counts["jv_agreements"] = (
+            await session.execute(
+                delete(JvAgreement).where(JvAgreement.jv_id.in_(demo_jv_ids))
+            )
+        ).rowcount
+        counts["joint_ventures"] = (
+            await session.execute(
+                delete(JointVenture).where(JointVenture.id.in_(demo_jv_ids))
+            )
+        ).rowcount
+    else:
+        counts["jv_members"] = 0
+        counts["jv_settlements"] = 0
+        counts["jv_disputes"] = 0
+        counts["jv_agreements"] = 0
+        counts["joint_ventures"] = 0
     return counts
 
 

@@ -486,3 +486,42 @@ class PublicWorksConsultationStatus(StrEnum):
     OPEN = "open"  # 協議中・回答待ち
     RESPONDED = "responded"  # 回答受領（結果記録済み）
     CANCELLED = "cancelled"
+
+
+class JvStatus(StrEnum):
+    """JV（共同企業体）の状態（#61 JV 台帳）."""
+
+    PROSPECTING = "prospecting"  # 結成検討中
+    ACTIVE = "active"  # 活動中
+    COMPLETED = "completed"  # 完了・清算済み
+    DISSOLVED = "dissolved"  # 解散
+
+
+class JvMemberRole(StrEnum):
+    """JV 構成員の役割（#63 代表会社・構成員管理）."""
+
+    REPRESENTATIVE = "representative"  # 代表会社
+    MEMBER = "member"  # 構成員（幹事以外）
+
+
+class JvAgreementStatus(StrEnum):
+    """JV 協定書の状態（#62 JV 協定書管理）."""
+
+    DRAFT = "draft"  # 起案中
+    SIGNED = "signed"  # 締結済み
+    TERMINATED = "terminated"  # 終了
+
+
+class JvDisputeStatus(StrEnum):
+    """JV 内紛争・請求の状態（#69）."""
+
+    OPEN = "open"  # 協議中
+    RESPONDED = "responded"  # 回答済み
+    CANCELLED = "cancelled"
+
+
+class JvSettlementStatus(StrEnum):
+    """JV 終了・清算の状態（#70）."""
+
+    PENDING = "pending"  # 未清算
+    SETTLED = "settled"  # 清算済み
