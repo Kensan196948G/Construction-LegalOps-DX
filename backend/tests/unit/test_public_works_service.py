@@ -5,9 +5,8 @@ from __future__ import annotations
 from datetime import date, timedelta
 from uuid import uuid4
 
-from sqlalchemy import select
-
 import pytest
+from sqlalchemy import select
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.models.contract import Contract
@@ -94,7 +93,7 @@ async def test_agency_create_and_list(db_session) -> None:
             advance_payment_ratio=1.5,
         )
 
-    rows, total = await public_works_service.list_agencies(db_session, agency_type="municipal")
+    _, total = await public_works_service.list_agencies(db_session, agency_type="municipal")
     assert total >= 1
 
 
