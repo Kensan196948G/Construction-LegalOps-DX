@@ -28,8 +28,11 @@ from .enums import (
     ClauseRecommendation,
     CommentVisibility,
     Confidentiality,
+    ConsultationDirection,
+    ConsultationStatus,
     ContractStatus,
     ContractType,
+    DumpingSeverity,
     NotificationChannel,
     NotificationStatus,
     ReviewStatus,
@@ -56,6 +59,7 @@ from .obligation import ContractObligation
 from .outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from .partner import Partner
 from .payment_record import PaymentRecord
+from .price_consultation import PriceConsultationLog
 from .retention import ExternalForwardEvent, RetentionRule
 from .risk_item import RiskItem
 from .security_settings import SecuritySetting
@@ -81,6 +85,8 @@ __all__ = [
     "Comment",
     "CommentVisibility",
     "Confidentiality",
+    "ConsultationDirection",
+    "ConsultationStatus",
     "Contract",
     "ContractAccessGrant",
     "ContractDocument",
@@ -94,6 +100,7 @@ __all__ = [
     "DisputeEvidence",
     "DisputeTimelineEvent",
     "DocumentConsistencyResult",
+    "DumpingSeverity",
     "ESignatureEnvelope",
     "ESignatureEvent",
     "ExternalForwardEvent",
@@ -115,6 +122,7 @@ __all__ = [
     "NotificationStatus",
     "Partner",
     "PaymentRecord",
+    "PriceConsultationLog",
     "RetentionRule",
     "ReviewStatus",
     "ReviewType",

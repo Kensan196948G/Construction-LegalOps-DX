@@ -33,7 +33,7 @@ class LaborWageStandardOut(ORMModel):
 
 
 class LaborWageDiscrepancyOut(BaseModel):
-    """#20 乖離率判定結果."""
+    """#20 乖離率判定結果（#21 ダンピング深刻度を含む）."""
 
     work_type: str
     prefecture: str | None
@@ -45,3 +45,5 @@ class LaborWageDiscrepancyOut(BaseModel):
     ratio: float
     shortage_rate: float
     status: str  # ok / below
+    severity: str = "none"  # #21: none / watch / warning / critical
+    dumping: bool = False  # #21: severity が warning 以上 = True（要確認）

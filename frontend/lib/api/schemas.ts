@@ -1705,7 +1705,7 @@ export const laborWageStandardCreateSchema = z.object({
 });
 export type LaborWageStandardCreate = z.infer<typeof laborWageStandardCreateSchema>;
 
-/** #20 乖離率判定結果 */
+/** #20 乖離率判定結果（#21 ダンピング深刻度を含む） */
 export const laborWageDiscrepancySchema = z.object({
   work_type: laborWorkTypeEnum.or(z.string()),
   prefecture: z.string().nullable().optional(),
@@ -1717,5 +1717,69 @@ export const laborWageDiscrepancySchema = z.object({
   ratio: z.number(),
   shortage_rate: z.number(),
   status: z.enum(["ok", "below"]).or(z.string()),
+  severity: z.enum(["none", "watch", "warning", "critical"]).or(z.string()).default("none"),
+  dumping: z.boolean().default(false),
 });
 export type LaborWageDiscrepancy = z.infer<typeof laborWageDiscrepancySchema>;
+
+// ===========================================================================
+// 労務費価格協議・乖離確認 (ロードマップ #21/#23/#24 / migration 016)
+// ===========================================================================
+
+export const consultationDirectionEnum = z.enum([
+  "from_subcontractor",
+  "to_subcontractor",
+]);
+export type ConsultationDirection = z.infer<typeof consultationDirectionEnum>;
+
+export const consultationStatusEnum = z.enum(["open", "responded", "cancelled"]);
+export type ConsultationStatus = z.infer<typeof consultationStatusEnum>;
+
+export const dumpingSeverityEnum = z.enum([
+  "none",
+  "watch",
+  "warning",
+  "critical",
+]);
+export type DumpingSeverity = z.infer<typeof dumpingSeverityEnum>;
+
+/** 価格協議ログ 1 件（#24） */
+export const priceConsultationLogSchema = z.object({
+  id: idSchema,
+  log_no: z.string(),
+  direction: consultationDirectionEnum.or(z.string()),
+  status: consultationStatusEnum.or(z.string()),
+  contract_id: idSchema.nullable().optional(),
+  work_type: laborWorkTypeEnum.or(z.string()),
+  prefecture: z.string().nullable().optional(),
+  quote_day_jpy: z.number().int().nullable().optional(),
+  summary: z.string(),
+  request_detail: z.string().nullable().optional(),
+  requested_at: dateSchema.nullable().optional(),
+  standard_day_jpy: z.number().int().nullable().optional(),
+  ratio: z.number().nullable().optional(),
+  shortage_rate: z.number().nullable().optional(),
+  severity: dumpingSeverityEnum.or(z.string()).nullable().optional(),
+  effective_from: dateSchema.nullable().optional(),
+  source_ref: z.string().nullable().optional(),
+  responded_at: datetimeSchema.nullable().optional(),
+  response_summary: z.string().nullable().optional(),
+  responded_by: idSchema.nullable().optional(),
+  cancel_reason: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type PriceConsultationLog = z.infer<typeof priceConsultationLogSchema>;
+
+export const priceConsultationCreateSchema = z.object({
+  direction: consultationDirectionEnum,
+  contract_id: idSchema.nullish(),
+  work_type: z.string().min(1).max(64),
+  prefecture: z.string().max(16).nullish(),
+  quote_day_jpy: z.number().int().min(0).nullish(),
+  summary: z.string().min(1).max(256),
+  request_detail: z.string().max(8000).nullish(),
+  requested_at: dateSchema.nullish(),
+});
+export type PriceConsultationCreate = z.infer<typeof priceConsultationCreateSchema>;

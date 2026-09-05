@@ -221,4 +221,13 @@ export const queryKeys = {
     discrepancy: (params?: unknown) =>
       ["labor-wage", "discrepancy", params] as const,
   },
+
+  priceConsultations: {
+    all: ["price-consultations"] as const,
+    lists: () => ["price-consultations", "list"] as const,
+    list: (params?: unknown) => ["price-consultations", "list", params] as const,
+    monitor: (params?: unknown) =>
+      ["price-consultations", "monitor", params] as const,
+    detail: (id: number | string) => ["price-consultations", "detail", id] as const,
+  },
 } as const;

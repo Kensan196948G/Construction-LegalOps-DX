@@ -49,11 +49,12 @@ from app.models.obligation import ContractObligation
 from app.models.outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from app.models.partner import Partner
 from app.models.payment_record import PaymentRecord
+from app.models.price_consultation import PriceConsultationLog
 from app.models.risk_item import RiskItem
 from app.models.signing import ESignatureEnvelope, ESignatureEvent
 from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
-from app.services import audit_service
+from app.services import audit_service, price_consultation_service
 from app.services.rls_context import set_rls_context
 from sqlalchemy import delete, select, update
 
@@ -1364,6 +1365,64 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         wage_count += 1
     counts["labor_wage_standards"] = wage_count
 
+    # ---- 労務費価格協議（#24 / ダンピング警告 #21 / 見積変更監視 #23）----
+    # サービス層の乖離スナップショット付きで投入する（log_no は自動採番）。
+    # 冪等化: summary（協議内容）の重複を確認してスキップする。
+    existing_consultation_summaries = set(
+        (await session.execute(select(PriceConsultationLog.summary))).scalars()
+    )
+    consultation_count = 0
+    created_consultations: list[PriceConsultationLog] = []
+    demo_consultations = [
+        {
+            "direction": "from_subcontractor",
+            "work_type": "土木",
+            "prefecture": "東京都",
+            "quote_day_jpy": 17_500,
+            "summary": "労務費上昇に伴う単価引上げ協議（デモ）",
+            "request_detail": "2026年基準改定に伴う労務単価の上昇を踏まえた引上げの申出（架空）。",
+            "requested_at": date.today() - timedelta(days=6),
+        },
+        {
+            "direction": "from_subcontractor",
+            "work_type": "解体",
+            "quote_day_jpy": 14_000,
+            "summary": "解体工事の単価見直し協議（デモ）",
+            "request_detail": "現場条件の変化に伴う単価見直しの申出（架空）。基準を大きく下回る要確認例。",
+            "requested_at": date.today() - timedelta(days=3),
+        },
+        {
+            "direction": "to_subcontractor",
+            "work_type": "鉄筋",
+            "prefecture": "東京都",
+            "quote_day_jpy": 21_000,
+            "summary": "見積単価の確認依頼（デモ）",
+            "request_detail": "下請から提出された見積の妥当性確認（架空）。",
+            "requested_at": date.today() - timedelta(days=1),
+        },
+    ]
+    for item in demo_consultations:
+        if item["summary"] in existing_consultation_summaries:
+            continue
+        try:
+            row = await price_consultation_service.create_log(
+                session,
+                actor_id=user.id,
+                direction=item["direction"],
+                work_type=item["work_type"],
+                prefecture=item.get("prefecture"),
+                quote_day_jpy=item.get("quote_day_jpy"),
+                summary=item["summary"],
+                request_detail=item.get("request_detail"),
+                requested_at=item.get("requested_at"),
+            )
+        except Exception:  # 基準未登録等で失敗してもデモ全体を止めない
+            continue
+        consultation_count += 1
+        created_consultations.append(row)
+        existing_consultation_summaries.add(item["summary"])
+    counts["price_consultations"] = consultation_count
+
     await session.flush()
 
     # --- 監査ログ（デモフラグ付き・append-only）---
@@ -1447,6 +1506,17 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
             "legal_engagements",
             engagement.id,
             engagement_no=engagement.engagement_no,
+        )
+        audit_count += 1
+    for consultation in created_consultations:
+        await _log(
+            session,
+            user,
+            "price_consultation.create",
+            "price_consultation_logs",
+            consultation.id,
+            log_no=consultation.log_no,
+            severity=consultation.severity,
         )
         audit_count += 1
     counts["audit_logs"] = audit_count
@@ -1642,6 +1712,14 @@ async def delete_demo(session) -> dict[str, int]:
     counts["labor_wage_demo"] = (
         await session.execute(
             delete(LaborWageStandard).where(LaborWageStandard.source_ref == "demo-2026-01")
+        )
+    ).rowcount
+    # 労務費価格協議（デモ summary で判別）
+    counts["price_consultations"] = (
+        await session.execute(
+            delete(PriceConsultationLog).where(
+                PriceConsultationLog.summary.like("%（デモ）%")
+            )
         )
     ).rowcount
     return counts

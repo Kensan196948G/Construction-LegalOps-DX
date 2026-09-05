@@ -71,6 +71,8 @@ import {
   partnerSchema,
   partnerSummarySchema,
   paymentComplianceSchema,
+  priceConsultationCreateSchema,
+  priceConsultationLogSchema,
   renewalCheckSchema,
   retentionRuleSchema,
   reviewCreateSchema,
@@ -1348,7 +1350,7 @@ export const laborWageApi = {
       params: buildParams(params),
     }),
 
-  /** 労務費乖離率判定（#20・基準未満を below で検出） */
+  /** 労務費乖離率判定（#20・基準未満を below で検出・#21 深刻度付き） */
   discrepancy: (params: {
     work_type: string;
     quote_day_jpy: number;
@@ -1356,6 +1358,71 @@ export const laborWageApi = {
     as_of?: string | null;
   }) =>
     getParsed(apiResponse(laborWageDiscrepancySchema), "/labor-wage/discrepancy", {
+      params: buildParams(params),
+    }),
+};
+
+// ===========================================================================
+// 26. 労務費価格協議・乖離確認 (ロードマップ #21/#23/#24 / /price-consultations)
+// ===========================================================================
+
+export interface PriceConsultationListParams extends ListParams {
+  status?: string;
+  direction?: string;
+  severity?: string;
+  contract_id?: number | string;
+}
+
+export const priceConsultationApi = {
+  /** 価格協議ログ一覧（#24/#23） */
+  list: (params?: PriceConsultationListParams) =>
+    getParsed(paginatedSchema(priceConsultationLogSchema), "/price-consultations", {
+      params: buildParams(params),
+    }),
+
+  /** 協議申出を記録（#24・乖離スナップショット付き） */
+  create: (
+    data: {
+      direction: string;
+      work_type: string;
+      contract_id?: number | string | null;
+      prefecture?: string | null;
+      quote_day_jpy?: number | null;
+      summary: string;
+      request_detail?: string | null;
+      requested_at?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      priceConsultationLogSchema,
+      "/price-consultations",
+      priceConsultationCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(priceConsultationLogSchema), `/price-consultations/${id}`),
+
+  /** 回答（#24・open → responded） */
+  respond: (id: number | string, data: { response_summary: string }) =>
+    postParsed(
+      apiResponse(priceConsultationLogSchema),
+      `/price-consultations/${id}/respond`,
+      data,
+    ),
+
+  /** 取下げ（#24・open → cancelled） */
+  cancel: (id: number | string, data: { reason: string }) =>
+    postParsed(
+      apiResponse(priceConsultationLogSchema),
+      `/price-consultations/${id}/cancel`,
+      data,
+    ),
+
+  /** #23 見積変更要求監視（未回答の協議のみ） */
+  monitorQuoteChanges: (params?: { severity?: string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(priceConsultationLogSchema), "/price-consultations/monitor/quote-changes", {
       params: buildParams(params),
     }),
 };
@@ -1396,5 +1463,6 @@ export const api = {
   lawFirms: lawFirmsApi,
   engagements: engagementsApi,
   laborWage: laborWageApi,
+  priceConsultations: priceConsultationApi,
 } as const;
 

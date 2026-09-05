@@ -409,3 +409,33 @@ class LaborWorkType(StrEnum):
     TEKKIN = "鉄筋"
     KONKURIITO = "コンクリート"
     OTHER = "その他"
+
+
+class ConsultationDirection(StrEnum):
+    """労務費価格協議の申出方向（#24 価格協議履歴）."""
+
+    FROM_SUBCONTRACTOR = "from_subcontractor"  # 下請→元請（価格引上げ協議申出）
+    TO_SUBCONTRACTOR = "to_subcontractor"  # 元請→下請（価格確認・引下げ要求）
+
+
+class ConsultationStatus(StrEnum):
+    """労務費価格協議の状態（#24）."""
+
+    OPEN = "open"  # 協議申出・回答待ち
+    RESPONDED = "responded"  # 回答済み（証跡確定）
+    CANCELLED = "cancelled"  # 取下げ
+
+
+class DumpingSeverity(StrEnum):
+    """ダンピング警告の深刻度（#21・乖離率から決定論的に導出）.
+
+    - none: 基準以上（乖離なし）
+    - watch: 基準未満だが軽微（不足率 10% 未満）
+    - warning: 基準を 10% 以上下回る（要確認）
+    - critical: 基準を 20% 以上下回る（著しい低見積り）
+    """
+
+    NONE = "none"
+    WATCH = "watch"
+    WARNING = "warning"
+    CRITICAL = "critical"
