@@ -50,12 +50,13 @@ from app.models.outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from app.models.partner import Partner
 from app.models.payment_record import PaymentRecord
 from app.models.price_consultation import PriceConsultationLog
+from app.models.public_works import ContractingAgency, OwnerNotification, PublicWorksConsultation
 from app.models.risk_item import RiskItem
 from app.models.signing import ESignatureEnvelope, ESignatureEvent
 from app.models.standard_duration import StandardWorkDuration
 from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
-from app.services import audit_service, price_consultation_service
+from app.services import audit_service, price_consultation_service, public_works_service
 from app.services.rls_context import set_rls_context
 from sqlalchemy import delete, select, update
 
@@ -1468,6 +1469,87 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         existing_consultation_summaries.add(item["summary"])
     counts["price_consultations"] = consultation_count
 
+    # ---- 公共工事（#41-#43・#54-#57 / 画面 /public-works）----
+    # 発注機関マスタ 3 件・通知 3 件・協議 3 件（冪等: コード/タイトルで判別）。
+    existing_agencies = set((await session.execute(select(ContractingAgency.code))).scalars())
+    created_agencies: list[ContractingAgency] = []
+    demo_agencies = [
+        ("AG-DEMO-0001", "デモ国交省出張所", "national", None, 50, 0.4),
+        ("AG-DEMO-0002", "デモ県土木事務所", "prefectural", "東京都", 50, 0.3),
+        ("AG-DEMO-0003", "デモ市役所建設課", "municipal", "東京都", 60, 0.0),
+    ]
+    for code, name, atype, pref, pay_days, adv in demo_agencies:
+        if code in existing_agencies:
+            continue
+        agency = await public_works_service.create_agency(
+            session,
+            actor_id=user.id,
+            code=code,
+            name=name,
+            agency_type=atype,
+            prefecture=pref,
+            payment_deadline_days=pay_days,
+            advance_payment_ratio=adv,
+            requires_slide_clause=atype in ("national", "prefectural"),
+            notes="[DEMO] 架空の発注機関",
+        )
+        created_agencies.append(agency)
+        existing_agencies.add(code)
+    counts["contracting_agencies"] = len(created_agencies)
+    await session.flush()
+
+    existing_notif_titles = set(
+        (await session.execute(select(OwnerNotification.title))).scalars()
+    )
+    created_notifications: list[OwnerNotification] = []
+    demo_notifications = [
+        ("delay", "工期遅延に伴う通知（デモ）", date.today() - timedelta(days=2)),
+        ("design_change", "設計変更の通知（デモ）", date.today() + timedelta(days=14)),
+        ("completion", "部分使用承認申請の通知（デモ）", date.today() + timedelta(days=45)),
+    ]
+    for ntype, title, due in demo_notifications:
+        if title in existing_notif_titles:
+            continue
+        row = await public_works_service.create_notification(
+            session,
+            actor_id=user.id,
+            notification_type=ntype,
+            title=title,
+            agency_id=created_agencies[0].id if created_agencies else None,
+            detail="[DEMO] 架空の発注者通知",
+            due_date=due,
+        )
+        created_notifications.append(row)
+        existing_notif_titles.add(title)
+    counts["owner_notifications"] = len(created_notifications)
+    await session.flush()
+
+    existing_consult_titles = set(
+        (await session.execute(select(PublicWorksConsultation.title))).scalars()
+    )
+    created_consults: list[PublicWorksConsultation] = []
+    demo_consults = [
+        ("extension_of_time", "工期延伸協議（デモ）", 30, None),
+        ("design_change", "設計変更協議（デモ）", None, 8_000_000),
+        ("price_slide", "材料価格スライド請求協議（デモ）", None, 1_200_000),
+    ]
+    for ctype, title, cdays, camount in demo_consults:
+        if title in existing_consult_titles:
+            continue
+        row = await public_works_service.create_consultation(
+            session,
+            actor_id=user.id,
+            consultation_type=ctype,
+            title=title,
+            agency_id=created_agencies[1].id if len(created_agencies) > 1 else (created_agencies[0].id if created_agencies else None),
+            detail="[DEMO] 架空の発注者との協議",
+            claimed_days=cdays,
+            claimed_amount_jpy=camount,
+            due_date=date.today() + timedelta(days=20),
+        )
+        created_consults.append(row)
+        existing_consult_titles.add(title)
+    counts["public_works_consultations"] = len(created_consults)
     await session.flush()
 
     # --- 監査ログ（デモフラグ付き・append-only）---
@@ -1562,6 +1644,36 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
             consultation.id,
             log_no=consultation.log_no,
             severity=consultation.severity,
+        )
+        audit_count += 1
+    for agency in created_agencies:
+        await _log(
+            session,
+            user,
+            "contracting_agency.create",
+            "contracting_agencies",
+            agency.id,
+            code=agency.code,
+        )
+        audit_count += 1
+    for notification in created_notifications:
+        await _log(
+            session,
+            user,
+            "owner_notification.create",
+            "owner_notifications",
+            notification.id,
+            notification_no=notification.notification_no,
+        )
+        audit_count += 1
+    for consult in created_consults:
+        await _log(
+            session,
+            user,
+            "public_works_consultation.create",
+            "public_works_consultations",
+            consult.id,
+            consultation_no=consult.consultation_no,
         )
         audit_count += 1
     counts["audit_logs"] = audit_count
@@ -1773,6 +1885,50 @@ async def delete_demo(session) -> dict[str, int]:
             )
         )
     ).rowcount
+    # 公共工事（デモ識別子 AG-DEMO-%・タイトル（デモ）で判別）
+    demo_agency_ids = list(
+        (
+            await session.execute(
+                select(ContractingAgency.id).where(
+                    ContractingAgency.code.like("AG-DEMO-%")
+                )
+            )
+        ).scalars()
+    )
+    if demo_agency_ids:
+        counts["public_works_consultations"] = (
+            await session.execute(
+                delete(PublicWorksConsultation).where(
+                    PublicWorksConsultation.agency_id.in_(demo_agency_ids)
+                )
+            )
+        ).rowcount
+        counts["owner_notifications"] = (
+            await session.execute(
+                delete(OwnerNotification).where(
+                    OwnerNotification.agency_id.in_(demo_agency_ids)
+                )
+            )
+        ).rowcount
+        counts["contracting_agencies"] = (
+            await session.execute(
+                delete(ContractingAgency).where(ContractingAgency.id.in_(demo_agency_ids))
+            )
+        ).rowcount
+    else:
+        counts["public_works_consultations"] = (
+            await session.execute(
+                delete(PublicWorksConsultation).where(
+                    PublicWorksConsultation.title.like("%（デモ）%")
+                )
+            )
+        ).rowcount
+        counts["owner_notifications"] = (
+            await session.execute(
+                delete(OwnerNotification).where(OwnerNotification.title.like("%（デモ）%"))
+            )
+        ).rowcount
+        counts["contracting_agencies"] = 0
     return counts
 
 

@@ -616,7 +616,7 @@ Civil-Technology-IP-Intelligence-Platform
 - 完了条件（DoD）: 各 Issue の Completion Criteria 充足＋backend pytest / ruff / mypy・
   frontend typecheck / lint / Jest 全緑＋監査ログ・RLS/ACL 適用
 
-### Phase 2: 建設業特化を完成（🔴 / 🟠）— 🚧 **進行中（労務費 #16-26 完了 2026-09-05・公共工事以降は未着手）**
+### Phase 2: 建設業特化を完成（🔴 / 🟠）— 🚧 **進行中（労務費 #16-26 完了・公共工事 P0 完了 2026-09-05・JV 以降は未着手）**
 
 ```text
 労務費基準更新 → 公共工事 → JV → 施工体制 → 協力会社Portal
@@ -630,8 +630,13 @@ Civil-Technology-IP-Intelligence-Platform
   - ✅ #23 見積変更要求監視（`monitor/quote-changes`・未回答の深刻な協議を一覧化）
   - ✅ #22 短工期判定（`standard_work_durations`・migration 017・短縮率から深刻度導出）
   - ✅ #25/#26 スライド条項試算・価格転嫁シミュレータ（`/labor-wage/price-simulator`）
-  - 🚧 残: #27 見積書様式生成（P1）・#28 コミットメント条項（P1）
-    → 公共工事 #41-60 → JV #61-70 → 協力会社 #136-152
+  - ✅ #41/#42 発注機関マスタ・機関別契約条件（`contracting_agencies`・migration 018）
+  - ✅ #54 発注者通知期限管理（`owner_notifications`・期限バケット動的算出）
+  - ✅ #55/#56/#57 工期延伸/スライド請求/設計変更 協議プロセス（台帳は change_orders と役割分担）
+  - ✅ #43 標準請負約款差分チェック（12 重要条項カテゴリ突合・決定論的）
+  - ✅ #60 公共工事ダッシュボード（`/public-works`・種別別集計）
+  - 🚧 残: #27 見積書様式生成（P1）・#28 コミットメント条項（P1）・
+    公共工事 P1（#44-53・#58-60 の一部）→ JV #61-70 → 協力会社 #136-152
 - DoD: 更新型 Compliance Engine（データ取込 1 系統以上をデモモードで実証）＋公共工事ダッシュボード
 
 ### Phase 3: リスク統制（🔴 / 🟠）

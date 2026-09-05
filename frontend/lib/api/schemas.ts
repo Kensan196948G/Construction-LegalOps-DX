@@ -1860,3 +1860,188 @@ export const priceSimulatorOutSchema = z.object({
   direction: z.enum(["up", "down", "flat"]).or(z.string()),
 });
 export type PriceSimulatorOut = z.infer<typeof priceSimulatorOutSchema>;
+
+// ===========================================================================
+// 公共工事特化 (ロードマップ #41-#43・#54-#57・#60 / migration 018)
+// ===========================================================================
+
+export const agencyTypeEnum = z.enum([
+  "national",
+  "prefectural",
+  "municipal",
+  "public_corp",
+  "other",
+]);
+export type AgencyType = z.infer<typeof agencyTypeEnum>;
+
+export const ownerNotificationTypeEnum = z.enum([
+  "design_change",
+  "delay",
+  "suspension",
+  "claim",
+  "completion",
+  "other",
+]);
+export type OwnerNotificationType = z.infer<typeof ownerNotificationTypeEnum>;
+
+export const ownerNotificationStatusEnum = z.enum([
+  "open",
+  "notified",
+  "cancelled",
+]);
+export type OwnerNotificationStatus = z.infer<typeof ownerNotificationStatusEnum>;
+
+export const publicWorksConsultationTypeEnum = z.enum([
+  "extension_of_time",
+  "design_change",
+  "price_slide",
+  "suspension",
+  "other",
+]);
+export type PublicWorksConsultationType = z.infer<
+  typeof publicWorksConsultationTypeEnum
+>;
+
+export const publicWorksConsultationStatusEnum = z.enum([
+  "open",
+  "responded",
+  "cancelled",
+]);
+export type PublicWorksConsultationStatus = z.infer<
+  typeof publicWorksConsultationStatusEnum
+>;
+
+/** #41/#42 発注機関マスタ＋機関別契約条件 */
+export const contractingAgencySchema = z.object({
+  id: idSchema,
+  code: z.string(),
+  name: z.string(),
+  agency_type: agencyTypeEnum.or(z.string()),
+  prefecture: z.string().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  payment_deadline_days: z.number().int().nullable().optional(),
+  advance_payment_ratio: z.number().nullable().optional(),
+  warranty_period_months: z.number().int().nullable().optional(),
+  requires_slide_clause: z.boolean(),
+  notes: z.string().nullable().optional(),
+  is_active: z.boolean(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type ContractingAgency = z.infer<typeof contractingAgencySchema>;
+
+export const contractingAgencyCreateSchema = z.object({
+  code: z.string().min(1).max(64),
+  name: z.string().min(1).max(256),
+  agency_type: agencyTypeEnum,
+  prefecture: z.string().max(16).nullish(),
+  contact_email: z.string().max(256).nullish(),
+  phone: z.string().max(64).nullish(),
+  payment_deadline_days: z.number().int().min(1).nullish(),
+  advance_payment_ratio: z.number().min(0).max(1).nullish(),
+  warranty_period_months: z.number().int().min(0).nullish(),
+  requires_slide_clause: z.boolean().default(false),
+  notes: z.string().max(4000).nullish(),
+});
+export type ContractingAgencyCreate = z.infer<typeof contractingAgencyCreateSchema>;
+
+/** #54 発注者通知 */
+export const ownerNotificationSchema = z.object({
+  id: idSchema,
+  notification_no: z.string(),
+  contract_id: idSchema.nullable().optional(),
+  agency_id: idSchema.nullable().optional(),
+  notification_type: ownerNotificationTypeEnum.or(z.string()),
+  status: ownerNotificationStatusEnum.or(z.string()),
+  title: z.string(),
+  detail: z.string().nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  notified_at: datetimeSchema.nullable().optional(),
+  notified_by: idSchema.nullable().optional(),
+  cancel_reason: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type OwnerNotification = z.infer<typeof ownerNotificationSchema>;
+
+export const ownerNotificationCreateSchema = z.object({
+  notification_type: z.string().min(1).max(32),
+  title: z.string().min(1).max(256),
+  contract_id: idSchema.nullish(),
+  agency_id: idSchema.nullish(),
+  detail: z.string().max(8000).nullish(),
+  due_date: dateSchema.nullish(),
+});
+export type OwnerNotificationCreate = z.infer<typeof ownerNotificationCreateSchema>;
+
+/** #55/#56/#57 発注者との協議 */
+export const publicWorksConsultationSchema = z.object({
+  id: idSchema,
+  consultation_no: z.string(),
+  contract_id: idSchema.nullable().optional(),
+  agency_id: idSchema.nullable().optional(),
+  consultation_type: publicWorksConsultationTypeEnum.or(z.string()),
+  status: publicWorksConsultationStatusEnum.or(z.string()),
+  title: z.string(),
+  detail: z.string().nullable().optional(),
+  requested_at: dateSchema.nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  claimed_days: z.number().int().nullable().optional(),
+  claimed_amount_jpy: z.number().int().nullable().optional(),
+  resolved_days: z.number().int().nullable().optional(),
+  resolved_amount_jpy: z.number().int().nullable().optional(),
+  responded_at: datetimeSchema.nullable().optional(),
+  response_note: z.string().nullable().optional(),
+  cancel_reason: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type PublicWorksConsultation = z.infer<typeof publicWorksConsultationSchema>;
+
+export const publicWorksConsultationCreateSchema = z.object({
+  consultation_type: z.string().min(1).max(32),
+  title: z.string().min(1).max(256),
+  contract_id: idSchema.nullish(),
+  agency_id: idSchema.nullish(),
+  detail: z.string().max(8000).nullish(),
+  requested_at: dateSchema.nullish(),
+  due_date: dateSchema.nullish(),
+  claimed_days: z.number().int().min(1).nullish(),
+  claimed_amount_jpy: z.number().int().min(0).nullish(),
+});
+export type PublicWorksConsultationCreate = z.infer<
+  typeof publicWorksConsultationCreateSchema
+>;
+
+/** #43 標準請負約款差分チェック結果 */
+export const standardClauseCheckSchema = z.object({
+  contract_id: idSchema,
+  contract_no: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  total_categories: z.number().int(),
+  covered_categories: z.number().int(),
+  missing_categories: z.number().int(),
+  categories: z
+    .array(
+      z.object({
+        category: z.string(),
+        covered: z.boolean(),
+        matched_clause_seqs: z.array(z.number().int()).default([]),
+      })
+    )
+    .default([]),
+});
+export type StandardClauseCheck = z.infer<typeof standardClauseCheckSchema>;
+
+/** #60 公共工事ダッシュボード */
+export const publicWorksDashboardSchema = z.object({
+  agencies_active: z.number().int(),
+  notifications_open: z.number().int(),
+  notifications_overdue: z.number().int(),
+  consultations_open: z.number().int(),
+  consultations_by_type: z.record(z.string(), z.number().int()).default({}),
+});
+export type PublicWorksDashboard = z.infer<typeof publicWorksDashboardSchema>;

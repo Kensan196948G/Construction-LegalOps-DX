@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 公共工事特化 — 発注機関・通知期限・協議管理・約款チェック)
+
+- **🏛️ 発注機関マスタ＋機関別契約条件（#41/#42 / migration 018_public_works）**:
+  - `contracting_agencies`: 機関コード・種別（国/都道府県/市町村/公社/その他）＋
+    **支払日数・前払率・保証期間・スライド条項必須**等の機関別契約条件を管理
+- **📮 発注者通知期限管理（#54）**:
+  - `owner_notifications`: 設計変更・工期遅延・中止再開・請求・完了等の通知と送付期限。
+    状態遷移 open→notified/cancelled（ルールエンジン・409 保護）＋
+    **期限バケット（overdue/within_30/future）を動的算出**（保存しない）
+- **🤝 発注者との協議プロセス（#55 工期延伸・#56 スライド請求・#57 設計変更）**:
+  - `public_works_consultations`: 申出（申出日数・金額）→ 回答・結果（確定日数/金額）の
+    プロセス証跡。**台帳（確定内容）は既存 change_orders が正本**（重複しない役割分担）
+  - 協議番号 `PW-YYYY-NNNNNN` 自動採番・全変更を監査ログへ
+- **🔍 標準請負約款差分チェック（#43）**:
+  - `GET /public-works/standard-clause-check`: 契約条項を公共工事標準請負契約約款の
+    12 重要カテゴリ（契約金額/工期/支払検収/前払金/設計変更/工期延長/監督職員/
+    損害賠償/危険負担/解除/瑕疵担保/紛争処理）と突合し、**欠落カテゴリを決定論的に検出**（AI 不使用）
+- **📊 公共工事ダッシュボード（#60）**: `GET /public-works/dashboard`（有効機関数・
+  通知 open/overdue・協議 open・種別別集計）
+- **🖥️ 新規画面 `/public-works`**（サイドバー「法務・建設」グループ）:
+  ダッシュボード 4 カード・約款チェックツール・通知/協議の一覧・申出・回答操作
+- **🧪 seed**: 発注機関 3 件・通知 3 件・協議 3 件（冪等・delete 対応）
+- 検証: backend pytest 1234 passed（+8: unit 4 / integration 3 他） / ruff / mypy clean /
+  ローカル PG migration 018 適用 / フロント tsc・lint 0 / Jest 19 suites 76 tests
+
 ### Added / Changed (2026-09-05: 労務費 #22/#25/#26 — 標準工期・価格転嫁シミュレータ)
 
 - **🏗️ 短工期判定（#22 / migration 017_standard_duration）**:
