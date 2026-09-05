@@ -35,6 +35,7 @@ import {
   Scale,
   Landmark,
   BadgeJapaneseYen,
+  Construction,
   type LucideIcon,
 } from "lucide-react";
 
@@ -79,6 +80,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { label: "支払・検収コンプライアンス", href: "/payments", icon: ReceiptText, group: "legal" },
   { label: "リスク管理", href: "/risks", icon: ShieldAlert, group: "legal" },
   { label: "建設業法務チェック", href: "/construction-legal", icon: HardHat, group: "legal" },
+  { label: "公共工事", href: "/public-works", icon: Construction, group: "legal" },
   { label: "労務費基準", href: "/labor-wage", icon: BadgeJapaneseYen, group: "legal" },
   { label: "取引先・協力会社管理", href: "/partners", icon: Building2, group: "legal" },
   { label: "紛争・クレーム管理", href: "/disputes", icon: Swords, group: "legal" },

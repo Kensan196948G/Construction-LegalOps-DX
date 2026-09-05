@@ -230,4 +230,16 @@ export const queryKeys = {
       ["price-consultations", "monitor", params] as const,
     detail: (id: number | string) => ["price-consultations", "detail", id] as const,
   },
+
+  publicWorks: {
+    all: ["public-works"] as const,
+    agencies: (params?: unknown) => ["public-works", "agencies", params] as const,
+    notifications: (params?: unknown) =>
+      ["public-works", "notifications", params] as const,
+    consultations: (params?: unknown) =>
+      ["public-works", "consultations", params] as const,
+    clauseCheck: (contractId: number | string) =>
+      ["public-works", "clause-check", contractId] as const,
+    dashboard: () => ["public-works", "dashboard"] as const,
+  },
 } as const;

@@ -439,3 +439,50 @@ class DumpingSeverity(StrEnum):
     WATCH = "watch"
     WARNING = "warning"
     CRITICAL = "critical"
+
+
+class AgencyType(StrEnum):
+    """発注機関種別（公共工事 #41 発注機関マスタ）."""
+
+    NATIONAL = "national"  # 国の機関
+    PREFECTURAL = "prefectural"  # 都道府県
+    MUNICIPAL = "municipal"  # 市町村
+    PUBLIC_CORP = "public_corp"  # 公社・公団等
+    OTHER = "other"
+
+
+class OwnerNotificationType(StrEnum):
+    """発注者通知種別（公共工事 #54 発注者通知期限管理）."""
+
+    DESIGN_CHANGE = "design_change"  # 設計変更の通知
+    DELAY = "delay"  # 工期遅延の通知
+    SUSPENSION = "suspension"  # 工事中止・再開の通知
+    CLAIM = "claim"  # 請求・クレーム通知
+    COMPLETION = "completion"  # 完了・引渡し通知
+    OTHER = "other"
+
+
+class OwnerNotificationStatus(StrEnum):
+    """発注者通知の状態（#54）."""
+
+    OPEN = "open"  # 通知期限未達成（送付待ち）
+    NOTIFIED = "notified"  # 通知済み（証跡確定）
+    CANCELLED = "cancelled"
+
+
+class PublicWorksConsultationType(StrEnum):
+    """公共工事における発注者との協議種別（#55 工期延伸・#56 スライド請求・#57 設計変更）."""
+
+    EXTENSION_OF_TIME = "extension_of_time"  # 工期延伸協議（#55）
+    DESIGN_CHANGE = "design_change"  # 設計変更協議（#57）
+    PRICE_SLIDE = "price_slide"  # スライド請求（#56）
+    SUSPENSION = "suspension"  # 一時中止・再開協議（#58 関連）
+    OTHER = "other"
+
+
+class PublicWorksConsultationStatus(StrEnum):
+    """発注者との協議の状態."""
+
+    OPEN = "open"  # 協議中・回答待ち
+    RESPONDED = "responded"  # 回答受領（結果記録済み）
+    CANCELLED = "cancelled"

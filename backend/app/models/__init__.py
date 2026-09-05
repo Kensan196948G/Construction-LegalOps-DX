@@ -23,6 +23,7 @@ from .department import Department
 from .dispute import Dispute, DisputeEvidence, DisputeTimelineEvent
 from .document_consistency import DocumentConsistencyResult
 from .enums import (
+    AgencyType,
     AttachmentStorage,
     AuditAction,
     ClauseRecommendation,
@@ -60,6 +61,7 @@ from .outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from .partner import Partner
 from .payment_record import PaymentRecord
 from .price_consultation import PriceConsultationLog
+from .public_works import ContractingAgency, OwnerNotification, PublicWorksConsultation
 from .retention import ExternalForwardEvent, RetentionRule
 from .risk_item import RiskItem
 from .security_settings import SecuritySetting
@@ -70,6 +72,7 @@ from .workflow import Workflow, WorkflowStep, WorkflowTemplate
 
 __all__ = [
     "AccessControlEntry",
+    "AgencyType",
     "AiProviderSetting",
     "Attachment",
     "AttachmentStorage",
@@ -95,6 +98,7 @@ __all__ = [
     "ContractStatus",
     "ContractTemplate",
     "ContractType",
+    "ContractingAgency",
     "CounselLawyer",
     "Department",
     "Dispute",
@@ -121,9 +125,11 @@ __all__ = [
     "Notification",
     "NotificationChannel",
     "NotificationStatus",
+    "OwnerNotification",
     "Partner",
     "PaymentRecord",
     "PriceConsultationLog",
+    "PublicWorksConsultation",
     "RetentionRule",
     "ReviewStatus",
     "ReviewType",

@@ -100,6 +100,19 @@ export type {
   ShortDurationCheck,
   PriceSimulatorIn,
   PriceSimulatorOut,
+  AgencyType,
+  OwnerNotificationType,
+  OwnerNotificationStatus,
+  PublicWorksConsultationType,
+  PublicWorksConsultationStatus,
+  ContractingAgency,
+  ContractingAgencyCreate,
+  OwnerNotification,
+  OwnerNotificationCreate,
+  PublicWorksConsultation,
+  PublicWorksConsultationCreate,
+  StandardClauseCheck,
+  PublicWorksDashboard,
 } from "@/lib/api/schemas";
 
 export type { ProblemDetails } from "@/lib/api/client";

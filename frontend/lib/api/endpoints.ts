@@ -73,6 +73,14 @@ import {
   paymentComplianceSchema,
   priceConsultationCreateSchema,
   priceConsultationLogSchema,
+  contractingAgencyCreateSchema,
+  contractingAgencySchema,
+  ownerNotificationCreateSchema,
+  ownerNotificationSchema,
+  publicWorksConsultationCreateSchema,
+  publicWorksConsultationSchema,
+  publicWorksDashboardSchema,
+  standardClauseCheckSchema,
   priceSimulatorInSchema,
   priceSimulatorOutSchema,
   renewalCheckSchema,
@@ -1491,6 +1499,151 @@ export const priceConsultationApi = {
     }),
 };
 
+// ===========================================================================
+// 27. 公共工事特化 (ロードマップ #41-#43・#54-#57・#60 / /public-works)
+// ===========================================================================
+
+export interface AgencyListParams extends ListParams {
+  agency_type?: string;
+  is_active?: boolean;
+}
+
+export const contractingAgenciesApi = {
+  list: (params?: AgencyListParams) =>
+    getParsed(paginatedSchema(contractingAgencySchema), "/public-works/contracting-agencies", {
+      params: buildParams(params),
+    }),
+
+  create: (
+    data: {
+      code: string;
+      name: string;
+      agency_type: string;
+      prefecture?: string | null;
+      contact_email?: string | null;
+      phone?: string | null;
+      payment_deadline_days?: number | null;
+      advance_payment_ratio?: number | null;
+      warranty_period_months?: number | null;
+      requires_slide_clause?: boolean;
+      notes?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      contractingAgencySchema,
+      "/public-works/contracting-agencies",
+      contractingAgencyCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+};
+
+export interface OwnerNotificationListParams extends ListParams {
+  status?: string;
+  type?: string;
+  contract_id?: number | string;
+}
+
+export const ownerNotificationsApi = {
+  list: (params?: OwnerNotificationListParams) =>
+    getParsed(paginatedSchema(ownerNotificationSchema), "/public-works/notifications", {
+      params: buildParams(params),
+    }),
+
+  create: (
+    data: {
+      notification_type: string;
+      title: string;
+      contract_id?: number | string | null;
+      agency_id?: number | string | null;
+      detail?: string | null;
+      due_date?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      ownerNotificationSchema,
+      "/public-works/notifications",
+      ownerNotificationCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  notify: (id: number | string) =>
+    postParsed(
+      ownerNotificationSchema,
+      `/public-works/notifications/${id}/notify`,
+      {},
+    ),
+
+  cancel: (id: number | string, data: { reason: string }) =>
+    postParsed(ownerNotificationSchema, `/public-works/notifications/${id}/cancel`, data),
+};
+
+export interface PublicWorksConsultationListParams extends ListParams {
+  status?: string;
+  type?: string;
+  contract_id?: number | string;
+}
+
+export const publicWorksConsultationsApi = {
+  list: (params?: PublicWorksConsultationListParams) =>
+    getParsed(
+      paginatedSchema(publicWorksConsultationSchema),
+      "/public-works/consultations",
+      { params: buildParams(params) },
+    ),
+
+  create: (
+    data: {
+      consultation_type: string;
+      title: string;
+      contract_id?: number | string | null;
+      agency_id?: number | string | null;
+      detail?: string | null;
+      requested_at?: string | null;
+      due_date?: string | null;
+      claimed_days?: number | null;
+      claimed_amount_jpy?: number | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      publicWorksConsultationSchema,
+      "/public-works/consultations",
+      publicWorksConsultationCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  respond: (
+    id: number | string,
+    data: {
+      response_note: string;
+      resolved_days?: number | null;
+      resolved_amount_jpy?: number | null;
+    },
+  ) =>
+    postParsed(
+      publicWorksConsultationSchema,
+      `/public-works/consultations/${id}/respond`,
+      data,
+    ),
+
+  cancel: (id: number | string, data: { reason: string }) =>
+    postParsed(publicWorksConsultationSchema, `/public-works/consultations/${id}/cancel`, data),
+};
+
+export const publicWorksApi = {
+  /** #43 標準請負約款差分チェック */
+  standardClauseCheck: (contractId: number | string) =>
+    getParsed(apiResponse(standardClauseCheckSchema), "/public-works/standard-clause-check", {
+      params: buildParams({ contract_id: contractId }),
+    }),
+
+  /** #60 ダッシュボード */
+  dashboard: () =>
+    getParsed(apiResponse(publicWorksDashboardSchema), "/public-works/dashboard"),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -1528,5 +1681,9 @@ export const api = {
   engagements: engagementsApi,
   laborWage: laborWageApi,
   priceConsultations: priceConsultationApi,
+  contractingAgencies: contractingAgenciesApi,
+  ownerNotifications: ownerNotificationsApi,
+  publicWorksConsultations: publicWorksConsultationsApi,
+  publicWorks: publicWorksApi,
 } as const;
 
