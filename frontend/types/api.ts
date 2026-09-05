@@ -126,6 +126,12 @@ export type {
   JvDispute,
   JvSettlement,
   JvDashboard,
+  PartnerReviewType,
+  PartnerReviewStatus,
+  PartnerReview,
+  PartnerReviewCreate,
+  PartnerExpiryFlags,
+  PartnerRiskScore,
 } from "@/lib/api/schemas";
 
 export type { ProblemDetails } from "@/lib/api/client";

@@ -48,6 +48,7 @@ from app.models.notification import Notification
 from app.models.obligation import ContractObligation
 from app.models.outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from app.models.partner import Partner
+from app.models.partner_review import PartnerReview
 from app.models.payment_record import PaymentRecord
 from app.models.price_consultation import PriceConsultationLog
 from app.models.joint_venture import JvAgreement, JvDispute, JvMember, JvSettlement, JointVenture
@@ -57,7 +58,7 @@ from app.models.signing import ESignatureEnvelope, ESignatureEvent
 from app.models.standard_duration import StandardWorkDuration
 from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
-from app.services import audit_service, jv_service, price_consultation_service, public_works_service
+from app.services import audit_service, jv_service, partner_ext_service, price_consultation_service, public_works_service
 from app.services.rls_context import set_rls_context
 from sqlalchemy import delete, select, update
 
@@ -1610,6 +1611,37 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
     counts["joint_ventures"] = len(created_jvs)
     counts["jv_members"] = jv_member_count
 
+    # ---- 協力会社拡張（#146/#150/#151 / 画面 /partner-risk・/partners）----
+    # 既存 Partner（partners テーブル）へ保険証券期限・Risk Score を設定し、
+    # 定期再審査を起票・完了させる（冪等: review_no は自動採番、タイトルで判別）。
+    partners_rows = (
+        await session.execute(select(Partner).order_by(Partner.id).limit(3))
+    ).scalars().all()
+    created_reviews: list[PartnerReview] = []
+    for idx, partner_row in enumerate(partners_rows):
+        if partner_row.insurance_expiry is None:
+            partner_row.insurance_expiry = date.today() + timedelta(days=120 + idx * 30)
+        if idx == 0:
+            # 期限切れ例（アラート表示用）
+            partner_row.permit_expiry = date.today() - timedelta(days=10)
+        review = await partner_ext_service.create_review(
+            session,
+            actor_id=user.id,
+            partner_id=partner_row.id,
+            review_type="periodic",
+            title=f"定期再審査（デモ）— {partner_row.name}",
+        )
+        await partner_ext_service.complete_review(
+            session,
+            review_id=review.id,
+            actor_id=user.id,
+            safety_score=[88, 75, 92][idx % 3],
+            findings="[DEMO] 架空の再審査結果",
+        )
+        created_reviews.append(review)
+        await partner_ext_service.refresh_risk_score(session, partner_id=partner_row.id)
+    counts["partner_reviews"] = len(created_reviews)
+
     # --- 監査ログ（デモフラグ付き・append-only）---
     # 新規投入した行についてのみ記録する（冪等性維持）。
     audit_count = 0
@@ -1736,6 +1768,16 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         audit_count += 1
     for jv in created_jvs:
         await _log(session, user, "jv.create", "joint_ventures", jv.id, jv_no=jv.jv_no)
+        audit_count += 1
+    for review in created_reviews:
+        await _log(
+            session,
+            user,
+            "partner_review.create",
+            "partner_reviews",
+            review.id,
+            review_no=review.review_no,
+        )
         audit_count += 1
     counts["audit_logs"] = audit_count
 
@@ -2030,6 +2072,12 @@ async def delete_demo(session) -> dict[str, int]:
         counts["jv_disputes"] = 0
         counts["jv_agreements"] = 0
         counts["joint_ventures"] = 0
+    # 協力会社再審査（デモタイトルで判別）
+    counts["partner_reviews"] = (
+        await session.execute(
+            delete(PartnerReview).where(PartnerReview.title.like("%（デモ）%"))
+        )
+    ).rowcount
     return counts
 
 

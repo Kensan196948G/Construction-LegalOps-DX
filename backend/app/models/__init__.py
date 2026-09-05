@@ -65,6 +65,7 @@ from .notification import Notification
 from .obligation import ContractObligation
 from .outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from .partner import Partner
+from .partner_review import PartnerReview
 from .payment_record import PaymentRecord
 from .price_consultation import PriceConsultationLog
 from .public_works import ContractingAgency, OwnerNotification, PublicWorksConsultation
@@ -143,6 +144,9 @@ __all__ = [
     "NotificationStatus",
     "OwnerNotification",
     "Partner",
+    "PartnerReview",
+    "PartnerReviewStatus",
+    "PartnerReviewType",
     "PaymentRecord",
     "PriceConsultationLog",
     "PublicWorksConsultation",

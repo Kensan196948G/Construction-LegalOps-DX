@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 協力会社拡張 — 定期再審査・Risk Score・期限アラート)
+
+- **🏢 協力会社拡張（#136〜#152 / migration 020_partner_ext）**:
+  - `partner_reviews`（#151 定期再審査・#147 安全成績 0-100・#148 過去トラブル・
+    #149 契約違反回数・PRV-YYYY-NNNNNN 採番・open→completed 409 保護）
+  - Partner 列追加: `insurance_expiry`（#146 保険証券期限）・`risk_score`（#150）・
+    `self_registered`（#152 セルフ登録）・`next_review_due`（#151 次回再審査期限）
+  - **#150 Partner Risk Score**: 既存 assess_risk＋安全成績・違反回数・期限切れ
+    （許可/保険/CCUS/再審査）から 0-100 を決定論的に算出・保存（AI 不使用）
+  - **#138/#146/#151 期限アラート**: `GET /partners/alerts`（期限切れ・期限切れ近傍の
+    協力会社を決定論的に一覧化）
+- **🖥️ 新規画面 `/partner-risk`**（サイドバー「法務・建設」グループ）:
+  期限アラート一覧（許可/保険/CCUS/再審査の状態バッジ）＋ Risk Score 取得・算出保存
+- **🧪 seed**: 定期再審査 3 件＋Risk Score 保存（冪等・delete 対応）
+- 検証: backend pytest 1245 passed（+6: unit 4 / integration 2） / ruff / mypy clean /
+  ローカル PG migration 020 適用 / フロント tsc・lint 0 / Jest 21 suites 81 tests
+
 ### Added / Changed (2026-09-05: JV（共同企業体）管理)
 
 - **🤝 JV 管理（#61〜#70 / migration 019_joint_venture）**:

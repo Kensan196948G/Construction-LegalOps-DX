@@ -2185,3 +2185,75 @@ export const jvDashboardSchema = z.object({
   settlements_pending: z.number().int(),
 });
 export type JvDashboard = z.infer<typeof jvDashboardSchema>;
+
+// ===========================================================================
+// 協力会社拡張 (ロードマップ #136-#152 / migration 020)
+// ===========================================================================
+
+export const partnerReviewTypeEnum = z.enum(["periodic", "incident", "violation"]);
+export type PartnerReviewType = z.infer<typeof partnerReviewTypeEnum>;
+
+export const partnerReviewStatusEnum = z.enum(["open", "completed"]);
+export type PartnerReviewStatus = z.infer<typeof partnerReviewStatusEnum>;
+
+/** #147-#149/#151 協力会社再審査 */
+export const partnerReviewSchema = z.object({
+  id: idSchema,
+  partner_id: idSchema,
+  review_no: z.string(),
+  review_type: partnerReviewTypeEnum.or(z.string()),
+  status: partnerReviewStatusEnum.or(z.string()),
+  title: z.string(),
+  safety_score: z.number().int().nullable().optional(),
+  findings: z.string().nullable().optional(),
+  violation_count: z.number().int(),
+  incident_count: z.number().int(),
+  extra_data: z.record(z.string(), z.unknown()).nullable().optional(),
+  reviewed_at: dateSchema.nullable().optional(),
+  next_review_due: dateSchema.nullable().optional(),
+  reviewed_by: idSchema.nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type PartnerReview = z.infer<typeof partnerReviewSchema>;
+
+export const partnerReviewCreateSchema = z.object({
+  partner_id: idSchema.nullish(),
+  review_type: z.string().min(1).max(32),
+  title: z.string().min(1).max(256),
+  safety_score: z.number().int().min(0).max(100).nullish(),
+  findings: z.string().max(8000).nullish(),
+  violation_count: z.number().int().min(0).default(0),
+  incident_count: z.number().int().min(0).default(0),
+  notes: z.string().max(4000).nullish(),
+});
+export type PartnerReviewCreate = z.infer<typeof partnerReviewCreateSchema>;
+
+/** #138/#146/#151 期限状態フラグ */
+export const partnerExpiryFlagsSchema = z.object({
+  partner_id: idSchema,
+  partner_name: z.string(),
+  permit_expiry: dateSchema.nullable().optional(),
+  permit_state: z.string(),
+  insurance_expiry: dateSchema.nullable().optional(),
+  insurance_state: z.string(),
+  ccus_expiry: dateSchema.nullable().optional(),
+  ccus_state: z.string(),
+  next_review_due: dateSchema.nullable().optional(),
+  review_state: z.string(),
+  risk_score: z.number().int().nullable().optional(),
+});
+export type PartnerExpiryFlags = z.infer<typeof partnerExpiryFlagsSchema>;
+
+/** #150 Partner Risk Score */
+export const partnerRiskScoreSchema = z.object({
+  partner_id: idSchema,
+  partner_name: z.string(),
+  risk_score: z.number().int(),
+  risk_level: z.string(),
+  base_level: z.string(),
+  expiry_overdue_count: z.number().int(),
+});
+export type PartnerRiskScore = z.infer<typeof partnerRiskScoreSchema>;

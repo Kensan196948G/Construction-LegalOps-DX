@@ -10,6 +10,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -54,6 +55,14 @@ class Partner(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
         String(16), nullable=False, default="unknown", server_default="'unknown'"
     )
     insurance_joined: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # #146 保険証券の有効期限（任意）
+    insurance_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # #150 Partner Risk Score（0〜100・サービス層が決定論的に算出・保存）
+    risk_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # #152 協力会社ポータルからのセルフ登録フラグ
+    self_registered: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # #151 次回定期再審査期限
+    next_review_due: Mapped[date | None] = mapped_column(Date, nullable=True)
     re_subcontract: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     last_transaction: Mapped[date | None] = mapped_column(Date, nullable=True)
     risk_level: Mapped[str] = mapped_column(

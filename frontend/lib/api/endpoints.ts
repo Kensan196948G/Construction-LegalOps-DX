@@ -89,6 +89,10 @@ import {
   jvMemberSchema,
   jvSchema,
   jvSettlementSchema,
+  partnerExpiryFlagsSchema,
+  partnerReviewCreateSchema,
+  partnerReviewSchema,
+  partnerRiskScoreSchema,
   priceSimulatorInSchema,
   priceSimulatorOutSchema,
   renewalCheckSchema,
@@ -1773,6 +1777,78 @@ export const jvApi = {
   dashboard: () => getParsed(apiResponse(jvDashboardSchema), "/joint-ventures/dashboard/summary"),
 };
 
+// ===========================================================================
+// 29. 協力会社拡張 (ロードマップ #136-#152 / /partners 拡張)
+// ===========================================================================
+
+export const partnerExtApi = {
+  /** #138/#146/#151 期限アラート一覧 */
+  alerts: (params?: { within_days?: number; page?: number; size?: number }) =>
+    getParsed(z.array(partnerExpiryFlagsSchema), "/partners/alerts", {
+      params: buildParams(params),
+    }),
+
+  /** 期限状態フラグ */
+  expiryFlags: (partnerId: number | string) =>
+    getParsed(apiResponse(partnerExpiryFlagsSchema), `/partners/${partnerId}/expiry-flags`),
+
+  /** #150 Risk Score（計算のみ） */
+  riskScore: (partnerId: number | string) =>
+    getParsed(apiResponse(partnerRiskScoreSchema), `/partners/${partnerId}/risk-score`),
+
+  /** #150 Risk Score を算出して保存 */
+  refreshRiskScore: (partnerId: number | string) =>
+    postParsed(
+      apiResponse(partnerRiskScoreSchema),
+      `/partners/${partnerId}/risk-score/refresh`,
+      {},
+    ),
+
+  /** #147-#149/#151 再審査一覧 */
+  reviews: (partnerId: number | string, params?: { status?: string; type?: string }) =>
+    getParsed(paginatedSchema(partnerReviewSchema), `/partners/${partnerId}/reviews`, {
+      params: buildParams(params),
+    }),
+
+  /** 再審査・incident/violation 起票 */
+  createReview: (
+    partnerId: number | string,
+    data: {
+      review_type: string;
+      title: string;
+      safety_score?: number | null;
+      findings?: string | null;
+      violation_count?: number;
+      incident_count?: number;
+      notes?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      partnerReviewSchema,
+      `/partners/${partnerId}/reviews`,
+      partnerReviewCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** #151 再審査完了（次回期限を Partner へ反映） */
+  completeReview: (
+    reviewId: number | string,
+    data: {
+      safety_score?: number | null;
+      findings?: string | null;
+      violation_count?: number | null;
+      incident_count?: number | null;
+      next_review_due?: string | null;
+    },
+  ) =>
+    postParsed(
+      partnerReviewSchema,
+      `/partners/partner-reviews/${reviewId}/complete`,
+      data,
+    ),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -1815,5 +1891,6 @@ export const api = {
   publicWorksConsultations: publicWorksConsultationsApi,
   publicWorks: publicWorksApi,
   jv: jvApi,
+  partnerExt: partnerExtApi,
 } as const;
 
