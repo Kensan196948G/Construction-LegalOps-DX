@@ -56,6 +56,7 @@ from .ip_document import IpDocument
 from .ip_watch import IpWatchEvent, IpWatchTarget
 from .joint_venture import JointVenture, JvAgreement, JvDispute, JvMember, JvSettlement
 from .knowledge_article import KnowledgeArticle
+from .labor_commitment import LaborCommitment
 from .labor_wage import LaborWageStandard
 from .legal_hold import LegalHoldCase
 from .legal_review import LegalReview
@@ -131,6 +132,9 @@ __all__ = [
     "JvSettlementStatus",
     "JvStatus",
     "KnowledgeArticle",
+    "LaborCommitment",
+    "LaborCommitmentStatus",
+    "LaborCommitmentType",
     "LaborWageStandard",
     "LawFirm",
     "LegalEngagement",

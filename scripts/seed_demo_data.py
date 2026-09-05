@@ -40,6 +40,7 @@ from app.models.ip_asset import IpAsset
 from app.models.ip_document import IpDocument
 from app.models.ip_watch import IpWatchEvent, IpWatchTarget
 from app.models.knowledge_article import KnowledgeArticle
+from app.models.labor_commitment import LaborCommitment
 from app.models.labor_wage import LaborWageStandard
 from app.models.legal_review import LegalReview
 from app.models.matter import LegalMatter, MatterEvent, matter_contracts_table
@@ -1642,6 +1643,52 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         await partner_ext_service.refresh_risk_score(session, partner_id=partner_row.id)
     counts["partner_reviews"] = len(created_reviews)
 
+    # ---- 労務費コミットメント（#28 / 画面 /labor-wage）----
+    # デモ契約 2 件に表明を登録（冪等: タイトルで判別）。
+    existing_commitments = set(
+        (await session.execute(select(LaborCommitment.title))).scalars()
+    )
+    commitment_count = 0
+    created_commitments: list[LaborCommitment] = []
+    if demo_contracts:
+        for contract, ctype, title, statement in [
+            (
+                demo_contracts[0],
+                "wage_payment",
+                "賃金支払確約（デモ）",
+                "下請労働者への賃金を適時に、適正な額で支払うことを表明します（架空）。",
+            ),
+            (
+                demo_contracts[0],
+                "proper_allocation",
+                "労務費の適正配分（デモ）",
+                "労務費を適正に配分し、改善に努めることを表明します（架空）。",
+            ),
+            (
+                demo_contracts[1] if len(demo_contracts) > 1 else demo_contracts[0],
+                "no_lump_subcontract",
+                "一括下請負の禁止遵守（デモ）",
+                "一括して下請負をしないことを遵守します（架空）。",
+            ),
+        ]:
+            if title in existing_commitments:
+                continue
+            row = LaborCommitment(
+                contract_id=contract.id,
+                commitment_type=ctype,
+                title=title,
+                statement=statement,
+                status="active",
+                confirmed_at=date.today(),
+                created_by=user.id,
+            )
+            session.add(row)
+            created_commitments.append(row)
+            existing_commitments.add(title)
+            commitment_count += 1
+    await session.flush()
+    counts["labor_commitments"] = commitment_count
+
     # --- 監査ログ（デモフラグ付き・append-only）---
     # 新規投入した行についてのみ記録する（冪等性維持）。
     audit_count = 0
@@ -1777,6 +1824,16 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
             "partner_reviews",
             review.id,
             review_no=review.review_no,
+        )
+        audit_count += 1
+    for commitment in created_commitments:
+        await _log(
+            session,
+            user,
+            "labor_commitment.create",
+            "labor_commitments",
+            commitment.id,
+            title=commitment.title,
         )
         audit_count += 1
     counts["audit_logs"] = audit_count
@@ -2076,6 +2133,12 @@ async def delete_demo(session) -> dict[str, int]:
     counts["partner_reviews"] = (
         await session.execute(
             delete(PartnerReview).where(PartnerReview.title.like("%（デモ）%"))
+        )
+    ).rowcount
+    # 労務費コミットメント（デモタイトルで判別）
+    counts["labor_commitments"] = (
+        await session.execute(
+            delete(LaborCommitment).where(LaborCommitment.title.like("%（デモ）%"))
         )
     ).rowcount
     return counts
