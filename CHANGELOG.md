@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: デモデータ拡張 — Phase 1-2 新機能テーブル)
+
+- **🧪 `seed_demo_data.py` を拡張し、F1〜F7 新機能画面が空にならないようデモデータを追加**:
+  - **電子契約（/signing）**: `esignature_envelopes` 3 件（completed / sent / draft・電磁的方法の
+    承諾証跡付き・ES-DEMO 採番）＋ `esignature_events` 証跡 9 件（status に応じた現実的な遷移）
+  - **契約義務（/obligations）**: `contract_obligations` 6 件（報告/通知/保険/提出/更新/終了）。
+    期限は実行日相対で投入し、overdue / 30 日 / 60 日 / 将来の各バケットが表示される
+  - **条項交渉（/negotiations）**: 既存デモ条項 3 件に negotiation_status / clause_owner を付与し、
+    `clause_negotiation_events`（redline）を記録
+  - **法務案件（/matters）**: `legal_matters` 3 件（MT-DEMO 採番・dispute/compliance/labor）＋
+    `matter_events` タイムライン＋ `matter_contracts` 関係契約リンク 3 件
+  - **顧問弁護士（/outside-counsel）**: `law_firms` 1 件・`counsel_lawyers` 2 名・
+    `legal_engagements` 3 件（confirmed / answered / open・LEG-DEMO 採番・回答・Confidential）
+  - **労務費基準（/labor-wage）**: デモ正本を 8 件へ統一（既存 5 件 + 鉄筋/コンクリート/とび・土工・愛知県）
+  - 冪等性（識別子/タイトル/notes で重複スキップ）・監査ログ（デモフラグ付き）・
+    **delete_demo 対応**（FK 順序を遵守: 契約配下 → Matter → 事務所/弁護士/依頼 → 労務費）を実装
+  - 検証: ローカル PostgreSQL(127.0.0.1/legalops) で実投入・再実行（重複なし）・
+    delete → 再 seed 復元を確認。ruff クリーン（追加分）
+
 ### Added / Changed (2026-09-05: Phase 1〜2 新機能のフロント UI 接続 F1〜F7)
 
 - **🖥️ バックエンド実装済みの Phase 1〜2 機能をフロント UI へ接続（ロードマップ F1〜F7）**:

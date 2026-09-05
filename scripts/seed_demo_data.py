@@ -26,8 +26,6 @@ import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import delete, select, update
-
 from app.db.session import AsyncSessionLocal
 from app.models.app_settings import AiProviderSetting
 from app.models.change_order import ChangeOrder
@@ -42,15 +40,22 @@ from app.models.ip_asset import IpAsset
 from app.models.ip_document import IpDocument
 from app.models.ip_watch import IpWatchEvent, IpWatchTarget
 from app.models.knowledge_article import KnowledgeArticle
+from app.models.labor_wage import LaborWageStandard
 from app.models.legal_review import LegalReview
+from app.models.matter import LegalMatter, MatterEvent, matter_contracts_table
+from app.models.negotiation import ClauseNegotiationEvent
 from app.models.notification import Notification
+from app.models.obligation import ContractObligation
+from app.models.outside_counsel import CounselLawyer, LawFirm, LegalEngagement
 from app.models.partner import Partner
 from app.models.payment_record import PaymentRecord
 from app.models.risk_item import RiskItem
+from app.models.signing import ESignatureEnvelope, ESignatureEvent
 from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
 from app.services import audit_service
 from app.services.rls_context import set_rls_context
+from sqlalchemy import delete, select, update
 
 BASE_DATE = date(2026, 5, 16)
 
@@ -1031,6 +1036,334 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
     await session.flush()
     counts["ip_watch_targets"] = len(ip_targets)
 
+    # =====================================================================
+    # Phase 1-2 新機能デモデータ（signing / obligations / negotiation /
+    # matters / outside_counsel / labor_wage）— 画面 F1-F7 が空にならないよう投入
+    # =====================================================================
+
+    # ---- 電子契約・電子署名（#1-4 / 画面 /signing）----
+    existing_envelope_nos = set(
+        (await session.execute(select(ESignatureEnvelope.envelope_no))).scalars()
+    )
+    new_envelopes: list[ESignatureEnvelope] = []
+    for idx, (status, counterparty, method) in enumerate(
+        [
+            ("completed", "みらい建設工業(株)", "electronic"),
+            ("sent", "さくら土木(株)", "electronic"),
+            ("draft", "あおぞらコンサルタント(株)", "paper"),
+        ]
+    ):
+        no = f"ES-DEMO-2026-{idx + 1:04d}"
+        if no in existing_envelope_nos or not demo_contracts:
+            continue
+        contract = demo_contracts[idx % len(demo_contracts)]
+        env_kwargs: dict[str, object] = {
+            "contract_id": contract.id,
+            "envelope_no": no,
+            "status": status,
+            "method": method,
+            "provider": "demo",
+            "counterparty_name": counterparty,
+            "note": "[DEMO] 架空の電子署名デモ",
+            "created_by": user.id,
+        }
+        if status in ("sent", "completed"):
+            env_kwargs["sent_at"] = datetime.now(UTC) - timedelta(days=6 - idx)
+            env_kwargs["signer_name"] = PEOPLE[idx % len(PEOPLE)]
+            env_kwargs["signer_email"] = f"demo{idx + 1}@example.com"
+        if status == "completed":
+            env_kwargs["consent_confirmed_at"] = datetime.now(UTC) - timedelta(days=8 - idx)
+            env_kwargs["consentor_name"] = counterparty
+            env_kwargs["consentor_email"] = "legal@example.com"
+            env_kwargs["consent_note"] = "[DEMO] 電磁的方法による交付の承諾（建設業法19条）"
+            env_kwargs["viewed_at"] = datetime.now(UTC) - timedelta(days=5 - idx)
+            env_kwargs["signed_at"] = datetime.now(UTC) - timedelta(days=4 - idx)
+            env_kwargs["completed_at"] = datetime.now(UTC) - timedelta(days=3 - idx)
+        envelope = ESignatureEnvelope(**env_kwargs)  # type: ignore[arg-type]
+        session.add(envelope)
+        new_envelopes.append(envelope)
+        existing_envelope_nos.add(no)
+    await session.flush()
+    # 証跡イベント（追記専用・INSERT のみ・status に応じた現実的な遷移）
+    signing_event_count = 0
+    _event_sets = {
+        "draft": ["created"],
+        "sent": ["created", "sent"],
+        "completed": [
+            "created",
+            "sent",
+            "consent_received",
+            "viewed",
+            "signed",
+            "completed",
+        ],
+    }
+    for envelope in new_envelopes:
+        existing_ev = (
+            await session.execute(
+                select(ESignatureEvent.id).where(ESignatureEvent.envelope_id == envelope.id)
+            )
+        ).scalars().first()
+        if existing_ev is not None:
+            continue
+        for event_type in _event_sets.get(envelope.status or "draft", ["created"]):
+            session.add(
+                ESignatureEvent(
+                    envelope_id=envelope.id,
+                    event_type=event_type,
+                    actor_id=user.id,
+                    payload={"demo": True, "event_type": event_type},
+                )
+            )
+            signing_event_count += 1
+    counts["signing_envelopes"] = len(new_envelopes)
+    counts["signing_events"] = signing_event_count
+
+    # ---- 契約義務（#9-13 / 画面 /obligations）----
+    # 期限バケット（overdue / within_30 / within_60 / future）が実行日基準で
+    # 正しく見えるよう、実行日の相対日付で投入する（タイトルで冪等化）。
+    existing_obligations = set(
+        (await session.execute(select(ContractObligation.title))).scalars()
+    )
+    obligations: list[ContractObligation] = []
+    demo_obligations = [
+        ("notice", "工事着手届の提出（デモ）", datetime.now(UTC).date() - timedelta(days=3), "open"),
+        ("report", "月次工程報告書の提出（デモ）", datetime.now(UTC).date() + timedelta(days=12), "open"),
+        ("insurance", "保険証券の写し提出（デモ）", datetime.now(UTC).date() + timedelta(days=45), "in_progress"),
+        ("submit", "設計図書の提出（デモ）", datetime.now(UTC).date() + timedelta(days=90), "open"),
+        ("renewal", "自動更新の確認（デモ）", datetime.now(UTC).date() + timedelta(days=200), "open"),
+        ("closing", "完了検査・引渡し（デモ）", datetime.now(UTC).date() + timedelta(days=300), "open"),
+    ]
+    for idx, (otype, title, due, status) in enumerate(demo_obligations):
+        if title in existing_obligations or not demo_contracts:
+            continue
+        contract = demo_contracts[idx % len(demo_contracts)]
+        obligation = ContractObligation(
+            contract_id=contract.id,
+            obligation_type=otype,
+            title=title,
+            description="[DEMO] 架空の契約義務（画面確認用）",
+            due_date=due,
+            status=status,
+            assignee_id=user.id,
+            created_by=user.id,
+        )
+        session.add(obligation)
+        obligations.append(obligation)
+        existing_obligations.add(title)
+    counts["obligations"] = len(obligations)
+
+    # ---- 条項交渉・Redline（#5-8 / 画面 /negotiations・既存条項に付与）----
+    demo_clauses = (
+        await session.execute(
+            select(Clause)
+            .where(Clause.contract_id.in_([c.id for c in demo_contracts[:12]]))
+            .order_by(Clause.contract_id, Clause.seq)
+        )
+    ).scalars().all()
+    negotiation_event_count = 0
+    for clause in demo_clauses[:3]:
+        if clause.negotiation_status is not None:
+            continue
+        clause.negotiation_status = "negotiating"
+        clause.clause_owner = "法務"
+        clause.negotiated_text = clause.body.replace("60日以内", "45日以内") if "60日" in clause.body else None
+        session.add(
+            ClauseNegotiationEvent(
+                contract_id=clause.contract_id,
+                clause_id=clause.id,
+                round_no=1,
+                action="redline",
+                status_to="negotiating",
+                owner_to="法務",
+                note="[DEMO] 支払条件の修正提案（架空の交渉）",
+                proposed_text=clause.negotiated_text,
+                actor_id=user.id,
+            )
+        )
+        negotiation_event_count += 1
+    counts["negotiation_events"] = negotiation_event_count
+
+    # ---- Legal Matter（#71-84 / 画面 /matters）----
+    existing_matter_nos = set((await session.execute(select(LegalMatter.matter_no))).scalars())
+    matters: list[LegalMatter] = []
+    _matter_contract_links: list[tuple[int, int]] = []
+    for idx, (mtype, status, priority, title) in enumerate(
+        [
+            ("dispute", "in_progress", "high", "◯◯工事の追加工事費支払請求への対応（デモ）"),
+            ("compliance", "open", "medium", "下請法 60 日ルールの社内点検（デモ）"),
+            ("labor", "open", "medium", "労務費基準の乖離是正対応（デモ）"),
+        ]
+    ):
+        no = f"MT-DEMO-2026-{idx + 1:03d}"
+        if no in existing_matter_nos or not demo_contracts:
+            continue
+        contract = demo_contracts[idx % len(demo_contracts)]
+        matter = LegalMatter(
+            matter_no=no,
+            title=title,
+            description="[DEMO] 架空の法務案件（画面確認用）",
+            matter_type=mtype,
+            status=status,
+            priority=priority,
+            assignee_id=user.id,
+            opened_at=datetime.now(UTC) - timedelta(days=10 + idx),
+            created_by=user.id,
+        )
+        session.add(matter)
+        matters.append(matter)
+        existing_matter_nos.add(no)
+        _matter_contract_links.append((matter, contract.id))
+    await session.flush()
+    # 関係契約リンク（#79）— flush 後に matter.id が確定してから紐付ける
+    for matter, contract_id in _matter_contract_links:
+        await session.execute(
+            matter_contracts_table.insert().values(
+                matter_id=matter.id, contract_id=contract_id
+            )
+        )
+    await session.flush()
+    matter_event_count = 0
+    for matter in matters:
+        for event_type, note in [
+            ("created", "案件を登録しました"),
+            ("status_changed", "対応中に変更しました（デモ）"),
+        ]:
+            session.add(
+                MatterEvent(
+                    matter_id=matter.id,
+                    event_type=event_type,
+                    note=note,
+                    actor_id=user.id,
+                    payload={"demo": True},
+                )
+            )
+            matter_event_count += 1
+    counts["matters"] = len(matters)
+    counts["matter_events"] = matter_event_count
+
+    # ---- 顧問弁護士・外部法律事務所（#85-96 / 画面 /outside-counsel）----
+    existing_firms = set((await session.execute(select(LawFirm.firm_name))).scalars())
+    firms: list[LawFirm] = []
+    lawyers: list[CounselLawyer] = []
+    engagements: list[LegalEngagement] = []
+    firm = None
+    if "デモみらい法律事務所" not in existing_firms:
+        firm = LawFirm(
+            firm_name="デモみらい法律事務所",
+            contact_email="demo@example.com",
+            phone="03-0000-0000",
+            address="東京都千代田区（架空）",
+            notes="[DEMO] 架空の法律事務所",
+            created_by=user.id,
+        )
+        session.add(firm)
+        firms.append(firm)
+        existing_firms.add(firm.firm_name)
+    await session.flush()
+    if firm is not None:
+        existing_lawyer_names = set(
+            (await session.execute(select(CounselLawyer.lawyer_name))).scalars()
+        )
+        for lname, spec in [
+            ("デモ 法務太郎", "建設紛争・契約"),
+            ("デモ 契約花子", "労働・下請法"),
+        ]:
+            if lname in existing_lawyer_names:
+                continue
+            lawyer = CounselLawyer(
+                firm_id=firm.id,
+                lawyer_name=lname,
+                email="demo.lawyer@example.com",
+                bar_number="000000",
+                specialties=spec,
+                created_by=user.id,
+            )
+            session.add(lawyer)
+            lawyers.append(lawyer)
+            existing_lawyer_names.add(lname)
+        await session.flush()
+        existing_eng_no = set(
+            (await session.execute(select(LegalEngagement.engagement_no))).scalars()
+        )
+        for idx, (status, title, question) in enumerate(
+            [
+                ("confirmed", "追加工事費の請求可否について（デモ）", "◯◯工事の追加工事について、発注者への請求可否と法的論点をご教示ください。（架空）"),
+                ("answered", "労働者派遣と下請負の区分について（デモ）", "本件作業が労働者派遣に該当するか、下請負かについてご教示ください。（架空）"),
+                ("open", "一括下請負の該当性について（デモ）", "契約構成が一括下請負に該当しないか確認したい。（架空）"),
+            ]
+        ):
+            no = f"LEG-DEMO-2026-{idx + 1:03d}"
+            if no in existing_eng_no:
+                continue
+            engagement = LegalEngagement(
+                engagement_no=no,
+                firm_id=firm.id,
+                lawyer_id=lawyers[idx % len(lawyers)].id if lawyers else None,
+                matter_id=matters[idx % len(matters)].id if matters else None,
+                title=title,
+                question=question,
+                notes="[DEMO] 架空の弁護士依頼",
+                status=status,
+                due_date=BASE_DATE + timedelta(days=14 + idx * 7),
+                conflict_of_interest=False,
+                confidential=idx == 0,
+                fee_estimate_jpy=100_000 + idx * 50_000,
+                created_by=user.id,
+            )
+            if status in ("answered", "confirmed"):
+                engagement.answer = (
+                    "ご質問の件につき、法令に基づき以下のとおり回答します（デモ回答）。"
+                    "本回答は一般論であり、最終判断は社内でご確認ください。（架空）"
+                )
+                engagement.answered_at = datetime.now(UTC) - timedelta(days=2 - idx)
+                engagement.answered_by = user.id
+            session.add(engagement)
+            engagements.append(engagement)
+            existing_eng_no.add(no)
+        await session.flush()
+    counts["law_firms"] = len(firms)
+    counts["counsel_lawyers"] = len(lawyers)
+    counts["engagements"] = len(engagements)
+
+    # ---- 労務費基準マスタ（#16-20 / 画面 /labor-wage・source_ref で冪等化）----
+    # デモ正本は全 8 件（既存 5 件 + 追加 3 件）。delete → seed で必ず全件復元される。
+    existing_wage = set(
+        (
+            await session.execute(
+                select(LaborWageStandard.work_type, LaborWageStandard.prefecture)
+            )
+        ).all()
+    )
+    wage_count = 0
+    for wtype, pref, amount in [
+        ("土木", "東京都", 20400),
+        ("土木", "大阪府", 19800),
+        ("とび・土工", None, 21800),
+        ("舗装", None, 19300),
+        ("解体", None, 20100),
+        ("鉄筋", "東京都", 20500),
+        ("コンクリート", "大阪府", 19900),
+        ("とび・土工", "愛知県", 21600),
+    ]:
+        key = (wtype, pref)
+        if key in existing_wage:
+            continue
+        session.add(
+            LaborWageStandard(
+                work_type=wtype,
+                prefecture=pref,
+                amount_jpy=amount,
+                effective_from=date(2026, 1, 1),
+                amount_unit="日",
+                source_ref="demo-2026-01",
+                created_by=user.id,
+            )
+        )
+        existing_wage.add(key)
+        wage_count += 1
+    counts["labor_wage_standards"] = wage_count
+
     await session.flush()
 
     # --- 監査ログ（デモフラグ付き・append-only）---
@@ -1077,6 +1410,45 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
                 step=idx + 1,
             )
             audit_count += 1
+    for envelope in new_envelopes:
+        await _log(
+            session,
+            user,
+            "esignature.create",
+            "esignature_envelopes",
+            envelope.id,
+            envelope_no=envelope.envelope_no,
+        )
+        audit_count += 1
+    for obligation in obligations:
+        await _log(
+            session,
+            user,
+            "obligation.create",
+            "contract_obligations",
+            obligation.id,
+            title=obligation.title,
+        )
+        audit_count += 1
+    for matter in matters:
+        await _log(session, user, "matter.create", "legal_matters", matter.id, matter_no=matter.matter_no)
+        audit_count += 1
+    for firm_obj in firms:
+        await _log(session, user, "law_firm.create", "law_firms", firm_obj.id, firm_name=firm_obj.firm_name)
+        audit_count += 1
+    for lawyer in lawyers:
+        await _log(session, user, "counsel_lawyer.create", "counsel_lawyers", lawyer.id, lawyer_name=lawyer.lawyer_name)
+        audit_count += 1
+    for engagement in engagements:
+        await _log(
+            session,
+            user,
+            "engagement.create",
+            "legal_engagements",
+            engagement.id,
+            engagement_no=engagement.engagement_no,
+        )
+        audit_count += 1
     counts["audit_logs"] = audit_count
 
     return counts
@@ -1129,9 +1501,49 @@ async def delete_demo(session) -> dict[str, int]:
         counts["legal_reviews"] = (
             await session.execute(delete(LegalReview).where(LegalReview.contract_id.in_(demo_contract_ids)))
         ).rowcount
+        # Phase 1-2: 契約に FK で紐づく新機能テーブルは契約削除より先に消す
+        # （esignature_envelopes / clause_negotiation_events は ondelete=RESTRICT）
+        counts["contract_obligations"] = (
+            await session.execute(
+                delete(ContractObligation).where(ContractObligation.contract_id.in_(demo_contract_ids))
+            )
+        ).rowcount
+        counts["negotiation_events"] = (
+            await session.execute(
+                delete(ClauseNegotiationEvent).where(ClauseNegotiationEvent.contract_id.in_(demo_contract_ids))
+            )
+        ).rowcount
+        demo_envelope_ids = list(
+            (
+                await session.execute(
+                    select(ESignatureEnvelope.id).where(
+                        ESignatureEnvelope.contract_id.in_(demo_contract_ids)
+                    )
+                )
+            ).scalars()
+        )
+        if demo_envelope_ids:
+            counts["signing_events"] = (
+                await session.execute(
+                    delete(ESignatureEvent).where(ESignatureEvent.envelope_id.in_(demo_envelope_ids))
+                )
+            ).rowcount
+            counts["signing_envelopes"] = (
+                await session.execute(
+                    delete(ESignatureEnvelope).where(ESignatureEnvelope.id.in_(demo_envelope_ids))
+                )
+            ).rowcount
+        else:
+            counts["signing_events"] = 0
+            counts["signing_envelopes"] = 0
         counts["contracts"] = (
             await session.execute(delete(Contract).where(Contract.contract_no.like("CTR-2026-%")))
         ).rowcount
+    else:
+        counts["contract_obligations"] = 0
+        counts["negotiation_events"] = 0
+        counts["signing_events"] = 0
+        counts["signing_envelopes"] = 0
     counts["workflow_definitions"] = (
         await session.execute(delete(Workflow).where(Workflow.code == "DEMO-LEGAL-001"))
     ).rowcount
@@ -1157,6 +1569,79 @@ async def delete_demo(session) -> dict[str, int]:
     counts["ip_watch_targets"] = (
         await session.execute(
             delete(IpWatchTarget).where(IpWatchTarget.notes.like("%[DEMO]%"))
+        )
+    ).rowcount
+
+    # ---- Phase 1-2 新機能デモ（DEMO 識別子・[DEMO] メモで冪等に削除）----
+    # 契約配下（obligations / negotiation_events / envelopes）は上記の
+    # demo_contract_ids ブロック内（契約削除直前）で削除済み。
+    # 独立系: Matter（イベント → リンク → 本体）
+    demo_matter_ids = list(
+        (
+            await session.execute(
+                select(LegalMatter.id).where(LegalMatter.matter_no.like("MT-DEMO-%"))
+            )
+        ).scalars()
+    )
+    if demo_matter_ids:
+        counts["matter_events"] = (
+            await session.execute(
+                delete(MatterEvent).where(MatterEvent.matter_id.in_(demo_matter_ids))
+            )
+        ).rowcount
+        counts["matter_contracts"] = (
+            await session.execute(
+                delete(matter_contracts_table).where(
+                    matter_contracts_table.c.matter_id.in_(demo_matter_ids)
+                )
+            )
+        ).rowcount
+        counts["matters"] = (
+            await session.execute(
+                delete(LegalMatter).where(LegalMatter.id.in_(demo_matter_ids))
+            )
+        ).rowcount
+    else:
+        counts["matter_events"] = 0
+        counts["matter_contracts"] = 0
+        counts["matters"] = 0
+    # 顧問弁護士（依頼 → 弁護士 → 事務所）
+    demo_firm_ids = list(
+        (
+            await session.execute(
+                select(LawFirm.id).where(LawFirm.firm_name == "デモみらい法律事務所")
+            )
+        ).scalars()
+    )
+    if demo_firm_ids:
+        demo_lawyer_ids = list(
+            (
+                await session.execute(
+                    select(CounselLawyer.id).where(CounselLawyer.firm_id.in_(demo_firm_ids))
+                )
+            ).scalars()
+        )
+        counts["engagements"] = (
+            await session.execute(
+                delete(LegalEngagement).where(LegalEngagement.firm_id.in_(demo_firm_ids))
+            )
+        ).rowcount
+        counts["counsel_lawyers"] = (
+            await session.execute(
+                delete(CounselLawyer).where(CounselLawyer.firm_id.in_(demo_firm_ids))
+            )
+        ).rowcount if demo_lawyer_ids else 0
+        counts["law_firms"] = (
+            await session.execute(delete(LawFirm).where(LawFirm.id.in_(demo_firm_ids)))
+        ).rowcount
+    else:
+        counts["engagements"] = 0
+        counts["counsel_lawyers"] = 0
+        counts["law_firms"] = 0
+    # 労務費基準（source_ref=demo-2026-01 のデモ行のみ・既存実データは残す）
+    counts["labor_wage_demo"] = (
+        await session.execute(
+            delete(LaborWageStandard).where(LaborWageStandard.source_ref == "demo-2026-01")
         )
     ).rowcount
     return counts
