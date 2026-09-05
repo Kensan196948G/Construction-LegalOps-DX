@@ -616,7 +616,7 @@ Civil-Technology-IP-Intelligence-Platform
 - 完了条件（DoD）: 各 Issue の Completion Criteria 充足＋backend pytest / ruff / mypy・
   frontend typecheck / lint / Jest 全緑＋監査ログ・RLS/ACL 適用
 
-### Phase 2: 建設業特化を完成（🔴 / 🟠）— 🚧 **進行中（労務費 #16-20 完了・#21/#23/#24 完了 2026-09-05・公共工事以降は未着手）**
+### Phase 2: 建設業特化を完成（🔴 / 🟠）— 🚧 **進行中（労務費 #16-26 完了 2026-09-05・公共工事以降は未着手）**
 
 ```text
 労務費基準更新 → 公共工事 → JV → 施工体制 → 協力会社Portal
@@ -628,8 +628,10 @@ Civil-Technology-IP-Intelligence-Platform
   - ✅ #21 ダンピング警告（`discrepancy` に severity / dumping を追加・後方互換）
   - ✅ #24 価格協議履歴（`price_consultation_logs`・migration 016・`/price-consultations`）
   - ✅ #23 見積変更要求監視（`monitor/quote-changes`・未回答の深刻な協議を一覧化）
-  - 🚧 残: #22 短工期判定・#25 スライド条項・#26 価格転嫁シミュレータ・#27 様式生成・
-    #28 コミットメント条項 → 公共工事 #41-60 → JV #61-70 → 協力会社 #136-152
+  - ✅ #22 短工期判定（`standard_work_durations`・migration 017・短縮率から深刻度導出）
+  - ✅ #25/#26 スライド条項試算・価格転嫁シミュレータ（`/labor-wage/price-simulator`）
+  - 🚧 残: #27 見積書様式生成（P1）・#28 コミットメント条項（P1）
+    → 公共工事 #41-60 → JV #61-70 → 協力会社 #136-152
 - DoD: 更新型 Compliance Engine（データ取込 1 系統以上をデモモードで実証）＋公共工事ダッシュボード
 
 ### Phase 3: リスク統制（🔴 / 🟠）

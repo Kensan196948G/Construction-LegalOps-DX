@@ -22,6 +22,14 @@ jest.mock("@/lib/api", () => ({
     latest: jest.fn(),
     discrepancy: jest.fn().mockRejectedValue(new Error("offline")),
   },
+  priceConsultationApi: {
+    list: jest.fn().mockRejectedValue(new Error("offline")),
+    create: jest.fn(),
+    get: jest.fn(),
+    respond: jest.fn(),
+    cancel: jest.fn(),
+    monitorQuoteChanges: jest.fn().mockRejectedValue(new Error("offline")),
+  },
 }));
 
 describe("LaborWagePage", () => {
@@ -33,6 +41,11 @@ describe("LaborWagePage", () => {
   it("offers the 基準値を登録 button", () => {
     render(<LaborWagePage />);
     expect(screen.getByRole("button", { name: /基準値を登録/ })).toBeInTheDocument();
+  });
+
+  it("offers the 協議申出 button", () => {
+    render(<LaborWagePage />);
+    expect(screen.getByRole("button", { name: /協議申出/ })).toBeInTheDocument();
   });
 
   it("shows an offline alert when the API is down", async () => {

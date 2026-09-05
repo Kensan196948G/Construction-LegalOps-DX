@@ -64,6 +64,7 @@ from .retention import ExternalForwardEvent, RetentionRule
 from .risk_item import RiskItem
 from .security_settings import SecuritySetting
 from .signing import ESignatureEnvelope, ESignatureEvent
+from .standard_duration import StandardWorkDuration
 from .user import User
 from .workflow import Workflow, WorkflowStep, WorkflowTemplate
 
@@ -132,6 +133,7 @@ __all__ = [
     "RiskLevel",
     "RiskProbability",
     "SecuritySetting",
+    "StandardWorkDuration",
     "User",
     "UserRole",
     "Workflow",

@@ -1783,3 +1783,80 @@ export const priceConsultationCreateSchema = z.object({
   requested_at: dateSchema.nullish(),
 });
 export type PriceConsultationCreate = z.infer<typeof priceConsultationCreateSchema>;
+
+// ===========================================================================
+// 標準工期マスタ・短工期判定 (ロードマップ #22 / migration 017)
+// ===========================================================================
+
+/** 標準工期マスタ 1 行（工種 × 請負金額帯 × 適用期間） */
+export const standardWorkDurationSchema = z.object({
+  id: idSchema,
+  work_type: laborWorkTypeEnum.or(z.string()),
+  prefecture: z.string().nullable().optional(),
+  amount_min_jpy: z.number().int().min(0),
+  amount_max_jpy: z.number().int().nullable().optional(),
+  standard_days: z.number().int().min(1),
+  effective_from: dateSchema,
+  effective_to: dateSchema.nullable().optional(),
+  source_ref: z.string().nullable().optional(),
+});
+export type StandardWorkDuration = z.infer<typeof standardWorkDurationSchema>;
+
+export const standardWorkDurationCreateSchema = z.object({
+  work_type: z.string().min(1).max(64),
+  prefecture: z.string().max(16).nullish(),
+  amount_min_jpy: z.number().int().min(0),
+  amount_max_jpy: z.number().int().min(0).nullish(),
+  standard_days: z.number().int().min(1),
+  effective_from: dateSchema,
+  effective_to: dateSchema.nullish(),
+  source_ref: z.string().max(512).nullish(),
+});
+export type StandardWorkDurationCreate = z.infer<typeof standardWorkDurationCreateSchema>;
+
+/** #22 短工期判定結果 */
+export const shortDurationCheckSchema = z.object({
+  work_type: laborWorkTypeEnum.or(z.string()),
+  prefecture: z.string().nullable().optional(),
+  amount_min_jpy: z.number().int(),
+  amount_max_jpy: z.number().int().nullable().optional(),
+  standard_days: z.number().int(),
+  planned_days: z.number().int(),
+  ratio: z.number(),
+  shorten_rate: z.number(),
+  status: z.enum(["ok", "short"]).or(z.string()),
+  severity: dumpingSeverityEnum.or(z.string()),
+  effective_from: dateSchema,
+  source_ref: z.string().nullable().optional(),
+});
+export type ShortDurationCheck = z.infer<typeof shortDurationCheckSchema>;
+
+// ===========================================================================
+// 価格転嫁シミュレータ (ロードマップ #25/#26)
+// ===========================================================================
+
+export const priceSimulatorInSchema = z.object({
+  contract_amount_jpy: z.number().int().min(0),
+  labor_cost_jpy: z.number().int().min(0),
+  material_cost_jpy: z.number().int().min(0),
+  labor_change_rate: z.number().min(-1),
+  material_change_rate: z.number().min(-1),
+  pass_through_rate: z.number().min(0).max(1),
+});
+export type PriceSimulatorIn = z.infer<typeof priceSimulatorInSchema>;
+
+export const priceSimulatorOutSchema = z.object({
+  contract_amount_jpy: z.number().int(),
+  labor_cost_jpy: z.number().int(),
+  material_cost_jpy: z.number().int(),
+  labor_change_rate: z.number(),
+  material_change_rate: z.number(),
+  pass_through_rate: z.number(),
+  labor_delta_jpy: z.number().int(),
+  material_delta_jpy: z.number().int(),
+  total_delta_jpy: z.number().int(),
+  pass_through_amount_jpy: z.number().int(),
+  adjusted_amount_jpy: z.number().int(),
+  direction: z.enum(["up", "down", "flat"]).or(z.string()),
+});
+export type PriceSimulatorOut = z.infer<typeof priceSimulatorOutSchema>;
