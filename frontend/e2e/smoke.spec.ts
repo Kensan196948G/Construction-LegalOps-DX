@@ -20,6 +20,14 @@ const PAGES = [
   { path: "/templates", heading: /ひな形|テンプレート|Template/i },
   { path: "/knowledge", heading: /ナレッジ|Knowledge/i },
   { path: "/audit-logs", heading: /監査|Audit/i },
+  // Phase 1-2 新機能 UI（F1-F7）
+  { path: "/search", heading: /契約検索/ },
+  { path: "/signing", heading: /電子契約・署名/ },
+  { path: "/negotiations", heading: /契約交渉・Redline/ },
+  { path: "/obligations", heading: /契約義務/ },
+  { path: "/matters", heading: /法務案件/ },
+  { path: "/outside-counsel", heading: /顧問弁護士/ },
+  { path: "/labor-wage", heading: /労務費基準/ },
 ];
 
 test.describe("Smoke — page renders", () => {

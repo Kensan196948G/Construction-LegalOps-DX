@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Handshake, ListChecks, Pencil, PenLine, Scale } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,8 +131,34 @@ export default async function ContractDetailPage({ params }: ContractDetailPageP
             相手方: {contract.counterparty} / 種別: {contract.contractType}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <RiskBadge level={contract.riskLevel} />
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/negotiations?contract_id=${contract.id}`}>
+                <Handshake className="mr-1 h-4 w-4" aria-hidden="true" />
+                交渉
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/signing?contract_id=${contract.id}`}>
+                <PenLine className="mr-1 h-4 w-4" aria-hidden="true" />
+                電子契約
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/obligations?contract_id=${contract.id}`}>
+                <ListChecks className="mr-1 h-4 w-4" aria-hidden="true" />
+                義務
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/matters`}>
+                <Scale className="mr-1 h-4 w-4" aria-hidden="true" />
+                Matter
+              </Link>
+            </Button>
+          </div>
           <Button asChild variant="outline">
             <Link href={`/contracts/${contract.id}/edit`}>
               <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />

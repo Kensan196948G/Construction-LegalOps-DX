@@ -160,4 +160,65 @@ export const queryKeys = {
     legalHolds: (params?: unknown) => ["governance", "legal-holds", params] as const,
     retention: () => ["governance", "retention"] as const,
   },
+
+  signing: {
+    all: ["signing"] as const,
+    lists: () => ["signing", "list"] as const,
+    list: (params?: unknown) => ["signing", "list", params] as const,
+    details: () => ["signing", "detail"] as const,
+    detail: (id: number | string) => ["signing", "detail", id] as const,
+    events: (id: number | string) => ["signing", "detail", id, "events"] as const,
+  },
+
+  negotiations: {
+    all: ["negotiations"] as const,
+    list: (contractId: number | string, params?: unknown) =>
+      ["negotiations", "list", contractId, params] as const,
+  },
+
+  obligations: {
+    all: ["obligations"] as const,
+    lists: () => ["obligations", "list"] as const,
+    list: (params?: unknown) => ["obligations", "list", params] as const,
+    renewalCheck: (params?: unknown) =>
+      ["obligations", "renewal-check", params] as const,
+  },
+
+  search: {
+    all: ["search"] as const,
+    contracts: (params?: unknown) => ["search", "contracts", params] as const,
+  },
+
+  matters: {
+    all: ["matters"] as const,
+    lists: () => ["matters", "list"] as const,
+    list: (params?: unknown) => ["matters", "list", params] as const,
+    details: () => ["matters", "detail"] as const,
+    detail: (id: number | string) => ["matters", "detail", id] as const,
+    events: (id: number | string) => ["matters", "detail", id, "events"] as const,
+    contracts: (id: number | string) =>
+      ["matters", "detail", id, "contracts"] as const,
+  },
+
+  outsideCounsel: {
+    all: ["outside-counsel"] as const,
+    firms: (params?: unknown) => ["outside-counsel", "firms", params] as const,
+    lawyers: (params?: unknown) =>
+      ["outside-counsel", "lawyers", params] as const,
+    firmLawyers: (firmId: number | string, params?: unknown) =>
+      ["outside-counsel", "firms", firmId, "lawyers", params] as const,
+    engagements: (params?: unknown) =>
+      ["outside-counsel", "engagements", params] as const,
+    engagement: (id: number | string) =>
+      ["outside-counsel", "engagements", id] as const,
+  },
+
+  laborWage: {
+    all: ["labor-wage"] as const,
+    standards: (params?: unknown) => ["labor-wage", "standards", params] as const,
+    latest: (params?: unknown) =>
+      ["labor-wage", "standards", "latest", params] as const,
+    discrepancy: (params?: unknown) =>
+      ["labor-wage", "discrepancy", params] as const,
+  },
 } as const;
