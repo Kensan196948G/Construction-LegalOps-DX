@@ -37,6 +37,7 @@ import {
   BadgeJapaneseYen,
   Construction,
   Handshake as JvIcon,
+  ShieldAlert as PartnerRiskIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -83,6 +84,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { label: "建設業法務チェック", href: "/construction-legal", icon: HardHat, group: "legal" },
   { label: "公共工事", href: "/public-works", icon: Construction, group: "legal" },
   { label: "JV 管理", href: "/joint-ventures", icon: JvIcon, group: "legal" },
+  { label: "協力会社リスク", href: "/partner-risk", icon: PartnerRiskIcon, group: "legal" },
   { label: "労務費基準", href: "/labor-wage", icon: BadgeJapaneseYen, group: "legal" },
   { label: "取引先・協力会社管理", href: "/partners", icon: Building2, group: "legal" },
   { label: "紛争・クレーム管理", href: "/disputes", icon: Swords, group: "legal" },

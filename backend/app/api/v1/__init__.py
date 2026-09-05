@@ -29,6 +29,7 @@ from app.api.v1 import (
     notifications,
     obligations,
     outside_counsel,
+    partner_ext,
     price_consultation,
     public_works,
     reviews,
@@ -66,6 +67,7 @@ api_router.include_router(audit_logs.router)
 api_router.include_router(uploads.router)
 api_router.include_router(notifications.router)
 api_router.include_router(outside_counsel.router)
+api_router.include_router(partner_ext.router)
 api_router.include_router(obligations.obligations_router)
 api_router.include_router(obligations.contract_obligations_router)
 api_router.include_router(dashboard.router)

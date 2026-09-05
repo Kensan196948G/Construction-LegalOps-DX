@@ -251,4 +251,13 @@ export const queryKeys = {
     members: (id: number | string) => ["joint-ventures", "detail", id, "members"] as const,
     dashboard: () => ["joint-ventures", "dashboard"] as const,
   },
+
+  partnerExt: {
+    all: ["partner-ext"] as const,
+    alerts: (params?: unknown) => ["partner-ext", "alerts", params] as const,
+    reviews: (partnerId: number | string, params?: unknown) =>
+      ["partner-ext", "reviews", partnerId, params] as const,
+    riskScore: (partnerId: number | string) =>
+      ["partner-ext", "risk-score", partnerId] as const,
+  },
 } as const;

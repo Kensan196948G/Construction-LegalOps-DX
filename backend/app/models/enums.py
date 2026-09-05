@@ -525,3 +525,18 @@ class JvSettlementStatus(StrEnum):
 
     PENDING = "pending"  # 未清算
     SETTLED = "settled"  # 清算済み
+
+
+class PartnerReviewType(StrEnum):
+    """協力会社再審査の種別（#147-#149・#151）."""
+
+    PERIODIC = "periodic"  # 定期再審査（#151）
+    INCIDENT = "incident"  # 安全・事故記録（#147/#148）
+    VIOLATION = "violation"  # 契約違反記録（#149）
+
+
+class PartnerReviewStatus(StrEnum):
+    """協力会社再審査の状態."""
+
+    OPEN = "open"  # 審査中
+    COMPLETED = "completed"  # 審査完了

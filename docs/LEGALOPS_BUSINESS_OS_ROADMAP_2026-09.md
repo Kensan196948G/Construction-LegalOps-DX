@@ -616,7 +616,7 @@ Civil-Technology-IP-Intelligence-Platform
 - 完了条件（DoD）: 各 Issue の Completion Criteria 充足＋backend pytest / ruff / mypy・
   frontend typecheck / lint / Jest 全緑＋監査ログ・RLS/ACL 適用
 
-### Phase 2: 建設業特化を完成（🔴 / 🟠）— 🚧 **進行中（労務費 #16-26 完了・公共工事 P0 完了・JV 完了 2026-09-05・協力会社拡張は未着手）**
+### Phase 2: 建設業特化を完成（🔴 / 🟠）— 🚧 **進行中（労務費・公共工事 P0・JV・協力会社拡張 完了 2026-09-05）**
 
 ```text
 労務費基準更新 → 公共工事 → JV → 施工体制 → 協力会社Portal
@@ -638,8 +638,12 @@ Civil-Technology-IP-Intelligence-Platform
   - ✅ #61-#65/#69/#70 JV 管理（`joint_ventures`/`jv_members`/`jv_agreements`/
     `jv_disputes`/`jv_settlements`・migration 019・`/joint-ventures` 画面）
     ※#67 承認ルートは workflow_engine・#68 差分 AI レビューは reviews 基盤を流用
+  - ✅ #136-#152 協力会社拡張（`partner_reviews` + Partner 列追加・migration 020・
+    `partner_reviews` 定期再審査/安全成績/違反記録・#150 Risk Score・
+    #138/#146/#151 期限アラート・`/partner-risk` 画面）※セルフ登録ポータル（#136/#152）は
+    外部公開の別基盤とするためフラグ・データ構造のみ実装
   - 🚧 残: #27 見積書様式生成（P1）・#28 コミットメント条項（P1）・
-    公共工事 P1（#44-53・#58-59）→ 協力会社 #136-152
+    公共工事 P1（#44-53・#58-59）
 - DoD: 更新型 Compliance Engine（データ取込 1 系統以上をデモモードで実証）＋公共工事ダッシュボード
 
 ### Phase 3: リスク統制（🔴 / 🟠）
