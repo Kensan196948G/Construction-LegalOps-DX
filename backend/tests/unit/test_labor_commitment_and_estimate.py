@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import date
 from uuid import uuid4
 
 import pytest
@@ -41,7 +40,6 @@ async def _seed_user_and_contract(db_session) -> tuple[int, int]:
     db_session.add(contract)
     await db_session.flush()
     return int(user.id), int(contract.id)
-
 
 async def test_commitment_lifecycle(db_session) -> None:
     """#28: 登録（active）→ fulfilled / violated（409 保護）."""
@@ -85,7 +83,6 @@ async def test_commitment_lifecycle(db_session) -> None:
             db_session, commitment_id=row.id, actor_id=uid, outcome="active"
         )
 
-
 def test_estimate_form_generation() -> None:
     """#27: 総括表・明細表・内訳整合（決定論的）."""
     result = estimate_form_service.generate_estimate_form(
@@ -125,7 +122,6 @@ def test_estimate_form_generation() -> None:
     assert "【見積書（総括表）】" in result["formatted_text"]
     assert "【明細表】" in result["formatted_text"]
     assert len(result["items"]) == 2
-
 
 def test_estimate_form_validation() -> None:
     """内訳不一致・空明細・税率範囲外 422."""
