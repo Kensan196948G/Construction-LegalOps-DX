@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 労務費 #21/#23/#24 — 価格協議・ダンピング警告)
+
+- **🛡️ 労務費の乖離判定を拡張し、ダンピング警告を導入（Phase 2・#21）**:
+  - `labor_wage_service.discrepancy` が `severity`（none/watch/warning/critical）と
+    `dumping` フラグを返すよう後方互換で拡張（不足率 10% 以上 = warning・20% 以上 = critical）
+  - `/labor-wage/discrepancy` API も深刻度を返却（フロント乖離判定カードに深刻度バッジ表示）
+- **📋 労務費価格協議の証跡管理（#24 / migration 016_price_consultation）**:
+  - `price_consultation_logs`（`/price-consultations`）: 下請→元請の引上げ申出
+    （from_subcontractor）／元請→下請の価格確認（to_subcontractor）を記録
+  - 状態遷移: open（申出）→ responded（回答）／cancelled（取下げ）をルールエンジンで管理
+  - 記録時点で労務費基準を解決し、乖離率（ratio）・不足率（shortage_rate）・深刻度
+    （severity）の**スナップショットを自動保存**（AI 不使用・決定論的）
+  - ログ番号 `LC-YYYY-NNNNNN` 自動採番・全変更を監査ログへ
+- **👁️ 見積変更要求の監視（#23）**: `GET /price-consultations/monitor/quote-changes` で
+  未回答（open）の協議を深刻度フィルタ付きで一覧化
+- **🧪 `seed_demo_data.py`**: 価格協議デモ 3 件（warning / critical / none）を追加し、
+  delete → 再 seed で復元可能
+- 検証: backend pytest **1218 passed** / ruff / mypy clean・ローカル PG へ migration
+  016 適用＋roundtrip 確認・unit/integration 追加テスト 14 件（+10 unit / +4 integration）
+  / PG モード 6 passed・冪等性（再実行 0 件）
+
 ### Added / Changed (2026-09-05: デモデータ拡張 — Phase 1-2 新機能テーブル)
 
 - **🧪 `seed_demo_data.py` を拡張し、F1〜F7 新機能画面が空にならないようデモデータを追加**:

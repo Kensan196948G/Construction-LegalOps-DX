@@ -1,9 +1,11 @@
-"""労務費基準マスタの業務サービス（ロードマップ #16〜#20 / Issue #111）.
+"""労務費基準マスタの業務サービス（ロードマップ #16〜#21 / Issue #111）.
 
 - #16 データ更新: 基準値を有効期間付きで蓄積（削除せず更新）
 - #17 工種別・#18 都道府県別: 一覧・絞り込み
 - #20 労務費乖離率: 「基準日 as-of 時点の最新値」を解決し、見積単価との
   乖離率（基準を下回る場合の不足率）を決定論的に判定する（AI 不使用）
+- #21 ダンピング警告: 乖離率から none / watch / warning / critical を導出
+  （不足率 10% 以上 = warning・20% 以上 = critical・要ダンピング確認）
 """
 
 from __future__ import annotations
@@ -20,6 +22,24 @@ from app.models.enums import LaborWorkType
 from app.models.labor_wage import LaborWageStandard
 
 logger = structlog.get_logger(__name__)
+
+# #21 ダンピング警告の深刻度しきい値（不足率・決定論的）
+_WATCH_MIN_SHORTAGE = 0.0  # 0% 超 = watch（基準未満は軽微でも注視）
+_WARNING_MIN_SHORTAGE = 0.10  # 不足率 10% 以上 = warning（要確認）
+_CRITICAL_MIN_SHORTAGE = 0.20  # 不足率 20% 以上 = critical（著しい低見積り）
+
+
+def _derive_severity(status: str, shortage_rate: float) -> str:
+    """乖離率からダンピング深刻度を決定論的に導出する（#21）."""
+    if status == "ok":
+        return "none"
+    if shortage_rate >= _CRITICAL_MIN_SHORTAGE:
+        return "critical"
+    if shortage_rate >= _WARNING_MIN_SHORTAGE:
+        return "warning"
+    if shortage_rate > _WATCH_MIN_SHORTAGE:
+        return "watch"
+    return "none"
 
 
 async def upsert_standard(
@@ -137,11 +157,13 @@ async def discrepancy(
     prefecture: str | None = None,
     as_of: date | None = None,
 ) -> dict[str, Any]:
-    """#20 労務費乖離率: 見積単価と基準値の乖離を判定する.
+    """#20 労務費乖離率 + #21 ダンピング警告: 見積単価と基準値の乖離を判定する.
 
     返却: {work_type, prefecture, standard_day_jpy, quote_day_jpy,
-    ratio, shortage_rate, status}。
+    ratio, shortage_rate, status, severity, dumping}。
     status: ok（基準以上）/ below（基準を下回る・要ダンピング確認 #21 の入力）
+    severity: none / watch / warning / critical（#21・不足率から導出）
+    dumping: severity が warning 以上 = True（要ダンピング確認）
     """
     _validate_quote(quote_day_jpy)
     standard = await resolve_latest(
@@ -150,6 +172,7 @@ async def discrepancy(
     ratio = quote_day_jpy / standard.amount_jpy
     shortage_rate = max(0.0, 1.0 - ratio)
     status = "ok" if quote_day_jpy >= standard.amount_jpy else "below"
+    severity = _derive_severity(status, shortage_rate)
     return {
         "work_type": standard.work_type,
         "prefecture": standard.prefecture,
@@ -161,6 +184,8 @@ async def discrepancy(
         "ratio": round(ratio, 4),
         "shortage_rate": round(shortage_rate, 4),
         "status": status,
+        "severity": severity,
+        "dumping": severity in ("warning", "critical"),
     }
 
 

@@ -90,6 +90,11 @@ export type {
   LaborWageStandard,
   LaborWageStandardCreate,
   LaborWageDiscrepancy,
+  ConsultationDirection,
+  ConsultationStatus,
+  DumpingSeverity,
+  PriceConsultationLog,
+  PriceConsultationCreate,
 } from "@/lib/api/schemas";
 
 export type { ProblemDetails } from "@/lib/api/client";

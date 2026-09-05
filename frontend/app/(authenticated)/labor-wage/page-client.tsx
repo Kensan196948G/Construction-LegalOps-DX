@@ -260,7 +260,7 @@ export default function LaborWagePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Scale className="h-4 w-4 text-primary" aria-hidden="true" />
-            見積単価の乖離率判定（#20）
+            見積単価の乖離率判定（#20）・ダンピング警告（#21）
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -341,21 +341,49 @@ export default function LaborWagePage() {
             <div
               className={`rounded-md border p-4 ${
                 discrepancyResult.status === "below"
-                  ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
+                  ? discrepancyResult.severity === "critical"
+                    ? "border-red-400 bg-red-50 dark:border-red-700 dark:bg-red-950/40"
+                    : "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30"
                   : "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {discrepancyResult.status === "below" ? (
-                  <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
+                  <AlertTriangle
+                    className={`h-5 w-5 ${
+                      discrepancyResult.severity === "critical"
+                        ? "text-destructive"
+                        : "text-amber-600 dark:text-amber-400"
+                    }`}
+                    aria-hidden="true"
+                  />
                 ) : (
                   <CheckCircle2 className="h-5 w-5 text-green-700 dark:text-green-400" aria-hidden="true" />
                 )}
                 <p className="text-sm font-semibold">
                   {discrepancyResult.status === "below"
-                    ? "⚠️ 基準値を下回っています（ダンピング確認要）"
+                    ? discrepancyResult.severity === "critical"
+                      ? "🚨 基準を大きく下回っています（ダンピング確認必須）"
+                      : "⚠️ 基準値を下回っています（ダンピング確認要）"
                     : "✅ 基準値以上です"}
                 </p>
+                {discrepancyResult.status === "below" && (
+                  <Badge
+                    variant={
+                      discrepancyResult.severity === "critical"
+                        ? "destructive"
+                        : discrepancyResult.severity === "warning"
+                          ? "destructive"
+                          : "secondary"
+                    }
+                  >
+                    {discrepancyResult.severity === "critical"
+                      ? "深刻（要即時確認）"
+                      : discrepancyResult.severity === "warning"
+                        ? "要確認"
+                        : "注視"}
+                  </Badge>
+                )}
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
                 <div>

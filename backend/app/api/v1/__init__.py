@@ -28,6 +28,7 @@ from app.api.v1 import (
     notifications,
     obligations,
     outside_counsel,
+    price_consultation,
     reviews,
     risks,
     security,
@@ -57,6 +58,7 @@ api_router.include_router(templates.router)
 api_router.include_router(signing.router)
 api_router.include_router(knowledge.router)
 api_router.include_router(labor_wage.router)
+api_router.include_router(price_consultation.router)
 api_router.include_router(audit_logs.router)
 api_router.include_router(uploads.router)
 api_router.include_router(notifications.router)
