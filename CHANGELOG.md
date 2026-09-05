@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: 見積様式生成・コミットメント条項 — Phase 2 完結)
+
+- **📄 見積書様式生成（#27）**: `POST /labor-wage/estimate-form`
+  - 国交省様式（総括表＋明細表）に沿った見積書を**決定論的テンプレート処理**で生成（AI 不使用）
+  - 2025-12 改正対応: 明細に労務費/材料費/安全衛生経費/法定福利費の内訳を含め、
+    **内訳合計と金額の整合を検証**（不一致 422）・消費税・総額・労務費構成比を自動計算
+- **🤝 労務費コミットメント条項管理（#28 / migration 021_labor_commitment）**:
+  - `labor_commitments`: 契約ごとの表明（賃金支払確約/労務費適正配分/一括下請負禁止/
+    労働環境改善）を登録し、履行確認（fulfilled）/違反確認（violated）へ
+    ルールエンジンで遷移（active のみ・409 保護・全変更を監査ログへ）
+- **🧪 seed**: コミットメント 3 件（賃金支払確約/適正配分/一括下請負禁止・冪等・delete 対応）
+- 検証: backend pytest **1248 passed**（+3） / ruff / mypy clean / ローカル PG migration 021 適用
+- **🏁 Phase 2 完了**: 労務費 #16-28・公共工事 P0+#43+#60・JV #61-70・協力会社 #136-152
+
 ### Added / Changed (2026-09-05: 協力会社拡張 — 定期再審査・Risk Score・期限アラート)
 
 - **🏢 協力会社拡張（#136〜#152 / migration 020_partner_ext）**:

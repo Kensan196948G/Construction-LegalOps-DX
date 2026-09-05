@@ -22,6 +22,7 @@ from app.api.v1 import (
     ip,
     joint_venture,
     knowledge,
+    labor_commitment,
     labor_wage,
     legal_ai,
     matters,
@@ -61,6 +62,7 @@ api_router.include_router(templates.router)
 api_router.include_router(signing.router)
 api_router.include_router(knowledge.router)
 api_router.include_router(labor_wage.router)
+api_router.include_router(labor_commitment.router)
 api_router.include_router(price_consultation.router)
 api_router.include_router(public_works.router)
 api_router.include_router(audit_logs.router)

@@ -540,3 +540,21 @@ class PartnerReviewStatus(StrEnum):
 
     OPEN = "open"  # 審査中
     COMPLETED = "completed"  # 審査完了
+
+
+class LaborCommitmentType(StrEnum):
+    """労務費・賃金関連の表明（コミットメント）種別（#28）."""
+
+    WAGE_PAYMENT = "wage_payment"  # 賃金支払確約
+    PROPER_ALLOCATION = "proper_allocation"  # 労務費の適正配分
+    NO_LUMP_SUBCONTRACT = "no_lump_subcontract"  # 一括下請負の禁止遵守
+    IMPROVEMENT = "improvement"  # 労働環境改善
+    OTHER = "other"
+
+
+class LaborCommitmentStatus(StrEnum):
+    """表明の状態（#28）."""
+
+    ACTIVE = "active"  # 表明中
+    FULFILLED = "fulfilled"  # 履行確認済み
+    VIOLATED = "violated"  # 違反確認
