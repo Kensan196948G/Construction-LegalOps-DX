@@ -20,6 +20,7 @@ from app.api.v1 import (
     governance,
     health,
     ip,
+    joint_venture,
     knowledge,
     labor_wage,
     legal_ai,
@@ -80,6 +81,7 @@ api_router.include_router(governance.anchor_router)
 api_router.include_router(governance.admin_router)
 api_router.include_router(security.router)
 api_router.include_router(ip.ip_router)
+api_router.include_router(joint_venture.router)
 api_router.include_router(legal_ai.applicable_laws_router)
 api_router.include_router(legal_ai.evidence_router)
 api_router.include_router(legal_ai.impact_router)

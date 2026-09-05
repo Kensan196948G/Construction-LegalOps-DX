@@ -34,6 +34,11 @@ from .enums import (
     ContractStatus,
     ContractType,
     DumpingSeverity,
+    JvAgreementStatus,
+    JvDisputeStatus,
+    JvMemberRole,
+    JvSettlementStatus,
+    JvStatus,
     NotificationChannel,
     NotificationStatus,
     ReviewStatus,
@@ -49,6 +54,7 @@ from .enums import (
 from .ip_asset import IpAsset
 from .ip_document import IpDocument
 from .ip_watch import IpWatchEvent, IpWatchTarget
+from .joint_venture import JointVenture, JvAgreement, JvDispute, JvMember, JvSettlement
 from .knowledge_article import KnowledgeArticle
 from .labor_wage import LaborWageStandard
 from .legal_hold import LegalHoldCase
@@ -113,6 +119,16 @@ __all__ = [
     "IpDocument",
     "IpWatchEvent",
     "IpWatchTarget",
+    "JointVenture",
+    "JvAgreement",
+    "JvAgreementStatus",
+    "JvDispute",
+    "JvDisputeStatus",
+    "JvMember",
+    "JvMemberRole",
+    "JvSettlement",
+    "JvSettlementStatus",
+    "JvStatus",
     "KnowledgeArticle",
     "LaborWageStandard",
     "LawFirm",

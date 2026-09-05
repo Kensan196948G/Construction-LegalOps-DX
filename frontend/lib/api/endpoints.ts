@@ -81,6 +81,14 @@ import {
   publicWorksConsultationSchema,
   publicWorksDashboardSchema,
   standardClauseCheckSchema,
+  jvAgreementSchema,
+  jvCreateSchema,
+  jvDashboardSchema,
+  jvDisputeSchema,
+  jvMemberCreateSchema,
+  jvMemberSchema,
+  jvSchema,
+  jvSettlementSchema,
   priceSimulatorInSchema,
   priceSimulatorOutSchema,
   renewalCheckSchema,
@@ -1644,6 +1652,127 @@ export const publicWorksApi = {
     getParsed(apiResponse(publicWorksDashboardSchema), "/public-works/dashboard"),
 };
 
+// ===========================================================================
+// 28. JV（共同企業体）管理 (ロードマップ #61-#70 / /joint-ventures)
+// ===========================================================================
+
+export const jvApi = {
+  list: (params?: { status?: string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(jvSchema), "/joint-ventures", {
+      params: buildParams(params),
+    }),
+
+  create: (
+    data: {
+      name: string;
+      representative_name?: string | null;
+      works_title?: string | null;
+      contract_id?: number | string | null;
+      start_date?: string | null;
+      end_date?: string | null;
+      notes?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(jvSchema, "/joint-ventures", jvCreateSchema.parse(data), withIdempotencyKey({}, opts?.idempotencyKey)),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(jvSchema), `/joint-ventures/${id}`),
+
+  setStatus: (id: number | string, data: { status: string }) =>
+    postParsed(apiResponse(jvSchema), `/joint-ventures/${id}/status`, data),
+
+  members: (id: number | string) =>
+    getParsed(z.array(jvMemberSchema), `/joint-ventures/${id}/members`),
+
+  addMember: (
+    id: number | string,
+    data: {
+      company_name: string;
+      role?: string;
+      equity_ratio?: number | null;
+      profit_share_ratio?: number | null;
+      contact_email?: string | null;
+      notes?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      jvMemberSchema,
+      `/joint-ventures/${id}/members`,
+      jvMemberCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  agreements: (id: number | string) =>
+    getParsed(z.array(jvAgreementSchema), `/joint-ventures/${id}/agreements`),
+
+  createAgreement: (
+    id: number | string,
+    data: {
+      title: string;
+      summary?: string | null;
+      signed_at?: string | null;
+      document_url?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      jvAgreementSchema,
+      `/joint-ventures/${id}/agreements`,
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  disputes: (id: number | string) =>
+    getParsed(z.array(jvDisputeSchema), `/joint-ventures/${id}/disputes`),
+
+  createDispute: (
+    id: number | string,
+    data: {
+      title: string;
+      claimant_name?: string | null;
+      respondent_name?: string | null;
+      amount_claimed_jpy?: number | null;
+      detail?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      jvDisputeSchema,
+      `/joint-ventures/${id}/disputes`,
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  respondDispute: (disputeId: number | string, data: { response_note: string }) =>
+    postParsed(jvDisputeSchema, `/joint-ventures/disputes/${disputeId}/respond`, data),
+
+  settlements: (id: number | string) =>
+    getParsed(z.array(jvSettlementSchema), `/joint-ventures/${id}/settlements`),
+
+  createSettlement: (
+    id: number | string,
+    data: {
+      title: string;
+      settlement_amount_jpy?: number | null;
+      detail?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      jvSettlementSchema,
+      `/joint-ventures/${id}/settlements`,
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  settle: (settlementId: number | string) =>
+    postParsed(jvSettlementSchema, `/joint-ventures/settlements/${settlementId}/settle`, {}),
+
+  dashboard: () => getParsed(apiResponse(jvDashboardSchema), "/joint-ventures/dashboard/summary"),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -1685,5 +1814,6 @@ export const api = {
   ownerNotifications: ownerNotificationsApi,
   publicWorksConsultations: publicWorksConsultationsApi,
   publicWorks: publicWorksApi,
+  jv: jvApi,
 } as const;
 

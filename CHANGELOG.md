@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: JV（共同企業体）管理)
+
+- **🤝 JV 管理（#61〜#70 / migration 019_joint_venture）**:
+  - `joint_ventures`（#61 JV 台帳・JV-YYYY-NNNNNN 採番・状態遷移
+    prospecting→active→completed/dissolved・戻し不可 409）
+  - `jv_members`（#63 代表会社 1 社制・#64 **出資比率合計 100% を追加前に検証**・
+    #65 損益分担率）
+  - `jv_agreements`（#62 協定書・draft→signed→terminated・JVA-YYYY-NNNNNN）
+  - `jv_disputes`（#69 JV 内紛争・請求・JVD-YYYY-NNNNNN・open→responded 409 保護）
+  - `jv_settlements`（#70 終了・清算・**completed/dissolved のみ記録可**・
+    JVS-YYYY-NNNNNN・pending→settled）
+  - #67 承認ルートは既存 workflow_engine・#68 差分 AI レビューは reviews 基盤を
+    流用（重複しない役割分担）
+- **🖥️ 新規画面 `/joint-ventures`**（サイドバー「法務・建設」グループ）:
+  JV 台帳・状態遷移・構成員一覧・構成員追加
+- **🧪 seed**: JV 2 件＋構成員 4 件（冪等・delete 対応）
+- 検証: backend pytest 1239 passed（+6: unit 5 / integration 1） / ruff / mypy clean /
+  ローカル PG migration 019 適用 / フロント tsc・lint 0 / Jest 20 suites 79 tests
+
 ### Added / Changed (2026-09-05: 公共工事特化 — 発注機関・通知期限・協議管理・約款チェック)
 
 - **🏛️ 発注機関マスタ＋機関別契約条件（#41/#42 / migration 018_public_works）**:

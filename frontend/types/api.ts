@@ -113,6 +113,19 @@ export type {
   PublicWorksConsultationCreate,
   StandardClauseCheck,
   PublicWorksDashboard,
+  JvStatus,
+  JvMemberRole,
+  JvAgreementStatus,
+  JvDisputeStatus,
+  JvSettlementStatus,
+  Jv,
+  JvCreate,
+  JvMember,
+  JvMemberCreate,
+  JvAgreement,
+  JvDispute,
+  JvSettlement,
+  JvDashboard,
 } from "@/lib/api/schemas";
 
 export type { ProblemDetails } from "@/lib/api/client";

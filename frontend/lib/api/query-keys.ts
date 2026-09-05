@@ -242,4 +242,13 @@ export const queryKeys = {
       ["public-works", "clause-check", contractId] as const,
     dashboard: () => ["public-works", "dashboard"] as const,
   },
+
+  jv: {
+    all: ["joint-ventures"] as const,
+    lists: () => ["joint-ventures", "list"] as const,
+    list: (params?: unknown) => ["joint-ventures", "list", params] as const,
+    detail: (id: number | string) => ["joint-ventures", "detail", id] as const,
+    members: (id: number | string) => ["joint-ventures", "detail", id, "members"] as const,
+    dashboard: () => ["joint-ventures", "dashboard"] as const,
+  },
 } as const;
