@@ -30,6 +30,7 @@ import {
   changeOrderSchema,
   clauseSchema,
   clauseLibrarySchema,
+  clauseNegotiationStateSchema,
   complianceChecklistSchema,
   complianceCheckResultSchema,
   complianceRunSchema,
@@ -37,7 +38,10 @@ import {
   contractSchema,
   contractDocumentSchema,
   contractCreateSchema,
+  contractSearchHitSchema,
   contractUpdateSchema,
+  counselLawyerCreateSchema,
+  counselLawyerSchema,
   dashboardSummarySchema,
   dashboardTrendsSchema,
   disputeDetailSchema,
@@ -45,20 +49,37 @@ import {
   disputeExposureSchema,
   disputeSchema,
   disputeTimelineEventSchema,
+  engagementSchema,
   evidenceHitSchema,
   healthSchema,
   knowledgeArticleSchema,
+  laborWageDiscrepancySchema,
+  laborWageStandardCreateSchema,
+  laborWageStandardSchema,
+  lawFirmCreateSchema,
+  lawFirmSchema,
   legalHoldSchema,
   legalReviewSchema,
+  matterContractSchema,
+  matterEventSchema,
+  matterSchema,
+  negotiationEventCreateSchema,
+  negotiationEventSchema,
   notificationSchema,
+  obligationCreateSchema,
+  obligationSchema,
   partnerSchema,
   partnerSummarySchema,
   paymentComplianceSchema,
+  renewalCheckSchema,
   retentionRuleSchema,
   reviewCreateSchema,
   riskHeatmapSchema,
   riskItemSchema,
   riskUpdateSchema,
+  signingEnvelopeCreateSchema,
+  signingEnvelopeSchema,
+  signingEventSchema,
   templateSchema,
   userSchema,
   userSyncJobSchema,
@@ -901,6 +922,444 @@ export const ipMetaApi = {
   jpoStatus: () => getParsed(apiResponse(jpoStatusSchema), "/ip/jpo-status"),
 };
 
+// ===========================================================================
+// 19. 電子契約・電子署名 (ロードマップ #1-4 / /signing)
+// ===========================================================================
+
+export interface SigningListParams extends ListParams {
+  contract_id?: number | string;
+  status?: string;
+}
+
+export const signingApi = {
+  list: (params?: SigningListParams) =>
+    getParsed(paginatedSchema(signingEnvelopeSchema), "/signing", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(signingEnvelopeSchema), `/signing/${id}`),
+
+  create: (
+    data: {
+      contract_id: number | string;
+      method?: string;
+      provider?: string;
+      counterparty_name?: string | null;
+      counterparty_email?: string | null;
+      note?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      signingEnvelopeSchema,
+      "/signing",
+      signingEnvelopeCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 証跡イベント一覧（追記専用・読み取りのみ） */
+  events: (id: number | string) =>
+    getParsed(z.array(signingEventSchema), `/signing/${id}/events`),
+
+  send: (id: number | string) =>
+    postParsed(apiResponse(signingEnvelopeSchema), `/signing/${id}/send`, {}),
+
+  /** 相手方の承諾証跡を記録（建設業法 19 条・電磁的方法） */
+  consent: (
+    id: number | string,
+    data: { consentor_name?: string | null; consentor_email?: string | null; note?: string | null },
+  ) => postParsed(apiResponse(signingEnvelopeSchema), `/signing/${id}/consent`, data),
+
+  view: (id: number | string) =>
+    postParsed(apiResponse(signingEnvelopeSchema), `/signing/${id}/view`, {}),
+
+  sign: (
+    id: number | string,
+    data: { signer_name?: string | null; signer_email?: string | null },
+  ) => postParsed(apiResponse(signingEnvelopeSchema), `/signing/${id}/sign`, data),
+
+  /** 締結完了（signed → completed・attachment_id 任意） */
+  complete: (id: number | string, data: { attachment_id?: number | string | null } = {}) =>
+    postParsed(apiResponse(signingEnvelopeSchema), `/signing/${id}/complete`, data),
+
+  cancel: (id: number | string, data: { reason?: string | null } = {}) =>
+    postParsed(apiResponse(signingEnvelopeSchema), `/signing/${id}/cancel`, data),
+};
+
+// ===========================================================================
+// 20. 契約交渉・Redline (ロードマップ #5-8 / /contracts/{id}/negotiations 等)
+// ===========================================================================
+
+export interface NegotiationListParams extends ListParams {
+  clause_id?: number | string;
+}
+
+export const negotiationsApi = {
+  /** 交渉履歴タイムライン（新しい順） */
+  list: (contractId: number | string, params?: NegotiationListParams) =>
+    getParsed(paginatedSchema(negotiationEventSchema), `/contracts/${contractId}/negotiations`, {
+      params: buildParams(params),
+    }),
+
+  /** 交渉イベント記録（redline / demand / concession / comment） */
+  add: (
+    contractId: number | string,
+    data: {
+      action: string;
+      clause_id?: number | string | null;
+      round_no?: number | null;
+      note?: string | null;
+      proposed_text?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      negotiationEventSchema,
+      `/contracts/${contractId}/negotiations`,
+      negotiationEventCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 条項ステータス更新（accepted / rejected / negotiating） */
+  setClauseStatus: (
+    contractId: number | string,
+    clauseId: number | string,
+    data: { status: string; note?: string | null },
+  ) =>
+    postParsed(
+      apiResponse(clauseNegotiationStateSchema),
+      `/contracts/${contractId}/clauses/${clauseId}/status`,
+      data,
+    ),
+
+  /** 条項オーナー割当（法務・工事・営業・購買・その他） */
+  setClauseOwner: (
+    contractId: number | string,
+    clauseId: number | string,
+    data: { owner: string; note?: string | null },
+  ) =>
+    postParsed(
+      apiResponse(clauseNegotiationStateSchema),
+      `/contracts/${contractId}/clauses/${clauseId}/owner`,
+      data,
+    ),
+};
+
+// ===========================================================================
+// 21. 契約義務・Obligations Calendar (ロードマップ #9-13 / /obligations)
+// ===========================================================================
+
+export interface ObligationListParams extends ListParams {
+  contract_id?: number | string;
+  type?: string;
+  status?: string;
+  /** overdue / within_30 / within_60 / future */
+  bucket?: string;
+  from?: string;
+  to?: string;
+}
+
+export const obligationsApi = {
+  list: (params?: ObligationListParams) =>
+    getParsed(paginatedSchema(obligationSchema), "/obligations", {
+      params: buildParams(params),
+    }),
+
+  /** 自動更新・解約通知期限チェック（#12） */
+  renewalCheck: (params?: { contract_id?: number | string }) =>
+    getParsed(z.array(renewalCheckSchema), "/obligations/renewal-check", {
+      params: buildParams(params),
+    }),
+
+  update: (
+    id: number | string,
+    data: {
+      title?: string;
+      description?: string | null;
+      due_date?: string | null;
+      assignee_id?: number | string | null;
+      status?: string | null;
+    },
+  ) => patchParsed(apiResponse(obligationSchema), `/obligations/${id}`, data),
+
+  complete: (id: number | string) =>
+    postParsed(apiResponse(obligationSchema), `/obligations/${id}/complete`, {}),
+
+  waive: (id: number | string) =>
+    postParsed(apiResponse(obligationSchema), `/obligations/${id}/waive`, {}),
+
+  /** 契約へ義務を登録 */
+  createForContract: (
+    contractId: number | string,
+    data: {
+      obligation_type: string;
+      title: string;
+      description?: string | null;
+      due_date?: string | null;
+      assignee_id?: number | string | null;
+      status?: string;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      obligationSchema,
+      `/contracts/${contractId}/obligations`,
+      obligationCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+};
+
+// ===========================================================================
+// 22. 契約書全文検索 (ロードマップ #5下位 / /search)
+// ===========================================================================
+
+export interface ContractSearchParams extends ListParams {
+  q: string;
+  scope?: string;
+  contract_id?: number | string;
+  limit?: number;
+}
+
+export const contractSearchApi = {
+  search: (params: ContractSearchParams) =>
+    getParsed(z.array(contractSearchHitSchema), "/search", { params: buildParams(params) }),
+};
+
+// ===========================================================================
+// 23. Legal Matter Management (ロードマップ #71-84 / /matters)
+// ===========================================================================
+
+export interface MatterListParams extends ListParams {
+  status?: string;
+  type?: string;
+  assignee_id?: number | string;
+}
+
+export const mattersApi = {
+  list: (params?: MatterListParams) =>
+    getParsed(paginatedSchema(matterSchema), "/matters", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(matterSchema), `/matters/${id}`),
+
+  create: (
+    data: {
+      title: string;
+      matter_type: string;
+      description?: string | null;
+      priority?: string;
+      assignee_id?: number | string | null;
+      source_type?: string | null;
+      source_id?: number | string | null;
+      contract_ids?: Array<number | string>;
+      legal_hold_case_id?: number | string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) => postParsed(matterSchema, "/matters", data, withIdempotencyKey({}, opts?.idempotencyKey)),
+
+  update: (id: number | string, data: { title?: string; description?: string | null; priority?: string }) =>
+    patchParsed(apiResponse(matterSchema), `/matters/${id}`, data),
+
+  /** 状態遷移（open/in_progress/waiting/on_hold/closed） */
+  setStatus: (
+    id: number | string,
+    data: { status: string; note?: string | null },
+  ) => postParsed(apiResponse(matterSchema), `/matters/${id}/status`, data),
+
+  /** 担当法務アサイン（assignee_id null で解除） */
+  assign: (
+    id: number | string,
+    data: { assignee_id?: number | string | null; note?: string | null },
+  ) => postParsed(apiResponse(matterSchema), `/matters/${id}/assign`, data),
+
+  /** 関係契約リンク（#79） */
+  linkContract: (id: number | string, data: { contract_id: number | string }) =>
+    postParsed(apiResponse(matterSchema), `/matters/${id}/contracts`, data),
+
+  unlinkContract: (id: number | string, contractId: number | string) =>
+    apiClient.delete(`/matters/${id}/contracts/${contractId}`).then(() => undefined),
+
+  /** 関係契約一覧 */
+  contracts: (id: number | string) =>
+    getParsed(z.array(matterContractSchema), `/matters/${id}/contracts`),
+
+  /** Legal Hold 連動（#82・null で解除） */
+  setLegalHold: (id: number | string, data: { legal_hold_case_id?: number | string | null }) =>
+    postParsed(apiResponse(matterSchema), `/matters/${id}/legal-hold`, data),
+
+  /** タイムライン（追記専用） */
+  events: (id: number | string) =>
+    getParsed(z.array(matterEventSchema), `/matters/${id}/events`),
+
+  /** タイムラインへメモ追記 */
+  addNote: (id: number | string, data: { note: string }) =>
+    postParsed(matterEventSchema, `/matters/${id}/notes`, data),
+};
+
+// ===========================================================================
+// 24. 顧問弁護士・外部法律事務所 (ロードマップ #85-96 / /outside-counsel)
+// ===========================================================================
+
+export interface LawFirmListParams extends ListParams {
+  is_active?: boolean;
+}
+
+export const lawFirmsApi = {
+  list: (params?: LawFirmListParams) =>
+    getParsed(paginatedSchema(lawFirmSchema), "/outside-counsel/firms", {
+      params: buildParams(params),
+    }),
+
+  create: (
+    data: {
+      firm_name: string;
+      contact_email?: string | null;
+      phone?: string | null;
+      address?: string | null;
+      notes?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      lawFirmSchema,
+      "/outside-counsel/firms",
+      lawFirmCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 事務所の弁護士一覧（#87） */
+  lawyers: (firmId: number | string, params?: LawFirmListParams) =>
+    getParsed(paginatedSchema(counselLawyerSchema), `/outside-counsel/firms/${firmId}/lawyers`, {
+      params: buildParams(params),
+    }),
+
+  /** 弁護士登録 */
+  createLawyer: (
+    firmId: number | string,
+    data: {
+      firm_id: number | string;
+      lawyer_name: string;
+      email?: string | null;
+      bar_number?: string | null;
+      specialties?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      counselLawyerSchema,
+      `/outside-counsel/firms/${firmId}/lawyers`,
+      counselLawyerCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+};
+
+export interface EngagementListParams extends ListParams {
+  status?: string;
+  firm_id?: number | string;
+  matter_id?: number | string;
+}
+
+export const engagementsApi = {
+  list: (params?: EngagementListParams) =>
+    getParsed(paginatedSchema(engagementSchema), "/outside-counsel/engagements", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(engagementSchema), `/outside-counsel/engagements/${id}`),
+
+  /** 依頼起票（#85） */
+  create: (
+    data: {
+      firm_id: number | string;
+      lawyer_id?: number | string | null;
+      matter_id?: number | string | null;
+      title: string;
+      question: string;
+      due_date?: string | null;
+      conflict_of_interest?: boolean;
+      conflict_note?: string | null;
+      confidential?: boolean;
+      fee_estimate_jpy?: number | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      engagementSchema,
+      "/outside-counsel/engagements",
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 回答登録（#89・open→answered） */
+  answer: (id: number | string, data: { answer: string }) =>
+    postParsed(apiResponse(engagementSchema), `/outside-counsel/engagements/${id}/answer`, data),
+
+  /** 回答確認（answered→confirmed） */
+  confirm: (id: number | string) =>
+    postParsed(apiResponse(engagementSchema), `/outside-counsel/engagements/${id}/confirm`, {}),
+
+  cancel: (id: number | string, data: { reason?: string | null } = {}) =>
+    postParsed(apiResponse(engagementSchema), `/outside-counsel/engagements/${id}/cancel`, data),
+};
+
+// ===========================================================================
+// 25. 労務費基準マスタ・乖離率判定 (ロードマップ #16-20 / /labor-wage)
+// ===========================================================================
+
+export interface LaborWageListParams extends ListParams {
+  work_type?: string;
+  prefecture?: string;
+  as_of?: string;
+}
+
+export const laborWageApi = {
+  standards: (params?: LaborWageListParams) =>
+    getParsed(paginatedSchema(laborWageStandardSchema), "/labor-wage/standards", {
+      params: buildParams(params),
+    }),
+
+  /** 基準登録（#16 データ更新・履歴蓄積） */
+  createStandard: (
+    data: {
+      work_type: string;
+      amount_jpy: number;
+      prefecture?: string | null;
+      effective_from: string;
+      effective_to?: string | null;
+      amount_unit?: string;
+      source_ref?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      laborWageStandardSchema,
+      "/labor-wage/standards",
+      laborWageStandardCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** as-of 日時点の最新基準値（#16/#17/#18） */
+  latest: (params: { work_type: string; prefecture?: string | null; as_of?: string | null }) =>
+    getParsed(apiResponse(laborWageStandardSchema), "/labor-wage/standards/latest", {
+      params: buildParams(params),
+    }),
+
+  /** 労務費乖離率判定（#20・基準未満を below で検出） */
+  discrepancy: (params: {
+    work_type: string;
+    quote_day_jpy: number;
+    prefecture?: string | null;
+    as_of?: string | null;
+  }) =>
+    getParsed(apiResponse(laborWageDiscrepancySchema), "/labor-wage/discrepancy", {
+      params: buildParams(params),
+    }),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -929,5 +1388,13 @@ export const api = {
   ipDocuments: ipDocumentsApi,
   ipDashboard: ipDashboardApi,
   ipMeta: ipMetaApi,
+  signing: signingApi,
+  negotiations: negotiationsApi,
+  obligations: obligationsApi,
+  contractSearch: contractSearchApi,
+  matters: mattersApi,
+  lawFirms: lawFirmsApi,
+  engagements: engagementsApi,
+  laborWage: laborWageApi,
 } as const;
 

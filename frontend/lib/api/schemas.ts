@@ -1255,3 +1255,467 @@ export const jpoStatusSchema = z.object({
   max_calls_per_minute: z.number().int(),
 });
 export type JpoStatus = z.infer<typeof jpoStatusSchema>;
+
+// ===========================================================================
+// 電子契約・電子署名 (ロードマップ #1-4 / migration 010 / api v1 signing)
+// ===========================================================================
+
+export const signingMethodEnum = z.enum(["electronic", "paper"]);
+export type SigningMethod = z.infer<typeof signingMethodEnum>;
+
+export const signingProviderEnum = z.enum([
+  "cloudsign",
+  "docusign",
+  "demo",
+  "manual",
+]);
+export type SigningProvider = z.infer<typeof signingProviderEnum>;
+
+export const signingStatusEnum = z.enum([
+  "draft",
+  "sent",
+  "viewed",
+  "signed",
+  "completed",
+  "cancelled",
+]);
+export type SigningStatus = z.infer<typeof signingStatusEnum>;
+
+/** 署名エンベロープ（作成/一覧/詳細・状態遷移後の共通レスポンス） */
+export const signingEnvelopeSchema = z.object({
+  id: idSchema,
+  envelope_no: z.string(),
+  contract_id: idSchema,
+  status: signingStatusEnum.or(z.string()),
+  method: signingMethodEnum.or(z.string()).optional(),
+  provider: signingProviderEnum.or(z.string()).optional(),
+  provider_envelope_id: z.string().nullable().optional(),
+  counterparty_name: z.string().nullable().optional(),
+  counterparty_email: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+  consent_confirmed_at: datetimeSchema.nullable().optional(),
+  consentor_name: z.string().nullable().optional(),
+  consentor_email: z.string().nullable().optional(),
+  consent_note: z.string().nullable().optional(),
+  sent_at: datetimeSchema.nullable().optional(),
+  viewed_at: datetimeSchema.nullable().optional(),
+  signed_at: datetimeSchema.nullable().optional(),
+  completed_at: datetimeSchema.nullable().optional(),
+  signer_name: z.string().nullable().optional(),
+  signer_email: z.string().nullable().optional(),
+  signed_attachment_id: idSchema.nullable().optional(),
+  signed_document_id: idSchema.nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  version: z.number().int().optional(),
+});
+export type SigningEnvelope = z.infer<typeof signingEnvelopeSchema>;
+
+export const signingEventSchema = z.object({
+  id: idSchema,
+  envelope_id: idSchema,
+  event_type: z.string(),
+  actor_id: idSchema.nullable().optional(),
+  payload: z.record(z.string(), z.unknown()).nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type SigningEvent = z.infer<typeof signingEventSchema>;
+
+export const signingEnvelopeCreateSchema = z.object({
+  contract_id: idSchema,
+  method: signingMethodEnum.default("electronic"),
+  provider: signingProviderEnum.default("demo"),
+  counterparty_name: z.string().max(255).nullish(),
+  counterparty_email: z.string().max(255).nullish(),
+  note: z.string().nullish(),
+});
+export type SigningEnvelopeCreate = z.infer<typeof signingEnvelopeCreateSchema>;
+
+// ===========================================================================
+// 契約交渉・Redline (ロードマップ #5-8 / migration 011 / api v1 negotiations)
+// ===========================================================================
+
+export const clauseNegotiationStatusEnum = z.enum([
+  "accepted",
+  "rejected",
+  "negotiating",
+]);
+export type ClauseNegotiationStatus = z.infer<typeof clauseNegotiationStatusEnum>;
+
+export const clauseOwnerEnum = z.enum(["法務", "工事", "営業", "購買", "その他"]);
+export type ClauseOwner = z.infer<typeof clauseOwnerEnum>;
+
+export const negotiationActionEnum = z.enum([
+  "redline",
+  "demand",
+  "concession",
+  "comment",
+]);
+export type NegotiationAction = z.infer<typeof negotiationActionEnum>;
+
+/** 交渉イベント 1 件（証跡・読み取りのみ） */
+export const negotiationEventSchema = z.object({
+  id: idSchema,
+  contract_id: idSchema,
+  clause_id: idSchema.nullable().optional(),
+  round_no: z.number().int().nullable().optional(),
+  action: z.string(),
+  status_from: z.string().nullable().optional(),
+  status_to: z.string().nullable().optional(),
+  owner_from: z.string().nullable().optional(),
+  owner_to: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+  proposed_text: z.string().nullable().optional(),
+  actor_id: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type NegotiationEvent = z.infer<typeof negotiationEventSchema>;
+
+export const negotiationEventCreateSchema = z.object({
+  action: negotiationActionEnum,
+  clause_id: idSchema.nullish(),
+  round_no: z.number().int().min(1).nullish(),
+  note: z.string().max(2000).nullish(),
+  proposed_text: z.string().max(20000).nullish(),
+});
+export type NegotiationEventCreate = z.infer<typeof negotiationEventCreateSchema>;
+
+/** 更新後の条項（negotiation_status / clause_owner / negotiated_text を含む） */
+export const clauseNegotiationStateSchema = z.object({
+  id: idSchema,
+  contract_id: idSchema,
+  seq: z.number().int(),
+  title: z.string().nullable().optional(),
+  body: z.string(),
+  risk_level: z.string().nullable().optional(),
+  negotiation_status: clauseNegotiationStatusEnum.or(z.string()).nullable().optional(),
+  clause_owner: clauseOwnerEnum.or(z.string()).nullable().optional(),
+  negotiated_text: z.string().nullable().optional(),
+});
+export type ClauseNegotiationState = z.infer<typeof clauseNegotiationStateSchema>;
+
+// ===========================================================================
+// 契約義務・Obligations Calendar (ロードマップ #9-13 / migration 012 / api v1 obligations)
+// ===========================================================================
+
+export const obligationStatusEnum = z.enum([
+  "open",
+  "in_progress",
+  "completed",
+  "waived",
+]);
+export type ObligationStatus = z.infer<typeof obligationStatusEnum>;
+
+export const obligationTypeEnum = z.enum([
+  "report",
+  "notice",
+  "submit",
+  "insurance",
+  "renewal",
+  "condition",
+  "closing",
+  "other",
+]);
+export type ObligationType = z.infer<typeof obligationTypeEnum>;
+
+export const obligationSchema = z.object({
+  id: idSchema,
+  contract_id: idSchema,
+  obligation_type: obligationTypeEnum.or(z.string()),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  status: obligationStatusEnum.or(z.string()),
+  assignee_id: idSchema.nullable().optional(),
+  completed_at: datetimeSchema.nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type Obligation = z.infer<typeof obligationSchema>;
+
+export const obligationCreateSchema = z.object({
+  obligation_type: obligationTypeEnum,
+  title: z.string().min(1).max(256),
+  description: z.string().max(4000).nullish(),
+  due_date: dateSchema.nullish(),
+  assignee_id: idSchema.nullish(),
+  status: obligationStatusEnum.default("open"),
+});
+export type ObligationCreate = z.infer<typeof obligationCreateSchema>;
+
+/** 自動更新判定結果（#12） */
+export const renewalCheckSchema = z.object({
+  contract_id: idSchema,
+  contract_no: z.string().nullable().optional(),
+  title: z.string(),
+  end_date: dateSchema.nullable().optional(),
+  auto_renewal: z.boolean(),
+  renewal_notice_days: z.number().int(),
+  notice_deadline: dateSchema.nullable().optional(),
+  days_left: z.number().int().nullable().optional(),
+  state: z.string(),
+});
+export type RenewalCheck = z.infer<typeof renewalCheckSchema>;
+
+// ===========================================================================
+// 契約書全文検索 (ロードマップ #5下位 / api v1 contract_search)
+// ===========================================================================
+
+export const contractSearchHitSchema = z.object({
+  kind: z.enum(["contract", "clause", "document"]).or(z.string()),
+  record_id: idSchema,
+  contract_id: idSchema,
+  contract_no: z.string().nullable().optional(),
+  title: z.string().nullable().optional(),
+  snippet: z.string().nullable().optional(),
+  matched_fields: z.array(z.string()).default([]),
+  score: z.number(),
+});
+export type ContractSearchHit = z.infer<typeof contractSearchHitSchema>;
+
+// ===========================================================================
+// Legal Matter Management (ロードマップ #71-84 / migration 013 / api v1 matters)
+// ===========================================================================
+
+export const matterStatusEnum = z.enum([
+  "open",
+  "in_progress",
+  "waiting",
+  "on_hold",
+  "closed",
+]);
+export type MatterStatus = z.infer<typeof matterStatusEnum>;
+
+export const matterPriorityEnum = z.enum(["low", "medium", "high", "critical"]);
+export type MatterPriority = z.infer<typeof matterPriorityEnum>;
+
+export const matterTypeEnum = z.enum([
+  "contract",
+  "dispute",
+  "compliance",
+  "labor",
+  "regulatory",
+  "other",
+]);
+export type MatterType = z.infer<typeof matterTypeEnum>;
+
+export const matterSchema = z.object({
+  id: idSchema,
+  matter_no: z.string(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  matter_type: matterTypeEnum.or(z.string()),
+  status: matterStatusEnum.or(z.string()),
+  priority: matterPriorityEnum.or(z.string()),
+  assignee_id: idSchema.nullable().optional(),
+  source_type: z.string().nullable().optional(),
+  source_id: idSchema.nullable().optional(),
+  legal_hold_case_id: idSchema.nullable().optional(),
+  opened_at: datetimeSchema,
+  closed_at: datetimeSchema.nullable().optional(),
+  close_note: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type Matter = z.infer<typeof matterSchema>;
+
+export const matterCreateSchema = z.object({
+  title: z.string().min(1).max(256),
+  matter_type: matterTypeEnum,
+  description: z.string().max(8000).nullish(),
+  priority: matterPriorityEnum.default("medium"),
+  assignee_id: idSchema.nullish(),
+  source_type: z.string().nullish(),
+  source_id: idSchema.nullish(),
+  contract_ids: z.array(idSchema).default([]),
+  legal_hold_case_id: idSchema.nullish(),
+});
+export type MatterCreate = z.infer<typeof matterCreateSchema>;
+
+export const matterUpdateSchema = z.object({
+  title: z.string().min(1).max(256).nullish(),
+  description: z.string().max(8000).nullish(),
+  priority: matterPriorityEnum.nullish(),
+});
+export type MatterUpdate = z.infer<typeof matterUpdateSchema>;
+
+export const matterStatusInSchema = z.object({
+  status: matterStatusEnum,
+  note: z.string().max(2000).nullish(),
+});
+export type MatterStatusIn = z.infer<typeof matterStatusInSchema>;
+
+export const matterAssignInSchema = z.object({
+  assignee_id: idSchema.nullable(),
+  note: z.string().max(2000).nullish(),
+});
+export type MatterAssignIn = z.infer<typeof matterAssignInSchema>;
+
+export const matterNoteInSchema = z.object({
+  note: z.string().min(1).max(4000),
+});
+export type MatterNoteIn = z.infer<typeof matterNoteInSchema>;
+
+export const matterEventSchema = z.object({
+  id: idSchema,
+  matter_id: idSchema,
+  event_type: z.string(),
+  note: z.string().nullable().optional(),
+  payload: z.record(z.string(), z.unknown()).nullable().optional(),
+  actor_id: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type MatterEvent = z.infer<typeof matterEventSchema>;
+
+export const matterContractSchema = z.object({
+  contract_id: idSchema,
+  contract_no: z.string().nullable().optional(),
+  title: z.string(),
+});
+export type MatterContract = z.infer<typeof matterContractSchema>;
+
+// ===========================================================================
+// 顧問弁護士・外部法律事務所 (ロードマップ #85-96 / migration 014 / api v1 outside_counsel)
+// ===========================================================================
+
+export const lawFirmSchema = z.object({
+  id: idSchema,
+  firm_name: z.string(),
+  contact_email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  is_active: z.boolean(),
+});
+export type LawFirm = z.infer<typeof lawFirmSchema>;
+
+export const lawFirmCreateSchema = z.object({
+  firm_name: z.string().min(1).max(256),
+  contact_email: z.string().max(256).nullish(),
+  phone: z.string().max(64).nullish(),
+  address: z.string().max(512).nullish(),
+  notes: z.string().max(4000).nullish(),
+});
+export type LawFirmCreate = z.infer<typeof lawFirmCreateSchema>;
+
+export const counselLawyerSchema = z.object({
+  id: idSchema,
+  firm_id: idSchema,
+  lawyer_name: z.string(),
+  email: z.string().nullable().optional(),
+  bar_number: z.string().nullable().optional(),
+  specialties: z.string().nullable().optional(),
+  is_active: z.boolean(),
+});
+export type CounselLawyer = z.infer<typeof counselLawyerSchema>;
+
+export const counselLawyerCreateSchema = z.object({
+  firm_id: idSchema,
+  lawyer_name: z.string().min(1).max(128),
+  email: z.string().max(256).nullish(),
+  bar_number: z.string().max(64).nullish(),
+  specialties: z.string().max(512).nullish(),
+});
+export type CounselLawyerCreate = z.infer<typeof counselLawyerCreateSchema>;
+
+export const engagementStatusEnum = z.enum([
+  "open",
+  "answered",
+  "confirmed",
+  "cancelled",
+]);
+export type EngagementStatus = z.infer<typeof engagementStatusEnum>;
+
+export const engagementSchema = z.object({
+  id: idSchema,
+  engagement_no: z.string(),
+  firm_id: idSchema,
+  lawyer_id: idSchema.nullable().optional(),
+  matter_id: idSchema.nullable().optional(),
+  title: z.string(),
+  question: z.string(),
+  answer: z.string().nullable().optional(),
+  status: engagementStatusEnum.or(z.string()),
+  due_date: dateSchema.nullable().optional(),
+  answered_at: datetimeSchema.nullable().optional(),
+  answered_by: idSchema.nullable().optional(),
+  conflict_of_interest: z.boolean(),
+  conflict_note: z.string().nullable().optional(),
+  confidential: z.boolean(),
+  fee_estimate_jpy: z.number().int().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type Engagement = z.infer<typeof engagementSchema>;
+
+export const engagementCreateSchema = z.object({
+  firm_id: idSchema,
+  lawyer_id: idSchema.nullish(),
+  matter_id: idSchema.nullish(),
+  title: z.string().min(1).max(256),
+  question: z.string().min(1).max(20000),
+  due_date: dateSchema.nullish(),
+  conflict_of_interest: z.boolean().default(false),
+  conflict_note: z.string().max(2000).nullish(),
+  confidential: z.boolean().default(false),
+  fee_estimate_jpy: z.number().int().min(0).nullish(),
+});
+export type EngagementCreate = z.infer<typeof engagementCreateSchema>;
+
+// ===========================================================================
+// 労務費基準マスタ・乖離率判定 (ロードマップ #16-20 / migration 015 / api v1 labor_wage)
+// ===========================================================================
+
+export const laborWorkTypeEnum = z.enum([
+  "土木",
+  "とび・土工",
+  "舗装",
+  "解体",
+  "鉄筋",
+  "コンクリート",
+  "その他",
+]);
+export type LaborWorkType = z.infer<typeof laborWorkTypeEnum>;
+
+export const laborWageStandardSchema = z.object({
+  id: idSchema,
+  work_type: laborWorkTypeEnum.or(z.string()),
+  prefecture: z.string().nullable().optional(),
+  amount_jpy: z.number().int(),
+  amount_unit: z.string(),
+  effective_from: dateSchema,
+  effective_to: dateSchema.nullable().optional(),
+  source_ref: z.string().nullable().optional(),
+});
+export type LaborWageStandard = z.infer<typeof laborWageStandardSchema>;
+
+export const laborWageStandardCreateSchema = z.object({
+  work_type: laborWorkTypeEnum,
+  amount_jpy: z.number().int().min(0),
+  prefecture: z.string().max(16).nullish(),
+  effective_from: dateSchema,
+  effective_to: dateSchema.nullish(),
+  amount_unit: z.string().max(16).default("日"),
+  source_ref: z.string().max(512).nullish(),
+});
+export type LaborWageStandardCreate = z.infer<typeof laborWageStandardCreateSchema>;
+
+/** #20 乖離率判定結果 */
+export const laborWageDiscrepancySchema = z.object({
+  work_type: laborWorkTypeEnum.or(z.string()),
+  prefecture: z.string().nullable().optional(),
+  standard_day_jpy: z.number().int(),
+  amount_unit: z.string(),
+  effective_from: dateSchema,
+  source_ref: z.string().nullable().optional(),
+  quote_day_jpy: z.number().int(),
+  ratio: z.number(),
+  shortage_rate: z.number(),
+  status: z.enum(["ok", "below"]).or(z.string()),
+});
+export type LaborWageDiscrepancy = z.infer<typeof laborWageDiscrepancySchema>;

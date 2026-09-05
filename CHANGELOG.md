@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added / Changed (2026-09-05: Phase 1〜2 新機能のフロント UI 接続 F1〜F7)
+
+- **🖥️ バックエンド実装済みの Phase 1〜2 機能をフロント UI へ接続（ロードマップ F1〜F7）**:
+  - **API クライアント 7 種を追加**（`frontend/lib/api/`）: `signingApi`（電子契約 #1-4）/
+    `negotiationsApi`（交渉・Redline #5-8）`obligationsApi`（契約義務 #9-13）/
+    `contractSearchApi`（契約全文検索）`mattersApi`（Matter #71-84）/
+    `lawFirmsApi`・`engagementsApi`（顧問弁護士 #85-96）`laborWageApi`（労務費基準 #16-20）
+  - zod スキーマ・型（`schemas.ts` / `types/api.ts`）と TanStack queryKey
+    （`query-keys.ts`）へ新ドメイン 7 種を追加
+  - **新規画面 7 ルート**（`frontend/app/(authenticated)/`）:
+    `/signing`（エンベロープ一覧・作成・送信/承諾証跡/署名/締結/取消・証跡イベント履歴）・
+    `/negotiations`（契約選択 → 条項ステータス/オーナー変更・交渉イベント記録）・
+    `/obligations`（期限バケット・完了/放棄・自動更新チェック・契約絞り込み）・
+    `/search`（条項/文書/メタデータ横断の全文検索）・`/matters`（Matter 台帳・状態遷移・
+    担当アサイン・タイムライン・メモ追記）・`/outside-counsel`（依頼起票/回答/確認・
+    事務所/弁護士台帳）・`/labor-wage`（基準値マスタ・乖離率判定）
+  - **サイドバー再編**: グループ見出し（ホーム/契約/法務・建設/知財/品質・ナレッジ/管理）を
+    導入し、新機能 7 メニューを追加（既存 22 → 29 項目）
+  - **導線**: 契約詳細（`/contracts/[id]`）に「交渉 / 電子契約 / 義務 / Matter」ボタンを追加。
+    `?contract_id=` で対象契約をプリセット可能（signing / negotiations / obligations）
+  - 検証: frontend typecheck / lint（ESLint warnings 0）/ Jest 18 suites 72 tests passed
+    （新規 7 画面のスモークテスト 14 件含む）・`next build` 成功（新規 7 ルート含む 34 ページ）
+
 ### Added / Changed (2026-09-05: 労務費基準マスタ・乖離率判定 Issue #111)
 
 - **💰 労務費基準マスタ（Phase 2 起点・ロードマップ #16〜#20 / Issue #111）**:
