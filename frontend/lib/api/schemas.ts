@@ -2257,3 +2257,132 @@ export const partnerRiskScoreSchema = z.object({
   expiry_overdue_count: z.number().int(),
 });
 export type PartnerRiskScore = z.infer<typeof partnerRiskScoreSchema>;
+
+// ===========================================================================
+// 30. 証拠・eDiscovery 管理 (Phase 3 §5.17 / ロードマップ #217-230 / /evidence)
+// ===========================================================================
+
+export const evidenceSchema = z.object({
+  id: idSchema,
+  evidence_code: z.string(),
+  matter_id: idSchema.nullable().optional(),
+  contract_id: idSchema.nullable().optional(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  source_type: z.string(),
+  filename: z.string().nullable().optional(),
+  mime_type: z.string().nullable().optional(),
+  size_bytes: z.number().int().nullable().optional(),
+  storage: z.string(),
+  storage_ref: z.string().nullable().optional(),
+  sha256_hash: z.string(),
+  is_duplicate: z.boolean(),
+  duplicate_of_id: idSchema.nullable().optional(),
+  exif_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  email_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  relevance: z.string(),
+  relevance_score: z.number().int().nullable().optional(),
+  relevance_note: z.string().nullable().optional(),
+  collected_by: idSchema.nullable().optional(),
+  collected_by_name: z.string().nullable().optional(),
+  collected_at: datetimeSchema.nullable().optional(),
+  legal_hold_id: idSchema.nullable().optional(),
+  is_under_hold: z.boolean(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type Evidence = z.infer<typeof evidenceSchema>;
+
+export const evidenceCreateSchema = z.object({
+  title: z.string().min(1).max(256),
+  description: z.string().max(8000).nullish(),
+  source_type: z.string().max(16).default("upload"),
+  matter_id: idSchema.nullish(),
+  contract_id: idSchema.nullish(),
+  filename: z.string().max(256).nullish(),
+  mime_type: z.string().max(128).nullish(),
+  storage: z.string().max(32).default("local"),
+  storage_ref: z.string().max(256).nullish(),
+  file_content_base64: z.string().nullish(),
+  checksum_sha256: z.string().length(64).nullish(),
+  collected_by_name: z.string().max(128).nullish(),
+  collected_at: datetimeSchema.nullish(),
+});
+export type EvidenceCreate = z.infer<typeof evidenceCreateSchema>;
+
+export const evidenceCustodyEventSchema = z.object({
+  id: idSchema,
+  evidence_id: idSchema,
+  action: z.string(),
+  actor_id: idSchema.nullable().optional(),
+  actor_name: z.string().nullable().optional(),
+  from_custodian: z.string().nullable().optional(),
+  to_custodian: z.string().nullable().optional(),
+  occurred_at: datetimeSchema,
+  notes: z.string().nullable().optional(),
+  previous_hash: z.string().nullable().optional(),
+  hash_chain: z.string(),
+});
+export type EvidenceCustodyEvent = z.infer<typeof evidenceCustodyEventSchema>;
+
+export const evidenceTimelineItemSchema = z.object({
+  type: z.string(),
+  occurred_at: datetimeSchema,
+  action: z.string(),
+  actor_id: idSchema.nullable().optional(),
+  actor_name: z.string().nullable().optional(),
+  from_custodian: z.string().nullable().optional(),
+  to_custodian: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  hash_chain: z.string().nullable().optional(),
+});
+export type EvidenceTimelineItem = z.infer<typeof evidenceTimelineItemSchema>;
+
+export const evidenceViewHistoryItemSchema = z.object({
+  id: idSchema,
+  occurred_at: datetimeSchema,
+  action: z.string(),
+  actor_id: idSchema.nullable().optional(),
+});
+export type EvidenceViewHistoryItem = z.infer<typeof evidenceViewHistoryItemSchema>;
+
+export const evidenceExportBundleSchema = z.object({
+  evidence_code: z.string(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  sha256_hash: z.string(),
+  source_type: z.string(),
+  filename: z.string().nullable().optional(),
+  mime_type: z.string().nullable().optional(),
+  collected_at: z.string().nullable().optional(),
+  collected_by_name: z.string().nullable().optional(),
+  relevance: z.string(),
+  relevance_score: z.number().int().nullable().optional(),
+  relevance_note: z.string().nullable().optional(),
+  is_duplicate: z.boolean(),
+  duplicate_of_id: idSchema.nullable().optional(),
+  is_under_hold: z.boolean(),
+  exif_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  email_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  custody_chain_verified: z.boolean(),
+  timeline: z.array(z.record(z.string(), z.unknown())),
+  exported_at: z.string(),
+});
+export type EvidenceExportBundle = z.infer<typeof evidenceExportBundleSchema>;
+
+export const evidenceHoldReleaseApprovalSchema = z.object({
+  id: idSchema,
+  legal_hold_id: idSchema,
+  evidence_id: idSchema.nullable().optional(),
+  requested_by: idSchema.nullable().optional(),
+  requested_at: datetimeSchema,
+  reason: z.string(),
+  status: z.string(),
+  decided_by: idSchema.nullable().optional(),
+  decided_at: datetimeSchema.nullable().optional(),
+  decision_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type EvidenceHoldReleaseApproval = z.infer<typeof evidenceHoldReleaseApprovalSchema>;
