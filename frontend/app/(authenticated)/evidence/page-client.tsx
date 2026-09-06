@@ -318,8 +318,11 @@ export default function EvidencePage() {
       const a = document.createElement("a");
       a.href = url;
       a.download = `${detail.evidence_code}.json`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      // Firefox 等でダウンロード開始前に URL が破棄されるのを避けるため遅延する。
+      setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (err) {
       setActionError(
         err instanceof Error ? `Export に失敗しました: ${err.message}` : "Export に失敗しました。",
