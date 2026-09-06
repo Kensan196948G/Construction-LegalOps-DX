@@ -250,11 +250,26 @@ def upgrade() -> None:
                 WITH CHECK (legalops_actor_role() <> '' OR legalops_actor_id() IS NOT NULL)
                 """
             )
+            # AS RESTRICTIVE: PostgreSQL の PERMISSIVE ポリシー（デフォルト）は
+            # 同一コマンドで複数存在する場合 OR 結合される。tenant_isolation の
+            # USING がほぼ常に真になるため、PERMISSIVE のままでは本ポリシーの
+            # 契約スコープ制限が事実上無効化されてしまう。RESTRICTIVE にする
+            # ことで PERMISSIVE 群の結果と AND 結合し、確実に絞り込む。
+            # WITH CHECK も付与し、他契約の dispute_id を指定した
+            # INSERT/UPDATE を拒否する。
             op.execute(
                 f"""
                 CREATE POLICY {table}_contract_scope ON {table}
+                AS RESTRICTIVE
                 FOR ALL
                 USING (
+                    EXISTS (
+                        SELECT 1 FROM disputes d
+                        WHERE d.id = {table}.dispute_id
+                          AND (d.contract_id IS NULL OR legalops_contract_visible(d.contract_id))
+                    )
+                )
+                WITH CHECK (
                     EXISTS (
                         SELECT 1 FROM disputes d
                         WHERE d.id = {table}.dispute_id
