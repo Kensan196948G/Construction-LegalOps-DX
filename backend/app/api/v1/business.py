@@ -237,15 +237,19 @@ async def list_documents(
 ) -> list[ContractDocumentOut]:
     await _get_contract(session, contract_id)
     rows = (
-        await session.execute(
-            select(ContractDocument)
-            .where(
-                ContractDocument.contract_id == contract_id,
-                ContractDocument.deleted_at.is_(None),
+        (
+            await session.execute(
+                select(ContractDocument)
+                .where(
+                    ContractDocument.contract_id == contract_id,
+                    ContractDocument.deleted_at.is_(None),
+                )
+                .order_by(ContractDocument.priority.asc(), ContractDocument.id.asc())
             )
-            .order_by(ContractDocument.priority.asc(), ContractDocument.id.asc())
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return [ContractDocumentOut.model_validate(r) for r in rows]
 
 
@@ -338,15 +342,19 @@ async def check_document_consistency(
 ) -> DocumentConsistencyOut:
     contract = await _get_contract(session, contract_id)
     rows = (
-        await session.execute(
-            select(ContractDocument)
-            .where(
-                ContractDocument.contract_id == contract_id,
-                ContractDocument.deleted_at.is_(None),
+        (
+            await session.execute(
+                select(ContractDocument)
+                .where(
+                    ContractDocument.contract_id == contract_id,
+                    ContractDocument.deleted_at.is_(None),
+                )
+                .order_by(ContractDocument.priority.asc(), ContractDocument.id.asc())
             )
-            .order_by(ContractDocument.priority.asc(), ContractDocument.id.asc())
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     snapshots = [
         DocumentSnapshot(
             id=doc.id,
@@ -569,6 +577,7 @@ async def list_disputes(
 ) -> Page[DisputeOut]:
     items, total = await dispute_service.list_disputes(
         session,
+        viewer=current_user,
         q=q,
         status=status_,
         dispute_type=dispute_type,

@@ -82,6 +82,47 @@ async def test_dispute_lifecycle(client, auth_headers_admin):
     assert r_exp.json()["total_claimed_jpy"] == 5000000
 
 
+async def test_dispute_access_scoped_to_contract_acl(
+    client, auth_headers_admin, auth_headers_site, auth_headers_legal
+):
+    """Issue #127/#129: 紛争案件の取得・一覧・更新は案件（契約）ACLでスコープされる。
+
+    ACL の付与がない別ロールのユーザーは、一覧に他部門の紛争案件が表示されず、
+    直接の更新も403で拒否される。契約の drafter 本人と admin は引き続き見える。
+    """
+    contract_id = await _create_contract(client, auth_headers_site)
+    r = await client.post(
+        "/api/v1/disputes",
+        json={
+            "contract_id": contract_id,
+            "dispute_type": "claim",
+            "title": f"ACLスコープテスト紛争-{_SUFFIX}",
+        },
+        headers=auth_headers_site,
+    )
+    assert r.status_code == 201, r.text
+    dispute_id = r.json()["id"]
+
+    r_list_outsider = await client.get("/api/v1/disputes", headers=auth_headers_legal)
+    assert r_list_outsider.status_code == 200
+    assert dispute_id not in [item["id"] for item in r_list_outsider.json()["items"]]
+
+    r_patch_outsider = await client.patch(
+        f"/api/v1/disputes/{dispute_id}",
+        json={"status": "resolved"},
+        headers=auth_headers_legal,
+    )
+    assert r_patch_outsider.status_code == 403
+
+    r_list_owner = await client.get("/api/v1/disputes", headers=auth_headers_site)
+    assert r_list_owner.status_code == 200
+    assert dispute_id in [item["id"] for item in r_list_owner.json()["items"]]
+
+    r_list_admin = await client.get("/api/v1/disputes", headers=auth_headers_admin)
+    assert r_list_admin.status_code == 200
+    assert dispute_id in [item["id"] for item in r_list_admin.json()["items"]]
+
+
 async def test_change_order_lifecycle_and_impact(client, auth_headers_admin):
     contract_id = await _create_contract(client, auth_headers_admin)
     r = await client.post(
@@ -131,9 +172,7 @@ async def test_partner_lifecycle_and_summary(client, auth_headers_admin):
     assert r.json()["risk_level"] == "high"
     assert any(x["code"] == "antisocial_unconfirmed" for x in r.json()["risk_reasons"])
 
-    r_list = await client.get(
-        "/api/v1/partners?q=統合テスト", headers=auth_headers_admin
-    )
+    r_list = await client.get("/api/v1/partners?q=統合テスト", headers=auth_headers_admin)
     assert r_list.status_code == 200
     assert r_list.json()["total"] >= 1
 

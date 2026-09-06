@@ -10,12 +10,41 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.exceptions import ForbiddenError
 from app.deps import CurrentUser
+from app.models.contract import Contract
 from app.models.dispute import Dispute, DisputeEvidence, DisputeTimelineEvent
+from app.services import access_control
+
+_PRIVILEGED_ROLES = ("admin", "auditor")
 
 
 def _next_dispute_no() -> str:
     return f"D-{uuid.uuid4().hex[:10].upper()}"
+
+
+async def ensure_dispute_visible(
+    session: AsyncSession, *, dispute: Dispute, viewer: CurrentUser
+) -> None:
+    """案件（契約）ACL に基づくアプリ層の認可チェック（Issue #127/#129）.
+
+    PostgreSQL RLS（migration 026 の RESTRICTIVE 化）と同じ優先順位で判定する
+    多層防御。RLS が効かない環境（SQLite・テスト）でも、`viewer` が担当外の
+    紛争案件（他契約・他担当者）へアクセスするのを防ぐ。
+    """
+    role = getattr(viewer, "role", "guest")
+    if role in _PRIVILEGED_ROLES:
+        return
+    actor_id = getattr(viewer, "db_id", None)
+
+    if dispute.contract_id is not None:
+        contract = await session.get(Contract, dispute.contract_id)
+        if await access_control.can_access(session, viewer=viewer, contract=contract):
+            return
+    elif actor_id is not None and dispute.assignee_id == actor_id:
+        return
+
+    raise ForbiddenError("この紛争案件を閲覧する権限がありません。")
 
 
 async def create_dispute(
@@ -65,18 +94,30 @@ async def get_dispute(
         selectinload(Dispute.evidence),
     )
     result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    dispute = result.scalar_one_or_none()
+    if dispute is not None:
+        await ensure_dispute_visible(session, dispute=dispute, viewer=viewer)
+    return dispute
 
 
 async def list_disputes(
     session: AsyncSession,
     *,
+    viewer: CurrentUser,
     q: str | None = None,
     status: str | None = None,
     dispute_type: str | None = None,
     page: int = 1,
     size: int = 20,
 ) -> tuple[list[Dispute], int]:
+    """紛争案件一覧を検索する（Issue #127/#129: 案件ACLに基づく認可フィルタ付き）.
+
+    PostgreSQL では RLS（migration 026）が行レベルで絞り込むが、RLS の効かない
+    環境（SQLite・テスト）向けの多層防御として、非特権ユーザーには
+    `ensure_dispute_visible` の判定を適用したうえで `total`／ページングを
+    認可済みの集合から算出する（`app.services.evidence_service.list_evidence`
+    と同じ設計）。
+    """
     stmt = select(Dispute).where(Dispute.deleted_at.is_(None))
     if q:
         stmt = stmt.where(
@@ -88,11 +129,27 @@ async def list_disputes(
         stmt = stmt.where(Dispute.status == status)
     if dispute_type:
         stmt = stmt.where(Dispute.dispute_type == dispute_type)
-    count_stmt = select(func.count()).select_from(stmt.subquery())
-    total = (await session.execute(count_stmt)).scalar_one()
-    stmt = stmt.order_by(Dispute.updated_at.desc()).offset((page - 1) * size).limit(size)
-    rows = list((await session.execute(stmt)).scalars().all())
-    return rows, total
+    stmt = stmt.order_by(Dispute.updated_at.desc())
+
+    role = getattr(viewer, "role", "guest")
+    if role in _PRIVILEGED_ROLES:
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = (await session.execute(count_stmt)).scalar_one()
+        stmt = stmt.offset((page - 1) * size).limit(size)
+        rows = list((await session.execute(stmt)).scalars().all())
+        return rows, total
+
+    all_rows = list((await session.execute(stmt)).scalars().all())
+    visible_rows = []
+    for row in all_rows:
+        try:
+            await ensure_dispute_visible(session, dispute=row, viewer=viewer)
+        except ForbiddenError:
+            continue
+        visible_rows.append(row)
+    total = len(visible_rows)
+    start = (page - 1) * size
+    return visible_rows[start : start + size], total
 
 
 async def update_dispute(
@@ -185,13 +242,7 @@ async def add_evidence(
 async def exposure_summary(session: AsyncSession) -> dict[str, Any]:
     """紛争エクスポージャー集計（経営層向け）。"""
     rows = list(
-        (
-            await session.execute(
-                select(Dispute).where(Dispute.deleted_at.is_(None))
-            )
-        )
-        .scalars()
-        .all()
+        (await session.execute(select(Dispute).where(Dispute.deleted_at.is_(None)))).scalars().all()
     )
     by_status: dict[str, dict[str, int]] = {}
     for row in rows:

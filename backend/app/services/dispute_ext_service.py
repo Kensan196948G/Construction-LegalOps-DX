@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.deps import CurrentUser
 from app.models.dispute import Dispute
 from app.models.dispute_ext import (
     DisputeArgumentPosition,
@@ -32,8 +33,16 @@ from app.models.enums import (
 # ---------------------------------------------------------------------------
 
 
-async def get_dispute_full(session: AsyncSession, *, dispute_id: int) -> Dispute:
-    """関連（timeline / evidence / delay_events）をロード済みの Dispute を返す。"""
+async def get_dispute_full(
+    session: AsyncSession, *, dispute_id: int, viewer: CurrentUser
+) -> Dispute:
+    """関連（timeline / evidence / delay_events）をロード済みの Dispute を返す。
+
+    Issue #127/#129: 案件（契約）ACL に基づくアプリ層の認可チェックを適用する
+    （`app.services.dispute_service.ensure_dispute_visible` と同じ判定）。
+    """
+    from app.services.dispute_service import ensure_dispute_visible
+
     stmt = (
         select(Dispute)
         .where(Dispute.id == dispute_id, Dispute.deleted_at.is_(None))
@@ -50,6 +59,7 @@ async def get_dispute_full(session: AsyncSession, *, dispute_id: int) -> Dispute
     row = (await session.execute(stmt)).scalar_one_or_none()
     if row is None:
         raise NotFoundError(f"紛争案件が見つかりません（id={dispute_id}）")
+    await ensure_dispute_visible(session, dispute=row, viewer=viewer)
     return row
 
 
