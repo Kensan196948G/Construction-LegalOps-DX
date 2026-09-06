@@ -50,13 +50,18 @@ from app.models.enums import (
 )
 from app.models.evidence import Evidence, EvidenceCustodyEvent, EvidenceHoldReleaseApproval
 from app.models.matter import LegalMatter
-from app.services import audit_service
+from app.services import access_control, audit_service
 
 _ZERO_HASH = "0" * 64
 _TARGET_TYPE = "evidence"
 
 _ALLOWED_SOURCE = {s.value for s in EvidenceSourceType}
 _ALLOWED_RELEVANCE = {r.value for r in EvidenceRelevance}
+
+# M10 CodeRabbit 指摘対応: PostgreSQL RLS（migration 025）を補助するアプリ層の
+# 認可判定で使う特権ロール（RLS 側の legalops_actor_role() IN ('admin',
+# 'auditor') と揃える）。
+_PRIVILEGED_ROLES = frozenset({"admin", "auditor"})
 _ALLOWED_CUSTODY_ACTION = {a.value for a in EvidenceCustodyAction}
 
 # ルールベース関連性分類（#228）のキーワード辞書。AI 不使用・決定論的。
@@ -417,6 +422,46 @@ async def get_evidence(session: AsyncSession, *, evidence_id: int) -> Evidence:
     return row
 
 
+async def ensure_evidence_visible(
+    session: AsyncSession, *, evidence: Evidence, viewer: Any
+) -> None:
+    """案件 ACL・Legal Hold 倫理壁に基づくアプリ層の認可チェック（M10）.
+
+    PostgreSQL RLS（migration 025 の ``legalops_evidence_row_visible``）と同じ
+    優先順位で判定する多層防御。RLS が効かない環境（SQLite・テスト）でも
+    ``viewer`` ロールが未実装の案件 ACL・倫理壁を経ずに証拠へアクセスするのを
+    防ぐ。閲覧不可の場合は ``ForbiddenError`` を送出する。
+    """
+    role = getattr(viewer, "role", "guest")
+    actor_id = getattr(viewer, "db_id", None)
+    if role in _PRIVILEGED_ROLES:
+        return
+
+    hold: LegalHold | None = None
+    if evidence.legal_hold_id is not None:
+        hold = await session.get(LegalHold, evidence.legal_hold_id)
+        if hold is not None and hold.ethical_wall:
+            # 倫理壁が有効な Legal Hold に紐づく証拠は特権ロール以外は不可視。
+            raise ForbiddenError("この証拠は Legal Hold の倫理壁により閲覧できません。")
+
+    if evidence.contract_id is not None:
+        contract = await session.get(Contract, evidence.contract_id)
+        if await access_control.can_access(session, viewer=viewer, contract=contract):
+            return
+    elif evidence.matter_id is not None:
+        matter = await session.get(LegalMatter, evidence.matter_id)
+        if matter is not None and actor_id is not None and matter.assignee_id == actor_id:
+            return
+    else:
+        if actor_id is not None and actor_id in (evidence.collected_by, evidence.created_by):
+            return
+
+    if hold is not None and actor_id is not None and hold.started_by == actor_id:
+        return
+
+    raise ForbiddenError("この証拠を閲覧する権限がありません。")
+
+
 async def list_evidence(
     session: AsyncSession,
     *,
@@ -502,6 +547,10 @@ async def create_evidence(
 
     if raw is not None:
         sha256_hash = compute_sha256(raw)
+        if checksum_sha256 and checksum_sha256.strip().lower() != sha256_hash:
+            raise ValidationError(
+                "checksum_sha256 が file_content_base64 の実体ハッシュと一致しません。"
+            )
         size_bytes: int | None = len(raw)
         exif = extract_exif(raw) if (mime_type or "").startswith("image/") else None
     elif checksum_sha256:
@@ -966,6 +1015,29 @@ async def decide_hold_release(
                 actor_id=decided_by,
                 notes=decision_note or "Legal Hold 解除承認",
             )
+
+        # hold.status は Hold 全体を released にするため、同一 legal_hold_id を
+        # 参照する他の Evidence（上記で処理済みの approval.evidence_id を除く）
+        # も is_under_hold=False へ揃える。放置すると解除済み Hold を指したまま
+        # is_under_hold=True の証拠が残ってしまう。
+        other_stmt = select(Evidence).where(
+            Evidence.legal_hold_id == hold.id,
+            Evidence.deleted_at.is_(None),
+        )
+        if approval.evidence_id is not None:
+            other_stmt = other_stmt.where(Evidence.id != approval.evidence_id)
+        other_rows = (await session.execute(other_stmt)).scalars().all()
+        for other in other_rows:
+            if not other.is_under_hold:
+                continue
+            other.is_under_hold = False
+            await _append_custody_event(
+                session,
+                evidence_id=other.id,
+                action=EvidenceCustodyAction.HOLD_RELEASED.value,
+                actor_id=decided_by,
+                notes=decision_note or "Legal Hold 解除承認（Hold 単位の一括解除）",
+            )
         await audit_service.log(
             session,
             actor_id=decided_by,
@@ -1010,6 +1082,7 @@ __all__ = [
     "compute_sha256",
     "create_evidence",
     "decide_hold_release",
+    "ensure_evidence_visible",
     "export_evidence_bundle",
     "extract_exif",
     "get_evidence",

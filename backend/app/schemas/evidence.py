@@ -23,12 +23,18 @@ class EvidenceCreate(BaseModel):
     storage: str = Field(default="local", max_length=32)
     storage_ref: str | None = Field(default=None, max_length=256)
     file_content_base64: str | None = Field(
-        default=None, description="小容量ファイル（写真等）を base64 で直接送信する場合。"
+        default=None,
+        max_length=14_000_000,
+        description=(
+            "小容量ファイル（写真等）を base64 で直接送信する場合。"
+            "約 10MB 相当（base64 展開後）を上限とする。"
+        ),
     )
     checksum_sha256: str | None = Field(
         default=None,
         min_length=64,
         max_length=64,
+        pattern=r"^[0-9a-fA-F]{64}$",
         description="クライアント側で事前計算済みの SHA-256（大容量ファイル用）。",
     )
     collected_by_name: str | None = Field(default=None, max_length=128)
