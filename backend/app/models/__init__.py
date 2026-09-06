@@ -34,6 +34,10 @@ from .enums import (
     ContractStatus,
     ContractType,
     DumpingSeverity,
+    EvidenceCustodyAction,
+    EvidenceHoldApprovalStatus,
+    EvidenceRelevance,
+    EvidenceSourceType,
     JvAgreementStatus,
     JvDisputeStatus,
     JvMemberRole,
@@ -51,6 +55,7 @@ from .enums import (
     WorkflowStepStatus,
     WorkflowStepType,
 )
+from .evidence import Evidence, EvidenceCustodyEvent, EvidenceHoldReleaseApproval
 from .ip_asset import IpAsset
 from .ip_document import IpDocument
 from .ip_watch import IpWatchEvent, IpWatchTarget
@@ -116,6 +121,13 @@ __all__ = [
     "DumpingSeverity",
     "ESignatureEnvelope",
     "ESignatureEvent",
+    "Evidence",
+    "EvidenceCustodyAction",
+    "EvidenceCustodyEvent",
+    "EvidenceHoldApprovalStatus",
+    "EvidenceHoldReleaseApproval",
+    "EvidenceRelevance",
+    "EvidenceSourceType",
     "ExternalForwardEvent",
     "IpAsset",
     "IpDocument",
