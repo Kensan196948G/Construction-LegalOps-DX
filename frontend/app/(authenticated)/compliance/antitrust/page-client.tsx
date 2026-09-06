@@ -229,8 +229,10 @@ export default function AntitrustCompliancePage() {
     try {
       const result = await antitrustApi.listApplications({ page: 1, size: 100 });
       setApplications(result.items);
+      setOffline(false);
     } catch {
       setApplications([]);
+      setOffline(true);
     } finally {
       setApplicationsLoading(false);
     }
@@ -351,8 +353,10 @@ export default function AntitrustCompliancePage() {
     try {
       const result = await antitrustApi.listConsultations({ page: 1, size: 50 });
       setConsultations(result.items);
+      setOffline(false);
     } catch {
       setConsultations([]);
+      setOffline(true);
     }
   }, []);
 
@@ -394,8 +398,10 @@ export default function AntitrustCompliancePage() {
     try {
       const result = await antitrustApi.listTrainings({ page: 1, size: 100 });
       setTrainings(result.items);
+      setOffline(false);
     } catch {
       setTrainings([]);
+      setOffline(true);
     }
   }, []);
 
