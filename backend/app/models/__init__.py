@@ -7,6 +7,12 @@ which is required for Alembic autogenerate to discover the schema.
 from __future__ import annotations
 
 from .access_control import AccessControlEntry, LegalHold
+from .antitrust_compliance import (
+    AntitrustCheck,
+    AntitrustConsultation,
+    AntitrustPriorApplication,
+    ComplianceTraining,
+)
 from .app_settings import AiProviderSetting
 from .attachment import Attachment
 from .audit_anchor import AuditAnchor
@@ -24,6 +30,10 @@ from .dispute import Dispute, DisputeEvidence, DisputeTimelineEvent
 from .document_consistency import DocumentConsistencyResult
 from .enums import (
     AgencyType,
+    AntitrustApplicationStatus,
+    AntitrustApplicationType,
+    AntitrustCheckSeverity,
+    AntitrustCheckType,
     AttachmentStorage,
     AuditAction,
     ClauseRecommendation,
@@ -82,6 +92,13 @@ __all__ = [
     "AccessControlEntry",
     "AgencyType",
     "AiProviderSetting",
+    "AntitrustApplicationStatus",
+    "AntitrustApplicationType",
+    "AntitrustCheck",
+    "AntitrustCheckSeverity",
+    "AntitrustCheckType",
+    "AntitrustConsultation",
+    "AntitrustPriorApplication",
     "Attachment",
     "AttachmentStorage",
     "AuditAction",
@@ -96,6 +113,7 @@ __all__ = [
     "ClauseRecommendation",
     "Comment",
     "CommentVisibility",
+    "ComplianceTraining",
     "Confidentiality",
     "ConsultationDirection",
     "ConsultationStatus",
