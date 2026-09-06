@@ -558,3 +558,98 @@ class LaborCommitmentStatus(StrEnum):
     ACTIVE = "active"  # 表明中
     FULFILLED = "fulfilled"  # 履行確認済み
     VIOLATED = "violated"  # 違反確認
+
+
+class WhistleblowerCategory(StrEnum):
+    """内部通報のカテゴリ（Phase3 §5.10 / Issue #123・#125-135）."""
+
+    HARASSMENT = "harassment"  # ハラスメント
+    COMPLIANCE = "compliance"  # コンプライアンス違反全般
+    SAFETY = "safety"  # 安全衛生
+    LABOR = "labor"  # 労務（賃金不払い等）
+    CORRUPTION = "corruption"  # 汚職・贈収賄・談合
+    FRAUD = "fraud"  # 不正経理・横領
+    OTHER = "other"
+
+
+class WhistleblowerReportStatus(StrEnum):
+    """内部通報案件の状態."""
+
+    RECEIVED = "received"  # 受付
+    TRIAGE = "triage"  # 一次評価中
+    INVESTIGATING = "investigating"  # 調査中
+    CORRECTIVE_ACTION = "corrective_action"  # 是正措置中
+    CLOSED = "closed"  # 完了
+    DISMISSED = "dismissed"  # 却下（対象外・事実不確認）
+
+
+class WhistleblowerSeverity(StrEnum):
+    """内部通報の重大度（Matter の priority と同じ 4 段階）."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class WhistleblowerCaseRole(StrEnum):
+    """調査担当者 ACL 上の役割（#127 調査担当者限定 ACL）."""
+
+    LEAD_INVESTIGATOR = "lead_investigator"  # 主任調査担当
+    INVESTIGATOR = "investigator"  # 調査担当
+    OBSERVER = "observer"  # 陪席・監督者（識別情報は原則不可）
+
+
+class WhistleblowerEvidenceType(StrEnum):
+    """証拠の種別（#129 証拠保全）."""
+
+    DOCUMENT = "document"
+    EMAIL = "email"
+    PHOTO = "photo"
+    RECORDING = "recording"
+    TESTIMONY = "testimony"
+    SYSTEM_LOG = "system_log"
+    OTHER = "other"
+
+
+class WhistleblowerIntervieweeType(StrEnum):
+    """ヒアリング対象の種別（#130 ヒアリング記録）."""
+
+    REPORTER = "reporter"  # 通報者本人
+    WITNESS = "witness"  # 参考人
+    SUBJECT = "subject"  # 被通報者
+    OTHER = "other"
+
+
+class WhistleblowerTimelineEventType(StrEnum):
+    """調査タイムラインのイベント種別（#131）."""
+
+    RECEIVED = "received"
+    TRIAGED = "triaged"
+    ASSIGNED = "assigned"
+    STATUS_CHANGED = "status_changed"
+    EVIDENCE_ADDED = "evidence_added"
+    INTERVIEW_CONDUCTED = "interview_conducted"
+    MATTER_LINKED = "matter_linked"
+    ACTION_ADDED = "action_added"
+    ACCESS_GRANTED = "access_granted"
+    ACCESS_REVOKED = "access_revoked"
+    NOTE = "note"
+    CLOSED = "closed"
+
+
+class WhistleblowerActionCategory(StrEnum):
+    """措置の区分（#132 是正措置管理・#133 再発防止管理）."""
+
+    CORRECTIVE = "corrective"  # 是正措置
+    PREVENTIVE = "preventive"  # 再発防止策
+
+
+class WhistleblowerActionStatus(StrEnum):
+    """措置の状態."""
+
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    VERIFIED = "verified"
+    OVERDUE = "overdue"
