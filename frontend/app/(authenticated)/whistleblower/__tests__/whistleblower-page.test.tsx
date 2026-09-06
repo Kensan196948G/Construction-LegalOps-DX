@@ -2,10 +2,16 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 
 import WhistleblowerPage from "../page-client";
+import { useCurrentUser } from "@/hooks/use-users";
 
 jest.mock("@/hooks/use-users", () => ({
-  useCurrentUser: jest.fn().mockReturnValue({ data: undefined }),
+  useCurrentUser: jest.fn(),
 }));
+
+// M13（CodeRabbit）: 常に `{ data: undefined }`（未ロード状態）を返すモックでは
+// 「非特権ロール」ではなく「未ロード状態」しか検証できず、権限判定が壊れても
+// 検出できない。テストごとに明示的なロールを設定できるようにする。
+const mockUseCurrentUser = useCurrentUser as jest.Mock;
 
 jest.mock("@/lib/api", () => {
   const actual = jest.requireActual("@/lib/api/client");
@@ -36,6 +42,11 @@ jest.mock("@/lib/api", () => {
 });
 
 describe("WhistleblowerPage", () => {
+  beforeEach(() => {
+    mockUseCurrentUser.mockReset();
+    mockUseCurrentUser.mockReturnValue({ data: { role: "drafter" } });
+  });
+
   it("renders the page heading", () => {
     render(<WhistleblowerPage />);
     expect(screen.getByRole("heading", { name: "内部通報・調査" })).toBeInTheDocument();
@@ -60,8 +71,21 @@ describe("WhistleblowerPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not show the aggregate button for non-privileged roles", () => {
+  it("does not show the aggregate button for a non-privileged role", () => {
+    mockUseCurrentUser.mockReturnValue({ data: { role: "drafter" } });
     render(<WhistleblowerPage />);
     expect(screen.queryByRole("button", { name: /経営報告匿名集計/ })).not.toBeInTheDocument();
+  });
+
+  it("shows the aggregate button for a privileged role (admin)", () => {
+    mockUseCurrentUser.mockReturnValue({ data: { role: "admin" } });
+    render(<WhistleblowerPage />);
+    expect(screen.getByRole("button", { name: /経営報告匿名集計/ })).toBeInTheDocument();
+  });
+
+  it("shows the aggregate button for a privileged role (auditor)", () => {
+    mockUseCurrentUser.mockReturnValue({ data: { role: "auditor" } });
+    render(<WhistleblowerPage />);
+    expect(screen.getByRole("button", { name: /経営報告匿名集計/ })).toBeInTheDocument();
   });
 });

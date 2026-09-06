@@ -161,6 +161,7 @@ import {
   whistleblowerCaseAccessSchema,
   whistleblowerEvidenceSchema,
   whistleblowerInterviewSchema,
+  whistleblowerReportCreateSchema,
   whistleblowerReportSchema,
   whistleblowerReporterProfileSchema,
   whistleblowerTimelineEventSchema,
@@ -185,10 +186,9 @@ import {
   type WhistleblowerActionCategory,
   type WhistleblowerActionStatus,
   type WhistleblowerCaseRole,
-  type WhistleblowerCategory,
   type WhistleblowerEvidenceType,
   type WhistleblowerIntervieweeType,
-  type WhistleblowerSeverity,
+  type WhistleblowerReportCreate,
 } from "./schemas";
 
 // ---------------------------------------------------------------------------
@@ -2091,21 +2091,13 @@ export const whistleblowerApi = {
   get: (id: number | string) =>
     getParsed(apiResponse(whistleblowerReportSchema), `/whistleblower/reports/${id}`),
 
-  create: (data: {
-    category: WhistleblowerCategory;
-    title: string;
-    description: string;
-    severity?: WhistleblowerSeverity;
-    is_anonymous?: boolean;
-    occurred_at?: string | null;
-    lead_investigator_id?: number | string | null;
-    reporter_name?: string | null;
-    contact_email?: string | null;
-    contact_phone?: string | null;
-    department?: string | null;
-    relationship_to_subject?: string | null;
-    consent_identity_disclosure?: boolean;
-  }) => postParsed(whistleblowerReportSchema, "/whistleblower/reports", data),
+  create: (data: WhistleblowerReportCreate, opts?: { idempotencyKey?: string }) =>
+    postParsed(
+      whistleblowerReportSchema,
+      "/whistleblower/reports",
+      whistleblowerReportCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
 
   /** 通報者識別情報（最重要の隔離対象）。403 の場合は呼び出し側で権限なし表示にすること。 */
   getReporterProfile: (id: number | string) =>

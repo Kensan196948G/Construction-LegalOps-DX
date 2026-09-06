@@ -176,7 +176,7 @@ def upgrade() -> None:
             "can_view_reporter_identity",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("true"),
+            server_default=sa.text("false"),
         ),
         sa.Column("granted_by", sa.BigInteger(), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
@@ -310,11 +310,66 @@ def upgrade() -> None:
     # ---- PostgreSQL RLS（SQLite ではスキップ・既存 006/007 のパターン踏襲） ----
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
+        # NOTE(CodeRabbit M6): USING 句のみの CREATE POLICY は PostgreSQL では
+        # FOR ALL（SELECT/INSERT/UPDATE/DELETE 全て）に適用され、同じ条件が
+        # WITH CHECK にも流用される。ACL 保有者が既存行を更新・削除できてしまう
+        # うえ、通報作成時（ACL 行がまだ無い段階）は admin/auditor 以外の INSERT
+        # が拒否されるため、reports / reporter_profiles は FOR SELECT に限定し、
+        # INSERT・UPDATE 用の別ポリシーを用意する。
+        #
+        # 実 PostgreSQL（テーブル所有者以外の DB ロールで接続する構成）での検証で
+        # 判明した残課題（本 PR の範囲外・フォローアップ Issue 化対象）:
+        # SQLAlchemy の INSERT は既定で RETURNING を使い、``create_report`` は
+        # flush 後に ``session.refresh(report)`` で読み戻すため、ACL 行がまだ
+        # 無い時点でも自分が作成した行を SELECT できる必要がある。非匿名通報は
+        # 下記 ``created_by = actor_id`` 条件で救済されるが、匿名通報
+        # （``created_by`` を意図的に NULL のまま保存する設計）はこの条件でも
+        # 救済できない。現行の単一 DB ロール構成（アプリ = テーブル所有者）では
+        # 所有者が RLS をバイパスするため実運用には影響しない
+        # （app/services/rls.py 冒頭の NOTE 参照）。
         op.execute("ALTER TABLE whistleblower_reports ENABLE ROW LEVEL SECURITY")
         op.execute(
             """
             CREATE POLICY whistleblower_reports_case_access ON whistleblower_reports
+            FOR SELECT
             USING (
+                current_setting('app.role', true) IN ('admin', 'auditor')
+                OR whistleblower_reports.created_by
+                   = NULLIF(current_setting('app.actor_id', true), '')::bigint
+                OR EXISTS (
+                    SELECT 1 FROM whistleblower_case_access wca
+                    WHERE wca.report_id = whistleblower_reports.id
+                      AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+                      AND wca.revoked_at IS NULL
+                      AND (wca.expires_at IS NULL OR wca.expires_at > now())
+                )
+            )
+            """
+        )
+        op.execute(
+            """
+            CREATE POLICY whistleblower_reports_insert ON whistleblower_reports
+            FOR INSERT
+            WITH CHECK (
+                COALESCE(NULLIF(current_setting('app.role', true), ''), 'guest') <> 'guest'
+            )
+            """
+        )
+        op.execute(
+            """
+            CREATE POLICY whistleblower_reports_update ON whistleblower_reports
+            FOR UPDATE
+            USING (
+                current_setting('app.role', true) IN ('admin', 'auditor')
+                OR EXISTS (
+                    SELECT 1 FROM whistleblower_case_access wca
+                    WHERE wca.report_id = whistleblower_reports.id
+                      AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+                      AND wca.revoked_at IS NULL
+                      AND (wca.expires_at IS NULL OR wca.expires_at > now())
+                )
+            )
+            WITH CHECK (
                 current_setting('app.role', true) IN ('admin', 'auditor')
                 OR EXISTS (
                     SELECT 1 FROM whistleblower_case_access wca
@@ -332,6 +387,7 @@ def upgrade() -> None:
             """
             CREATE POLICY whistleblower_reporter_profiles_identity_access
             ON whistleblower_reporter_profiles
+            FOR SELECT
             USING (
                 current_setting('app.role', true) IN ('admin', 'auditor')
                 OR EXISTS (
@@ -341,6 +397,21 @@ def upgrade() -> None:
                       AND wca.can_view_reporter_identity = true
                       AND wca.revoked_at IS NULL
                       AND (wca.expires_at IS NULL OR wca.expires_at > now())
+                )
+            )
+            """
+        )
+        op.execute(
+            """
+            CREATE POLICY whistleblower_reporter_profiles_insert
+            ON whistleblower_reporter_profiles
+            FOR INSERT
+            WITH CHECK (
+                current_setting('app.role', true) IN ('admin', 'auditor')
+                OR EXISTS (
+                    SELECT 1 FROM whistleblower_reports r
+                    WHERE r.id = whistleblower_reporter_profiles.report_id
+                      AND r.created_by = NULLIF(current_setting('app.actor_id', true), '')::bigint
                 )
             )
             """
@@ -397,10 +468,16 @@ def downgrade() -> None:
             op.execute(f"DROP POLICY IF EXISTS {child_table}_case_access ON {child_table}")
             op.execute(f"ALTER TABLE {child_table} DISABLE ROW LEVEL SECURITY")
         op.execute(
+            "DROP POLICY IF EXISTS whistleblower_reporter_profiles_insert "
+            "ON whistleblower_reporter_profiles"
+        )
+        op.execute(
             "DROP POLICY IF EXISTS whistleblower_reporter_profiles_identity_access "
             "ON whistleblower_reporter_profiles"
         )
         op.execute("ALTER TABLE whistleblower_reporter_profiles DISABLE ROW LEVEL SECURITY")
+        op.execute("DROP POLICY IF EXISTS whistleblower_reports_update ON whistleblower_reports")
+        op.execute("DROP POLICY IF EXISTS whistleblower_reports_insert ON whistleblower_reports")
         op.execute(
             "DROP POLICY IF EXISTS whistleblower_reports_case_access ON whistleblower_reports"
         )
