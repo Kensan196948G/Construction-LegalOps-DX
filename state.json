@@ -41,8 +41,8 @@
     "same_error_limit": 2,
     "phase": "Verify",
     "last_session_summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/development 限定で fail-closed。backend pytest 1113 passed / ruff 0.16.1 / mypy 2.3.0 clean、frontend 43 passed、Docker build OK、公開 URL smoke 200。#60/#64 を検証の上クローズ。残は PR/CI/merge と #23/#24/#50 の本番人間ゲート。",
-    "last_stop_at": "2026-08-14T02:39:13.203Z",
-    "current_session_start_at": "2026-08-13T23:37:42.778Z",
+    "last_stop_at": "2026-09-06T03:05:02.997Z",
+    "current_session_start_at": "2026-09-06T02:26:44.082Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
   },
@@ -261,6 +261,72 @@
   "learning": {
     "failure_patterns": [
       {
+        "at": "2026-09-06T03:05:03.022Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T03:02:22.159Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T03:02:00.816Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T02:32:04.053Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-05T07:13:04.229Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-05T06:57:43.190Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
         "at": "2026-08-14T02:39:13.221Z",
         "reasons": [
           "verify_subagent_missing",
@@ -413,72 +479,6 @@
           "verify_subagent_missing"
         ],
         "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T21:20:28.641Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T21:11:46.513Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T20:59:05.704Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T19:55:43.531Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T19:28:44.045Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T19:24:14.495Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
       }
     ],
     "success_patterns": [
@@ -595,8 +595,8 @@
           "last_used": "2026-08-01T12:22:29.434Z",
           "last_description": "運用文書 4 本の起草"
         },
-        "_total_agent_calls": 29,
-        "_last_agent_call_at": "2026-08-01T12:22:29.434Z",
+        "_total_agent_calls": 33,
+        "_last_agent_call_at": "2026-09-06T02:31:47.908Z",
         "Explore": {
           "call_count": 6,
           "last_used": "2026-07-20T04:13:58.462Z",
@@ -616,6 +616,11 @@
           "call_count": 2,
           "last_used": "2026-07-19T13:57:17.742Z",
           "last_description": "Frontend検証スイート実行"
+        },
+        "dev-api": {
+          "call_count": 4,
+          "last_used": "2026-09-06T02:31:47.908Z",
+          "last_description": "証拠・eDiscovery管理を実装"
         }
       }
     }
@@ -4179,6 +4184,300 @@
         "scripts/seed_demo_data.py"
       ],
       "truncated": false
+    },
+    {
+      "at": "2026-09-05T06:57:38.861Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-09-05T06:57:43.190Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 45 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/013_matters.py",
+        "backend/alembic/versions/014_outside_counsel.py",
+        "backend/alembic/versions/015_labor_wage.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/matters.py",
+        "backend/app/api/v1/outside_counsel.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/labor_wage.py",
+        "backend/app/models/matter.py",
+        "backend/app/models/outside_counsel.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/matter.py",
+        "backend/app/schemas/outside_counsel.py",
+        "backend/app/services/labor_wage_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/outside_counsel_service.py",
+        "backend/tests/integration/test_labor_wage_api.py",
+        "backend/tests/integration/test_matter_api.py",
+        "backend/tests/integration/test_outside_counsel_api.py",
+        "backend/tests/unit/test_labor_wage_service.py",
+        "backend/tests/unit/test_matter_service.py",
+        "backend/tests/unit/test_outside_counsel_service.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/labor-wage/page-client.tsx",
+        "frontend/app/(authenticated)/labor-wage/page.tsx",
+        "frontend/app/(authenticated)/matters/page-client.tsx",
+        "frontend/app/(authenticated)/matters/page.tsx",
+        "frontend/app/(authenticated)/negotiations/page-client.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-05T07:12:40.095Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-09-05T07:13:04.229Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 45 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/013_matters.py",
+        "backend/alembic/versions/014_outside_counsel.py",
+        "backend/alembic/versions/015_labor_wage.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/matters.py",
+        "backend/app/api/v1/outside_counsel.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/labor_wage.py",
+        "backend/app/models/matter.py",
+        "backend/app/models/outside_counsel.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/matter.py",
+        "backend/app/schemas/outside_counsel.py",
+        "backend/app/services/labor_wage_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/outside_counsel_service.py",
+        "backend/tests/integration/test_labor_wage_api.py",
+        "backend/tests/integration/test_matter_api.py",
+        "backend/tests/integration/test_outside_counsel_api.py",
+        "backend/tests/unit/test_labor_wage_service.py",
+        "backend/tests/unit/test_matter_service.py",
+        "backend/tests/unit/test_outside_counsel_service.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/labor-wage/page-client.tsx",
+        "frontend/app/(authenticated)/labor-wage/page.tsx",
+        "frontend/app/(authenticated)/matters/page-client.tsx",
+        "frontend/app/(authenticated)/matters/page.tsx",
+        "frontend/app/(authenticated)/negotiations/page-client.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T02:32:03.989Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-09-06T02:32:04.053Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:02:00.772Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-09-06T03:02:00.816Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:02:22.131Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-09-06T03:02:22.159Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:05:02.997Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": [
+        "qa",
+        "security-reviewer",
+        "e2e-runner"
+      ]
+    },
+    {
+      "at": "2026-09-06T03:05:03.022Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
     }
   ],
   "compact": {
