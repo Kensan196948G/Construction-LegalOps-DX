@@ -10,6 +10,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     admin,
+    antitrust,
     audit_logs,
     auth,
     business,
@@ -17,6 +18,8 @@ from app.api.v1 import (
     contract_search,
     contracts,
     dashboard,
+    dispute_ext,
+    evidence,
     governance,
     health,
     ip,
@@ -40,6 +43,7 @@ from app.api.v1 import (
     templates,
     uploads,
     users,
+    whistleblower,
     workflows,
 )
 
@@ -89,6 +93,10 @@ api_router.include_router(joint_venture.router)
 api_router.include_router(legal_ai.applicable_laws_router)
 api_router.include_router(legal_ai.evidence_router)
 api_router.include_router(legal_ai.impact_router)
+api_router.include_router(dispute_ext.router)
+api_router.include_router(antitrust.router)
+api_router.include_router(whistleblower.router)
+api_router.include_router(evidence.router)
 
 
 __all__ = ["api_router"]
