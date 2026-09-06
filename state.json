@@ -47,6 +47,13 @@
     "ci_result": "全8ジョブ green（Backend pytest PostgreSQL16 / alembic roundtrip / pytest+ruff+mypy / Frontend eslint+tsc+jest / Docker build / E2E Playwright smoke / Security bandit+trivy / CodeRabbit skipped→ready化後は再評価）",
     "safety": "No production deploy, secret injection, Cloudflare/Neon mutation, push to shared remote, rebase, merge, tag, release, or destructive migration executed by this session."
   },
+  "phase3_coderabbit_review_fixes": {
+    "completed_at": "2026-09-06",
+    "summary": "PR #126 CodeRabbit レビュー（Critical 2 / Major 19 / Minor 11）を3並列worktreeエージェントで検証・修正。Critical: (1) 022_dispute_ext.py の RLS ポリシーがPERMISSIVE OR結合で契約スコープ制限が無効化されていた問題をRESTRICTIVE化+WITH CHECKで根治、(2) whistleblower匿名通報の監査ログにactor_idが記録され匿名性が実質破られていた問題を修正。Major: evidences系テーブルへのRLS新設、can_view_reporter_identityデフォルトをtrue→false（最小権限）、whistleblowerのRLSをFOR SELECT限定に修正、証拠取得エンドポイントへのACL認可追加、フロントの型安全性・入力検証・アクセシビリティ・権限テスト等。Minor11件中10件対応。",
+    "not_fixed_scope": "紛争案件の部署/契約スコープ認可欠如（既存disputesルーター全体に及ぶ設計課題）は影響範囲が広いため Issue #127 として別Issue化。dispute-evidence-fixes チームが発見した「007系migrationにも同型のRLS OR結合問題が既存」との報告は追加調査・別Issue化が必要。",
+    "verification": "backend pytest SQLite全体1371 passed / PostgreSQL16(tests/integration/、CI同一コマンド)257 passed / ruff・mypy clean / migration upgrade→downgrade→re-upgrade実PostgreSQL成功 / frontend typecheck・lint clean・jest 97 passed・production build成功",
+    "next_action": "push→CI再確認→マージ判定Y/N"
+  },
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": 1,
@@ -62,7 +69,7 @@
     "same_error_limit": 2,
     "phase": "Verify",
     "last_session_summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/development 限定で fail-closed。backend pytest 1113 passed / ruff 0.16.1 / mypy 2.3.0 clean、frontend 43 passed、Docker build OK、公開 URL smoke 200。#60/#64 を検証の上クローズ。残は PR/CI/merge と #23/#24/#50 の本番人間ゲート。",
-    "last_stop_at": "2026-09-06T04:19:15.571Z",
+    "last_stop_at": "2026-09-06T05:19:00.214Z",
     "current_session_start_at": "2026-09-06T02:26:44.082Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
@@ -238,6 +245,72 @@
   "learning": {
     "failure_patterns": [
       {
+        "at": "2026-09-06T05:19:00.897Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T05:07:50.133Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:37:35.776Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:29:14.131Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:25:34.654Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:22:07.104Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
         "at": "2026-09-06T04:19:15.650Z",
         "reasons": [
           "verify_subagent_missing",
@@ -390,72 +463,6 @@
           "verify_subagent_missing"
         ],
         "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-09-05T07:13:04.229Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-09-05T06:57:43.190Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-08-14T02:39:13.221Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-08-14T02:35:29.006Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-08-14T02:11:39.788Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-08-14T01:44:10.437Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       }
     ],
     "success_patterns": [
@@ -559,8 +566,8 @@
           "last_used": "2026-08-01T12:22:29.434Z",
           "last_description": "運用文書 4 本の起草"
         },
-        "_total_agent_calls": 33,
-        "_last_agent_call_at": "2026-09-06T02:31:47.908Z",
+        "_total_agent_calls": 36,
+        "_last_agent_call_at": "2026-09-06T04:37:25.513Z",
         "Explore": {
           "call_count": 6,
           "last_used": "2026-07-20T04:13:58.462Z",
@@ -582,9 +589,9 @@
           "last_description": "Frontend検証スイート実行"
         },
         "dev-api": {
-          "call_count": 4,
-          "last_used": "2026-09-06T02:31:47.908Z",
-          "last_description": "証拠・eDiscovery管理を実装"
+          "call_count": 7,
+          "last_used": "2026-09-06T04:37:25.513Z",
+          "last_description": "独禁法・共通基盤・紛争軽微指摘を修正"
         }
       }
     }
@@ -4487,6 +4494,138 @@
         "frontend/lib/api/endpoints.ts",
         "frontend/lib/api/query-keys.ts",
         "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:22:07.085Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:22:07.103Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:25:34.636Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:25:34.654Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:29:14.113Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:29:14.131Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:37:35.758Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:37:35.776Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T05:07:49.950Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T05:07:50.133Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T05:19:00.215Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T05:19:00.896Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
       ],
       "truncated": false
     }
