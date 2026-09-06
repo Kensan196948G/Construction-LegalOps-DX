@@ -20,7 +20,7 @@ async def _seed_user_and_contract(db_session) -> tuple[int, int]:
     await db_session.flush()
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="作成者",
         role="reviewer",
         department_id=dept.id,
@@ -90,14 +90,23 @@ async def test_create_check_missing_contract_raises(db_session) -> None:
 
 
 async def test_list_checks_filters_by_type(db_session) -> None:
-    uid, _ = await _seed_user_and_contract(db_session)
+    uid, cid = await _seed_user_and_contract(db_session)
     await antitrust_service.create_check(
-        db_session, actor_id=uid, check_type="general", subject="A", context={}
+        db_session, actor_id=uid, check_type="general", subject="A", context={}, contract_id=cid
     )
     await antitrust_service.create_check(
-        db_session, actor_id=uid, check_type="bid_rigging", subject="B", context={}
+        db_session,
+        actor_id=uid,
+        check_type="bid_rigging",
+        subject="B",
+        context={},
+        contract_id=cid,
     )
-    items, total = await antitrust_service.list_checks(db_session, check_type="bid_rigging")
+    # 共有 PG テスト DB には他テストが作った bid_rigging チェックも含まれうるため、
+    # 本テストが作成した contract_id で絞り込んで検証する。
+    items, total = await antitrust_service.list_checks(
+        db_session, check_type="bid_rigging", contract_id=cid
+    )
     assert total == 1
     assert items[0].check_type == "bid_rigging"
 
@@ -316,6 +325,10 @@ async def test_list_trainings_filters_by_category(db_session) -> None:
         user_id=uid,
         category="security",
     )
-    items, total = await antitrust_service.list_trainings(db_session, category="antitrust")
+    # 共有 PG テスト DB には他テストが作った antitrust カテゴリの研修履歴も
+    # 含まれうるため、本テストが作成した user_id で絞り込んで検証する。
+    items, total = await antitrust_service.list_trainings(
+        db_session, category="antitrust", user_id=uid
+    )
     assert total == 1
     assert items[0].category == "antitrust"

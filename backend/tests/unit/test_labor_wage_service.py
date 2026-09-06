@@ -19,7 +19,7 @@ async def _seed_user(db_session) -> int:
     await db_session.flush()
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="作成者",
         role="reviewer",
         department_id=dept.id,
@@ -116,10 +116,13 @@ async def test_validation_and_list(db_session) -> None:
     with pytest.raises(ValidationError):
         await labor_wage_service.discrepancy(db_session, work_type="土木", quote_day_jpy=-1)
 
+    # 共有 PG テスト DB には他テストが作った「土木・全国基準」も含まれうるため、
+    # シード前後の差分で検証する（work_type/prefecture だけでは一意に絞れない）。
+    _, total_before = await labor_wage_service.list_standards(db_session, work_type="土木")
     await _seed_standards(db_session, uid)
-    _, total = await labor_wage_service.list_standards(db_session, work_type="土木")
-    assert total == 2
+    _, total_after = await labor_wage_service.list_standards(db_session, work_type="土木")
+    assert total_after - total_before == 2
     rows_asof, _ = await labor_wage_service.list_standards(
         db_session, work_type="土木", as_of=date(2026, 1, 15)
     )
-    assert len(rows_asof) == 1
+    assert any(row.amount_jpy == 20_000 for row in rows_asof)

@@ -2,101 +2,42 @@
 
 This conftest provides:
 
-* session-scoped ``event_loop`` (so async fixtures share a loop)
-* ``db_engine`` — async SQLAlchemy engine.
-    Default: ``sqlite+aiosqlite:///:memory:``.
-    Set ``PYTEST_USE_POSTGRES=1`` to use the URL from ``PYTEST_DATABASE_URL``
-    (or fall back to the production-style asyncpg URL).
+* ``db_engine`` — session-scoped async SQLAlchemy engine against the local
+    PostgreSQL test database (see ``app.db.test_session.resolve_test_db_url``).
+    Schema is dropped and recreated once per test session.
 * ``db_session`` — wraps each test in a transaction, rolling back on exit.
 * ``client`` — ``httpx.AsyncClient(transport=ASGITransport(app=app))``
 * ``auth_headers_*`` — Bearer headers for admin / legal / site personas
-* ``factory_session`` — SQLAlchemy *sync* session for factory-boy
 
-The fixtures degrade gracefully if upstream modules (``app.db.session``,
-``app.main`` …) are not yet wired — collection should still succeed in
-early Loops.
+Tests run exclusively against PostgreSQL (the same engine as production) —
+there is no SQLite fallback. See ``app/db/test_session.py`` for why.
 """
 
 from __future__ import annotations
 
-import os
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from typing import Any
 
 import pytest
 import pytest_asyncio
 
 # ---------------------------------------------------------------------------
-# Database URL helpers
-# ---------------------------------------------------------------------------
-
-
-def _resolve_db_url() -> str:
-    if os.getenv("PYTEST_USE_POSTGRES") == "1":
-        return os.getenv(
-            "PYTEST_DATABASE_URL",
-            "postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test",
-        )
-    return "sqlite+aiosqlite:///:memory:"
-
-
-def _sync_sqlite_url() -> str:
-    """Synchronous URL used by factory-boy sessions when running on SQLite."""
-    return "sqlite:///:memory:"
-
-
-# ---------------------------------------------------------------------------
 # DB engine / session (async)
 # ---------------------------------------------------------------------------
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(scope="session")
 async def db_engine() -> AsyncGenerator[Any, None]:
-    """Create an async engine and (best-effort) the schema.
+    """Session-scoped engine with the schema created once for the whole run.
 
-    If ``app.db.base.Base`` is not importable yet (early Loops), we still
-    yield a usable engine so that integration tests can be collected and
-    skipped explicitly.
+    Function-scoped drop/create against real PostgreSQL would be far too slow
+    across 1000+ tests, so the schema is bootstrapped once here; each test
+    gets isolation via ``db_session``'s per-test transaction rollback instead.
     """
-    try:
-        from sqlalchemy.ext.asyncio import create_async_engine
-    except ImportError:  # pragma: no cover
-        pytest.skip("SQLAlchemy async support unavailable")
+    from app.db.test_session import create_all_for_tests, create_test_engine
 
-    url = _resolve_db_url()
-    # PostgreSQL では NullPool にして、テストごとのイベントループで
-    # 接続が跨らないようにする（cross-loop エラー防止）。
-    if url.startswith("postgresql"):
-        from sqlalchemy.pool import NullPool
-
-        engine = create_async_engine(url, future=True, echo=False, poolclass=NullPool)
-    else:
-        engine = create_async_engine(url, future=True, echo=False)
-
-    # Best-effort schema bootstrap. Don't fail collection if metadata is
-    # not importable yet.
-    #
-    # NOTE: We deliberately go through ``create_all_for_tests`` (not a bare
-    # ``Base.metadata.create_all``) because several models declare
-    # PostgreSQL-flavoured ``server_default`` literals such as
-    # ``"'{}'::jsonb"``. SQLAlchemy 2.x renders a *plain string*
-    # ``server_default`` by quoting it verbatim, which turns that value into
-    # ``'''{}''::jsonb'`` — invalid input for a ``json``/``jsonb`` column on
-    # real PostgreSQL (``asyncpg.exceptions.InvalidTextRepresentationError``).
-    # ``create_all_for_tests`` wraps such string defaults in ``text()`` for
-    # PostgreSQL (and strips the ``::json`` cast for SQLite) so schema
-    # bootstrap succeeds under both ``PYTEST_USE_POSTGRES=1`` and the default
-    # SQLite engine. Without this, ``create_all`` fails for the *entire*
-    # schema and the exception below silently swallows it, leaving every
-    # ``db_session``-based unit test failing with "relation ... does not
-    # exist" against a fresh PostgreSQL database.
-    try:
-        from app.db.test_session import create_all_for_tests
-
-        await create_all_for_tests(engine)
-    except Exception:
-        pass
-
+    engine = create_test_engine()
+    await create_all_for_tests(engine)
     try:
         yield engine
     finally:
@@ -119,41 +60,6 @@ async def db_session(db_engine: Any) -> AsyncGenerator[Any, None]:
         if trans.is_active:
             await trans.rollback()
         await connection.close()
-
-
-# ---------------------------------------------------------------------------
-# factory-boy uses a sync session
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture()
-def factory_session() -> Generator[Any, None, None]:
-    """Sync SQLAlchemy session for factory-boy ``sqlalchemy_session``.
-
-    Uses an isolated in-memory SQLite DB so factory output does not require
-    the production schema to be migrated.
-    """
-    try:
-        from sqlalchemy import create_engine
-        from sqlalchemy.orm import sessionmaker
-    except ImportError:  # pragma: no cover
-        pytest.skip("SQLAlchemy unavailable")
-
-    engine = create_engine(_sync_sqlite_url(), future=True)
-    try:
-        from app.db.base import Base  # type: ignore
-
-        Base.metadata.create_all(engine)
-    except Exception:
-        pass
-
-    Session = sessionmaker(bind=engine, expire_on_commit=False, future=True)
-    session = Session()
-    try:
-        yield session
-    finally:
-        session.close()
-        engine.dispose()
 
 
 # ---------------------------------------------------------------------------

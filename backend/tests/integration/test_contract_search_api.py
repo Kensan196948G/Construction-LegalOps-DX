@@ -12,9 +12,14 @@ SEARCH = "/api/v1/search"
 
 
 async def _create_contract_with_text(
-    client: Any, headers: dict[str, str], db_session: Any
+    client: Any, headers: dict[str, str], api_db_session: Any
 ) -> int:
-    """API で契約作成し、条項・文書本文を DB 経由で追加する."""
+    """API で契約作成し、条項・文書本文を DB 経由で追加する.
+
+    ``api_db_session`` は ``client`` と同じ ``test_engine`` に直接 bind
+    されたセッション（``db_session`` はロールバックされるため、別コネクション
+    の ``client`` からは見えない）。
+    """
     r = await client.post(
         CONTRACT_API,
         json={
@@ -28,7 +33,7 @@ async def _create_contract_with_text(
     )
     assert r.status_code in (200, 201), r.text
     cid = int(r.json()["id"])
-    db_session.add(
+    api_db_session.add(
         Clause(
             contract_id=cid,
             seq=1,
@@ -37,7 +42,7 @@ async def _create_contract_with_text(
             risk_level="high",
         )
     )
-    db_session.add(
+    api_db_session.add(
         ContractDocument(
             contract_id=cid,
             doc_type="contract",
@@ -47,16 +52,16 @@ async def _create_contract_with_text(
             version=1,
         )
     )
-    await db_session.flush()
-    await db_session.commit()
+    await api_db_session.flush()
+    await api_db_session.commit()
     return cid
 
 
 async def test_search_all_scopes_and_filters(
-    client: Any, auth_headers_legal: dict[str, str], db_session: Any
+    client: Any, auth_headers_legal: dict[str, str], api_db_session: Any
 ) -> None:
     """契約・条項・文書に跨る検索・contract_id 絞り込み・スコア降順."""
-    cid = await _create_contract_with_text(client, auth_headers_legal, db_session)
+    cid = await _create_contract_with_text(client, auth_headers_legal, api_db_session)
 
     r_all = await client.get(
         SEARCH, params={"q": "損害", "scope": "all"}, headers=auth_headers_legal

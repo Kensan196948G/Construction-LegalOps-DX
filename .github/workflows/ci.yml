@@ -23,50 +23,14 @@ env:
 jobs:
   # ============================================================
   # Backend: Python / FastAPI
-  #  - Loop 4 以降: ruff / mypy / pytest をハードフェイル化
-  #  - pytest は 48 unit テストを全 PASS させること
+  #  - ruff / mypy / pytest をハードフェイル化
+  #  - pytest は unit + integration 全体を実 PostgreSQL 16 で実行する
+  #    （本番と同じエンジンでテストし、SQLite 代替では検出できない
+  #    dialect 固有バグ — RLS ポリシー・server_default キャスト・
+  #    JSONB/ARRAY 列 — を継続的に検出する）
   # ============================================================
   backend:
-    name: Backend (pytest / ruff / mypy)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-          pip install -e ".[dev]"
-
-      - name: Ruff (lint) — HARD
-        run: ruff check .
-
-      - name: Mypy (type check) — HARD
-        run: mypy app
-
-      - name: Pytest — HARD (48 unit tests must pass)
-        env:
-          APP_ENV: test
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: pytest -q --disable-warnings
-
-  # ============================================================
-  # Backend: Integration tests against real PostgreSQL 16
-  # (P1 HANDOVER.md item — ensures ARRAY/JSONB/pgvector compatibility)
-  # ============================================================
-  backend-pg:
-    name: Backend (pytest / PostgreSQL 16)
+    name: Backend (pytest / ruff / mypy / PostgreSQL 16)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -98,17 +62,23 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
           pip install -e ".[dev]"
 
-      - name: Pytest against PostgreSQL (integration tests)
+      - name: Ruff (lint) — HARD
+        run: ruff check .
+
+      - name: Mypy (type check) — HARD
+        run: mypy app
+
+      - name: Pytest against PostgreSQL — HARD
         env:
           APP_ENV: test
           PYTHONDONTWRITEBYTECODE: "1"
-          PYTEST_USE_POSTGRES: "1"
           PYTEST_DATABASE_URL: postgresql+asyncpg://legalops:legalops_dev@localhost:5432/legalops_test
           JWT_SECRET: ci-test-secret-key-not-for-production
-        run: |
-          pytest tests/integration/ -q --disable-warnings --tb=short
+        run: pytest -q --disable-warnings
 
   # ============================================================
   # Backend: Alembic migration chain against real PostgreSQL 16

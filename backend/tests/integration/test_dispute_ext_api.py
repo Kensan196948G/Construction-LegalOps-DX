@@ -26,8 +26,8 @@ from app.models.dispute import Dispute
 
 def _fake_user(role: str = "admin") -> CurrentUser:
     return CurrentUser(
-        id=f"{role}-user@test.local",
-        email=f"{role}-user@test.local",
+        id=f"{role}-user@test.example",
+        email=f"{role}-user@test.example",
         role=role,
         department_ids=(),
         raw_claims={},

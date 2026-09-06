@@ -25,7 +25,7 @@ from app.deps import CurrentUser
 def _current_user(*, role: str, db_id: int | None) -> CurrentUser:
     return CurrentUser(
         id=uuid.uuid4(),
-        email=f"{role}@test.local",
+        email=f"{role}@test.example",
         role=role,
         department_ids=(),
         raw_claims={},
@@ -84,7 +84,7 @@ async def _make_user(db_session: Any, *, role: str, name: str) -> int:
     await db_session.flush()
     user = User(
         entra_oid=uuid.uuid4(),
-        email=f"{uuid.uuid4().hex[:10]}@test.local",
+        email=f"{uuid.uuid4().hex[:10]}@test.example",
         display_name=name,
         role=role,
         department_id=dept.id,

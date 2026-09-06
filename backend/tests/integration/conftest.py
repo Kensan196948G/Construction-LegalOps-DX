@@ -1,21 +1,37 @@
 """Integration-test fixtures.
 
-This conftest only fires for tests under ``tests/integration/``. It is
-intentionally scoped narrowly so that unit tests in ``tests/unit/``
-keep their lightweight in-memory fixtures from the parent
-``tests/conftest.py``.
+This conftest only fires for tests under ``tests/integration/``.
 
 Key fixtures
 ------------
 
-* ``test_engine`` (session) — SQLite async engine with the full schema
-  bootstrapped (PG types fall back via :mod:`app.db.test_session`).
-* ``db_session`` (function, override) — async session bound to a fresh
-  connection per test.
+* ``test_engine`` (session) — thin alias for the parent ``tests/conftest.py``
+  ``db_engine`` fixture (same PostgreSQL engine, same schema bootstrap run
+  once per test session). Kept as a separate name since many integration
+  tests request ``test_engine`` explicitly; aliasing avoids a second
+  ``drop_all``/``create_all`` pass racing the unit-test schema.
+* ``db_session`` (function, override) — transaction-isolated session bound
+  to ``test_engine``, rolled back on teardown (same contract as the parent
+  ``db_session``).
 * ``client`` (function, override) — ASGI ``httpx.AsyncClient`` with the
   application's ``get_db`` dependency rebound to the test session and
   the lifespan handler disabled (the lifespan would otherwise dispose
   the *production* engine on shutdown).
+* ``api_db_session`` (function) — bound directly to ``test_engine`` (same
+  bind target as ``client``'s own session), for tests that need to seed
+  rows via the ORM and then have ``client`` read them back over HTTP.
+  ``db_session`` cannot be used for that: its rows live inside a
+  connection-level transaction that ``client``'s separate connection
+  never sees, even after ``session.commit()``.
+
+``client`` and ``api_db_session`` commit directly to the shared
+``test_engine`` (unlike ``db_session``, which rolls back on teardown), so
+rows they commit remain visible to later tests in the same session.
+Per-test ``TRUNCATE`` of the full schema was measured (~2.5s/test — a
+~2.7x slowdown across the ~260 integration tests, from fsync cost on
+~60 tables) and rejected as disproportionate; affected tests instead
+scope assertions to their own rows (filter by the id they created, or
+compare before/after counts) — see individual test files.
 """
 
 from __future__ import annotations
@@ -27,21 +43,14 @@ import pytest
 import pytest_asyncio
 
 # ---------------------------------------------------------------------------
-# Engine / schema bootstrap
+# Engine (aliases the parent conftest's session-scoped engine)
 # ---------------------------------------------------------------------------
 
 
 @pytest_asyncio.fixture(scope="session")
-async def test_engine() -> AsyncGenerator[Any, None]:
-    """Session-scoped async engine with the test schema applied."""
-    from app.db.test_session import create_all_for_tests, create_test_engine
-
-    engine = create_test_engine()
-    try:
-        await create_all_for_tests(engine)
-        yield engine
-    finally:
-        await engine.dispose()
+async def test_engine(db_engine: Any) -> AsyncGenerator[Any, None]:
+    """Alias for the shared session-scoped PostgreSQL engine."""
+    yield db_engine
 
 
 # ---------------------------------------------------------------------------
@@ -51,19 +60,39 @@ async def test_engine() -> AsyncGenerator[Any, None]:
 
 @pytest_asyncio.fixture()
 async def db_session(test_engine: Any) -> AsyncGenerator[Any, None]:
-    """Override the parent ``db_session`` fixture with the SQLite engine.
+    """Override the parent ``db_session`` fixture, bound to ``test_engine``.
 
-    Each test gets its own session. We do **not** wrap in a SAVEPOINT
-    rollback here because SQLite + StaticPool keeps a single shared
-    connection — rolling back would also revert schema in some edge
-    cases. Instead we let the engine's schema persist for the session
-    and rely on test isolation via unique-ish data.
+    Same transaction-rollback contract as the parent fixture — kept as a
+    separate override only because integration tests request ``test_engine``
+    (not ``db_engine``) as the bind target.
     """
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-    Session = async_sessionmaker(
-        bind=test_engine, expire_on_commit=False, class_=AsyncSession
-    )
+    connection = await test_engine.connect()
+    trans = await connection.begin()
+    Session = async_sessionmaker(bind=connection, expire_on_commit=False, class_=AsyncSession)
+    session = Session()
+    try:
+        yield session
+    finally:
+        await session.close()
+        if trans.is_active:
+            await trans.rollback()
+        await connection.close()
+
+
+@pytest_asyncio.fixture()
+async def api_db_session(test_engine: Any) -> AsyncGenerator[Any, None]:
+    """Session bound directly to ``test_engine``, visible to ``client``.
+
+    Use this (not ``db_session``) to seed rows via the ORM that a
+    subsequent ``client`` HTTP call must read back — ``client`` opens its
+    own connection to ``test_engine`` and cannot see rows still held
+    inside ``db_session``'s rolled-back-on-teardown transaction.
+    """
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+    Session = async_sessionmaker(bind=test_engine, expire_on_commit=False, class_=AsyncSession)
     session = Session()
     try:
         yield session
@@ -98,9 +127,7 @@ async def client(test_engine: Any) -> AsyncGenerator[Any, None]:
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"get_db not importable: {exc}")
 
-    Session = async_sessionmaker(
-        bind=test_engine, expire_on_commit=False, class_=AsyncSession
-    )
+    Session = async_sessionmaker(bind=test_engine, expire_on_commit=False, class_=AsyncSession)
 
     async def _override_get_db() -> AsyncIterator[AsyncSession]:
         session = Session()

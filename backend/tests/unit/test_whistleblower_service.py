@@ -23,7 +23,7 @@ async def _make_user(db_session, *, role: str, name: str = "user") -> int:
     await db_session.flush()
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name=name,
         role=role,
         department_id=dept.id,

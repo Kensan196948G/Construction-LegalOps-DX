@@ -4,11 +4,11 @@ Two layers are exercised here, each with a deliberately different DB-isolation
 strategy (see ``tests/integration/conftest.py`` for why the shared engine has no
 rollback):
 
-* **Service / DB layer** — runs against a *fresh, function-scoped* SQLite engine
-  (each :func:`create_test_engine` call yields its own ``:memory:`` database), so
+* **Service / DB layer** — runs against the shared PostgreSQL ``test_engine``
+  through a *transaction-isolated* connection (see ``fresh_session`` below), so
   encrypt-at-rest persistence, ``upsert`` key semantics, ``get_view`` synthesis,
   the fail-closed ``get_active_provider_key`` gate, and the Claude dormancy probe
-  are verified in complete isolation. A fixed Fernet makes encrypt/decrypt
+  are verified without polluting other tests. A fixed Fernet makes encrypt/decrypt
   deterministic, and the Perplexity network path is exercised only via an
   injected ``httpx.MockTransport`` (never a real call).
 
@@ -69,29 +69,30 @@ def _update(
 
 
 @pytest_asyncio.fixture()
-async def fresh_session() -> AsyncGenerator[Any, None]:
-    """A brand-new in-memory SQLite session, isolated from the shared engine.
+async def fresh_session(test_engine: Any) -> AsyncGenerator[Any, None]:
+    """A transaction-isolated session against the shared PostgreSQL engine.
 
-    Each ``create_test_engine()`` call produces its own ``:memory:`` database,
-    so service-layer tests can mutate ``ai_provider_settings`` freely without
-    polluting (or being polluted by) the HTTP-layer tests on ``test_engine``.
+    Wraps a connection in a transaction that is rolled back on teardown (same
+    contract as ``db_session`` in ``tests/integration/conftest.py``), so
+    service-layer tests can mutate ``ai_provider_settings`` freely without
+    polluting (or being polluted by) the HTTP-layer tests that share
+    ``test_engine``. This avoids owning a second engine/schema against the
+    same PostgreSQL database, which would risk dropping tables the shared
+    ``client`` fixture's tests depend on.
     """
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-    from app.db.test_session import DEFAULT_SQLITE_URL, create_all_for_tests, create_test_engine
-
-    # Always use SQLite :memory: for service-layer isolation, regardless of
-    # PYTEST_USE_POSTGRES — PostgreSQL does not support :memory: databases,
-    # and this fixture's isolation contract requires a fresh schema per test.
-    engine = create_test_engine(DEFAULT_SQLITE_URL)
-    await create_all_for_tests(engine)
-    Session = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
+    connection = await test_engine.connect()
+    trans = await connection.begin()
+    Session = async_sessionmaker(bind=connection, expire_on_commit=False, class_=AsyncSession)
     session = Session()
     try:
         yield session
     finally:
         await session.close()
-        await engine.dispose()
+        if trans.is_active:
+            await trans.rollback()
+        await connection.close()
 
 
 # ===========================================================================

@@ -17,7 +17,7 @@ async def _seed_contract(db_session, *, case_category: str | None = None) -> tup
     await db_session.flush()
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="作成者",
         role="drafter",
         department_id=dept.id,
@@ -44,7 +44,7 @@ async def _seed_contract(db_session, *, case_category: str | None = None) -> tup
 async def _seed_user(db_session) -> int:
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="利用者",
         role="viewer",
         is_active=True,

@@ -1,4 +1,4 @@
-"""RLS コンテキスト設定のテスト（SQLite では no-op を検証）."""
+"""RLS コンテキスト設定のテスト（PostgreSQL の SET LOCAL 経由）."""
 
 from __future__ import annotations
 
@@ -8,12 +8,15 @@ from sqlalchemy import text
 from app.services.rls_context import set_rls_context
 
 
-async def test_set_rls_context_sqlite_is_noop(db_session) -> None:
-    """SQLite では何も実行せず例外も出さない."""
+async def test_set_rls_context_sets_session_variables(db_session) -> None:
+    """actor_id/role が PostgreSQL のセッション変数へ反映される."""
     await set_rls_context(db_session, actor_id=1, role="admin")
-    # SQLite ではセッション変数が無いため、クエリ結果は通常どおり
-    result = await db_session.execute(text("SELECT 1 AS v"))
-    assert result.scalar_one() == 1
+    result = await db_session.execute(
+        text("SELECT current_setting('app.actor_id', true), current_setting('app.role', true)")
+    )
+    actor_id, role = result.one()
+    assert actor_id == "1"
+    assert role == "admin"
 
 
 @pytest.mark.parametrize(
