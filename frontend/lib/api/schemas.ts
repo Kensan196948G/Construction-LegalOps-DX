@@ -396,6 +396,185 @@ export const disputeExposureSchema = z.object({
 export type DisputeExposure = z.infer<typeof disputeExposureSchema>;
 
 // ---------------------------------------------------------------------------
+// 紛争・クレーム管理高度化（ロードマップ #97〜#112 / Issue #121）
+// ---------------------------------------------------------------------------
+
+export const disputeDelayEventSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  cause_category: z.enum([
+    "owner_caused",
+    "contractor_caused",
+    "weather",
+    "third_party",
+    "force_majeure",
+    "design_change",
+    "other",
+  ]),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  occurred_from: dateSchema,
+  occurred_to: dateSchema.nullable().optional(),
+  delay_days: z.number().int(),
+  responsible_party: z.string().nullable().optional(),
+  additional_cost_jpy: z.number().int().nullable().optional(),
+  damage_amount_jpy: z.number().int().nullable().optional(),
+  eot_days_requested: z.number().int().nullable().optional(),
+  eot_days_granted: z.number().int().nullable().optional(),
+  eot_status: z.enum(["pending", "approved", "partial", "rejected"]),
+  eot_decided_at: datetimeSchema.nullable().optional(),
+  eot_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeDelayEvent = z.infer<typeof disputeDelayEventSchema>;
+
+export const disputeDelaySummarySchema = z.object({
+  dispute_id: idSchema,
+  by_cause: z
+    .array(
+      z.object({
+        cause_category: z.string(),
+        count: z.number().int(),
+        total_delay_days: z.number().int(),
+        total_additional_cost_jpy: z.number().int(),
+        total_damage_amount_jpy: z.number().int(),
+      }),
+    )
+    .default([]),
+  total_delay_days: z.number().int(),
+  total_additional_cost_jpy: z.number().int(),
+  total_damage_amount_jpy: z.number().int(),
+  total_eot_days_granted: z.number().int(),
+});
+export type DisputeDelaySummary = z.infer<typeof disputeDelaySummarySchema>;
+
+export const disputeClaimNoticeSchema = z.object({
+  dispute_id: idSchema,
+  subject: z.string(),
+  recipient: z.string(),
+  sender: z.string(),
+  notice_date: dateSchema,
+  notice_deadline: dateSchema.nullable().optional(),
+  statute_limitations_date: dateSchema.nullable().optional(),
+  formatted_text: z.string(),
+});
+export type DisputeClaimNotice = z.infer<typeof disputeClaimNoticeSchema>;
+
+export const disputeNoticeDeadlineAutoJudgeSchema = z.object({
+  dispute_id: idSchema,
+  dispute_type: z.string(),
+  event_date: dateSchema,
+  notice_period_days: z.number().int(),
+  notice_deadline: dateSchema,
+  applied: z.boolean(),
+});
+export type DisputeNoticeDeadlineAutoJudge = z.infer<typeof disputeNoticeDeadlineAutoJudgeSchema>;
+
+export const disputeTimeBarAlertSchema = z.object({
+  dispute_id: idSchema,
+  dispute_no: z.string(),
+  title: z.string(),
+  status: z.string(),
+  statute_limitations_date: dateSchema.nullable().optional(),
+  statute_days_remaining: z.number().int().nullable().optional(),
+  notice_deadline: dateSchema.nullable().optional(),
+  notice_days_remaining: z.number().int().nullable().optional(),
+  severity: z.string(),
+});
+export type DisputeTimeBarAlert = z.infer<typeof disputeTimeBarAlertSchema>;
+
+export const disputeEvidenceScoreSchema = z.object({
+  dispute_id: idSchema,
+  score: z.number().int(),
+  required_types: z.array(z.string()).default([]),
+  present_types: z.array(z.string()).default([]),
+  missing_types: z.array(z.string()).default([]),
+  unpreserved_types: z.array(z.string()).default([]),
+  recommendations: z.array(z.string()).default([]),
+});
+export type DisputeEvidenceScore = z.infer<typeof disputeEvidenceScoreSchema>;
+
+export const disputeChronologyEntrySchema = z.object({
+  source_type: z.string(),
+  occurred_at: datetimeSchema,
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  ref_id: idSchema,
+  estimated: z.boolean().default(false),
+});
+export type DisputeChronologyEntry = z.infer<typeof disputeChronologyEntrySchema>;
+
+export const disputeArgumentPositionSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  issue_no: z.number().int(),
+  issue_title: z.string(),
+  party: z.enum(["ours", "counterparty"]),
+  stance: z.enum(["claim", "rebuttal", "counter_rebuttal"]),
+  content: z.string(),
+  evidence_refs: z.array(z.number().int()).default([]),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeArgumentPosition = z.infer<typeof disputeArgumentPositionSchema>;
+
+export const disputeSettlementOptionSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  option_no: z.number().int(),
+  title: z.string(),
+  settlement_amount_jpy: z.number().int().nullable().optional(),
+  payment_terms: z.string().nullable().optional(),
+  pros: z.string().nullable().optional(),
+  cons: z.string().nullable().optional(),
+  probability_score: z.number().int().nullable().optional(),
+  expected_value_jpy: z.number().int().nullable().optional(),
+  status: z.enum(["draft", "proposed", "accepted", "rejected", "withdrawn"]),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeSettlementOption = z.infer<typeof disputeSettlementOptionSchema>;
+
+export const disputeSettlementCompareItemSchema = z.object({
+  id: idSchema,
+  option_no: z.number().int(),
+  title: z.string(),
+  settlement_amount_jpy: z.number().int().nullable().optional(),
+  probability_score: z.number().int().nullable().optional(),
+  expected_value_jpy: z.number().int().nullable().optional(),
+  status: z.string(),
+  recommended: z.boolean(),
+});
+export type DisputeSettlementCompareItem = z.infer<typeof disputeSettlementCompareItemSchema>;
+
+export const disputeProceedingStageSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  stage: z.enum([
+    "negotiation",
+    "mediation",
+    "arbitration_filed",
+    "arbitration_hearing",
+    "arbitration_award",
+    "lawsuit_filed",
+    "first_instance",
+    "appeal",
+    "final_judgment",
+    "settled",
+  ]),
+  status: z.enum(["active", "completed"]),
+  started_at: dateSchema,
+  ended_at: dateSchema.nullable().optional(),
+  forum: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeProceedingStage = z.infer<typeof disputeProceedingStageSchema>;
+
+// ---------------------------------------------------------------------------
 // 支払・出来高・検収コンプライアンス
 // ---------------------------------------------------------------------------
 

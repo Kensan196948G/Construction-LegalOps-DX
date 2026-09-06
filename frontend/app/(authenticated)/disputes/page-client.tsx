@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AlertTriangle, RefreshCw, Search, Swords } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -353,9 +354,14 @@ export default function DisputesPage() {
                       </TableCell>
                       <TableCell className="text-sm">{d.registeredAt}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => void openDetail(d.id)}>
-                          詳細
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => void openDetail(d.id)}>
+                            詳細
+                          </Button>
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={`/disputes/${d.id}`}>拡張管理</Link>
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

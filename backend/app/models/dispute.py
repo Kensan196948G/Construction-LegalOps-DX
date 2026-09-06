@@ -26,6 +26,12 @@ from ._mixins import AuditedByMixin, IntPKMixin, TimestampMixin
 if TYPE_CHECKING:
     from .attachment import Attachment
     from .contract import Contract
+    from .dispute_ext import (
+        DisputeArgumentPosition,
+        DisputeDelayEvent,
+        DisputeProceedingStage,
+        DisputeSettlementOption,
+    )
     from .user import User
 
 
@@ -84,12 +90,35 @@ class Dispute(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
         back_populates="dispute",
         cascade="all, delete-orphan",
     )
+    # ロードマップ #97〜#112（紛争・クレーム管理高度化）の拡張リレーション。
+    # 実体は app.models.dispute_ext に定義する（循環 import 回避のため文字列参照）。
+    delay_events: Mapped[list[DisputeDelayEvent]] = relationship(
+        "DisputeDelayEvent",
+        back_populates="dispute",
+        cascade="all, delete-orphan",
+        order_by="DisputeDelayEvent.occurred_from",
+    )
+    argument_positions: Mapped[list[DisputeArgumentPosition]] = relationship(
+        "DisputeArgumentPosition",
+        back_populates="dispute",
+        cascade="all, delete-orphan",
+    )
+    settlement_options: Mapped[list[DisputeSettlementOption]] = relationship(
+        "DisputeSettlementOption",
+        back_populates="dispute",
+        cascade="all, delete-orphan",
+    )
+    proceeding_stages: Mapped[list[DisputeProceedingStage]] = relationship(
+        "DisputeProceedingStage",
+        back_populates="dispute",
+        cascade="all, delete-orphan",
+        order_by="DisputeProceedingStage.started_at",
+    )
 
     __table_args__ = (
         UniqueConstraint("dispute_no", name="uq_disputes_no"),
         CheckConstraint(
-            "dispute_type IN ('claim', 'defect', 'delay', 'payment', 'labor', "
-            "'accident', 'other')",
+            "dispute_type IN ('claim', 'defect', 'delay', 'payment', 'labor', 'accident', 'other')",
             name="ck_disputes_type",
         ),
         CheckConstraint(
@@ -164,8 +193,7 @@ class DisputeEvidence(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
 
     __table_args__ = (
         CheckConstraint(
-            "evidence_type IN ('contract', 'email', 'photo', 'daily_report', 'minutes', "
-            "'other')",
+            "evidence_type IN ('contract', 'email', 'photo', 'daily_report', 'minutes', 'other')",
             name="ck_dispute_evidence_type",
         ),
         Index("ix_dispute_evidence_dispute", "dispute_id"),

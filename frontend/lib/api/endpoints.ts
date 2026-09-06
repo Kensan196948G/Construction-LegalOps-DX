@@ -44,10 +44,21 @@ import {
   counselLawyerSchema,
   dashboardSummarySchema,
   dashboardTrendsSchema,
+  disputeArgumentPositionSchema,
+  disputeChronologyEntrySchema,
+  disputeClaimNoticeSchema,
+  disputeDelayEventSchema,
+  disputeDelaySummarySchema,
   disputeDetailSchema,
   disputeEvidenceSchema,
+  disputeEvidenceScoreSchema,
   disputeExposureSchema,
+  disputeNoticeDeadlineAutoJudgeSchema,
+  disputeProceedingStageSchema,
   disputeSchema,
+  disputeSettlementCompareItemSchema,
+  disputeSettlementOptionSchema,
+  disputeTimeBarAlertSchema,
   disputeTimelineEventSchema,
   engagementSchema,
   evidenceHitSchema,
@@ -132,7 +143,11 @@ import {
   type ContractCreate,
   type ContractUpdate,
   type Dispute,
+  type DisputeArgumentPosition,
+  type DisputeDelayEvent,
   type DisputeEvidence,
+  type DisputeProceedingStage,
+  type DisputeSettlementOption,
   type IpAssetCreate,
   type IpWatchTargetCreate,
   type Paginated,
@@ -742,6 +757,89 @@ export const disputesApi = {
     id: number | string,
     data: Partial<DisputeEvidence>,
   ) => postParsed(disputeEvidenceSchema, `/disputes/${id}/evidence`, data),
+};
+
+// ===========================================================================
+// 16.1 紛争・クレーム管理高度化（ロードマップ #97〜#112 / Issue #121）
+// ===========================================================================
+
+export const disputesExtApi = {
+  /** #97 クレーム通知書生成（決定論的テンプレート処理・AI 不使用） */
+  generateClaimNotice: (
+    id: number | string,
+    data: { sender_name: string; recipient_name?: string; notice_date?: string; extra_note?: string },
+  ) => postParsed(disputeClaimNoticeSchema, `/disputes/${id}/claim-notice`, data),
+
+  /** #98 通知期限自動判定（既定日数テーブル。apply=true で dispute へ保存） */
+  autoJudgeNoticeDeadline: (
+    id: number | string,
+    data: { event_date: string; override_days?: number; apply?: boolean },
+  ) =>
+    postParsed(
+      disputeNoticeDeadlineAutoJudgeSchema,
+      `/disputes/${id}/notice-deadline/auto-judge`,
+      data,
+    ),
+
+  /** #99/#112 Time Bar 警告一覧（未解決案件横断） */
+  timeBarAlerts: () => getParsed(z.array(disputeTimeBarAlertSchema), "/disputes/alerts/time-bar"),
+
+  /** #99/#112 単一案件の消滅時効・通知期限タイマー */
+  timeBarStatus: (id: number | string) =>
+    getParsed(disputeTimeBarAlertSchema, `/disputes/${id}/time-bar`),
+
+  /** #100〜#104 遅延事象台帳 */
+  listDelayEvents: (id: number | string) =>
+    getParsed(z.array(disputeDelayEventSchema), `/disputes/${id}/delay-events`),
+
+  addDelayEvent: (id: number | string, data: Partial<DisputeDelayEvent>) =>
+    postParsed(disputeDelayEventSchema, `/disputes/${id}/delay-events`, data),
+
+  delaySummary: (id: number | string) =>
+    getParsed(disputeDelaySummarySchema, `/disputes/${id}/delay-events/summary`),
+
+  updateDelayEventEot: (
+    delayEventId: number | string,
+    data: { eot_status: "approved" | "partial" | "rejected"; eot_days_granted?: number; eot_note?: string },
+  ) => patchParsed(disputeDelayEventSchema, `/disputes/delay-events/${delayEventId}/eot`, data),
+
+  /** #105/#106 証拠充足度スコア・証拠不足検知（ルールベース・AI 不使用） */
+  evidenceScore: (id: number | string) =>
+    getParsed(disputeEvidenceScoreSchema, `/disputes/${id}/evidence-score`),
+
+  /** #107/#108 Claim Chronology 自動生成 */
+  chronology: (id: number | string) =>
+    getParsed(z.array(disputeChronologyEntrySchema), `/disputes/${id}/chronology`),
+
+  /** #109 主張・反論マトリクス */
+  listArguments: (id: number | string) =>
+    getParsed(z.array(disputeArgumentPositionSchema), `/disputes/${id}/arguments`),
+
+  addArgument: (id: number | string, data: Partial<DisputeArgumentPosition>) =>
+    postParsed(disputeArgumentPositionSchema, `/disputes/${id}/arguments`, data),
+
+  /** #110 和解案比較 */
+  listSettlementOptions: (id: number | string) =>
+    getParsed(z.array(disputeSettlementOptionSchema), `/disputes/${id}/settlement-options`),
+
+  addSettlementOption: (id: number | string, data: Partial<DisputeSettlementOption>) =>
+    postParsed(disputeSettlementOptionSchema, `/disputes/${id}/settlement-options`, data),
+
+  compareSettlementOptions: (id: number | string) =>
+    getParsed(
+      z.array(disputeSettlementCompareItemSchema),
+      `/disputes/${id}/settlement-options/compare`,
+    ),
+
+  updateSettlementOption: (optionId: number | string, data: Partial<DisputeSettlementOption>) =>
+    patchParsed(disputeSettlementOptionSchema, `/disputes/settlement-options/${optionId}`, data),
+
+  /** #111 訴訟・ADR ステージ管理 */
+  listStages: (id: number | string) =>
+    getParsed(z.array(disputeProceedingStageSchema), `/disputes/${id}/stages`),
+
+  addStage: (id: number | string, data: Partial<DisputeProceedingStage>) =>
+    postParsed(disputeProceedingStageSchema, `/disputes/${id}/stages`, data),
 };
 
 // ===========================================================================
@@ -1867,6 +1965,7 @@ export const api = {
   changeOrders: changeOrdersApi,
   partners: partnersApi,
   disputes: disputesApi,
+  disputesExt: disputesExtApi,
   payments: paymentComplianceApi,
   governance: governanceApi,
   legalAi: legalAiApi,
