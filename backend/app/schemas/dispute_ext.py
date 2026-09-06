@@ -214,15 +214,15 @@ class DisputeSettlementOptionCreate(BaseModel):
 class DisputeSettlementOptionUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=256)
     settlement_amount_jpy: int | None = Field(default=None, ge=0)
-    payment_terms: str | None = None
-    pros: str | None = None
-    cons: str | None = None
+    payment_terms: str | None = Field(default=None, max_length=4000)
+    pros: str | None = Field(default=None, max_length=4000)
+    cons: str | None = Field(default=None, max_length=4000)
     probability_score: int | None = Field(default=None, ge=0, le=100)
     status: Annotated[
         str | None,
         Field(default=None, pattern="^(draft|proposed|accepted|rejected|withdrawn)$"),
     ] = None
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=4000)
 
 
 class DisputeSettlementOptionOut(ORMModel):

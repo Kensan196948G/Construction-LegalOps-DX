@@ -448,6 +448,35 @@ async def test_proceeding_stages_auto_completes_previous_active(db_session) -> N
     assert [s.stage for s in stages] == ["negotiation", "mediation"]
 
 
+async def test_proceeding_stages_retroactive_registration_keeps_ended_at_consistent(
+    db_session,
+) -> None:
+    """新ステージの started_at が既存ステージの started_at より前でも
+    ended_at < started_at という不整合レコードにならないこと（N7 回帰）."""
+    dispute = await _seed_dispute(db_session)
+    first = await svc.add_proceeding_stage(
+        db_session,
+        dispute_id=dispute.id,
+        actor_id=None,
+        data={"stage": "negotiation", "started_at": date(2026, 2, 1)},
+    )
+    assert first.status == "active"
+
+    # 遡及登録: 新ステージの開始日が既存アクティブステージの開始日より前
+    second = await svc.add_proceeding_stage(
+        db_session,
+        dispute_id=dispute.id,
+        actor_id=None,
+        data={"stage": "mediation", "started_at": date(2026, 1, 1)},
+    )
+    await db_session.refresh(first)
+    assert first.status == "completed"
+    # ended_at は既存ステージ自身の started_at を下限にする（2026-01-01 ではなく 2026-02-01）
+    assert first.ended_at == date(2026, 2, 1)
+    assert first.ended_at >= first.started_at
+    assert second.status == "active"
+
+
 async def test_get_dispute_full_not_found(db_session) -> None:
     with pytest.raises(NotFoundError):
         await svc.get_dispute_full(db_session, dispute_id=999_999)
