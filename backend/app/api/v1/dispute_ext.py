@@ -87,7 +87,9 @@ async def generate_claim_notice(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> DisputeClaimNoticeOut:
-    dispute = await dispute_ext_service.get_dispute_full(session, dispute_id=dispute_id)
+    dispute = await dispute_ext_service.get_dispute_full(
+        session, dispute_id=dispute_id, viewer=current_user
+    )
     result = dispute_ext_service.generate_claim_notice(
         dispute,
         sender_name=body.sender_name,
@@ -161,9 +163,11 @@ async def list_time_bar_alerts(
 async def get_time_bar_status(
     dispute_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> DisputeTimeBarAlertOut:
-    dispute = await dispute_ext_service.get_dispute_full(session, dispute_id=dispute_id)
+    dispute = await dispute_ext_service.get_dispute_full(
+        session, dispute_id=dispute_id, viewer=current_user
+    )
     result = dispute_ext_service.dispute_time_bar_status(dispute)
     return DisputeTimeBarAlertOut(**{**result, "severity": result["severity"] or "ok"})
 
@@ -266,9 +270,11 @@ async def update_delay_event_eot(
 async def evidence_score(
     dispute_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> DisputeEvidenceScoreOut:
-    dispute = await dispute_ext_service.get_dispute_full(session, dispute_id=dispute_id)
+    dispute = await dispute_ext_service.get_dispute_full(
+        session, dispute_id=dispute_id, viewer=current_user
+    )
     result = dispute_ext_service.evidence_sufficiency_score(dispute)
     return DisputeEvidenceScoreOut(**result)
 
@@ -282,9 +288,11 @@ async def evidence_score(
 async def chronology(
     dispute_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> list[DisputeChronologyEntryOut]:
-    dispute = await dispute_ext_service.get_dispute_full(session, dispute_id=dispute_id)
+    dispute = await dispute_ext_service.get_dispute_full(
+        session, dispute_id=dispute_id, viewer=current_user
+    )
     entries = dispute_ext_service.build_chronology(dispute)
     return [DisputeChronologyEntryOut(**e) for e in entries]
 

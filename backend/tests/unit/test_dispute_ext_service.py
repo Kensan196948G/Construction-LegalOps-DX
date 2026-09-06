@@ -8,9 +8,19 @@ from uuid import uuid4
 import pytest
 
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.deps import CurrentUser
 from app.models.dispute import Dispute, DisputeEvidence, DisputeTimelineEvent
 from app.models.dispute_ext import DisputeDelayEvent
 from app.services import dispute_ext_service as svc
+
+_ADMIN_VIEWER = CurrentUser(
+    id="admin-tester",
+    email="admin-tester@example.com",
+    role="admin",
+    department_ids=(),
+    raw_claims={},
+    db_id=1,
+)
 
 
 async def _seed_dispute(db_session, **overrides) -> Dispute:
@@ -479,4 +489,4 @@ async def test_proceeding_stages_retroactive_registration_keeps_ended_at_consist
 
 async def test_get_dispute_full_not_found(db_session) -> None:
     with pytest.raises(NotFoundError):
-        await svc.get_dispute_full(db_session, dispute_id=999_999)
+        await svc.get_dispute_full(db_session, dispute_id=999_999, viewer=_ADMIN_VIEWER)
