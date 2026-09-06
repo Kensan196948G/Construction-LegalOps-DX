@@ -66,7 +66,14 @@ import {
   disputeTimeBarAlertSchema,
   disputeTimelineEventSchema,
   engagementSchema,
+  evidenceCreateSchema,
+  evidenceCustodyEventSchema,
+  evidenceExportBundleSchema,
   evidenceHitSchema,
+  evidenceHoldReleaseApprovalSchema,
+  evidenceSchema,
+  evidenceTimelineItemSchema,
+  evidenceViewHistoryItemSchema,
   healthSchema,
   knowledgeArticleSchema,
   laborWageDiscrepancySchema,
@@ -2233,6 +2240,138 @@ export const whistleblowerApi = {
     ),
 };
 
+// ===========================================================================
+// 30. 証拠・eDiscovery 管理 (Phase 3 §5.17 / ロードマップ #217-230 / /evidence)
+// ===========================================================================
+
+export const evidenceApi = {
+  /** #217 証拠一覧 */
+  list: (params?: {
+    matter_id?: number | string;
+    contract_id?: number | string;
+    relevance?: string;
+    is_duplicate?: boolean;
+    source_type?: string;
+    page?: number;
+    size?: number;
+  }) => getParsed(paginatedSchema(evidenceSchema), "/evidence", { params: buildParams(params) }),
+
+  /** #217/#218/#219 証拠登録（file_content_base64 または checksum_sha256 が必須） */
+  create: (
+    data: {
+      title: string;
+      description?: string | null;
+      source_type?: string;
+      matter_id?: number | string | null;
+      contract_id?: number | string | null;
+      filename?: string | null;
+      mime_type?: string | null;
+      storage?: string;
+      storage_ref?: string | null;
+      file_content_base64?: string | null;
+      checksum_sha256?: string | null;
+      collected_by_name?: string | null;
+      collected_at?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      evidenceSchema,
+      "/evidence",
+      evidenceCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** #226 メール証拠取込（.eml） */
+  emailIngest: (
+    data: {
+      raw_eml: string;
+      matter_id?: number | string | null;
+      contract_id?: number | string | null;
+      collected_by_name?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(evidenceSchema, "/evidence/email-ingest", data, withIdempotencyKey({}, opts?.idempotencyKey)),
+
+  /** #222 証拠詳細（閲覧履歴に記録される） */
+  get: (id: number | string) => getParsed(apiResponse(evidenceSchema), `/evidence/${id}`),
+
+  /** #225 重複ファイル検出 */
+  duplicates: (id: number | string) =>
+    getParsed(z.array(evidenceSchema), `/evidence/${id}/duplicates`),
+
+  /** #223 証拠タイムライン */
+  timeline: (id: number | string) =>
+    getParsed(z.array(evidenceTimelineItemSchema), `/evidence/${id}/timeline`),
+
+  /** #222 証拠閲覧履歴 */
+  viewHistory: (id: number | string, params?: { page?: number; size?: number }) =>
+    getParsed(z.array(evidenceViewHistoryItemSchema), `/evidence/${id}/view-history`, {
+      params: buildParams(params),
+    }),
+
+  /** #224 証拠 Export（ハッシュ整合性検証結果を含む） */
+  export: (id: number | string) =>
+    getParsed(apiResponse(evidenceExportBundleSchema), `/evidence/${id}/export`),
+
+  /** #220 Chain of Custody 一覧 */
+  custody: (id: number | string) =>
+    getParsed(z.array(evidenceCustodyEventSchema), `/evidence/${id}/custody`),
+
+  /** #220/#221 Chain of Custody 追記 */
+  addCustodyEvent: (
+    id: number | string,
+    data: {
+      action: string;
+      actor_name?: string | null;
+      from_custodian?: string | null;
+      to_custodian?: string | null;
+      notes?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      evidenceCustodyEventSchema,
+      `/evidence/${id}/custody`,
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 既存 Legal Hold の証拠への紐付け */
+  linkLegalHold: (id: number | string, legalHoldId: number | string) =>
+    postParsed(evidenceSchema, `/evidence/${id}/legal-hold`, { legal_hold_id: legalHoldId }),
+
+  /** #230 Legal Hold 解除申請 */
+  requestHoldRelease: (
+    data: { legal_hold_id: number | string; reason: string; evidence_id?: number | string | null },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      evidenceHoldReleaseApprovalSchema,
+      "/evidence/hold-release-requests",
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** #230 Legal Hold 解除申請一覧 */
+  holdReleaseRequests: (params?: { legal_hold_id?: number | string; status?: string }) =>
+    getParsed(z.array(evidenceHoldReleaseApprovalSchema), "/evidence/hold-release-requests", {
+      params: buildParams(params),
+    }),
+
+  /** #230 Legal Hold 解除申請の決裁（申請者本人による決裁は 403） */
+  decideHoldRelease: (
+    approvalId: number | string,
+    data: { approve: boolean; decision_note?: string | null },
+  ) =>
+    postParsed(
+      evidenceHoldReleaseApprovalSchema,
+      `/evidence/hold-release-requests/${approvalId}/decide`,
+      data,
+    ),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -2279,5 +2418,6 @@ export const api = {
   partnerExt: partnerExtApi,
   antitrust: antitrustApi,
   whistleblower: whistleblowerApi,
+  evidence: evidenceApi,
 } as const;
 

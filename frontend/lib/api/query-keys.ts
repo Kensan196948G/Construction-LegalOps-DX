@@ -260,4 +260,17 @@ export const queryKeys = {
     riskScore: (partnerId: number | string) =>
       ["partner-ext", "risk-score", partnerId] as const,
   },
+
+  evidence: {
+    all: ["evidence"] as const,
+    lists: () => ["evidence", "list"] as const,
+    list: (params?: unknown) => ["evidence", "list", params] as const,
+    detail: (id: number | string) => ["evidence", "detail", id] as const,
+    duplicates: (id: number | string) => ["evidence", "detail", id, "duplicates"] as const,
+    timeline: (id: number | string) => ["evidence", "detail", id, "timeline"] as const,
+    viewHistory: (id: number | string) => ["evidence", "detail", id, "view-history"] as const,
+    custody: (id: number | string) => ["evidence", "detail", id, "custody"] as const,
+    holdReleaseRequests: (params?: unknown) =>
+      ["evidence", "hold-release-requests", params] as const,
+  },
 } as const;

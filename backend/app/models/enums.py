@@ -765,3 +765,44 @@ class WhistleblowerActionStatus(StrEnum):
     COMPLETED = "completed"
     VERIFIED = "verified"
     OVERDUE = "overdue"
+
+
+class EvidenceSourceType(StrEnum):
+    """証拠の入手経路（Phase 3 §5.17・証拠・eDiscovery管理 / Issue #124）."""
+
+    UPLOAD = "upload"  # 手動アップロード
+    EMAIL = "email"  # メール証拠取込（#226）
+    PHOTO = "photo"  # 写真（EXIF 保持対象・#227）
+    SCAN = "scan"  # スキャン文書
+    OTHER = "other"
+
+
+class EvidenceRelevance(StrEnum):
+    """証拠関連性のルールベース分類（#228）."""
+
+    UNCLASSIFIED = "unclassified"  # 未分類・要人手確認
+    RELEVANT = "relevant"  # 関連性あり
+    NOT_RELEVANT = "not_relevant"  # 関連性なし
+    PRIVILEGED = "privileged"  # 秘匿特権の疑いあり（要法務確認）
+
+
+class EvidenceCustodyAction(StrEnum):
+    """Chain of Custody（証拠の受け渡し記録）のイベント種別（#220）."""
+
+    COLLECTED = "collected"  # 収集
+    RECEIVED = "received"  # 受領
+    TRANSFERRED = "transferred"  # 移管
+    ANALYZED = "analyzed"  # 分析
+    COPIED = "copied"  # 複製
+    RETURNED = "returned"  # 返却
+    DESTROYED = "destroyed"  # 廃棄
+    HOLD_APPLIED = "hold_applied"  # Legal Hold 紐付け
+    HOLD_RELEASED = "hold_released"  # Legal Hold 解除
+
+
+class EvidenceHoldApprovalStatus(StrEnum):
+    """証拠に紐づく Legal Hold 解除承認申請の状態（#230）."""
+
+    PENDING = "pending"  # 決裁待ち
+    APPROVED = "approved"  # 承認（解除実行済み）
+    REJECTED = "rejected"  # 却下
