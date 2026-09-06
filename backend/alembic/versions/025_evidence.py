@@ -2,14 +2,10 @@
 evidence_hold_release_approvals）.
 
 Revision ID: 025_evidence
-Revises: 021_labor_commitment
+Revises: 024_whistleblower
 Create Date: 2026-09-06
 
 Phase 3 §5.17（ロードマップ #217-230）/ Issue #124。
-
-このリビジョンは 021_labor_commitment の直後に連結する。022〜024 は並列
-実装中の別 Issue が採番済みのため、本 Issue は 025 を使用する
-（コーディネーター指示）。
 """
 
 from __future__ import annotations
