@@ -29,6 +29,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -80,7 +81,7 @@ class AntitrustCheck(IntPKMixin, TimestampMixin, AuditedByMixin, Base):
         JsonType, nullable=False, default=list, server_default="'[]'::jsonb"
     )
     checked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 

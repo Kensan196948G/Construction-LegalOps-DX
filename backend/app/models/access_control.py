@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -57,9 +58,7 @@ class AccessControlEntry(IntPKMixin, TimestampMixin, Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     contract: Mapped[Contract] = relationship("Contract", back_populates="access_entries")
-    grantor: Mapped[User | None] = relationship(
-        "User", foreign_keys=[granted_by], viewonly=True
-    )
+    grantor: Mapped[User | None] = relationship("User", foreign_keys=[granted_by], viewonly=True)
 
     __table_args__ = (
         UniqueConstraint(
@@ -107,7 +106,7 @@ class LegalHold(IntPKMixin, TimestampMixin, Base):
         nullable=True,
     )
     started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     released_by: Mapped[int | None] = mapped_column(
