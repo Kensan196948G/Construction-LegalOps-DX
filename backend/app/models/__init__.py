@@ -21,6 +21,12 @@ from .contract_document import ContractDocument
 from .contract_template import ContractTemplate
 from .department import Department
 from .dispute import Dispute, DisputeEvidence, DisputeTimelineEvent
+from .dispute_ext import (
+    DisputeArgumentPosition,
+    DisputeDelayEvent,
+    DisputeProceedingStage,
+    DisputeSettlementOption,
+)
 from .document_consistency import DocumentConsistencyResult
 from .enums import (
     AgencyType,
@@ -33,6 +39,13 @@ from .enums import (
     ConsultationStatus,
     ContractStatus,
     ContractType,
+    DisputeArgumentParty,
+    DisputeArgumentStance,
+    DisputeDelayCauseCategory,
+    DisputeEotStatus,
+    DisputeProceedingStageStatus,
+    DisputeProceedingStageType,
+    DisputeSettlementStatus,
     DumpingSeverity,
     JvAgreementStatus,
     JvDisputeStatus,
@@ -110,7 +123,18 @@ __all__ = [
     "CounselLawyer",
     "Department",
     "Dispute",
+    "DisputeArgumentParty",
+    "DisputeArgumentPosition",
+    "DisputeArgumentStance",
+    "DisputeDelayCauseCategory",
+    "DisputeDelayEvent",
+    "DisputeEotStatus",
     "DisputeEvidence",
+    "DisputeProceedingStage",
+    "DisputeProceedingStageStatus",
+    "DisputeProceedingStageType",
+    "DisputeSettlementOption",
+    "DisputeSettlementStatus",
     "DisputeTimelineEvent",
     "DocumentConsistencyResult",
     "DumpingSeverity",

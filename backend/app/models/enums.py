@@ -558,3 +558,71 @@ class LaborCommitmentStatus(StrEnum):
     ACTIVE = "active"  # 表明中
     FULFILLED = "fulfilled"  # 履行確認済み
     VIOLATED = "violated"  # 違反確認
+
+
+class DisputeDelayCauseCategory(StrEnum):
+    """遅延事象の原因分類（ロードマップ #101）."""
+
+    OWNER_CAUSED = "owner_caused"  # 発注者起因
+    CONTRACTOR_CAUSED = "contractor_caused"  # 請負者起因
+    WEATHER = "weather"  # 天候
+    THIRD_PARTY = "third_party"  # 第三者起因
+    FORCE_MAJEURE = "force_majeure"  # 不可抗力
+    DESIGN_CHANGE = "design_change"  # 設計変更
+    OTHER = "other"
+
+
+class DisputeEotStatus(StrEnum):
+    """EOT（工期延長）判定状態（ロードマップ #104）."""
+
+    PENDING = "pending"  # 未判定
+    APPROVED = "approved"  # 全部認容
+    PARTIAL = "partial"  # 一部認容
+    REJECTED = "rejected"  # 却下
+
+
+class DisputeArgumentParty(StrEnum):
+    """主張・反論マトリクスの当事者区分（ロードマップ #109）."""
+
+    OURS = "ours"
+    COUNTERPARTY = "counterparty"
+
+
+class DisputeArgumentStance(StrEnum):
+    """主張・反論マトリクスの立場（ロードマップ #109）."""
+
+    CLAIM = "claim"  # 主張
+    REBUTTAL = "rebuttal"  # 反論
+    COUNTER_REBUTTAL = "counter_rebuttal"  # 再反論
+
+
+class DisputeSettlementStatus(StrEnum):
+    """和解案の状態（ロードマップ #110）."""
+
+    DRAFT = "draft"  # 検討中
+    PROPOSED = "proposed"  # 提案済み
+    ACCEPTED = "accepted"  # 合意
+    REJECTED = "rejected"  # 拒否
+    WITHDRAWN = "withdrawn"  # 撤回
+
+
+class DisputeProceedingStageType(StrEnum):
+    """訴訟・ADR ステージ種別（ロードマップ #111）."""
+
+    NEGOTIATION = "negotiation"  # 交渉
+    MEDIATION = "mediation"  # 調停
+    ARBITRATION_FILED = "arbitration_filed"  # 仲裁申立
+    ARBITRATION_HEARING = "arbitration_hearing"  # 仲裁審理
+    ARBITRATION_AWARD = "arbitration_award"  # 仲裁判断
+    LAWSUIT_FILED = "lawsuit_filed"  # 訴訟提起
+    FIRST_INSTANCE = "first_instance"  # 第一審
+    APPEAL = "appeal"  # 控訴審
+    FINAL_JUDGMENT = "final_judgment"  # 確定判決
+    SETTLED = "settled"  # 和解成立
+
+
+class DisputeProceedingStageStatus(StrEnum):
+    """訴訟・ADR ステージの進行状態（ロードマップ #111）."""
+
+    ACTIVE = "active"  # 進行中
+    COMPLETED = "completed"  # 完了
