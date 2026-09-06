@@ -23,8 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.api.v1.antitrust import router as antitrust_router
 from app.core.exceptions import register_exception_handlers
-from app.db.base import Base
 from app.db.session import get_db
+from app.db.test_session import create_all_for_tests
 from app.deps import CurrentUser, get_current_user
 from app.models.contract import Contract
 from app.models.department import Department
@@ -44,8 +44,7 @@ def _make_app() -> FastAPI:
 @pytest_asyncio.fixture()
 async def antitrust_engine() -> AsyncGenerator[Any, None]:
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True, echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await create_all_for_tests(engine)
     try:
         yield engine
     finally:
