@@ -21,7 +21,7 @@ async def _seed_contract(db_session, **overrides) -> tuple[int, int]:
     await db_session.flush()
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="作成者",
         role="drafter",
         department_id=dept.id,

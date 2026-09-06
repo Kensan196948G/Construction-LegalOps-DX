@@ -73,20 +73,20 @@ class TestManifests:
 
 class TestAnalyze:
     @pytest.mark.asyncio
-    async def test_old_contract_with_large_workforce_is_impacted(
-        self, db_session
-    ) -> None:
+    async def test_old_contract_with_large_workforce_is_impacted(self, db_session) -> None:
+        # analyze() は共有 PG テスト DB 上の直近 limit 件を全件スキャンするため、
+        # contracts_checked を厳密な件数で検証せず、自分が作った契約
+        # （contract_no）が正しく判定されたことをピンポイントで確認する。
         await _seed_contract(
             db_session,
             contract_no="C-OLD-001",
             order_date=date(2025, 6, 1),
             our_employees=150,
         )
-        result = await analyze(db_session)
-        assert result["contracts_checked"] == 1
-        assert result["impacted_count"] >= 1
-        reasons = result["impacted_contracts"][0]["impact_reasons"]
-        assert any("従業員数基準" in r for r in reasons)
+        result = await analyze(db_session, limit=10_000)
+        assert result["contracts_checked"] >= 1
+        own = next(c for c in result["impacted_contracts"] if c["contract_no"] == "C-OLD-001")
+        assert any("従業員数基準" in r for r in own["impact_reasons"])
 
     @pytest.mark.asyncio
     async def test_new_contract_is_not_impacted_by_switch(self, db_session) -> None:
@@ -96,12 +96,12 @@ class TestAnalyze:
             order_date=date(2026, 3, 1),
             our_employees=150,
         )
-        result = await analyze(db_session)
-        reasons = (
-            result["impacted_contracts"][0]["impact_reasons"]
-            if result["impacted_contracts"]
-            else []
+        result = await analyze(db_session, limit=10_000)
+        own = next(
+            (c for c in result["impacted_contracts"] if c["contract_no"] == "C-NEW-001"),
+            None,
         )
+        reasons = own["impact_reasons"] if own is not None else []
         assert all("従業員数基準" not in r for r in reasons)
 
     @pytest.mark.asyncio

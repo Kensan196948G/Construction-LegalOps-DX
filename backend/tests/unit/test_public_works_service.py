@@ -22,7 +22,7 @@ async def _seed_user(db_session) -> int:
     await db_session.flush()
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="作成者",
         role="reviewer",
         department_id=dept.id,

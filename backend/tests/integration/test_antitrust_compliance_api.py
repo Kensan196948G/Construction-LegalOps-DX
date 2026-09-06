@@ -6,7 +6,9 @@
 
 本テストは、それとは別に router を単体でマウントした自己完結の FastAPI
 インスタンスに対して認証・認可・スキーマ・監査ログ連携を検証する
-（他ドメインのルーターと混在しない最小構成で確認するため）。
+（他ドメインのルーターと混在しない最小構成で確認するため）。DB は
+共有の ``test_engine``（``tests/integration/conftest.py``、PostgreSQL）を
+使い、専用の SQLite エンジンは持たない。
 """
 
 from __future__ import annotations
@@ -18,12 +20,11 @@ from uuid import uuid4
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.v1.antitrust import router as antitrust_router
 from app.core.exceptions import register_exception_handlers
 from app.db.session import get_db
-from app.db.test_session import create_all_for_tests
 from app.deps import CurrentUser, get_current_user
 from app.models.contract import Contract
 from app.models.department import Department
@@ -42,26 +43,16 @@ def _make_app() -> FastAPI:
 
 
 @pytest_asyncio.fixture()
-async def antitrust_engine() -> AsyncGenerator[Any, None]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True, echo=False)
-    await create_all_for_tests(engine)
-    try:
-        yield engine
-    finally:
-        await engine.dispose()
-
-
-@pytest_asyncio.fixture()
-async def seeded_ids(antitrust_engine: Any) -> tuple[int, int]:
+async def seeded_ids(test_engine: Any) -> tuple[int, int]:
     """Seed a department/user/contract row and return ``(user_id, contract_id)``."""
-    Session = async_sessionmaker(bind=antitrust_engine, expire_on_commit=False, class_=AsyncSession)
+    Session = async_sessionmaker(bind=test_engine, expire_on_commit=False, class_=AsyncSession)
     async with Session() as session:
         dept = Department(code=f"D-{uuid4().hex[:8]}", name="法務部")
         session.add(dept)
         await session.flush()
         user = User(
             entra_oid=uuid4(),
-            email=f"{uuid4().hex[:10]}@test.local",
+            email=f"{uuid4().hex[:10]}@test.example",
             display_name="テストユーザー",
             role="admin",
             department_id=dept.id,
@@ -87,11 +78,11 @@ async def seeded_ids(antitrust_engine: Any) -> tuple[int, int]:
 
 @pytest_asyncio.fixture()
 async def antitrust_client(
-    antitrust_engine: Any, seeded_ids: tuple[int, int]
+    test_engine: Any, seeded_ids: tuple[int, int]
 ) -> AsyncGenerator[AsyncClient, None]:
     user_id, _contract_id = seeded_ids
     app = _make_app()
-    Session = async_sessionmaker(bind=antitrust_engine, expire_on_commit=False, class_=AsyncSession)
+    Session = async_sessionmaker(bind=test_engine, expire_on_commit=False, class_=AsyncSession)
 
     async def _override_get_db() -> AsyncIterator[AsyncSession]:
         session = Session()
@@ -293,12 +284,12 @@ async def test_endpoints_require_authentication() -> None:
 
 
 async def test_write_endpoint_requires_write_role(
-    antitrust_engine: Any, seeded_ids: tuple[int, int]
+    test_engine: Any, seeded_ids: tuple[int, int]
 ) -> None:
     """viewer ロールでは書き込み系が 403 になる。"""
     user_id, _ = seeded_ids
     app = _make_app()
-    Session = async_sessionmaker(bind=antitrust_engine, expire_on_commit=False, class_=AsyncSession)
+    Session = async_sessionmaker(bind=test_engine, expire_on_commit=False, class_=AsyncSession)
 
     async def _override_get_db() -> AsyncIterator[AsyncSession]:
         session = Session()
@@ -331,12 +322,12 @@ async def test_write_endpoint_requires_write_role(
 
 
 async def test_create_consultation_requires_write_role(
-    antitrust_engine: Any, seeded_ids: tuple[int, int]
+    test_engine: Any, seeded_ids: tuple[int, int]
 ) -> None:
     """viewer/auditor ロールでは AI 相談の作成（書き込み）が 403 になる。"""
     user_id, _ = seeded_ids
     app = _make_app()
-    Session = async_sessionmaker(bind=antitrust_engine, expire_on_commit=False, class_=AsyncSession)
+    Session = async_sessionmaker(bind=test_engine, expire_on_commit=False, class_=AsyncSession)
 
     async def _override_get_db() -> AsyncIterator[AsyncSession]:
         session = Session()

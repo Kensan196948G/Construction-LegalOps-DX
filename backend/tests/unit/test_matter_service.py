@@ -23,7 +23,7 @@ async def _seed(db_session) -> tuple[int, int, int]:
     await db_session.flush()
     u1 = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="担当者A",
         role="reviewer",
         department_id=dept.id,
@@ -31,7 +31,7 @@ async def _seed(db_session) -> tuple[int, int, int]:
     )
     u2 = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="担当者B",
         role="reviewer",
         department_id=dept.id,

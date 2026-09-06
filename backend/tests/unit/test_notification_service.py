@@ -62,88 +62,66 @@ class _FakeResponse:
         return json.dumps(self._payload).encode("utf-8")
 
 
-@pytest_asyncio.fixture(scope="session")
-async def notification_test_engine() -> AsyncGenerator[Any, None]:
-    """Unit-test engine with the full SQLAlchemy schema applied."""
-    from sqlalchemy import delete, select
+@pytest_asyncio.fixture()
+async def notification_db_session(db_session: Any) -> AsyncGenerator[Any, None]:
+    """Alias for the shared, transaction-isolated ``db_session`` fixture.
 
-    from app.db.test_session import create_all_for_tests, create_test_engine
+    Kept as a separate name since this module's tests historically requested
+    ``notification_db_session`` explicitly. Previously this fixture owned a
+    dedicated engine and ran ``create_all_for_tests`` (drop/create) against
+    it — since that targets the same shared PostgreSQL database as every
+    other test, it would wipe tables out from under whichever other test
+    happened to be mid-transaction. Using the shared ``db_session`` avoids
+    a second schema reset entirely.
+    """
+    yield db_session
+
+
+@pytest_asyncio.fixture()
+async def notification_actors(notification_db_session: Any) -> dict[str, int]:
+    """Seed a department + three users + a contract; return their ids.
+
+    PostgreSQL enforces the FK from ``notifications.recipient_id``/
+    ``contract_id`` to ``users``/``contracts``, so tests can no longer
+    reference hardcoded ids (1, 2, 99, 7) that may not exist in the shared
+    test database.
+    """
+    from uuid import uuid4
+
     from app.models.contract import Contract
     from app.models.department import Department
     from app.models.user import User
 
-    engine = create_test_engine()
-    try:
-        await create_all_for_tests(engine)
-        # PostgreSQL では FK が強制されるため、通知テストが参照する
-        # users / departments / contracts の正本行を seed する。
-        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+    dept = Department(code=f"D-{uuid4().hex[:8]}", name="通知テスト部")
+    notification_db_session.add(dept)
+    await notification_db_session.flush()
 
-        Session = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
-        async with Session() as session:
-            # 共有 PG テスト DB での再実行冪等性: 通知テーブルはテスト専用に空にする
-            await session.execute(delete(Notification))
-            dept = (
-                await session.execute(select(Department).where(Department.id == 1))
-            ).scalar_one_or_none()
-            if dept is None:
-                session.add(Department(id=1, code="D-NOTIFY", name="法務部"))
-                await session.flush()
-            for uid, email in (
-                (1, "user1@test.local"),
-                (2, "user2@test.local"),
-                (99, "user99@test.local"),
-            ):
-                user = (
-                    await session.execute(select(User).where(User.id == uid))
-                ).scalar_one_or_none()
-                if user is None:
-                    session.add(
-                        User(
-                            id=uid,
-                            entra_oid=__import__("uuid").uuid4(),
-                            email=email,
-                            display_name=f"利用者{uid}",
-                            role="viewer",
-                            department_id=1,
-                            is_active=True,
-                        )
-                    )
-            contract = (
-                await session.execute(select(Contract).where(Contract.id == 7))
-            ).scalar_one_or_none()
-            if contract is None:
-                session.add(
-                    Contract(
-                        id=7,
-                        contract_no="C-NOTIFY-007",
-                        title="通知テスト契約",
-                        counterparty="株式会社テスト",
-                        contract_type="請負",
-                        department_id=1,
-                        drafter_id=1,
-                    )
-                )
-            await session.commit()
-        yield engine
-    finally:
-        await engine.dispose()
+    users = {}
+    for key in ("user1", "user2", "user99"):
+        user = User(
+            entra_oid=uuid4(),
+            email=f"{uuid4().hex[:10]}@test.example",
+            display_name=f"利用者-{key}",
+            role="viewer",
+            department_id=dept.id,
+            is_active=True,
+        )
+        notification_db_session.add(user)
+        await notification_db_session.flush()
+        users[key] = user.id
 
-
-@pytest_asyncio.fixture()
-async def notification_db_session(notification_test_engine: Any) -> AsyncGenerator[Any, None]:
-    """Short-lived DB session for DB-backed notification helper tests."""
-    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
-    Session = async_sessionmaker(
-        bind=notification_test_engine, expire_on_commit=False, class_=AsyncSession
+    contract = Contract(
+        contract_no=f"C-NOTIFY-{uuid4().hex[:8]}",
+        title="通知テスト契約",
+        counterparty="株式会社テスト",
+        contract_type="請負",
+        department_id=dept.id,
+        drafter_id=users["user1"],
     )
-    session = Session()
-    try:
-        yield session
-    finally:
-        await session.rollback()
-        await session.close()
+    notification_db_session.add(contract)
+    await notification_db_session.flush()
+
+    return {**users, "contract": contract.id}
 
 
 # ---------------------------------------------------------------------------
@@ -496,21 +474,28 @@ async def test_clear_empties_sent_list():
 
 
 @pytest.mark.asyncio
-async def test_list_for_user_returns_owned_unread_notifications(notification_db_session):
+async def test_list_for_user_returns_owned_unread_notifications(
+    notification_db_session, notification_actors
+):
     """list_for_user() maps persisted notifications to the public schema."""
+    u1, u2, contract_id = (
+        notification_actors["user1"],
+        notification_actors["user2"],
+        notification_actors["contract"],
+    )
     notification_db_session.add_all(
         [
             Notification(
-                recipient_id=1,
+                recipient_id=u1,
                 channel=NotificationChannel.IN_APP.value,
                 category="workflow",
                 subject="Review needed",
-                body="Please review contract #7",
-                contract_id=7,
+                body="Please review contract",
+                contract_id=contract_id,
                 status=NotificationStatus.SENT.value,
             ),
             Notification(
-                recipient_id=2,
+                recipient_id=u2,
                 channel=NotificationChannel.IN_APP.value,
                 category="workflow",
                 subject="Other user",
@@ -521,24 +506,27 @@ async def test_list_for_user_returns_owned_unread_notifications(notification_db_
     )
     await notification_db_session.flush()
 
-    items, total = await list_for_user(notification_db_session, user_id=1, status="unread")
+    items, total = await list_for_user(notification_db_session, user_id=u1, status="unread")
 
     assert total == 1
     assert len(items) == 1
-    assert items[0].user_id == 1
+    assert items[0].user_id == u1
     assert items[0].title == "Review needed"
     assert items[0].status == "unread"
     assert items[0].related_type == "contract"
-    assert items[0].related_id == 7
+    assert items[0].related_id == contract_id
 
 
 @pytest.mark.asyncio
-async def test_list_for_user_filters_channel_alias_and_paginates(notification_db_session):
+async def test_list_for_user_filters_channel_alias_and_paginates(
+    notification_db_session, notification_actors
+):
     """The API's email alias is mapped to the MAIL channel and pagination is applied."""
+    u99 = notification_actors["user99"]
     for idx in range(3):
         notification_db_session.add(
             Notification(
-                recipient_id=99,
+                recipient_id=u99,
                 channel=NotificationChannel.MAIL.value,
                 category="mail",
                 subject=f"Mail {idx}",
@@ -548,7 +536,7 @@ async def test_list_for_user_filters_channel_alias_and_paginates(notification_db
         )
     notification_db_session.add(
         Notification(
-            recipient_id=99,
+            recipient_id=u99,
             channel=NotificationChannel.TEAMS.value,
             category="teams",
             subject="Teams",
@@ -560,7 +548,7 @@ async def test_list_for_user_filters_channel_alias_and_paginates(notification_db
 
     items, total = await list_for_user(
         notification_db_session,
-        user_id=99,
+        user_id=u99,
         status="unread",
         channel="email",
         page=2,
@@ -573,10 +561,11 @@ async def test_list_for_user_filters_channel_alias_and_paginates(notification_db
 
 
 @pytest.mark.asyncio
-async def test_mark_read_sets_read_at_and_status(notification_db_session):
+async def test_mark_read_sets_read_at_and_status(notification_db_session, notification_actors):
     """mark_read() marks only the owning user's notification as read."""
+    u1 = notification_actors["user1"]
     notification = Notification(
-        recipient_id=1,
+        recipient_id=u1,
         channel=NotificationChannel.IN_APP.value,
         category="workflow",
         subject="Read me",
@@ -586,7 +575,7 @@ async def test_mark_read_sets_read_at_and_status(notification_db_session):
     notification_db_session.add(notification)
     await notification_db_session.flush()
 
-    out = await mark_read(notification_db_session, notification_id=notification.id, user_id=1)
+    out = await mark_read(notification_db_session, notification_id=notification.id, user_id=u1)
 
     assert out.status == "read"
     assert out.read_at is not None
@@ -600,10 +589,11 @@ async def test_mark_read_sets_read_at_and_status(notification_db_session):
 
 
 @pytest.mark.asyncio
-async def test_mark_read_rejects_other_user(notification_db_session):
+async def test_mark_read_rejects_other_user(notification_db_session, notification_actors):
     """A user cannot mark another user's notification as read."""
+    u1, u2 = notification_actors["user1"], notification_actors["user2"]
     notification = Notification(
-        recipient_id=1,
+        recipient_id=u1,
         channel=NotificationChannel.IN_APP.value,
         category="workflow",
         subject="Private",
@@ -614,23 +604,28 @@ async def test_mark_read_rejects_other_user(notification_db_session):
     await notification_db_session.flush()
 
     with pytest.raises(PermissionError):
-        await mark_read(notification_db_session, notification_id=notification.id, user_id=2)
+        await mark_read(notification_db_session, notification_id=notification.id, user_id=u2)
 
 
 @pytest.mark.asyncio
-async def test_mark_read_raises_lookup_error(notification_db_session):
+async def test_mark_read_raises_lookup_error(notification_db_session, notification_actors):
     """mark_read() raises LookupError for a missing notification."""
     with pytest.raises(LookupError):
-        await mark_read(notification_db_session, notification_id=42, user_id=1)
+        await mark_read(
+            notification_db_session, notification_id=42, user_id=notification_actors["user1"]
+        )
 
 
 @pytest.mark.asyncio
-async def test_mark_all_read_marks_only_unread_owned_rows(notification_db_session):
+async def test_mark_all_read_marks_only_unread_owned_rows(
+    notification_db_session, notification_actors
+):
     """mark_all_read() updates unread notifications belonging to the caller."""
+    u1, u2 = notification_actors["user1"], notification_actors["user2"]
     notification_db_session.add_all(
         [
             Notification(
-                recipient_id=1,
+                recipient_id=u1,
                 channel=NotificationChannel.IN_APP.value,
                 category="workflow",
                 subject="One",
@@ -638,7 +633,7 @@ async def test_mark_all_read_marks_only_unread_owned_rows(notification_db_sessio
                 status=NotificationStatus.SENT.value,
             ),
             Notification(
-                recipient_id=1,
+                recipient_id=u1,
                 channel=NotificationChannel.MAIL.value,
                 category="mail",
                 subject="Two",
@@ -646,7 +641,7 @@ async def test_mark_all_read_marks_only_unread_owned_rows(notification_db_sessio
                 status=NotificationStatus.SENT.value,
             ),
             Notification(
-                recipient_id=2,
+                recipient_id=u2,
                 channel=NotificationChannel.IN_APP.value,
                 category="workflow",
                 subject="Other",
@@ -657,9 +652,9 @@ async def test_mark_all_read_marks_only_unread_owned_rows(notification_db_sessio
     )
     await notification_db_session.flush()
 
-    count = await mark_all_read(notification_db_session, user_id=1)
+    count = await mark_all_read(notification_db_session, user_id=u1)
 
     assert count == 2
-    items, total = await list_for_user(notification_db_session, user_id=1, status="read")
+    items, total = await list_for_user(notification_db_session, user_id=u1, status="read")
     assert total == 2
     assert all(item.status == "read" for item in items)

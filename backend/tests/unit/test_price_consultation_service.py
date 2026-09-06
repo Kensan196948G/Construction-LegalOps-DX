@@ -19,7 +19,7 @@ async def _seed_user(db_session) -> int:
     await db_session.flush()
     user = User(
         entra_oid=uuid4(),
-        email=f"{uuid4().hex[:10]}@test.local",
+        email=f"{uuid4().hex[:10]}@test.example",
         display_name="作成者",
         role="reviewer",
         department_id=dept.id,
@@ -156,10 +156,21 @@ async def test_invalid_direction_and_quote(db_session) -> None:
 
 
 async def test_list_and_monitor_filters(db_session) -> None:
-    """#23: 未回答監視は open のみ・深刻度絞り込み可能."""
+    """#23: 未回答監視は open のみ・深刻度絞り込み可能.
+
+    共有 PG テスト DB には他テストが作った open/critical な協議ログも
+    含まれうるため、絶対件数ではなくシード前後の差分で検証する。
+    """
     uid = await _seed_user(db_session)
     await _seed_standard(db_session, uid, amount=20_000)
-    await price_consultation_service.create_log(
+
+    _, total_before = await price_consultation_service.list_open_monitor(db_session)
+    _, crit_total_before = await price_consultation_service.list_open_monitor(
+        db_session, severity="critical"
+    )
+    _, all_total_before = await price_consultation_service.list_logs(db_session)
+
+    critical_row = await price_consultation_service.create_log(
         db_session,
         actor_id=uid,
         direction="from_subcontractor",
@@ -176,16 +187,16 @@ async def test_list_and_monitor_filters(db_session) -> None:
         summary="軽微な協議（デモ）",
     )
     _, total = await price_consultation_service.list_open_monitor(db_session)
-    assert total == 2
+    assert total - total_before == 2
 
     crit_rows, crit_total = await price_consultation_service.list_open_monitor(
         db_session, severity="critical"
     )
-    assert crit_total == 1
-    assert crit_rows[0].severity == "critical"
+    assert crit_total - crit_total_before == 1
+    assert any(row.id == critical_row.id and row.severity == "critical" for row in crit_rows)
 
     _, all_total = await price_consultation_service.list_logs(db_session)
-    assert all_total == 2
+    assert all_total - all_total_before == 2
 
     with pytest.raises(NotFoundError):
         await price_consultation_service.get_log(db_session, log_id=999_999)

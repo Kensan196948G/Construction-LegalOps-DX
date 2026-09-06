@@ -189,8 +189,13 @@ async def test_contract_versions_returns_current_snapshot(client, auth_headers_l
     assert body["items"][0]["version"] == contract["version"]
 
 
-async def test_contract_clauses_returns_db_rows(client, db_session, auth_headers_legal):
-    """GET /contracts/{id}/clauses returns DB-backed clauses in seq order."""
+async def test_contract_clauses_returns_db_rows(client, api_db_session, auth_headers_legal):
+    """GET /contracts/{id}/clauses returns DB-backed clauses in seq order.
+
+    ``api_db_session`` は ``client`` と同じ ``test_engine`` に直接 bind
+    されたセッション（``db_session`` はロールバックされるため、別コネクション
+    の ``client`` からは見えない）。
+    """
     r_create = await client.post(
         "/api/v1/contracts",
         json={
@@ -204,7 +209,7 @@ async def test_contract_clauses_returns_db_rows(client, db_session, auth_headers
     assert r_create.status_code in (200, 201), r_create.text
     cid = r_create.json()["id"]
 
-    db_session.add_all(
+    api_db_session.add_all(
         [
             Clause(contract_id=cid, seq=2, title="第2条", body="第2条本文", risk_level="low"),
             Clause(
@@ -217,7 +222,7 @@ async def test_contract_clauses_returns_db_rows(client, db_session, auth_headers
             ),
         ]
     )
-    await db_session.commit()
+    await api_db_session.commit()
 
     r_clauses = await client.get(
         f"/api/v1/contracts/{cid}/clauses",

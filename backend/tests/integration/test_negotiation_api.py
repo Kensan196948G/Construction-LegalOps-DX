@@ -25,7 +25,11 @@ async def _create_contract(client: Any, headers: dict[str, str]) -> int:
     return int(r.json()["id"])
 
 
-async def _seed_clause(db_session: Any, contract_id: int) -> int:
+async def _seed_clause(api_db_session: Any, contract_id: int) -> int:
+    """``api_db_session`` は ``client`` と同じ ``test_engine`` に直接 bind
+    されたセッション（``db_session`` はロールバックされるため、別コネクション
+    の ``client`` からは見えない）。
+    """
     clause = Clause(
         contract_id=contract_id,
         seq=1,
@@ -33,9 +37,9 @@ async def _seed_clause(db_session: Any, contract_id: int) -> int:
         body="（原案）秘密情報は 5 年間保持する。",
         risk_level="medium",
     )
-    db_session.add(clause)
-    await db_session.flush()
-    await db_session.commit()
+    api_db_session.add(clause)
+    await api_db_session.flush()
+    await api_db_session.commit()
     return int(clause.id)
 
 
@@ -67,11 +71,11 @@ async def test_negotiation_timeline_and_add(
 
 
 async def test_redline_and_clause_status_owner_endpoints(
-    client: Any, auth_headers_legal: dict[str, str], db_session: Any
+    client: Any, auth_headers_legal: dict[str, str], api_db_session: Any
 ) -> None:
     """redline 記録 → ステータス → オーナー割当の一連フロー."""
     cid = await _create_contract(client, auth_headers_legal)
-    clause_id = await _seed_clause(db_session, cid)
+    clause_id = await _seed_clause(api_db_session, cid)
 
     # redline（修正提案）
     r_redline = await client.post(
@@ -148,11 +152,11 @@ async def test_foreign_clause_returns_404(
 
 
 async def test_invalid_status_payload_returns_422(
-    client: Any, auth_headers_legal: dict[str, str], db_session: Any
+    client: Any, auth_headers_legal: dict[str, str], api_db_session: Any
 ) -> None:
     """不正なステータス値は 422（pydantic enum 検証）."""
     cid = await _create_contract(client, auth_headers_legal)
-    clause_id = await _seed_clause(db_session, cid)
+    clause_id = await _seed_clause(api_db_session, cid)
     r = await client.post(
         f"{CONTRACT_API}/{cid}/clauses/{clause_id}/status",
         json={"status": "done"},
