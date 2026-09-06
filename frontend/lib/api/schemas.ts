@@ -2597,3 +2597,207 @@ export const complianceTrainingCreateSchema = z.object({
   notes: z.string().max(4000).nullish(),
 });
 export type ComplianceTrainingCreate = z.infer<typeof complianceTrainingCreateSchema>;
+
+// ===========================================================================
+// 内部通報・調査管理（Issue #123・ロードマップ #125-135 / migration 024）
+//
+// 最重要: 通報者識別情報（whistleblowerReporterProfileSchema）は調査担当者
+// ACL 保有者・admin/auditor のみ取得できる（バックエンドが 403 を返す）。
+// フロントエンドは 403 を「権限なし」として明示し、握りつぶさないこと。
+// ===========================================================================
+
+export const whistleblowerCategoryEnum = z.enum([
+  "harassment",
+  "compliance",
+  "safety",
+  "labor",
+  "corruption",
+  "fraud",
+  "other",
+]);
+export type WhistleblowerCategory = z.infer<typeof whistleblowerCategoryEnum>;
+
+export const whistleblowerStatusEnum = z.enum([
+  "received",
+  "triage",
+  "investigating",
+  "corrective_action",
+  "closed",
+  "dismissed",
+]);
+export type WhistleblowerStatus = z.infer<typeof whistleblowerStatusEnum>;
+
+export const whistleblowerSeverityEnum = z.enum(["low", "medium", "high", "critical"]);
+export type WhistleblowerSeverity = z.infer<typeof whistleblowerSeverityEnum>;
+
+export const whistleblowerCaseRoleEnum = z.enum([
+  "lead_investigator",
+  "investigator",
+  "observer",
+]);
+export type WhistleblowerCaseRole = z.infer<typeof whistleblowerCaseRoleEnum>;
+
+export const whistleblowerEvidenceTypeEnum = z.enum([
+  "document",
+  "email",
+  "photo",
+  "recording",
+  "testimony",
+  "system_log",
+  "other",
+]);
+export type WhistleblowerEvidenceType = z.infer<typeof whistleblowerEvidenceTypeEnum>;
+
+export const whistleblowerIntervieweeTypeEnum = z.enum([
+  "reporter",
+  "witness",
+  "subject",
+  "other",
+]);
+export type WhistleblowerIntervieweeType = z.infer<typeof whistleblowerIntervieweeTypeEnum>;
+
+export const whistleblowerActionCategoryEnum = z.enum(["corrective", "preventive"]);
+export type WhistleblowerActionCategory = z.infer<typeof whistleblowerActionCategoryEnum>;
+
+export const whistleblowerActionStatusEnum = z.enum([
+  "open",
+  "in_progress",
+  "completed",
+  "verified",
+  "overdue",
+]);
+export type WhistleblowerActionStatus = z.infer<typeof whistleblowerActionStatusEnum>;
+
+export const whistleblowerReportSchema = z.object({
+  id: idSchema,
+  report_no: z.string(),
+  category: whistleblowerCategoryEnum.or(z.string()),
+  title: z.string(),
+  description: z.string(),
+  status: whistleblowerStatusEnum.or(z.string()),
+  severity: whistleblowerSeverityEnum.or(z.string()),
+  is_anonymous: z.boolean(),
+  occurred_at: dateSchema.nullable().optional(),
+  received_at: datetimeSchema,
+  matter_id: idSchema.nullable().optional(),
+  lead_investigator_id: idSchema.nullable().optional(),
+  substantiated: z.boolean().nullable().optional(),
+  closed_at: datetimeSchema.nullable().optional(),
+  close_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type WhistleblowerReport = z.infer<typeof whistleblowerReportSchema>;
+
+export const whistleblowerReportCreateSchema = z.object({
+  category: whistleblowerCategoryEnum,
+  title: z.string().min(1).max(256),
+  description: z.string().min(1).max(8000),
+  severity: whistleblowerSeverityEnum.default("medium"),
+  is_anonymous: z.boolean().default(false),
+  occurred_at: dateSchema.nullish(),
+  lead_investigator_id: idSchema.nullish(),
+  reporter_name: z.string().max(128).nullish(),
+  contact_email: z.string().email().nullish(),
+  contact_phone: z.string().max(32).nullish(),
+  department: z.string().max(128).nullish(),
+  relationship_to_subject: z.string().max(64).nullish(),
+  consent_identity_disclosure: z.boolean().default(false),
+});
+export type WhistleblowerReportCreate = z.infer<typeof whistleblowerReportCreateSchema>;
+
+/** 通報者識別情報（隔離・調査担当者限定）。403 の場合は取得しない。 */
+export const whistleblowerReporterProfileSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  reporter_name: z.string().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  contact_phone: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  relationship_to_subject: z.string().nullable().optional(),
+  consent_identity_disclosure: z.boolean(),
+});
+export type WhistleblowerReporterProfile = z.infer<typeof whistleblowerReporterProfileSchema>;
+
+export const whistleblowerCaseAccessSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  user_id: idSchema,
+  role_in_case: whistleblowerCaseRoleEnum.or(z.string()),
+  can_view_reporter_identity: z.boolean(),
+  granted_by: idSchema.nullable().optional(),
+  expires_at: datetimeSchema.nullable().optional(),
+  revoked_at: datetimeSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerCaseAccess = z.infer<typeof whistleblowerCaseAccessSchema>;
+
+export const whistleblowerEvidenceSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  evidence_type: whistleblowerEvidenceTypeEnum.or(z.string()),
+  description: z.string().nullable().optional(),
+  occurred_at: dateSchema.nullable().optional(),
+  attachment_id: idSchema.nullable().optional(),
+  preserved: z.boolean(),
+  chain_of_custody: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerEvidence = z.infer<typeof whistleblowerEvidenceSchema>;
+
+export const whistleblowerInterviewSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  interviewee_type: whistleblowerIntervieweeTypeEnum.or(z.string()),
+  interviewee_name: z.string().nullable().optional(),
+  conducted_at: datetimeSchema,
+  conducted_by: idSchema.nullable().optional(),
+  summary: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerInterview = z.infer<typeof whistleblowerInterviewSchema>;
+
+export const whistleblowerTimelineEventSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  event_type: z.string(),
+  note: z.string().nullable().optional(),
+  payload: z.record(z.string(), z.unknown()).nullable().optional(),
+  actor_id: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerTimelineEvent = z.infer<typeof whistleblowerTimelineEventSchema>;
+
+export const whistleblowerActionSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  action_category: whistleblowerActionCategoryEnum.or(z.string()),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  owner_id: idSchema.nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  status: whistleblowerActionStatusEnum.or(z.string()),
+  completed_at: datetimeSchema.nullable().optional(),
+  verified_by: idSchema.nullable().optional(),
+  verified_at: datetimeSchema.nullable().optional(),
+  verification_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type WhistleblowerAction = z.infer<typeof whistleblowerActionSchema>;
+
+/** 経営報告匿名集計（#134/#135）。個人特定情報は含まれない。 */
+export const whistleblowerAggregateSchema = z.object({
+  total: z.number().int(),
+  anonymous_count: z.number().int(),
+  substantiated_count: z.number().int(),
+  dismissed_count: z.number().int(),
+  by_category: z.record(z.string(), z.number().int()),
+  by_status: z.record(z.string(), z.number().int()),
+  by_severity: z.record(z.string(), z.number().int()),
+  avg_days_to_close: z.number().nullable().optional(),
+  date_from: z.string().nullable().optional(),
+  date_to: z.string().nullable().optional(),
+});
+export type WhistleblowerAggregate = z.infer<typeof whistleblowerAggregateSchema>;

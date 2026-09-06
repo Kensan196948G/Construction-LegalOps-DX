@@ -149,6 +149,14 @@ import {
   ipWatchTargetSchema,
   ipWatchTargetSyncResultSchema,
   jpoStatusSchema,
+  whistleblowerActionSchema,
+  whistleblowerAggregateSchema,
+  whistleblowerCaseAccessSchema,
+  whistleblowerEvidenceSchema,
+  whistleblowerInterviewSchema,
+  whistleblowerReportSchema,
+  whistleblowerReporterProfileSchema,
+  whistleblowerTimelineEventSchema,
   type AiProvider,
   type AiSettingsUpdate,
   type ChangeOrderCreate,
@@ -167,6 +175,13 @@ import {
   type PaymentFinding,
   type ReviewCreate,
   type RiskUpdate,
+  type WhistleblowerActionCategory,
+  type WhistleblowerActionStatus,
+  type WhistleblowerCaseRole,
+  type WhistleblowerCategory,
+  type WhistleblowerEvidenceType,
+  type WhistleblowerIntervieweeType,
+  type WhistleblowerSeverity,
 } from "./schemas";
 
 // ---------------------------------------------------------------------------
@@ -2046,6 +2061,178 @@ export const antitrustApi = {
     ),
 };
 
+// ---------------------------------------------------------------------------
+// 内部通報・調査管理（Issue #123・#125-135）
+//
+// NOTE（統合担当者向け）: バックエンド router
+// (`app/api/v1/whistleblower.py`) は `app/api/v1/__init__.py` へ未登録の
+// ため、統合前はこれらの呼び出しは 404 になる。統合後にそのまま動作する。
+// 最重要: reporter（通報者識別情報）取得は 403 になり得る想定で、呼び出し
+// 側は catch して「権限なし」表示に倒すこと（隠蔽・握りつぶし禁止）。
+// ---------------------------------------------------------------------------
+export const whistleblowerApi = {
+  list: (params?: {
+    status?: string;
+    category?: string;
+    page?: number;
+    size?: number;
+  }) =>
+    getParsed(paginatedSchema(whistleblowerReportSchema), "/whistleblower/reports", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(whistleblowerReportSchema), `/whistleblower/reports/${id}`),
+
+  create: (data: {
+    category: WhistleblowerCategory;
+    title: string;
+    description: string;
+    severity?: WhistleblowerSeverity;
+    is_anonymous?: boolean;
+    occurred_at?: string | null;
+    lead_investigator_id?: number | string | null;
+    reporter_name?: string | null;
+    contact_email?: string | null;
+    contact_phone?: string | null;
+    department?: string | null;
+    relationship_to_subject?: string | null;
+    consent_identity_disclosure?: boolean;
+  }) => postParsed(whistleblowerReportSchema, "/whistleblower/reports", data),
+
+  /** 通報者識別情報（最重要の隔離対象）。403 の場合は呼び出し側で権限なし表示にすること。 */
+  getReporterProfile: (id: number | string) =>
+    getParsed(
+      apiResponse(whistleblowerReporterProfileSchema.nullable()),
+      `/whistleblower/reports/${id}/reporter`,
+    ),
+
+  setStatus: (id: number | string, data: { status: string; note?: string | null }) =>
+    postParsed(apiResponse(whistleblowerReportSchema), `/whistleblower/reports/${id}/status`, data),
+
+  promoteToMatter: (id: number | string) =>
+    postParsed(
+      apiResponse(whistleblowerReportSchema),
+      `/whistleblower/reports/${id}/promote-to-matter`,
+      {},
+    ),
+
+  aggregate: (params?: { date_from?: string; date_to?: string }) =>
+    getParsed(apiResponse(whistleblowerAggregateSchema), "/whistleblower/reports/aggregate", {
+      params: buildParams(params),
+    }),
+
+  // --- 調査担当者限定 ACL ---
+  listAccess: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerCaseAccessSchema)),
+      `/whistleblower/reports/${reportId}/access`,
+    ),
+
+  grantAccess: (
+    reportId: number | string,
+    data: {
+      user_id: number | string;
+      role_in_case?: WhistleblowerCaseRole;
+      can_view_reporter_identity?: boolean;
+      expires_at?: string | null;
+    },
+  ) =>
+    postParsed(
+      whistleblowerCaseAccessSchema,
+      `/whistleblower/reports/${reportId}/access`,
+      data,
+    ),
+
+  revokeAccess: (reportId: number | string, grantId: number | string) =>
+    apiClient
+      .delete(`/whistleblower/reports/${reportId}/access/${grantId}`)
+      .then(() => undefined),
+
+  // --- 証拠保全（#129） ---
+  listEvidence: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerEvidenceSchema)),
+      `/whistleblower/reports/${reportId}/evidence`,
+    ),
+
+  addEvidence: (
+    reportId: number | string,
+    data: {
+      evidence_type: WhistleblowerEvidenceType;
+      description?: string | null;
+      occurred_at?: string | null;
+      attachment_id?: number | string | null;
+      preserved?: boolean;
+      chain_of_custody?: string | null;
+    },
+  ) =>
+    postParsed(whistleblowerEvidenceSchema, `/whistleblower/reports/${reportId}/evidence`, data),
+
+  // --- ヒアリング記録（#130） ---
+  listInterviews: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerInterviewSchema)),
+      `/whistleblower/reports/${reportId}/interviews`,
+    ),
+
+  addInterview: (
+    reportId: number | string,
+    data: {
+      interviewee_type: WhistleblowerIntervieweeType;
+      conducted_at: string;
+      interviewee_name?: string | null;
+      summary?: string | null;
+    },
+  ) =>
+    postParsed(
+      whistleblowerInterviewSchema,
+      `/whistleblower/reports/${reportId}/interviews`,
+      data,
+    ),
+
+  // --- 調査タイムライン（#131） ---
+  listTimeline: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerTimelineEventSchema)),
+      `/whistleblower/reports/${reportId}/timeline`,
+    ),
+
+  addNote: (reportId: number | string, note: string) =>
+    postParsed(whistleblowerTimelineEventSchema, `/whistleblower/reports/${reportId}/notes`, {
+      note,
+    }),
+
+  // --- 是正措置・再発防止管理（#132/#133） ---
+  listActions: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerActionSchema)),
+      `/whistleblower/reports/${reportId}/actions`,
+    ),
+
+  addAction: (
+    reportId: number | string,
+    data: {
+      action_category: WhistleblowerActionCategory;
+      title: string;
+      description?: string | null;
+      owner_id?: number | string | null;
+      due_date?: string | null;
+    },
+  ) => postParsed(whistleblowerActionSchema, `/whistleblower/reports/${reportId}/actions`, data),
+
+  updateActionStatus: (
+    reportId: number | string,
+    actionId: number | string,
+    data: { status: WhistleblowerActionStatus; verification_note?: string | null },
+  ) =>
+    postParsed(
+      whistleblowerActionSchema,
+      `/whistleblower/reports/${reportId}/actions/${actionId}/status`,
+      data,
+    ),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -2091,5 +2278,6 @@ export const api = {
   jv: jvApi,
   partnerExt: partnerExtApi,
   antitrust: antitrustApi,
+  whistleblower: whistleblowerApi,
 } as const;
 

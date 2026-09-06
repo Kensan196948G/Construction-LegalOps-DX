@@ -145,6 +145,38 @@ USING (
         "ALTER TABLE retention_rules ENABLE ROW LEVEL SECURITY",
         "ALTER TABLE audit_anchors ENABLE ROW LEVEL SECURITY",
         "ALTER TABLE external_forward_events ENABLE ROW LEVEL SECURITY",
+        # --- Issue #123: 内部通報・調査管理（migration 024 と同期） ---
+        "ALTER TABLE whistleblower_reports ENABLE ROW LEVEL SECURITY",
+        """CREATE POLICY whistleblower_reports_case_access ON whistleblower_reports
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_reports.id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "ALTER TABLE whistleblower_reporter_profiles ENABLE ROW LEVEL SECURITY",
+        """CREATE POLICY whistleblower_reporter_profiles_identity_access
+ON whistleblower_reporter_profiles
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_reporter_profiles.report_id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.can_view_reporter_identity = true
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "ALTER TABLE whistleblower_case_access ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE whistleblower_evidence ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE whistleblower_interviews ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE whistleblower_timeline_events ENABLE ROW LEVEL SECURITY",
+        "ALTER TABLE whistleblower_actions ENABLE ROW LEVEL SECURITY",
     ]
 
 

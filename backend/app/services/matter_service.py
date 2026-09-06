@@ -83,11 +83,19 @@ async def _validate_assignee(session: AsyncSession, *, assignee_id: int | None) 
 
 
 async def _validate_source(session: AsyncSession, *, source_type: str, source_id: int) -> None:
-    """昇格元の存在検証（#73）: 現状 dispute に対応."""
+    """昇格元の存在検証（#73）: dispute / whistleblower（Issue #123）に対応."""
     if source_type == "dispute":
         dispute = await session.get(Dispute, source_id)
         if dispute is None:
             raise NotFoundError(f"dispute {source_id} not found")
+    elif source_type == "whistleblower":
+        # 循環 import 回避のため関数内 import（whistleblower_service も
+        # matter_service を利用する）。
+        from app.models.whistleblower import WhistleblowerReport
+
+        report = await session.get(WhistleblowerReport, source_id)
+        if report is None:
+            raise NotFoundError(f"whistleblower report {source_id} not found")
 
 
 async def create_matter(
@@ -118,7 +126,7 @@ async def create_matter(
     if source_type is not None:
         if source_id is None:
             raise ValidationError("source_type 指定時は source_id が必須です。")
-        if source_type == "dispute":
+        if source_type in {"dispute", "whistleblower"}:
             await _validate_source(session, source_type=source_type, source_id=source_id)
         elif source_type not in {"manual", "review", "other"}:
             raise ValidationError(f"不正な source_type: {source_type!r}")
@@ -180,9 +188,7 @@ async def create_matter(
     if contract_objs:
         for c in contract_objs:
             await session.execute(
-                insert(matter_contracts_table).values(
-                    matter_id=matter.id, contract_id=c.id
-                )
+                insert(matter_contracts_table).values(matter_id=matter.id, contract_id=c.id)
             )
             await _append_event(
                 session,
@@ -207,12 +213,16 @@ async def create_matter(
 async def matter_contract_ids(session: AsyncSession, *, matter_id: int) -> list[int]:
     """関係契約リンク id 一覧（async 安全・association 直接参照）."""
     rows = (
-        await session.execute(
-            select(matter_contracts_table.c.contract_id).where(
-                matter_contracts_table.c.matter_id == matter_id
+        (
+            await session.execute(
+                select(matter_contracts_table.c.contract_id).where(
+                    matter_contracts_table.c.matter_id == matter_id
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -341,9 +351,7 @@ async def link_contract(
     if contract_id in await matter_contract_ids(session, matter_id=matter.id):
         raise ConflictError(f"契約 {contract_id} は既にリンク済みです。")
     await session.execute(
-        insert(matter_contracts_table).values(
-            matter_id=matter.id, contract_id=contract_id
-        )
+        insert(matter_contracts_table).values(matter_id=matter.id, contract_id=contract_id)
     )
     matter.updated_by = actor_id
     await _append_event(

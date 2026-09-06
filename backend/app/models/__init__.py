@@ -99,6 +99,15 @@ from .security_settings import SecuritySetting
 from .signing import ESignatureEnvelope, ESignatureEvent
 from .standard_duration import StandardWorkDuration
 from .user import User
+from .whistleblower import (
+    WhistleblowerAction,
+    WhistleblowerCaseAccess,
+    WhistleblowerEvidence,
+    WhistleblowerInterview,
+    WhistleblowerReport,
+    WhistleblowerReporterProfile,
+    WhistleblowerTimelineEvent,
+)
 from .workflow import Workflow, WorkflowStep, WorkflowTemplate
 
 __all__ = [
@@ -208,6 +217,13 @@ __all__ = [
     "StandardWorkDuration",
     "User",
     "UserRole",
+    "WhistleblowerAction",
+    "WhistleblowerCaseAccess",
+    "WhistleblowerEvidence",
+    "WhistleblowerInterview",
+    "WhistleblowerReport",
+    "WhistleblowerReporterProfile",
+    "WhistleblowerTimelineEvent",
     "Workflow",
     "WorkflowStep",
     "WorkflowStepStatus",
