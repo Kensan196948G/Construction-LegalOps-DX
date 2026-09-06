@@ -7,6 +7,12 @@ which is required for Alembic autogenerate to discover the schema.
 from __future__ import annotations
 
 from .access_control import AccessControlEntry, LegalHold
+from .antitrust_compliance import (
+    AntitrustCheck,
+    AntitrustConsultation,
+    AntitrustPriorApplication,
+    ComplianceTraining,
+)
 from .app_settings import AiProviderSetting
 from .attachment import Attachment
 from .audit_anchor import AuditAnchor
@@ -21,9 +27,19 @@ from .contract_document import ContractDocument
 from .contract_template import ContractTemplate
 from .department import Department
 from .dispute import Dispute, DisputeEvidence, DisputeTimelineEvent
+from .dispute_ext import (
+    DisputeArgumentPosition,
+    DisputeDelayEvent,
+    DisputeProceedingStage,
+    DisputeSettlementOption,
+)
 from .document_consistency import DocumentConsistencyResult
 from .enums import (
     AgencyType,
+    AntitrustApplicationStatus,
+    AntitrustApplicationType,
+    AntitrustCheckSeverity,
+    AntitrustCheckType,
     AttachmentStorage,
     AuditAction,
     ClauseRecommendation,
@@ -33,7 +49,18 @@ from .enums import (
     ConsultationStatus,
     ContractStatus,
     ContractType,
+    DisputeArgumentParty,
+    DisputeArgumentStance,
+    DisputeDelayCauseCategory,
+    DisputeEotStatus,
+    DisputeProceedingStageStatus,
+    DisputeProceedingStageType,
+    DisputeSettlementStatus,
     DumpingSeverity,
+    EvidenceCustodyAction,
+    EvidenceHoldApprovalStatus,
+    EvidenceRelevance,
+    EvidenceSourceType,
     JvAgreementStatus,
     JvDisputeStatus,
     JvMemberRole,
@@ -51,6 +78,7 @@ from .enums import (
     WorkflowStepStatus,
     WorkflowStepType,
 )
+from .evidence import Evidence, EvidenceCustodyEvent, EvidenceHoldReleaseApproval
 from .ip_asset import IpAsset
 from .ip_document import IpDocument
 from .ip_watch import IpWatchEvent, IpWatchTarget
@@ -76,12 +104,28 @@ from .security_settings import SecuritySetting
 from .signing import ESignatureEnvelope, ESignatureEvent
 from .standard_duration import StandardWorkDuration
 from .user import User
+from .whistleblower import (
+    WhistleblowerAction,
+    WhistleblowerCaseAccess,
+    WhistleblowerEvidence,
+    WhistleblowerInterview,
+    WhistleblowerReport,
+    WhistleblowerReporterProfile,
+    WhistleblowerTimelineEvent,
+)
 from .workflow import Workflow, WorkflowStep, WorkflowTemplate
 
 __all__ = [
     "AccessControlEntry",
     "AgencyType",
     "AiProviderSetting",
+    "AntitrustApplicationStatus",
+    "AntitrustApplicationType",
+    "AntitrustCheck",
+    "AntitrustCheckSeverity",
+    "AntitrustCheckType",
+    "AntitrustConsultation",
+    "AntitrustPriorApplication",
     "Attachment",
     "AttachmentStorage",
     "AuditAction",
@@ -96,6 +140,7 @@ __all__ = [
     "ClauseRecommendation",
     "Comment",
     "CommentVisibility",
+    "ComplianceTraining",
     "Confidentiality",
     "ConsultationDirection",
     "ConsultationStatus",
@@ -110,12 +155,30 @@ __all__ = [
     "CounselLawyer",
     "Department",
     "Dispute",
+    "DisputeArgumentParty",
+    "DisputeArgumentPosition",
+    "DisputeArgumentStance",
+    "DisputeDelayCauseCategory",
+    "DisputeDelayEvent",
+    "DisputeEotStatus",
     "DisputeEvidence",
+    "DisputeProceedingStage",
+    "DisputeProceedingStageStatus",
+    "DisputeProceedingStageType",
+    "DisputeSettlementOption",
+    "DisputeSettlementStatus",
     "DisputeTimelineEvent",
     "DocumentConsistencyResult",
     "DumpingSeverity",
     "ESignatureEnvelope",
     "ESignatureEvent",
+    "Evidence",
+    "EvidenceCustodyAction",
+    "EvidenceCustodyEvent",
+    "EvidenceHoldApprovalStatus",
+    "EvidenceHoldReleaseApproval",
+    "EvidenceRelevance",
+    "EvidenceSourceType",
     "ExternalForwardEvent",
     "IpAsset",
     "IpDocument",
@@ -166,6 +229,13 @@ __all__ = [
     "StandardWorkDuration",
     "User",
     "UserRole",
+    "WhistleblowerAction",
+    "WhistleblowerCaseAccess",
+    "WhistleblowerEvidence",
+    "WhistleblowerInterview",
+    "WhistleblowerReport",
+    "WhistleblowerReporterProfile",
+    "WhistleblowerTimelineEvent",
     "Workflow",
     "WorkflowStep",
     "WorkflowStepStatus",

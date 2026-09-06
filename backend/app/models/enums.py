@@ -558,3 +558,251 @@ class LaborCommitmentStatus(StrEnum):
     ACTIVE = "active"  # 表明中
     FULFILLED = "fulfilled"  # 履行確認済み
     VIOLATED = "violated"  # 違反確認
+
+
+class DisputeDelayCauseCategory(StrEnum):
+    """遅延事象の原因分類（ロードマップ #101）."""
+
+    OWNER_CAUSED = "owner_caused"  # 発注者起因
+    CONTRACTOR_CAUSED = "contractor_caused"  # 請負者起因
+    WEATHER = "weather"  # 天候
+    THIRD_PARTY = "third_party"  # 第三者起因
+    FORCE_MAJEURE = "force_majeure"  # 不可抗力
+    DESIGN_CHANGE = "design_change"  # 設計変更
+    OTHER = "other"
+
+
+class DisputeEotStatus(StrEnum):
+    """EOT（工期延長）判定状態（ロードマップ #104）."""
+
+    PENDING = "pending"  # 未判定
+    APPROVED = "approved"  # 全部認容
+    PARTIAL = "partial"  # 一部認容
+    REJECTED = "rejected"  # 却下
+
+
+class DisputeArgumentParty(StrEnum):
+    """主張・反論マトリクスの当事者区分（ロードマップ #109）."""
+
+    OURS = "ours"
+    COUNTERPARTY = "counterparty"
+
+
+class DisputeArgumentStance(StrEnum):
+    """主張・反論マトリクスの立場（ロードマップ #109）."""
+
+    CLAIM = "claim"  # 主張
+    REBUTTAL = "rebuttal"  # 反論
+    COUNTER_REBUTTAL = "counter_rebuttal"  # 再反論
+
+
+class DisputeSettlementStatus(StrEnum):
+    """和解案の状態（ロードマップ #110）."""
+
+    DRAFT = "draft"  # 検討中
+    PROPOSED = "proposed"  # 提案済み
+    ACCEPTED = "accepted"  # 合意
+    REJECTED = "rejected"  # 拒否
+    WITHDRAWN = "withdrawn"  # 撤回
+
+
+class DisputeProceedingStageType(StrEnum):
+    """訴訟・ADR ステージ種別（ロードマップ #111）."""
+
+    NEGOTIATION = "negotiation"  # 交渉
+    MEDIATION = "mediation"  # 調停
+    ARBITRATION_FILED = "arbitration_filed"  # 仲裁申立
+    ARBITRATION_HEARING = "arbitration_hearing"  # 仲裁審理
+    ARBITRATION_AWARD = "arbitration_award"  # 仲裁判断
+    LAWSUIT_FILED = "lawsuit_filed"  # 訴訟提起
+    FIRST_INSTANCE = "first_instance"  # 第一審
+    APPEAL = "appeal"  # 控訴審
+    FINAL_JUDGMENT = "final_judgment"  # 確定判決
+    SETTLED = "settled"  # 和解成立
+
+
+class DisputeProceedingStageStatus(StrEnum):
+    """訴訟・ADR ステージの進行状態（ロードマップ #111）."""
+
+    ACTIVE = "active"  # 進行中
+    COMPLETED = "completed"  # 完了
+
+
+class AntitrustCheckType(StrEnum):
+    """独禁法・入札談合コンプライアンス — ルールベースチェックの種別（Issue #122）.
+
+    決定論的なルールエンジン（``app.services.antitrust_checker``）が唯一の正で
+    あり、AI には最終法的判断をさせない。
+    """
+
+    GENERAL = "general"  # #113 独禁法チェック（契約書・取引文面の一般スクリーニング）
+    BID_RIGGING = "bid_rigging"  # #114 入札談合リスクチェック
+    PRICE_EXCHANGE = "price_exchange"  # #117 価格情報交換禁止チェック
+    JV_FORMATION = "jv_formation"  # #118 JV 形成時競争法チェック
+    JOINT_RESEARCH = "joint_research"  # #119 競合との共同研究チェック
+
+
+class AntitrustCheckSeverity(StrEnum):
+    """チェック結果の重大度（``ComplianceSeverity`` と同義の 3 段階）."""
+
+    INFO = "info"
+    WARN = "warn"
+    BLOCK = "block"
+
+
+class AntitrustApplicationType(StrEnum):
+    """事前申請 → 承認 → 記録ワークフローの種別（Issue #122）."""
+
+    COMPETITOR_CONTACT = "competitor_contact"  # #115 競合他社接触記録
+    MEETING_SOCIAL = "meeting_social"  # #116 会合・懇親会事前申請
+    ENTERTAINMENT_GIFT = "entertainment_gift"  # #121 贈収賄・接待管理
+    PUBLIC_OFFICIAL_CONTACT = "public_official_contact"  # #122 公務員接触記録
+    DONATION_SPONSORSHIP = "donation_sponsorship"  # #123 寄付・協賛審査
+    # 備考: #120（競争法 AI 相談）は AntitrustConsultation、
+    # #124（コンプライアンス研修履歴）は ComplianceTraining が別テーブルで担当する。
+
+
+class AntitrustApplicationStatus(StrEnum):
+    """事前申請の状態遷移."""
+
+    SUBMITTED = "submitted"  # 申請中（承認待ち）
+    APPROVED = "approved"  # 承認済み（実施可）
+    REJECTED = "rejected"  # 却下
+    COMPLETED = "completed"  # 実施済み（記録済み）
+    CANCELLED = "cancelled"  # 取下げ
+
+
+class WhistleblowerCategory(StrEnum):
+    """内部通報のカテゴリ（Phase3 §5.10 / Issue #123・#125-135）."""
+
+    HARASSMENT = "harassment"  # ハラスメント
+    COMPLIANCE = "compliance"  # コンプライアンス違反全般
+    SAFETY = "safety"  # 安全衛生
+    LABOR = "labor"  # 労務（賃金不払い等）
+    CORRUPTION = "corruption"  # 汚職・贈収賄・談合
+    FRAUD = "fraud"  # 不正経理・横領
+    OTHER = "other"
+
+
+class WhistleblowerReportStatus(StrEnum):
+    """内部通報案件の状態."""
+
+    RECEIVED = "received"  # 受付
+    TRIAGE = "triage"  # 一次評価中
+    INVESTIGATING = "investigating"  # 調査中
+    CORRECTIVE_ACTION = "corrective_action"  # 是正措置中
+    CLOSED = "closed"  # 完了
+    DISMISSED = "dismissed"  # 却下（対象外・事実不確認）
+
+
+class WhistleblowerSeverity(StrEnum):
+    """内部通報の重大度（Matter の priority と同じ 4 段階）."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class WhistleblowerCaseRole(StrEnum):
+    """調査担当者 ACL 上の役割（#127 調査担当者限定 ACL）."""
+
+    LEAD_INVESTIGATOR = "lead_investigator"  # 主任調査担当
+    INVESTIGATOR = "investigator"  # 調査担当
+    OBSERVER = "observer"  # 陪席・監督者（識別情報は原則不可）
+
+
+class WhistleblowerEvidenceType(StrEnum):
+    """証拠の種別（#129 証拠保全）."""
+
+    DOCUMENT = "document"
+    EMAIL = "email"
+    PHOTO = "photo"
+    RECORDING = "recording"
+    TESTIMONY = "testimony"
+    SYSTEM_LOG = "system_log"
+    OTHER = "other"
+
+
+class WhistleblowerIntervieweeType(StrEnum):
+    """ヒアリング対象の種別（#130 ヒアリング記録）."""
+
+    REPORTER = "reporter"  # 通報者本人
+    WITNESS = "witness"  # 参考人
+    SUBJECT = "subject"  # 被通報者
+    OTHER = "other"
+
+
+class WhistleblowerTimelineEventType(StrEnum):
+    """調査タイムラインのイベント種別（#131）."""
+
+    RECEIVED = "received"
+    TRIAGED = "triaged"
+    ASSIGNED = "assigned"
+    STATUS_CHANGED = "status_changed"
+    EVIDENCE_ADDED = "evidence_added"
+    INTERVIEW_CONDUCTED = "interview_conducted"
+    MATTER_LINKED = "matter_linked"
+    ACTION_ADDED = "action_added"
+    ACCESS_GRANTED = "access_granted"
+    ACCESS_REVOKED = "access_revoked"
+    NOTE = "note"
+    CLOSED = "closed"
+
+
+class WhistleblowerActionCategory(StrEnum):
+    """措置の区分（#132 是正措置管理・#133 再発防止管理）."""
+
+    CORRECTIVE = "corrective"  # 是正措置
+    PREVENTIVE = "preventive"  # 再発防止策
+
+
+class WhistleblowerActionStatus(StrEnum):
+    """措置の状態."""
+
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    VERIFIED = "verified"
+    OVERDUE = "overdue"
+
+
+class EvidenceSourceType(StrEnum):
+    """証拠の入手経路（Phase 3 §5.17・証拠・eDiscovery管理 / Issue #124）."""
+
+    UPLOAD = "upload"  # 手動アップロード
+    EMAIL = "email"  # メール証拠取込（#226）
+    PHOTO = "photo"  # 写真（EXIF 保持対象・#227）
+    SCAN = "scan"  # スキャン文書
+    OTHER = "other"
+
+
+class EvidenceRelevance(StrEnum):
+    """証拠関連性のルールベース分類（#228）."""
+
+    UNCLASSIFIED = "unclassified"  # 未分類・要人手確認
+    RELEVANT = "relevant"  # 関連性あり
+    NOT_RELEVANT = "not_relevant"  # 関連性なし
+    PRIVILEGED = "privileged"  # 秘匿特権の疑いあり（要法務確認）
+
+
+class EvidenceCustodyAction(StrEnum):
+    """Chain of Custody（証拠の受け渡し記録）のイベント種別（#220）."""
+
+    COLLECTED = "collected"  # 収集
+    RECEIVED = "received"  # 受領
+    TRANSFERRED = "transferred"  # 移管
+    ANALYZED = "analyzed"  # 分析
+    COPIED = "copied"  # 複製
+    RETURNED = "returned"  # 返却
+    DESTROYED = "destroyed"  # 廃棄
+    HOLD_APPLIED = "hold_applied"  # Legal Hold 紐付け
+    HOLD_RELEASED = "hold_released"  # Legal Hold 解除
+
+
+class EvidenceHoldApprovalStatus(StrEnum):
+    """証拠に紐づく Legal Hold 解除承認申請の状態（#230）."""
+
+    PENDING = "pending"  # 決裁待ち
+    APPROVED = "approved"  # 承認（解除実行済み）
+    REJECTED = "rejected"  # 却下

@@ -1,0 +1,12 @@
+# ============================================================
+# 本番相当データ投入後の運用向けオーバーライド。
+# 元のdocker-compose.mvp.ymlの seed サービスは「架空ダミーデータ」を
+# 再投入する設計 (restart: "no" だが up -d の度に実行される) のため、
+# Neonから移行した実データを保持するにはこのオーバーライドで
+# alembicマイグレーションのみ実行しダミーデータ投入をスキップする。
+# 起動:
+#   docker compose -f infra/docker/docker-compose.mvp.yml -f infra/docker/docker-compose.mvp.override.yml up -d
+# ============================================================
+services:
+  seed:
+    command: ["sh", "-c", "alembic upgrade head"]

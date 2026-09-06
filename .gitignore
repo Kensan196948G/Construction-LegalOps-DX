@@ -131,3 +131,4 @@ scripts/**/CLAUDE.md
 # local agent tool state (auto-generated, may contain machine-local config)
 .agents/
 .codex/
+.claude/worktrees/

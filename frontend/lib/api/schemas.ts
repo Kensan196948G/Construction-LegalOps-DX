@@ -396,6 +396,185 @@ export const disputeExposureSchema = z.object({
 export type DisputeExposure = z.infer<typeof disputeExposureSchema>;
 
 // ---------------------------------------------------------------------------
+// 紛争・クレーム管理高度化（ロードマップ #97〜#112 / Issue #121）
+// ---------------------------------------------------------------------------
+
+export const disputeDelayEventSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  cause_category: z.enum([
+    "owner_caused",
+    "contractor_caused",
+    "weather",
+    "third_party",
+    "force_majeure",
+    "design_change",
+    "other",
+  ]),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  occurred_from: dateSchema,
+  occurred_to: dateSchema.nullable().optional(),
+  delay_days: z.number().int(),
+  responsible_party: z.string().nullable().optional(),
+  additional_cost_jpy: z.number().int().nullable().optional(),
+  damage_amount_jpy: z.number().int().nullable().optional(),
+  eot_days_requested: z.number().int().nullable().optional(),
+  eot_days_granted: z.number().int().nullable().optional(),
+  eot_status: z.enum(["pending", "approved", "partial", "rejected"]),
+  eot_decided_at: datetimeSchema.nullable().optional(),
+  eot_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeDelayEvent = z.infer<typeof disputeDelayEventSchema>;
+
+export const disputeDelaySummarySchema = z.object({
+  dispute_id: idSchema,
+  by_cause: z
+    .array(
+      z.object({
+        cause_category: z.string(),
+        count: z.number().int(),
+        total_delay_days: z.number().int(),
+        total_additional_cost_jpy: z.number().int(),
+        total_damage_amount_jpy: z.number().int(),
+      }),
+    )
+    .default([]),
+  total_delay_days: z.number().int(),
+  total_additional_cost_jpy: z.number().int(),
+  total_damage_amount_jpy: z.number().int(),
+  total_eot_days_granted: z.number().int(),
+});
+export type DisputeDelaySummary = z.infer<typeof disputeDelaySummarySchema>;
+
+export const disputeClaimNoticeSchema = z.object({
+  dispute_id: idSchema,
+  subject: z.string(),
+  recipient: z.string(),
+  sender: z.string(),
+  notice_date: dateSchema,
+  notice_deadline: dateSchema.nullable().optional(),
+  statute_limitations_date: dateSchema.nullable().optional(),
+  formatted_text: z.string(),
+});
+export type DisputeClaimNotice = z.infer<typeof disputeClaimNoticeSchema>;
+
+export const disputeNoticeDeadlineAutoJudgeSchema = z.object({
+  dispute_id: idSchema,
+  dispute_type: z.string(),
+  event_date: dateSchema,
+  notice_period_days: z.number().int(),
+  notice_deadline: dateSchema,
+  applied: z.boolean(),
+});
+export type DisputeNoticeDeadlineAutoJudge = z.infer<typeof disputeNoticeDeadlineAutoJudgeSchema>;
+
+export const disputeTimeBarAlertSchema = z.object({
+  dispute_id: idSchema,
+  dispute_no: z.string(),
+  title: z.string(),
+  status: z.string(),
+  statute_limitations_date: dateSchema.nullable().optional(),
+  statute_days_remaining: z.number().int().nullable().optional(),
+  notice_deadline: dateSchema.nullable().optional(),
+  notice_days_remaining: z.number().int().nullable().optional(),
+  severity: z.string(),
+});
+export type DisputeTimeBarAlert = z.infer<typeof disputeTimeBarAlertSchema>;
+
+export const disputeEvidenceScoreSchema = z.object({
+  dispute_id: idSchema,
+  score: z.number().int(),
+  required_types: z.array(z.string()).default([]),
+  present_types: z.array(z.string()).default([]),
+  missing_types: z.array(z.string()).default([]),
+  unpreserved_types: z.array(z.string()).default([]),
+  recommendations: z.array(z.string()).default([]),
+});
+export type DisputeEvidenceScore = z.infer<typeof disputeEvidenceScoreSchema>;
+
+export const disputeChronologyEntrySchema = z.object({
+  source_type: z.string(),
+  occurred_at: datetimeSchema,
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  ref_id: idSchema,
+  estimated: z.boolean().default(false),
+});
+export type DisputeChronologyEntry = z.infer<typeof disputeChronologyEntrySchema>;
+
+export const disputeArgumentPositionSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  issue_no: z.number().int(),
+  issue_title: z.string(),
+  party: z.enum(["ours", "counterparty"]),
+  stance: z.enum(["claim", "rebuttal", "counter_rebuttal"]),
+  content: z.string(),
+  evidence_refs: z.array(z.number().int()).default([]),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeArgumentPosition = z.infer<typeof disputeArgumentPositionSchema>;
+
+export const disputeSettlementOptionSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  option_no: z.number().int(),
+  title: z.string(),
+  settlement_amount_jpy: z.number().int().nullable().optional(),
+  payment_terms: z.string().nullable().optional(),
+  pros: z.string().nullable().optional(),
+  cons: z.string().nullable().optional(),
+  probability_score: z.number().int().nullable().optional(),
+  expected_value_jpy: z.number().int().nullable().optional(),
+  status: z.enum(["draft", "proposed", "accepted", "rejected", "withdrawn"]),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeSettlementOption = z.infer<typeof disputeSettlementOptionSchema>;
+
+export const disputeSettlementCompareItemSchema = z.object({
+  id: idSchema,
+  option_no: z.number().int(),
+  title: z.string(),
+  settlement_amount_jpy: z.number().int().nullable().optional(),
+  probability_score: z.number().int().nullable().optional(),
+  expected_value_jpy: z.number().int().nullable().optional(),
+  status: z.string(),
+  recommended: z.boolean(),
+});
+export type DisputeSettlementCompareItem = z.infer<typeof disputeSettlementCompareItemSchema>;
+
+export const disputeProceedingStageSchema = z.object({
+  id: idSchema,
+  dispute_id: idSchema,
+  stage: z.enum([
+    "negotiation",
+    "mediation",
+    "arbitration_filed",
+    "arbitration_hearing",
+    "arbitration_award",
+    "lawsuit_filed",
+    "first_instance",
+    "appeal",
+    "final_judgment",
+    "settled",
+  ]),
+  status: z.enum(["active", "completed"]),
+  started_at: dateSchema,
+  ended_at: dateSchema.nullable().optional(),
+  forum: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type DisputeProceedingStage = z.infer<typeof disputeProceedingStageSchema>;
+
+// ---------------------------------------------------------------------------
 // 支払・出来高・検収コンプライアンス
 // ---------------------------------------------------------------------------
 
@@ -2257,3 +2436,497 @@ export const partnerRiskScoreSchema = z.object({
   expiry_overdue_count: z.number().int(),
 });
 export type PartnerRiskScore = z.infer<typeof partnerRiskScoreSchema>;
+
+// ===========================================================================
+// 独禁法・入札談合コンプライアンス（Issue #122・ロードマップ #113〜#124）
+// ===========================================================================
+
+export const antitrustCheckTypeEnum = z.enum([
+  "general",
+  "bid_rigging",
+  "price_exchange",
+  "jv_formation",
+  "joint_research",
+]);
+export type AntitrustCheckType = z.infer<typeof antitrustCheckTypeEnum>;
+
+export const antitrustSeverityEnum = z.enum(["info", "warn", "block"]);
+export type AntitrustSeverity = z.infer<typeof antitrustSeverityEnum>;
+
+export const antitrustApplicationTypeEnum = z.enum([
+  "competitor_contact",
+  "meeting_social",
+  "entertainment_gift",
+  "public_official_contact",
+  "donation_sponsorship",
+]);
+export type AntitrustApplicationType = z.infer<typeof antitrustApplicationTypeEnum>;
+
+export const antitrustApplicationStatusEnum = z.enum([
+  "submitted",
+  "approved",
+  "rejected",
+  "completed",
+  "cancelled",
+]);
+export type AntitrustApplicationStatus = z.infer<typeof antitrustApplicationStatusEnum>;
+
+/** #113/#114/#117/#118/#119 チェック結果の finding */
+export const antitrustFindingSchema = z.object({
+  code: z.string(),
+  title: z.string(),
+  severity: antitrustSeverityEnum.or(z.string()),
+  description: z.string(),
+  citation: z.string(),
+  suggestion: z.string().nullable().optional(),
+  matched_keywords: z.array(z.string()).default([]),
+});
+export type AntitrustFinding = z.infer<typeof antitrustFindingSchema>;
+
+/** #113/#114/#117/#118/#119 決定論的ルールベースチェック結果 */
+export const antitrustCheckSchema = z.object({
+  id: idSchema,
+  check_no: z.string(),
+  check_type: antitrustCheckTypeEnum.or(z.string()),
+  severity: antitrustSeverityEnum.or(z.string()),
+  subject: z.string(),
+  contract_id: idSchema.nullable().optional(),
+  jv_id: idSchema.nullable().optional(),
+  input_context: z.record(z.string(), z.unknown()).default({}),
+  findings: z.array(antitrustFindingSchema).default([]),
+  checked_at: datetimeSchema,
+  notes: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  disclaimer: z.string(),
+});
+export type AntitrustCheck = z.infer<typeof antitrustCheckSchema>;
+
+export const antitrustCheckCreateSchema = z.object({
+  check_type: z.string().min(1).max(32),
+  subject: z.string().min(1).max(256),
+  context: z.record(z.string(), z.unknown()).default({}),
+  contract_id: idSchema.nullish(),
+  jv_id: idSchema.nullish(),
+  notes: z.string().max(4000).nullish(),
+});
+export type AntitrustCheckCreate = z.infer<typeof antitrustCheckCreateSchema>;
+
+/** #115/#116/#121/#122/#123 事前申請 → 承認 → 記録 */
+export const antitrustApplicationSchema = z.object({
+  id: idSchema,
+  application_no: z.string(),
+  application_type: antitrustApplicationTypeEnum.or(z.string()),
+  status: antitrustApplicationStatusEnum.or(z.string()),
+  title: z.string(),
+  counterparty_name: z.string().nullable().optional(),
+  counterparty_organization: z.string().nullable().optional(),
+  purpose: z.string().nullable().optional(),
+  scheduled_at: datetimeSchema.nullable().optional(),
+  location: z.string().nullable().optional(),
+  amount_jpy: z.number().int().nullable().optional(),
+  attendees: z.array(z.string()).nullable().optional(),
+  contract_id: idSchema.nullable().optional(),
+  jv_id: idSchema.nullable().optional(),
+  approved_by: idSchema.nullable().optional(),
+  approved_at: datetimeSchema.nullable().optional(),
+  decision_note: z.string().nullable().optional(),
+  occurred_at: datetimeSchema.nullable().optional(),
+  outcome_note: z.string().nullable().optional(),
+  reported_at: datetimeSchema.nullable().optional(),
+  cancel_reason: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type AntitrustApplication = z.infer<typeof antitrustApplicationSchema>;
+
+export const antitrustApplicationCreateSchema = z.object({
+  application_type: z.string().min(1).max(32),
+  title: z.string().min(1).max(256),
+  counterparty_name: z.string().max(256).nullish(),
+  counterparty_organization: z.string().max(256).nullish(),
+  purpose: z.string().max(4000).nullish(),
+  scheduled_at: z.string().nullish(),
+  location: z.string().max(256).nullish(),
+  amount_jpy: z.number().int().min(0).nullish(),
+  attendees: z.array(z.string()).nullish(),
+  contract_id: idSchema.nullish(),
+  jv_id: idSchema.nullish(),
+});
+export type AntitrustApplicationCreate = z.infer<typeof antitrustApplicationCreateSchema>;
+
+/** #120 競争法 AI 相談 */
+export const antitrustConsultationSchema = z.object({
+  id: idSchema,
+  query_text: z.string(),
+  answer_text: z.string(),
+  citations: z.array(z.record(z.string(), z.unknown())).default([]),
+  contract_id: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  disclaimer: z.string(),
+});
+export type AntitrustConsultation = z.infer<typeof antitrustConsultationSchema>;
+
+/** #124 コンプライアンス研修履歴 */
+export const complianceTrainingSchema = z.object({
+  id: idSchema,
+  user_id: idSchema.nullable().optional(),
+  attendee_name: z.string().nullable().optional(),
+  training_title: z.string(),
+  category: z.string(),
+  completed_at: dateSchema,
+  score: z.number().int().nullable().optional(),
+  certificate_url: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type ComplianceTraining = z.infer<typeof complianceTrainingSchema>;
+
+export const complianceTrainingCreateSchema = z.object({
+  training_title: z.string().min(1).max(256),
+  completed_at: dateSchema,
+  user_id: idSchema.nullish(),
+  attendee_name: z.string().max(256).nullish(),
+  category: z.string().max(64).default("antitrust"),
+  score: z.number().int().min(0).max(100).nullish(),
+  certificate_url: z.string().max(512).nullish(),
+  notes: z.string().max(4000).nullish(),
+});
+export type ComplianceTrainingCreate = z.infer<typeof complianceTrainingCreateSchema>;
+
+// ===========================================================================
+// 内部通報・調査管理（Issue #123・ロードマップ #125-135 / migration 024）
+//
+// 最重要: 通報者識別情報（whistleblowerReporterProfileSchema）は調査担当者
+// ACL 保有者・admin/auditor のみ取得できる（バックエンドが 403 を返す）。
+// フロントエンドは 403 を「権限なし」として明示し、握りつぶさないこと。
+// ===========================================================================
+
+export const whistleblowerCategoryEnum = z.enum([
+  "harassment",
+  "compliance",
+  "safety",
+  "labor",
+  "corruption",
+  "fraud",
+  "other",
+]);
+export type WhistleblowerCategory = z.infer<typeof whistleblowerCategoryEnum>;
+
+export const whistleblowerStatusEnum = z.enum([
+  "received",
+  "triage",
+  "investigating",
+  "corrective_action",
+  "closed",
+  "dismissed",
+]);
+export type WhistleblowerStatus = z.infer<typeof whistleblowerStatusEnum>;
+
+export const whistleblowerSeverityEnum = z.enum(["low", "medium", "high", "critical"]);
+export type WhistleblowerSeverity = z.infer<typeof whistleblowerSeverityEnum>;
+
+export const whistleblowerCaseRoleEnum = z.enum([
+  "lead_investigator",
+  "investigator",
+  "observer",
+]);
+export type WhistleblowerCaseRole = z.infer<typeof whistleblowerCaseRoleEnum>;
+
+export const whistleblowerEvidenceTypeEnum = z.enum([
+  "document",
+  "email",
+  "photo",
+  "recording",
+  "testimony",
+  "system_log",
+  "other",
+]);
+export type WhistleblowerEvidenceType = z.infer<typeof whistleblowerEvidenceTypeEnum>;
+
+export const whistleblowerIntervieweeTypeEnum = z.enum([
+  "reporter",
+  "witness",
+  "subject",
+  "other",
+]);
+export type WhistleblowerIntervieweeType = z.infer<typeof whistleblowerIntervieweeTypeEnum>;
+
+export const whistleblowerActionCategoryEnum = z.enum(["corrective", "preventive"]);
+export type WhistleblowerActionCategory = z.infer<typeof whistleblowerActionCategoryEnum>;
+
+export const whistleblowerActionStatusEnum = z.enum([
+  "open",
+  "in_progress",
+  "completed",
+  "verified",
+  "overdue",
+]);
+export type WhistleblowerActionStatus = z.infer<typeof whistleblowerActionStatusEnum>;
+
+export const whistleblowerReportSchema = z.object({
+  id: idSchema,
+  report_no: z.string(),
+  category: whistleblowerCategoryEnum.or(z.string()),
+  title: z.string(),
+  description: z.string(),
+  status: whistleblowerStatusEnum.or(z.string()),
+  severity: whistleblowerSeverityEnum.or(z.string()),
+  is_anonymous: z.boolean(),
+  occurred_at: dateSchema.nullable().optional(),
+  received_at: datetimeSchema,
+  matter_id: idSchema.nullable().optional(),
+  lead_investigator_id: idSchema.nullable().optional(),
+  substantiated: z.boolean().nullable().optional(),
+  closed_at: datetimeSchema.nullable().optional(),
+  close_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type WhistleblowerReport = z.infer<typeof whistleblowerReportSchema>;
+
+export const whistleblowerReportCreateSchema = z.object({
+  category: whistleblowerCategoryEnum,
+  title: z.string().min(1).max(256),
+  description: z.string().min(1).max(8000),
+  severity: whistleblowerSeverityEnum.default("medium"),
+  is_anonymous: z.boolean().default(false),
+  occurred_at: dateSchema.nullish(),
+  lead_investigator_id: idSchema.nullish(),
+  reporter_name: z.string().max(128).nullish(),
+  contact_email: z.string().email().nullish(),
+  contact_phone: z.string().max(32).nullish(),
+  department: z.string().max(128).nullish(),
+  relationship_to_subject: z.string().max(64).nullish(),
+  consent_identity_disclosure: z.boolean().default(false),
+});
+export type WhistleblowerReportCreate = z.infer<typeof whistleblowerReportCreateSchema>;
+
+/** 通報者識別情報（隔離・調査担当者限定）。403 の場合は取得しない。 */
+export const whistleblowerReporterProfileSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  reporter_name: z.string().nullable().optional(),
+  contact_email: z.string().nullable().optional(),
+  contact_phone: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  relationship_to_subject: z.string().nullable().optional(),
+  consent_identity_disclosure: z.boolean(),
+});
+export type WhistleblowerReporterProfile = z.infer<typeof whistleblowerReporterProfileSchema>;
+
+export const whistleblowerCaseAccessSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  user_id: idSchema,
+  role_in_case: whistleblowerCaseRoleEnum.or(z.string()),
+  can_view_reporter_identity: z.boolean(),
+  granted_by: idSchema.nullable().optional(),
+  expires_at: datetimeSchema.nullable().optional(),
+  revoked_at: datetimeSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerCaseAccess = z.infer<typeof whistleblowerCaseAccessSchema>;
+
+export const whistleblowerEvidenceSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  evidence_type: whistleblowerEvidenceTypeEnum.or(z.string()),
+  description: z.string().nullable().optional(),
+  occurred_at: dateSchema.nullable().optional(),
+  attachment_id: idSchema.nullable().optional(),
+  preserved: z.boolean(),
+  chain_of_custody: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerEvidence = z.infer<typeof whistleblowerEvidenceSchema>;
+
+export const whistleblowerInterviewSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  interviewee_type: whistleblowerIntervieweeTypeEnum.or(z.string()),
+  interviewee_name: z.string().nullable().optional(),
+  conducted_at: datetimeSchema,
+  conducted_by: idSchema.nullable().optional(),
+  summary: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerInterview = z.infer<typeof whistleblowerInterviewSchema>;
+
+export const whistleblowerTimelineEventSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  event_type: z.string(),
+  note: z.string().nullable().optional(),
+  payload: z.record(z.string(), z.unknown()).nullable().optional(),
+  actor_id: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+});
+export type WhistleblowerTimelineEvent = z.infer<typeof whistleblowerTimelineEventSchema>;
+
+export const whistleblowerActionSchema = z.object({
+  id: idSchema,
+  report_id: idSchema,
+  action_category: whistleblowerActionCategoryEnum.or(z.string()),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  owner_id: idSchema.nullable().optional(),
+  due_date: dateSchema.nullable().optional(),
+  status: whistleblowerActionStatusEnum.or(z.string()),
+  completed_at: datetimeSchema.nullable().optional(),
+  verified_by: idSchema.nullable().optional(),
+  verified_at: datetimeSchema.nullable().optional(),
+  verification_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type WhistleblowerAction = z.infer<typeof whistleblowerActionSchema>;
+
+/** 経営報告匿名集計（#134/#135）。個人特定情報は含まれない。 */
+export const whistleblowerAggregateSchema = z.object({
+  total: z.number().int(),
+  anonymous_count: z.number().int(),
+  substantiated_count: z.number().int(),
+  dismissed_count: z.number().int(),
+  by_category: z.record(z.string(), z.number().int()),
+  by_status: z.record(z.string(), z.number().int()),
+  by_severity: z.record(z.string(), z.number().int()),
+  avg_days_to_close: z.number().nullable().optional(),
+  date_from: z.string().nullable().optional(),
+  date_to: z.string().nullable().optional(),
+});
+export type WhistleblowerAggregate = z.infer<typeof whistleblowerAggregateSchema>;
+
+// ===========================================================================
+// 30. 証拠・eDiscovery 管理 (Phase 3 §5.17 / ロードマップ #217-230 / /evidence)
+// ===========================================================================
+
+export const evidenceSchema = z.object({
+  id: idSchema,
+  evidence_code: z.string(),
+  matter_id: idSchema.nullable().optional(),
+  contract_id: idSchema.nullable().optional(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  source_type: z.string(),
+  filename: z.string().nullable().optional(),
+  mime_type: z.string().nullable().optional(),
+  size_bytes: z.number().int().nullable().optional(),
+  storage: z.string(),
+  storage_ref: z.string().nullable().optional(),
+  sha256_hash: z.string(),
+  is_duplicate: z.boolean(),
+  duplicate_of_id: idSchema.nullable().optional(),
+  exif_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  email_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  relevance: z.string(),
+  relevance_score: z.number().int().nullable().optional(),
+  relevance_note: z.string().nullable().optional(),
+  collected_by: idSchema.nullable().optional(),
+  collected_by_name: z.string().nullable().optional(),
+  collected_at: datetimeSchema.nullable().optional(),
+  legal_hold_id: idSchema.nullable().optional(),
+  is_under_hold: z.boolean(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type Evidence = z.infer<typeof evidenceSchema>;
+
+export const evidenceCreateSchema = z.object({
+  title: z.string().min(1).max(256),
+  description: z.string().max(8000).nullish(),
+  source_type: z.string().max(16).default("upload"),
+  matter_id: idSchema.nullish(),
+  contract_id: idSchema.nullish(),
+  filename: z.string().max(256).nullish(),
+  mime_type: z.string().max(128).nullish(),
+  storage: z.string().max(32).default("local"),
+  storage_ref: z.string().max(256).nullish(),
+  file_content_base64: z.string().nullish(),
+  checksum_sha256: z.string().length(64).nullish(),
+  collected_by_name: z.string().max(128).nullish(),
+  collected_at: datetimeSchema.nullish(),
+});
+export type EvidenceCreate = z.infer<typeof evidenceCreateSchema>;
+
+export const evidenceCustodyEventSchema = z.object({
+  id: idSchema,
+  evidence_id: idSchema,
+  action: z.string(),
+  actor_id: idSchema.nullable().optional(),
+  actor_name: z.string().nullable().optional(),
+  from_custodian: z.string().nullable().optional(),
+  to_custodian: z.string().nullable().optional(),
+  occurred_at: datetimeSchema,
+  notes: z.string().nullable().optional(),
+  previous_hash: z.string().nullable().optional(),
+  hash_chain: z.string(),
+});
+export type EvidenceCustodyEvent = z.infer<typeof evidenceCustodyEventSchema>;
+
+export const evidenceTimelineItemSchema = z.object({
+  type: z.string(),
+  occurred_at: datetimeSchema,
+  action: z.string(),
+  actor_id: idSchema.nullable().optional(),
+  actor_name: z.string().nullable().optional(),
+  from_custodian: z.string().nullable().optional(),
+  to_custodian: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  hash_chain: z.string().nullable().optional(),
+});
+export type EvidenceTimelineItem = z.infer<typeof evidenceTimelineItemSchema>;
+
+export const evidenceViewHistoryItemSchema = z.object({
+  id: idSchema,
+  occurred_at: datetimeSchema,
+  action: z.string(),
+  actor_id: idSchema.nullable().optional(),
+});
+export type EvidenceViewHistoryItem = z.infer<typeof evidenceViewHistoryItemSchema>;
+
+export const evidenceExportBundleSchema = z.object({
+  evidence_code: z.string(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  sha256_hash: z.string(),
+  source_type: z.string(),
+  filename: z.string().nullable().optional(),
+  mime_type: z.string().nullable().optional(),
+  collected_at: z.string().nullable().optional(),
+  collected_by_name: z.string().nullable().optional(),
+  relevance: z.string(),
+  relevance_score: z.number().int().nullable().optional(),
+  relevance_note: z.string().nullable().optional(),
+  is_duplicate: z.boolean(),
+  duplicate_of_id: idSchema.nullable().optional(),
+  is_under_hold: z.boolean(),
+  exif_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  email_metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  custody_chain_verified: z.boolean(),
+  timeline: z.array(z.record(z.string(), z.unknown())),
+  exported_at: z.string(),
+});
+export type EvidenceExportBundle = z.infer<typeof evidenceExportBundleSchema>;
+
+export const evidenceHoldReleaseApprovalSchema = z.object({
+  id: idSchema,
+  legal_hold_id: idSchema,
+  evidence_id: idSchema.nullable().optional(),
+  requested_by: idSchema.nullable().optional(),
+  requested_at: datetimeSchema,
+  reason: z.string(),
+  status: z.string(),
+  decided_by: idSchema.nullable().optional(),
+  decided_at: datetimeSchema.nullable().optional(),
+  decision_note: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type EvidenceHoldReleaseApproval = z.infer<typeof evidenceHoldReleaseApprovalSchema>;

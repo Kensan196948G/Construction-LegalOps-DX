@@ -13,6 +13,11 @@ import type { AxiosRequestConfig } from "axios";
 import { z } from "zod";
 
 import { apiClient, withIdempotencyKey } from "./client";
+import type {
+  AntitrustApplicationCreate,
+  AntitrustCheckCreate,
+  ComplianceTrainingCreate,
+} from "./schemas";
 import {
   // envelopes
   apiResponse,
@@ -44,13 +49,31 @@ import {
   counselLawyerSchema,
   dashboardSummarySchema,
   dashboardTrendsSchema,
+  disputeArgumentPositionSchema,
+  disputeChronologyEntrySchema,
+  disputeClaimNoticeSchema,
+  disputeDelayEventSchema,
+  disputeDelaySummarySchema,
   disputeDetailSchema,
   disputeEvidenceSchema,
+  disputeEvidenceScoreSchema,
   disputeExposureSchema,
+  disputeNoticeDeadlineAutoJudgeSchema,
+  disputeProceedingStageSchema,
   disputeSchema,
+  disputeSettlementCompareItemSchema,
+  disputeSettlementOptionSchema,
+  disputeTimeBarAlertSchema,
   disputeTimelineEventSchema,
   engagementSchema,
+  evidenceCreateSchema,
+  evidenceCustodyEventSchema,
+  evidenceExportBundleSchema,
   evidenceHitSchema,
+  evidenceHoldReleaseApprovalSchema,
+  evidenceSchema,
+  evidenceTimelineItemSchema,
+  evidenceViewHistoryItemSchema,
   healthSchema,
   knowledgeArticleSchema,
   laborWageDiscrepancySchema,
@@ -81,6 +104,13 @@ import {
   publicWorksConsultationSchema,
   publicWorksDashboardSchema,
   standardClauseCheckSchema,
+  antitrustApplicationCreateSchema,
+  antitrustApplicationSchema,
+  antitrustCheckCreateSchema,
+  antitrustCheckSchema,
+  antitrustConsultationSchema,
+  complianceTrainingCreateSchema,
+  complianceTrainingSchema,
   jvAgreementSchema,
   jvCreateSchema,
   jvDashboardSchema,
@@ -126,13 +156,26 @@ import {
   ipWatchTargetSchema,
   ipWatchTargetSyncResultSchema,
   jpoStatusSchema,
+  whistleblowerActionSchema,
+  whistleblowerAggregateSchema,
+  whistleblowerCaseAccessSchema,
+  whistleblowerEvidenceSchema,
+  whistleblowerInterviewSchema,
+  whistleblowerReportCreateSchema,
+  whistleblowerReportSchema,
+  whistleblowerReporterProfileSchema,
+  whistleblowerTimelineEventSchema,
   type AiProvider,
   type AiSettingsUpdate,
   type ChangeOrderCreate,
   type ContractCreate,
   type ContractUpdate,
   type Dispute,
+  type DisputeArgumentPosition,
+  type DisputeDelayEvent,
   type DisputeEvidence,
+  type DisputeProceedingStage,
+  type DisputeSettlementOption,
   type IpAssetCreate,
   type IpWatchTargetCreate,
   type Paginated,
@@ -140,6 +183,12 @@ import {
   type PaymentFinding,
   type ReviewCreate,
   type RiskUpdate,
+  type WhistleblowerActionCategory,
+  type WhistleblowerActionStatus,
+  type WhistleblowerCaseRole,
+  type WhistleblowerEvidenceType,
+  type WhistleblowerIntervieweeType,
+  type WhistleblowerReportCreate,
 } from "./schemas";
 
 // ---------------------------------------------------------------------------
@@ -742,6 +791,89 @@ export const disputesApi = {
     id: number | string,
     data: Partial<DisputeEvidence>,
   ) => postParsed(disputeEvidenceSchema, `/disputes/${id}/evidence`, data),
+};
+
+// ===========================================================================
+// 16.1 紛争・クレーム管理高度化（ロードマップ #97〜#112 / Issue #121）
+// ===========================================================================
+
+export const disputesExtApi = {
+  /** #97 クレーム通知書生成（決定論的テンプレート処理・AI 不使用） */
+  generateClaimNotice: (
+    id: number | string,
+    data: { sender_name: string; recipient_name?: string; notice_date?: string; extra_note?: string },
+  ) => postParsed(disputeClaimNoticeSchema, `/disputes/${id}/claim-notice`, data),
+
+  /** #98 通知期限自動判定（既定日数テーブル。apply=true で dispute へ保存） */
+  autoJudgeNoticeDeadline: (
+    id: number | string,
+    data: { event_date: string; override_days?: number; apply?: boolean },
+  ) =>
+    postParsed(
+      disputeNoticeDeadlineAutoJudgeSchema,
+      `/disputes/${id}/notice-deadline/auto-judge`,
+      data,
+    ),
+
+  /** #99/#112 Time Bar 警告一覧（未解決案件横断） */
+  timeBarAlerts: () => getParsed(z.array(disputeTimeBarAlertSchema), "/disputes/alerts/time-bar"),
+
+  /** #99/#112 単一案件の消滅時効・通知期限タイマー */
+  timeBarStatus: (id: number | string) =>
+    getParsed(disputeTimeBarAlertSchema, `/disputes/${id}/time-bar`),
+
+  /** #100〜#104 遅延事象台帳 */
+  listDelayEvents: (id: number | string) =>
+    getParsed(z.array(disputeDelayEventSchema), `/disputes/${id}/delay-events`),
+
+  addDelayEvent: (id: number | string, data: Partial<DisputeDelayEvent>) =>
+    postParsed(disputeDelayEventSchema, `/disputes/${id}/delay-events`, data),
+
+  delaySummary: (id: number | string) =>
+    getParsed(disputeDelaySummarySchema, `/disputes/${id}/delay-events/summary`),
+
+  updateDelayEventEot: (
+    delayEventId: number | string,
+    data: { eot_status: "approved" | "partial" | "rejected"; eot_days_granted?: number; eot_note?: string },
+  ) => patchParsed(disputeDelayEventSchema, `/disputes/delay-events/${delayEventId}/eot`, data),
+
+  /** #105/#106 証拠充足度スコア・証拠不足検知（ルールベース・AI 不使用） */
+  evidenceScore: (id: number | string) =>
+    getParsed(disputeEvidenceScoreSchema, `/disputes/${id}/evidence-score`),
+
+  /** #107/#108 Claim Chronology 自動生成 */
+  chronology: (id: number | string) =>
+    getParsed(z.array(disputeChronologyEntrySchema), `/disputes/${id}/chronology`),
+
+  /** #109 主張・反論マトリクス */
+  listArguments: (id: number | string) =>
+    getParsed(z.array(disputeArgumentPositionSchema), `/disputes/${id}/arguments`),
+
+  addArgument: (id: number | string, data: Partial<DisputeArgumentPosition>) =>
+    postParsed(disputeArgumentPositionSchema, `/disputes/${id}/arguments`, data),
+
+  /** #110 和解案比較 */
+  listSettlementOptions: (id: number | string) =>
+    getParsed(z.array(disputeSettlementOptionSchema), `/disputes/${id}/settlement-options`),
+
+  addSettlementOption: (id: number | string, data: Partial<DisputeSettlementOption>) =>
+    postParsed(disputeSettlementOptionSchema, `/disputes/${id}/settlement-options`, data),
+
+  compareSettlementOptions: (id: number | string) =>
+    getParsed(
+      z.array(disputeSettlementCompareItemSchema),
+      `/disputes/${id}/settlement-options/compare`,
+    ),
+
+  updateSettlementOption: (optionId: number | string, data: Partial<DisputeSettlementOption>) =>
+    patchParsed(disputeSettlementOptionSchema, `/disputes/settlement-options/${optionId}`, data),
+
+  /** #111 訴訟・ADR ステージ管理 */
+  listStages: (id: number | string) =>
+    getParsed(z.array(disputeProceedingStageSchema), `/disputes/${id}/stages`),
+
+  addStage: (id: number | string, data: Partial<DisputeProceedingStage>) =>
+    postParsed(disputeProceedingStageSchema, `/disputes/${id}/stages`, data),
 };
 
 // ===========================================================================
@@ -1849,6 +1981,389 @@ export const partnerExtApi = {
     ),
 };
 
+// ===========================================================================
+// 独禁法・入札談合コンプライアンス（Issue #122・ロードマップ #113〜#124）
+// ===========================================================================
+
+export const antitrustApi = {
+  /** #113/#114/#117/#118/#119 チェック結果一覧 */
+  listChecks: (params?: {
+    check_type?: string;
+    severity?: string;
+    contract_id?: number | string;
+    jv_id?: number | string;
+    page?: number;
+    size?: number;
+  }) =>
+    getParsed(paginatedSchema(antitrustCheckSchema), "/antitrust/checks", {
+      params: buildParams(params),
+    }),
+
+  getCheck: (id: number | string) =>
+    getParsed(apiResponse(antitrustCheckSchema), `/antitrust/checks/${id}`),
+
+  /** ルールベースチェックを実行（決定論的・AI 不使用） */
+  runCheck: (data: AntitrustCheckCreate, opts?: { idempotencyKey?: string }) =>
+    postParsed(
+      antitrustCheckSchema,
+      "/antitrust/checks",
+      antitrustCheckCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** #115/#116/#121/#122/#123 事前申請一覧 */
+  listApplications: (params?: { type?: string; status?: string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(antitrustApplicationSchema), "/antitrust/applications", {
+      params: buildParams(params),
+    }),
+
+  getApplication: (id: number | string) =>
+    getParsed(apiResponse(antitrustApplicationSchema), `/antitrust/applications/${id}`),
+
+  createApplication: (data: AntitrustApplicationCreate, opts?: { idempotencyKey?: string }) =>
+    postParsed(
+      antitrustApplicationSchema,
+      "/antitrust/applications",
+      antitrustApplicationCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** submitted → approved/rejected */
+  decideApplication: (
+    id: number | string,
+    data: { decision: string; decision_note?: string | null },
+  ) => postParsed(antitrustApplicationSchema, `/antitrust/applications/${id}/decision`, data),
+
+  /** approved → completed（実施記録） */
+  completeApplication: (
+    id: number | string,
+    data: { outcome_note: string; occurred_at?: string | null },
+  ) => postParsed(antitrustApplicationSchema, `/antitrust/applications/${id}/complete`, data),
+
+  /** submitted/approved → cancelled */
+  cancelApplication: (id: number | string, data: { cancel_reason: string }) =>
+    postParsed(antitrustApplicationSchema, `/antitrust/applications/${id}/cancel`, data),
+
+  /** #120 競争法 AI 相談履歴 */
+  listConsultations: (params?: { contract_id?: number | string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(antitrustConsultationSchema), "/antitrust/consultations", {
+      params: buildParams(params),
+    }),
+
+  /** 一次情報引用付きの参考回答を生成（法的助言の断定はしない） */
+  consult: (data: { query_text: string; contract_id?: number | string | null }) =>
+    postParsed(antitrustConsultationSchema, "/antitrust/consultations", data),
+
+  /** #124 コンプライアンス研修履歴一覧 */
+  listTrainings: (params?: { user_id?: number | string; category?: string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(complianceTrainingSchema), "/antitrust/trainings", {
+      params: buildParams(params),
+    }),
+
+  createTraining: (data: ComplianceTrainingCreate) =>
+    postParsed(
+      complianceTrainingSchema,
+      "/antitrust/trainings",
+      complianceTrainingCreateSchema.parse(data),
+    ),
+};
+
+// ---------------------------------------------------------------------------
+// 内部通報・調査管理（Issue #123・#125-135）
+//
+// NOTE（統合担当者向け）: バックエンド router
+// (`app/api/v1/whistleblower.py`) は `app/api/v1/__init__.py` へ未登録の
+// ため、統合前はこれらの呼び出しは 404 になる。統合後にそのまま動作する。
+// 最重要: reporter（通報者識別情報）取得は 403 になり得る想定で、呼び出し
+// 側は catch して「権限なし」表示に倒すこと（隠蔽・握りつぶし禁止）。
+// ---------------------------------------------------------------------------
+export const whistleblowerApi = {
+  list: (params?: {
+    status?: string;
+    category?: string;
+    page?: number;
+    size?: number;
+  }) =>
+    getParsed(paginatedSchema(whistleblowerReportSchema), "/whistleblower/reports", {
+      params: buildParams(params),
+    }),
+
+  get: (id: number | string) =>
+    getParsed(apiResponse(whistleblowerReportSchema), `/whistleblower/reports/${id}`),
+
+  create: (data: WhistleblowerReportCreate, opts?: { idempotencyKey?: string }) =>
+    postParsed(
+      whistleblowerReportSchema,
+      "/whistleblower/reports",
+      whistleblowerReportCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 通報者識別情報（最重要の隔離対象）。403 の場合は呼び出し側で権限なし表示にすること。 */
+  getReporterProfile: (id: number | string) =>
+    getParsed(
+      apiResponse(whistleblowerReporterProfileSchema.nullable()),
+      `/whistleblower/reports/${id}/reporter`,
+    ),
+
+  setStatus: (id: number | string, data: { status: string; note?: string | null }) =>
+    postParsed(apiResponse(whistleblowerReportSchema), `/whistleblower/reports/${id}/status`, data),
+
+  promoteToMatter: (id: number | string) =>
+    postParsed(
+      apiResponse(whistleblowerReportSchema),
+      `/whistleblower/reports/${id}/promote-to-matter`,
+      {},
+    ),
+
+  aggregate: (params?: { date_from?: string; date_to?: string }) =>
+    getParsed(apiResponse(whistleblowerAggregateSchema), "/whistleblower/reports/aggregate", {
+      params: buildParams(params),
+    }),
+
+  // --- 調査担当者限定 ACL ---
+  listAccess: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerCaseAccessSchema)),
+      `/whistleblower/reports/${reportId}/access`,
+    ),
+
+  grantAccess: (
+    reportId: number | string,
+    data: {
+      user_id: number | string;
+      role_in_case?: WhistleblowerCaseRole;
+      can_view_reporter_identity?: boolean;
+      expires_at?: string | null;
+    },
+  ) =>
+    postParsed(
+      whistleblowerCaseAccessSchema,
+      `/whistleblower/reports/${reportId}/access`,
+      data,
+    ),
+
+  revokeAccess: (reportId: number | string, grantId: number | string) =>
+    apiClient
+      .delete(`/whistleblower/reports/${reportId}/access/${grantId}`)
+      .then(() => undefined),
+
+  // --- 証拠保全（#129） ---
+  listEvidence: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerEvidenceSchema)),
+      `/whistleblower/reports/${reportId}/evidence`,
+    ),
+
+  addEvidence: (
+    reportId: number | string,
+    data: {
+      evidence_type: WhistleblowerEvidenceType;
+      description?: string | null;
+      occurred_at?: string | null;
+      attachment_id?: number | string | null;
+      preserved?: boolean;
+      chain_of_custody?: string | null;
+    },
+  ) =>
+    postParsed(whistleblowerEvidenceSchema, `/whistleblower/reports/${reportId}/evidence`, data),
+
+  // --- ヒアリング記録（#130） ---
+  listInterviews: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerInterviewSchema)),
+      `/whistleblower/reports/${reportId}/interviews`,
+    ),
+
+  addInterview: (
+    reportId: number | string,
+    data: {
+      interviewee_type: WhistleblowerIntervieweeType;
+      conducted_at: string;
+      interviewee_name?: string | null;
+      summary?: string | null;
+    },
+  ) =>
+    postParsed(
+      whistleblowerInterviewSchema,
+      `/whistleblower/reports/${reportId}/interviews`,
+      data,
+    ),
+
+  // --- 調査タイムライン（#131） ---
+  listTimeline: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerTimelineEventSchema)),
+      `/whistleblower/reports/${reportId}/timeline`,
+    ),
+
+  addNote: (reportId: number | string, note: string) =>
+    postParsed(whistleblowerTimelineEventSchema, `/whistleblower/reports/${reportId}/notes`, {
+      note,
+    }),
+
+  // --- 是正措置・再発防止管理（#132/#133） ---
+  listActions: (reportId: number | string) =>
+    getParsed(
+      apiResponse(z.array(whistleblowerActionSchema)),
+      `/whistleblower/reports/${reportId}/actions`,
+    ),
+
+  addAction: (
+    reportId: number | string,
+    data: {
+      action_category: WhistleblowerActionCategory;
+      title: string;
+      description?: string | null;
+      owner_id?: number | string | null;
+      due_date?: string | null;
+    },
+  ) => postParsed(whistleblowerActionSchema, `/whistleblower/reports/${reportId}/actions`, data),
+
+  updateActionStatus: (
+    reportId: number | string,
+    actionId: number | string,
+    data: { status: WhistleblowerActionStatus; verification_note?: string | null },
+  ) =>
+    postParsed(
+      whistleblowerActionSchema,
+      `/whistleblower/reports/${reportId}/actions/${actionId}/status`,
+      data,
+    ),
+};
+
+// ===========================================================================
+// 30. 証拠・eDiscovery 管理 (Phase 3 §5.17 / ロードマップ #217-230 / /evidence)
+// ===========================================================================
+
+export const evidenceApi = {
+  /** #217 証拠一覧 */
+  list: (params?: {
+    matter_id?: number | string;
+    contract_id?: number | string;
+    relevance?: string;
+    is_duplicate?: boolean;
+    source_type?: string;
+    page?: number;
+    size?: number;
+  }) => getParsed(paginatedSchema(evidenceSchema), "/evidence", { params: buildParams(params) }),
+
+  /** #217/#218/#219 証拠登録（file_content_base64 または checksum_sha256 が必須） */
+  create: (
+    data: {
+      title: string;
+      description?: string | null;
+      source_type?: string;
+      matter_id?: number | string | null;
+      contract_id?: number | string | null;
+      filename?: string | null;
+      mime_type?: string | null;
+      storage?: string;
+      storage_ref?: string | null;
+      file_content_base64?: string | null;
+      checksum_sha256?: string | null;
+      collected_by_name?: string | null;
+      collected_at?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      evidenceSchema,
+      "/evidence",
+      evidenceCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** #226 メール証拠取込（.eml） */
+  emailIngest: (
+    data: {
+      raw_eml: string;
+      matter_id?: number | string | null;
+      contract_id?: number | string | null;
+      collected_by_name?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(evidenceSchema, "/evidence/email-ingest", data, withIdempotencyKey({}, opts?.idempotencyKey)),
+
+  /** #222 証拠詳細（閲覧履歴に記録される） */
+  get: (id: number | string) => getParsed(apiResponse(evidenceSchema), `/evidence/${id}`),
+
+  /** #225 重複ファイル検出 */
+  duplicates: (id: number | string) =>
+    getParsed(z.array(evidenceSchema), `/evidence/${id}/duplicates`),
+
+  /** #223 証拠タイムライン */
+  timeline: (id: number | string) =>
+    getParsed(z.array(evidenceTimelineItemSchema), `/evidence/${id}/timeline`),
+
+  /** #222 証拠閲覧履歴 */
+  viewHistory: (id: number | string, params?: { page?: number; size?: number }) =>
+    getParsed(z.array(evidenceViewHistoryItemSchema), `/evidence/${id}/view-history`, {
+      params: buildParams(params),
+    }),
+
+  /** #224 証拠 Export（ハッシュ整合性検証結果を含む） */
+  export: (id: number | string) =>
+    getParsed(apiResponse(evidenceExportBundleSchema), `/evidence/${id}/export`),
+
+  /** #220 Chain of Custody 一覧 */
+  custody: (id: number | string) =>
+    getParsed(z.array(evidenceCustodyEventSchema), `/evidence/${id}/custody`),
+
+  /** #220/#221 Chain of Custody 追記 */
+  addCustodyEvent: (
+    id: number | string,
+    data: {
+      action: string;
+      actor_name?: string | null;
+      from_custodian?: string | null;
+      to_custodian?: string | null;
+      notes?: string | null;
+    },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      evidenceCustodyEventSchema,
+      `/evidence/${id}/custody`,
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** 既存 Legal Hold の証拠への紐付け */
+  linkLegalHold: (id: number | string, legalHoldId: number | string) =>
+    postParsed(evidenceSchema, `/evidence/${id}/legal-hold`, { legal_hold_id: legalHoldId }),
+
+  /** #230 Legal Hold 解除申請 */
+  requestHoldRelease: (
+    data: { legal_hold_id: number | string; reason: string; evidence_id?: number | string | null },
+    opts?: { idempotencyKey?: string },
+  ) =>
+    postParsed(
+      evidenceHoldReleaseApprovalSchema,
+      "/evidence/hold-release-requests",
+      data,
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** #230 Legal Hold 解除申請一覧 */
+  holdReleaseRequests: (params?: { legal_hold_id?: number | string; status?: string }) =>
+    getParsed(z.array(evidenceHoldReleaseApprovalSchema), "/evidence/hold-release-requests", {
+      params: buildParams(params),
+    }),
+
+  /** #230 Legal Hold 解除申請の決裁（申請者本人による決裁は 403） */
+  decideHoldRelease: (
+    approvalId: number | string,
+    data: { approve: boolean; decision_note?: string | null },
+  ) =>
+    postParsed(
+      evidenceHoldReleaseApprovalSchema,
+      `/evidence/hold-release-requests/${approvalId}/decide`,
+      data,
+    ),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -1867,6 +2382,7 @@ export const api = {
   changeOrders: changeOrdersApi,
   partners: partnersApi,
   disputes: disputesApi,
+  disputesExt: disputesExtApi,
   payments: paymentComplianceApi,
   governance: governanceApi,
   legalAi: legalAiApi,
@@ -1892,5 +2408,8 @@ export const api = {
   publicWorks: publicWorksApi,
   jv: jvApi,
   partnerExt: partnerExtApi,
+  antitrust: antitrustApi,
+  whistleblower: whistleblowerApi,
+  evidence: evidenceApi,
 } as const;
 

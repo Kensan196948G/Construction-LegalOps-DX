@@ -24,8 +24,42 @@
     "deploy_ready": false,
     "last_session_summary": "Loop 109: 外部評価（67/100・条件付き導入推奨）への最終対応を完了。P0-1〜P0-5（取適法・改正建設業法・19条チェック・AI根拠強制・プロンプトインジェクション）は前回実装を精査し、P0-6（PostgreSQL RLS 13テーブル・案件単位ACL・倫理壁・Legal Hold・AI保存期間・WORM外部出力・Sentinel転送）と高優先業務機能（変更契約・文書パッケージ・支払コンプライアンス・協力会社台帳・紛争管理）およびAI機能（適用法令自動判定・一次情報RAG・法令改正影響分析）を実装。migration 006/007 を新設し PG 16 実DBで 001→007 適用、pytest 1,083 passed / 2 skipped（SQLite 全件）・PG 統合 181 passed、ruff/mypy クリーン、frontend typecheck/lint/Jest 40 passed、alembic roundtrip 成功。README/CHANGELOG/要件・設計・セキュリティ文書を更新。PR #80 は CI 全 7 ジョブ GREEN（mergeState CLEAN）を確認後、2026-08-05T02:18:51Z に main へマージ済み（merge commit 5d4d65d）。本番 deploy・秘密情報投入・Cloudflare/Neon 変更は従来どおり人間ゲート（#23/#24/#50）。"
   },
-  "goal": "外部評価（67/100）への最終対応完了 — P0-1〜P0-6・高優先業務機能・AI機能を実装・検証済み。残りは PR 作成/マージと #23/#24/#50 の人間ゲート。",
+  "goal": "ロードマップ Phase 3「リスク統制」実装完了 — 紛争高度化/独禁法コンプライアンス/内部通報調査/証拠eDiscoveryを実装・検証済み。残りは PR 作成/マージと #23/#24/#50 の人間ゲート。",
   "phase": "Verify",
+  "phase3_risk_controls": {
+    "name": "Phase 3: リスク統制 — 紛争高度化 + 独禁法コンプライアンス + 内部通報調査 + 証拠eDiscovery",
+    "completed_at": "2026-09-06",
+    "issues": [121, 122, 123, 124],
+    "created_issue": [125],
+    "branch": "feature/phase3-risk-controls",
+    "migrations": [
+      "022_dispute_ext",
+      "023_antitrust_compliance",
+      "024_whistleblower",
+      "025_evidence"
+    ],
+    "summary": "docs/LEGALOPS_BUSINESS_OS_ROADMAP_2026-09.md Phase 3（ロードマップ#97-112・#113-124・#125-135・#217-230）を4並列worktreeエージェントで実装。紛争・クレーム管理高度化（Claim Notice/Time Bar/EOT/主張反論マトリクス/和解案比較等）、独禁法・入札談合コンプライアンス（ルールベースチェック/事前申請ワークフロー/AI相談/研修履歴）、内部通報・調査管理（通報者情報をRLSで別テーブル隔離）、証拠・eDiscovery管理（SHA-256ハッシュ/Chain of Custody/Legal Hold解除承認）を新設。",
+    "verification": "backend pytest 1367 passed / ruff・mypy clean / alembic upgrade→downgrade→re-upgrade（実PostgreSQL 16）成功 / frontend typecheck・lint clean・jest 93 passed・production build成功（40ルート）",
+    "found_issue": "Issue #125: 既存 LegalHold.started_at の server_default 文字列指定がSQLite環境で潜在バグの可能性（本Phaseスコープ外・別Issue化）",
+    "ci_fix": "test_session.py の _PG_DEFAULT_REWRITES を固定辞書から '::json'/'::jsonb' サフィックス除去の正規表現へ汎用化（既存 ip_watch_targets.ip_types の未登録パターンが CI PostgreSQL 16 ジョブでのみ顕在化した既存バグを同時に根治）。加えて test_antitrust_compliance_api.py の独自フィクスチャを共有 create_all_for_tests() 経由に修正。",
+    "pr": 126,
+    "pr_status": "ready_for_review",
+    "ci_result": "全8ジョブ green（Backend pytest PostgreSQL16 / alembic roundtrip / pytest+ruff+mypy / Frontend eslint+tsc+jest / Docker build / E2E Playwright smoke / Security bandit+trivy / CodeRabbit skipped→ready化後は再評価）",
+    "safety": "No production deploy, secret injection, Cloudflare/Neon mutation, push to shared remote, rebase, merge, tag, release, or destructive migration executed by this session."
+  },
+  "phase3_coderabbit_review_fixes": {
+    "completed_at": "2026-09-06",
+    "summary": "PR #126 CodeRabbit レビュー（Critical 2 / Major 19 / Minor 11）を3並列worktreeエージェントで検証・修正。Critical: (1) 022_dispute_ext.py の RLS ポリシーがPERMISSIVE OR結合で契約スコープ制限が無効化されていた問題をRESTRICTIVE化+WITH CHECKで根治、(2) whistleblower匿名通報の監査ログにactor_idが記録され匿名性が実質破られていた問題を修正。Major: evidences系テーブルへのRLS新設、can_view_reporter_identityデフォルトをtrue→false（最小権限）、whistleblowerのRLSをFOR SELECT限定に修正、証拠取得エンドポイントへのACL認可追加、フロントの型安全性・入力検証・アクセシビリティ・権限テスト等。Minor11件中10件対応。",
+    "not_fixed_scope": "紛争案件の部署/契約スコープ認可欠如（既存disputesルーター全体に及ぶ設計課題）は影響範囲が広いため Issue #127 として別Issue化。dispute-evidence-fixes チームが発見した「007系migrationにも同型のRLS OR結合問題が既存」との報告は追加調査・別Issue化が必要。",
+    "verification": "backend pytest SQLite全体1371 passed / PostgreSQL16(tests/integration/、CI同一コマンド)257 passed / ruff・mypy clean / migration upgrade→downgrade→re-upgrade実PostgreSQL成功 / frontend typecheck・lint clean・jest 97 passed・production build成功",
+    "next_action": "push→CI再確認→マージ判定Y/N"
+  },
+  "phase3_coderabbit_review_round2_fixes": {
+    "completed_at": "2026-09-06",
+    "summary": "1回目修正のpush後にCodeRabbitが再レビューし新たに6件（Major中心）を指摘、全て検証の上修正。(1) evidence一覧APIでtotal/ページングが認可フィルタ前のDB件数のまま不整合だった問題をpaginate=falseオプション追加で根治、(2) antitrust入札談合チェックが「公共入札×競合接触」だけでBLOCK＋入札談合防止法引用にしていたが同法は発注機関職員の関与を規制対象とするため procuring_agency_involvement フラグを新設し発注機関職員関与時のみBLOCKに是正（UI/バックエンド/テスト）、(3) Legal Hold作成(governance.create_legal_hold)時にevidence_idsで指定した証拠のEvidence.legal_hold_idが同期されておらず解除承認の一括更新から漏れる問題をlink_legal_hold呼び出しで同期、decide_hold_release側もhold.evidence_idsから防御的に集約するよう強化、(4) antitrustページの3タブ（申請/相談/研修履歴）が単一offlineステートを共有し一つの成功が他の失敗表示を消していた問題を個別ステートに分離、(5) whistleblower権限テストに未ロード状態（data:undefined）のケースを追加、(6) whistleblowerのgrantAccessが常にcan_view_reporter_identity:trueを送信しM4のバックエンド最小権限修正を骨抜きにしていた問題をUIの明示チェックボックス（デフォルトfalse）に変更。",
+    "verification": "backend pytest全体1372 passed / ruff・mypy clean / frontend typecheck clean・lint clean・jest 98 passed・production build成功",
+    "next_action": "push→CI再確認→マージ判定Y/N"
+  },
   "kpi": {
     "success_rate_target": 0.9,
     "ci_success_rate": 1,
@@ -41,8 +75,8 @@
     "same_error_limit": 2,
     "phase": "Verify",
     "last_session_summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/development 限定で fail-closed。backend pytest 1113 passed / ruff 0.16.1 / mypy 2.3.0 clean、frontend 43 passed、Docker build OK、公開 URL smoke 200。#60/#64 を検証の上クローズ。残は PR/CI/merge と #23/#24/#50 の本番人間ゲート。",
-    "last_stop_at": "2026-08-14T02:39:13.203Z",
-    "current_session_start_at": "2026-08-13T23:37:42.778Z",
+    "last_stop_at": "2026-09-06T05:59:59.264Z",
+    "current_session_start_at": "2026-09-06T02:26:44.082Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
   },
@@ -61,10 +95,7 @@
   "loop30": {
     "name": "CI 内 本番同等スタック検証の確立 — 潜在 P1 ×3 根治 + k6 SLO 達成 + migrations ゲート新設",
     "completed_at": "2026-07-14",
-    "merged_prs": [
-      53,
-      54
-    ],
+    "merged_prs": [53, 54],
     "fixed_defects": [
       "P1: alembic env.py が存在しない設定名 (settings.DATABASE_URL) を参照し全環境で upgrade head 不能 (本番初回デプロイ即死)",
       "P1: uvicorn 配下で RequestContextMiddleware の scope[state] 属性代入が AttributeError → 全リクエスト 500 (ASGITransport/E2E では不可視、k6 初実走が摘出)",
@@ -79,10 +110,7 @@
   "loop28": {
     "name": "リリース後検証 Goal — 本番未デプロイの事実確定 + 運用文書整備 + CF/Neon 移行候補文書化",
     "completed_at": "2026-07-14",
-    "created_issues": [
-      50,
-      51
-    ],
+    "created_issues": [50, 51],
     "deployment_status": "未デプロイ確定 (git tag 0 / GitHub Deployments 0 / legalops.mirai-dx-platform.com NXDOMAIN / apex HTTPS 不通 / CD パイプライン不在 / wrangler・CF token・Neon 接続情報なし)",
     "docs_created": [
       "docs/OPERATIONS.md",
@@ -97,16 +125,9 @@
   "loop27": {
     "name": "Issue #45 根治 (identity JIT プロビジョニング) + PR #38 hard-gate 完遂",
     "completed_at": "2026-07-14",
-    "merged_prs": [
-      47,
-      38
-    ],
-    "closed_issues": [
-      45
-    ],
-    "created_issues": [
-      48
-    ],
+    "merged_prs": [47, 38],
+    "closed_issues": [45],
+    "created_issues": [48],
     "summary": "Issue #45 の本体修正 PR #47: CurrentUser.db_id + get_current_user の JIT プロビジョニング (oid/email lookup → get-or-create、savepoint 競合吸収)。誤用全数修正 (hash 合成廃止 / WHERE ×8 / 認可比較 / 監査 actor ×30 / 注釈乖離是正) + user_service selectinload + ARRAY patch 自己再帰修正。対抗レビュー 2 系統 (adversarial + silent-failure-hunter) が Critical 2 (workflow_service の getattr 移行漏れ / opaque subject の恒久 500) + High 2 (email-oid 不一致 merge / is_active 素通り) を検出し全反映。反例テスト含む identity テスト 7 本。PR #38: main 同期 + users シード撤去 (JIT が代替) + 検証セッションの短寿命化 (teardown ループ跨ぎ解消) で backend-pg hard-gate 下 151 passed / 0 failed の真の green を達成し merge。main CI 全ゲート fail-closed で success。",
     "verification": "ローカル 903 passed ×3 / ruff・mypy GREEN / PG 実証: identity 系エラー全クラス 0 → 最終 151 passed / 対抗レビュー Critical・High 全解消",
     "learning": "grep ベースの移行は getattr(obj, 'attr', default) パターンを見逃す — 属性移行では getattr 形も必ず併せて検索する。対抗レビュー 2 系統の並行実施は単独レビューが見逃す相補的欠陥 (設計観点: email merge / silent-failure 観点: 移行漏れ・恒久 500) を捕捉した。fixture 保持の DB セッションは PG + pytest-asyncio で teardown のループ跨ぎを踏む — 検証クエリはテスト本体内の短寿命セッションで。"
@@ -114,29 +135,10 @@
   "loop26": {
     "name": "Supervisor session — Security green + PR 一括 merge + PG hard-gate が本番欠陥を摘出",
     "completed_at": "2026-07-14",
-    "merged_prs": [
-      27,
-      37,
-      44,
-      42,
-      36
-    ],
-    "created_prs": [
-      42,
-      44
-    ],
-    "closed_issues": [
-      19,
-      35,
-      40,
-      43
-    ],
-    "created_issues": [
-      40,
-      41,
-      43,
-      45
-    ],
+    "merged_prs": [27, 37, 44, 42, 36],
+    "created_prs": [42, 44],
+    "closed_issues": [19, 35, 40, 43],
+    "created_issues": [40, 41, 43, 45],
     "blocked": {
       "pr": 38,
       "reason": "Issue #45 (identity マッピング本番欠陥) の修正が前提。PG hard-gate 赤のまま merge 禁止 (fail-closed)",
@@ -151,10 +153,7 @@
     "completed_at": "2026-06-17",
     "pr": 37,
     "branch": "feat/jest-harden-e2e-exclusion",
-    "commits": [
-      "5782208",
-      "7e8dfe4"
-    ],
+    "commits": ["5782208", "7e8dfe4"],
     "ci_run": "27692210055",
     "pr_state": "OPEN / MERGEABLE / mergeStateStatus=CLEAN — CI run 27692210055 全6ジョブ SUCCESS — 人間マージ待ち",
     "summary": "Jest ソフトフェイル（|| true）を廃止し HARD CI ゲート化。2 段階の根本原因修正: (1) Jest が frontend/e2e/*.spec.ts (Playwright spec 7 件) を収集し 'Playwright Test needs to be invoked via npx playwright test' エラーで 7 スイート失敗していた。修正: frontend/jest.config.ts の testPathIgnorePatterns に '/e2e/' を追加。(2) @testing-library/dom が devDependencies に未記載のため package-lock.json で 'peer: true' マーク → npm ci --legacy-peer-deps がスキップ → CI 4スイートで 'Cannot find module @testing-library/dom' 失敗。修正: package.json に '@testing-library/dom': '^10.0.0' を追加 + package-lock.json から 'peer: true' フラグを除去。ローカルは Node.js v25.2.1 非互換(Jest 29 と不一致)でローカル実行不可だったため CI で検証（GitHub Actions Node 24 使用）。最終 CI run 27692210055: Backend pytest・Security bandit/trivy・Backend PG・Frontend eslint/tsc/jest(Jest HARD 通過)・E2E Playwright 44 passed・Docker build — 全6ジョブ SUCCESS。",
@@ -247,21 +246,12 @@
     "本番デプロイ実行 — 人間判断",
     "Phase 2: 本番後確認・安定化 (本番デプロイ後に別セッションで)"
   ],
-  "completed_issues": [
-    19,
-    35,
-    40,
-    43,
-    45,
-    41,
-    48,
-    51
-  ],
+  "completed_issues": [19, 35, 40, 43, 45, 41, 48, 51],
   "blocked_issues": [],
   "learning": {
     "failure_patterns": [
       {
-        "at": "2026-08-14T02:39:13.221Z",
+        "at": "2026-09-06T05:59:59.409Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -272,7 +262,7 @@
         "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-14T02:35:29.006Z",
+        "at": "2026-09-06T05:19:00.897Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -283,7 +273,7 @@
         "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-14T02:11:39.788Z",
+        "at": "2026-09-06T05:07:50.133Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -294,7 +284,7 @@
         "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-14T01:44:10.437Z",
+        "at": "2026-09-06T04:37:35.776Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -305,7 +295,7 @@
         "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-14T01:09:42.958Z",
+        "at": "2026-09-06T04:29:14.131Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -316,7 +306,7 @@
         "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-13T23:43:06.158Z",
+        "at": "2026-09-06T04:25:34.654Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -324,10 +314,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-13T23:37:46.817Z",
+        "at": "2026-09-06T04:22:07.104Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -335,10 +325,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-13T23:34:50.553Z",
+        "at": "2026-09-06T04:19:15.650Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -346,10 +336,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-12T11:09:15.233Z",
+        "at": "2026-09-06T04:18:09.834Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -357,10 +347,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-12T11:08:47.354Z",
+        "at": "2026-09-06T04:16:15.853Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -368,10 +358,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-12T11:07:21.171Z",
+        "at": "2026-09-06T04:13:31.230Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -379,10 +369,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-12T10:52:24.288Z",
+        "at": "2026-09-06T04:11:52.185Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -390,10 +380,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-12T10:20:02.359Z",
+        "at": "2026-09-06T04:09:53.051Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -401,10 +391,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-11T21:20:52.084Z",
+        "at": "2026-09-06T03:59:04.167Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -412,10 +402,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-11T21:20:28.641Z",
+        "at": "2026-09-06T03:58:28.890Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -423,10 +413,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-11T21:11:46.513Z",
+        "at": "2026-09-06T03:56:10.549Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -434,10 +424,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-11T20:59:05.704Z",
+        "at": "2026-09-06T03:46:57.472Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -445,10 +435,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-11T19:55:43.531Z",
+        "at": "2026-09-06T03:05:03.022Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -456,10 +446,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-11T19:28:44.045Z",
+        "at": "2026-09-06T03:02:22.159Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -467,10 +457,10 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       },
       {
-        "at": "2026-08-11T19:24:14.495Z",
+        "at": "2026-09-06T03:02:00.816Z",
         "reasons": [
           "verify_subagent_missing",
           "verify_subagent_missing",
@@ -478,7 +468,7 @@
           "verify_subagent_missing",
           "verify_subagent_missing"
         ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
       }
     ],
     "success_patterns": [
@@ -513,27 +503,14 @@
       {
         "at": "2026-06-15T08:30:00.000Z",
         "phase": "Build",
-        "tags": [
-          "e2e",
-          "playwright",
-          "nextjs",
-          "ci",
-          "gating",
-          "fail-closed"
-        ],
+        "tags": ["e2e", "playwright", "nextjs", "ci", "gating", "fail-closed"],
         "problem": "実走化した E2E で 11 件失敗が顕在化 + 非ゲート `|| true` がサイレント障害を許す穴",
         "insight": "Playwright セレクタ失敗は DOM の実体に合わせて系統別に直すと再発しない: (A) shadcn CardTitle は <div> なので getByRole('heading') は不可 → getByText().first()。(B) <Button asChild><Link> は <a role='link'> なので getByRole('button') でなく getByRole('link')。(C) backend 非存在だと Server Component は table でなく空状態 <p> を出すため table.or(emptyState) で両対応。ゲート化の順序が肝: まず 44/44 緑を CI run で確認 → その後に `|| true` を除去（先に外すと赤 PR リスク）。除去後も別 run で EXIT 0 を確認し gating がビルドを壊さないことを実証。これで silent failure 穴を恒久封鎖でき fail-closed ポリシーに準拠。commit 315da69(11 fixes)+025eb99(gating)。PR #31 7/7 GREEN・人間マージ待ち。"
       },
       {
         "at": "2026-06-15T07:10:00.000Z",
         "phase": "Build",
-        "tags": [
-          "e2e",
-          "playwright",
-          "nextjs",
-          "ci",
-          "silent-failure"
-        ],
+        "tags": ["e2e", "playwright", "nextjs", "ci", "silent-failure"],
         "problem": "E2E ジョブが CI 緑なのにテスト無実行（|| true が webServer 起動失敗を隠蔽）",
         "insight": "next output:standalone は next start で配信不可・standalone server.js + static/public コピーが必須。webServer.url と起動ポートの一致も必須。非ゲート `|| true` は構成バグを緑で隠すため、実走確認後に gating 化を検討。"
       },
@@ -595,8 +572,8 @@
           "last_used": "2026-08-01T12:22:29.434Z",
           "last_description": "運用文書 4 本の起草"
         },
-        "_total_agent_calls": 29,
-        "_last_agent_call_at": "2026-08-01T12:22:29.434Z",
+        "_total_agent_calls": 36,
+        "_last_agent_call_at": "2026-09-06T04:37:25.513Z",
         "Explore": {
           "call_count": 6,
           "last_used": "2026-07-20T04:13:58.462Z",
@@ -616,6 +593,11 @@
           "call_count": 2,
           "last_used": "2026-07-19T13:57:17.742Z",
           "last_description": "Frontend検証スイート実行"
+        },
+        "dev-api": {
+          "call_count": 7,
+          "last_used": "2026-09-06T04:37:25.513Z",
+          "last_description": "独禁法・共通基盤・紛争軽微指摘を修正"
         }
       }
     }
@@ -674,11 +656,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T03:42:53.029Z",
@@ -696,11 +674,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T03:46:00.693Z",
@@ -718,11 +692,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T03:57:57.616Z",
@@ -767,11 +737,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T03:58:04.332Z",
@@ -816,11 +782,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:00:35.924Z",
@@ -865,11 +827,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:03:24.691Z",
@@ -914,11 +872,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:14:12.174Z",
@@ -963,11 +917,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:39:30.097Z",
@@ -1012,11 +962,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:39:39.721Z",
@@ -1061,11 +1007,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:39:49.355Z",
@@ -1110,11 +1052,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:41:42.111Z",
@@ -1157,11 +1095,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:52:49.194Z",
@@ -1206,11 +1140,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T04:56:45.195Z",
@@ -1255,11 +1185,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T05:19:08.232Z",
@@ -1304,11 +1230,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T05:22:49.691Z",
@@ -1353,11 +1275,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T05:27:24.079Z",
@@ -1402,11 +1320,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:05:33.555Z",
@@ -1451,11 +1365,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:09:47.152Z",
@@ -1500,11 +1410,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:45:19.778Z",
@@ -1549,11 +1455,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:47:11.541Z",
@@ -1598,11 +1500,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:52:24.524Z",
@@ -1647,11 +1545,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:55:03.971Z",
@@ -1696,11 +1590,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:55:55.046Z",
@@ -1745,11 +1635,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T06:58:49.212Z",
@@ -1794,11 +1680,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T07:07:40.687Z",
@@ -1843,11 +1725,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T07:17:52.159Z",
@@ -1892,11 +1770,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T07:29:08.788Z",
@@ -1939,11 +1813,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T07:35:27.517Z",
@@ -1986,11 +1856,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T08:13:42.299Z",
@@ -2009,11 +1875,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T08:24:57.804Z",
@@ -2032,11 +1894,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T08:30:42.780Z",
@@ -2055,11 +1913,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T08:44:34.329Z",
@@ -2087,11 +1941,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T08:45:22.372Z",
@@ -2119,11 +1969,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-07-20T08:54:38.681Z",
@@ -2151,11 +1997,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T11:45:14.885Z",
@@ -2182,11 +2024,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T11:55:41.283Z",
@@ -2213,11 +2051,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:00:34.189Z",
@@ -2244,11 +2078,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:13:47.031Z",
@@ -2276,11 +2106,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:17:00.184Z",
@@ -2308,11 +2134,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:18:26.757Z",
@@ -2340,11 +2162,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:19:27.972Z",
@@ -2372,11 +2190,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:35:38.188Z",
@@ -2404,11 +2218,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:40:19.852Z",
@@ -2436,11 +2246,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:47:11.031Z",
@@ -2468,11 +2274,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T12:49:35.779Z",
@@ -2500,11 +2302,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T13:18:32.862Z",
@@ -2532,11 +2330,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T13:28:54.797Z",
@@ -2564,11 +2358,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T13:35:51.787Z",
@@ -2596,11 +2386,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T13:38:35.516Z",
@@ -2628,11 +2414,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T13:40:49.965Z",
@@ -2660,11 +2442,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T13:49:50.418Z",
@@ -2692,11 +2470,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T13:52:54.081Z",
@@ -2724,11 +2498,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T14:02:00.535Z",
@@ -2756,11 +2526,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T14:05:31.590Z",
@@ -2788,11 +2554,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T14:07:07.888Z",
@@ -2820,11 +2582,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T14:27:36.201Z",
@@ -2852,11 +2610,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T14:44:40.362Z",
@@ -2884,11 +2638,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-01T14:46:45.478Z",
@@ -2916,11 +2666,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-04T15:05:14.035Z",
@@ -2948,11 +2694,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-04T21:02:39.769Z",
@@ -2980,11 +2722,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-05T02:25:21.673Z",
@@ -3029,11 +2767,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-05T02:45:32.233Z",
@@ -3078,11 +2812,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-05T02:48:10.944Z",
@@ -3127,11 +2857,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-05T02:51:33.052Z",
@@ -3176,11 +2902,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T19:17:12.612Z",
@@ -3225,11 +2947,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T19:20:33.656Z",
@@ -3274,11 +2992,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T19:24:14.495Z",
@@ -3323,11 +3037,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T19:28:44.045Z",
@@ -3372,11 +3082,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T19:55:43.531Z",
@@ -3421,11 +3127,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T20:59:05.703Z",
@@ -3470,11 +3172,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T21:11:46.512Z",
@@ -3519,11 +3217,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T21:20:28.640Z",
@@ -3568,11 +3262,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-11T21:20:52.084Z",
@@ -3617,11 +3307,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-12T10:20:02.359Z",
@@ -3652,11 +3338,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-12T10:52:24.288Z",
@@ -3701,11 +3383,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-12T11:07:21.170Z",
@@ -3750,11 +3428,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-12T11:08:47.354Z",
@@ -3799,11 +3473,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-12T11:09:15.233Z",
@@ -3848,11 +3518,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-13T23:34:50.553Z",
@@ -3897,11 +3563,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-13T23:37:46.817Z",
@@ -3946,11 +3608,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-13T23:43:06.158Z",
@@ -3995,11 +3653,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-14T01:09:42.958Z",
@@ -4033,11 +3687,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-14T01:44:10.437Z",
@@ -4071,11 +3721,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-14T02:11:39.787Z",
@@ -4109,11 +3755,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-14T02:35:29.006Z",
@@ -4147,11 +3789,7 @@
       "kind": "verify_subagent_missing",
       "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
       "phase": "Verify",
-      "required": [
-        "qa",
-        "security-reviewer",
-        "e2e-runner"
-      ]
+      "required": ["qa", "security-reviewer", "e2e-runner"]
     },
     {
       "at": "2026-08-14T02:39:13.221Z",
@@ -4179,6 +3817,868 @@
         "scripts/seed_demo_data.py"
       ],
       "truncated": false
+    },
+    {
+      "at": "2026-09-05T06:57:38.861Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-05T06:57:43.190Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 45 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/013_matters.py",
+        "backend/alembic/versions/014_outside_counsel.py",
+        "backend/alembic/versions/015_labor_wage.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/matters.py",
+        "backend/app/api/v1/outside_counsel.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/labor_wage.py",
+        "backend/app/models/matter.py",
+        "backend/app/models/outside_counsel.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/matter.py",
+        "backend/app/schemas/outside_counsel.py",
+        "backend/app/services/labor_wage_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/outside_counsel_service.py",
+        "backend/tests/integration/test_labor_wage_api.py",
+        "backend/tests/integration/test_matter_api.py",
+        "backend/tests/integration/test_outside_counsel_api.py",
+        "backend/tests/unit/test_labor_wage_service.py",
+        "backend/tests/unit/test_matter_service.py",
+        "backend/tests/unit/test_outside_counsel_service.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/labor-wage/page-client.tsx",
+        "frontend/app/(authenticated)/labor-wage/page.tsx",
+        "frontend/app/(authenticated)/matters/page-client.tsx",
+        "frontend/app/(authenticated)/matters/page.tsx",
+        "frontend/app/(authenticated)/negotiations/page-client.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-05T07:12:40.095Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-05T07:13:04.229Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 45 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/013_matters.py",
+        "backend/alembic/versions/014_outside_counsel.py",
+        "backend/alembic/versions/015_labor_wage.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/matters.py",
+        "backend/app/api/v1/outside_counsel.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/labor_wage.py",
+        "backend/app/models/matter.py",
+        "backend/app/models/outside_counsel.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/matter.py",
+        "backend/app/schemas/outside_counsel.py",
+        "backend/app/services/labor_wage_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/outside_counsel_service.py",
+        "backend/tests/integration/test_labor_wage_api.py",
+        "backend/tests/integration/test_matter_api.py",
+        "backend/tests/integration/test_outside_counsel_api.py",
+        "backend/tests/unit/test_labor_wage_service.py",
+        "backend/tests/unit/test_matter_service.py",
+        "backend/tests/unit/test_outside_counsel_service.py",
+        "frontend/app/(authenticated)/contracts/[id]/page.tsx",
+        "frontend/app/(authenticated)/labor-wage/page-client.tsx",
+        "frontend/app/(authenticated)/labor-wage/page.tsx",
+        "frontend/app/(authenticated)/matters/page-client.tsx",
+        "frontend/app/(authenticated)/matters/page.tsx",
+        "frontend/app/(authenticated)/negotiations/page-client.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T02:32:03.989Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T02:32:04.053Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:02:00.772Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:02:00.816Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:02:22.131Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:02:22.159Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:05:02.997Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:05:03.022Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 53 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/017_standard_duration.py",
+        "backend/alembic/versions/018_public_works.py",
+        "backend/alembic/versions/019_joint_venture.py",
+        "backend/alembic/versions/020_partner_ext.py",
+        "backend/alembic/versions/021_labor_commitment.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/joint_venture.py",
+        "backend/app/api/v1/labor_commitment.py",
+        "backend/app/api/v1/labor_wage.py",
+        "backend/app/api/v1/partner_ext.py",
+        "backend/app/api/v1/public_works.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/joint_venture.py",
+        "backend/app/models/labor_commitment.py",
+        "backend/app/models/partner.py",
+        "backend/app/models/partner_review.py",
+        "backend/app/models/public_works.py",
+        "backend/app/models/standard_duration.py",
+        "backend/app/schemas/joint_venture.py",
+        "backend/app/schemas/labor_commitment.py",
+        "backend/app/schemas/labor_wage.py",
+        "backend/app/schemas/partner_ext.py",
+        "backend/app/schemas/public_works.py",
+        "backend/app/services/estimate_form_service.py",
+        "backend/app/services/jv_service.py",
+        "backend/app/services/labor_commitment_service.py",
+        "backend/app/services/partner_ext_service.py",
+        "backend/app/services/price_simulator_service.py",
+        "backend/app/services/public_works_service.py"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:46:57.053Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:46:57.472Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 38 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/antitrust.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/antitrust_compliance.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/antitrust_compliance.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/antitrust_checker.py",
+        "backend/app/services/antitrust_service.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_antitrust_checker.py",
+        "backend/tests/unit/test_antitrust_service.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/compliance/antitrust/page-client.tsx",
+        "frontend/app/(authenticated)/compliance/antitrust/page.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:56:10.394Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:56:10.549Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 38 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/antitrust.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/antitrust_compliance.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/antitrust_compliance.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/antitrust_checker.py",
+        "backend/app/services/antitrust_service.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_antitrust_checker.py",
+        "backend/tests/unit/test_antitrust_service.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/compliance/antitrust/page-client.tsx",
+        "frontend/app/(authenticated)/compliance/antitrust/page.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:58:28.866Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:58:28.890Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T03:59:04.145Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:59:04.167Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:09:53.027Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:09:53.051Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:11:52.162Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:11:52.185Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:13:31.201Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:13:31.230Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:16:15.783Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:16:15.853Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 20 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/db/test_session.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/services/evidence_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:18:09.811Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:18:09.834Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 20 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/db/test_session.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/services/evidence_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:19:15.571Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:19:15.650Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 20 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/db/test_session.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/services/evidence_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:22:07.085Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:22:07.103Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:25:34.636Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:25:34.654Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:29:14.113Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:29:14.131Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:37:35.758Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:37:35.776Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T05:07:49.950Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T05:07:50.133Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T05:19:00.215Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T05:19:00.896Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 7 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/db/test_session.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "frontend/components/layout/sidebar.tsx"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T05:59:59.264Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T05:59:59.409Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 32 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/022_dispute_ext.py",
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/antitrust.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/db/test_session.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/antitrust_compliance.py",
+        "backend/app/schemas/dispute_ext.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/antitrust_checker.py",
+        "backend/app/services/antitrust_service.py",
+        "backend/app/services/dispute_ext_service.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/conftest.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_dispute_ext_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_antitrust_checker.py",
+        "backend/tests/unit/test_antitrust_service.py",
+        "backend/tests/unit/test_dispute_ext_service.py",
+        "frontend/app/(authenticated)/compliance/antitrust/page-client.tsx",
+        "frontend/app/(authenticated)/disputes/[id]/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx"
+      ],
+      "truncated": true
     }
   ],
   "compact": {
@@ -4215,11 +4715,7 @@
   "loop32": {
     "name": "Phase 1 最終整備 — P2 コード改善 (PyJWT/JIT/Ops) + 全検証 + WebUI 確認",
     "completed_at": "2026-07-18",
-    "commits": [
-      "4ca68f3",
-      "52d5a88",
-      "62e0032"
-    ],
+    "commits": ["4ca68f3", "52d5a88", "62e0032"],
     "summary": "Issue #41 (python-jose→PyJWT 移行, N=1): 5 files, 906 regression OK, 19 JWT tests OK. Issue #48 (JIT 残課題 3/6): ai_review reviewer_id, auth refresh oid claim, audit type fix. Issue #51 (運用基盤): prometheus.yml + alert.rules.yml + backup_db.sh. 全検証: ruff/mypy/tsc/eslint/jest green, 906 passed/0 failed, WebUI backend OK (healthz/readyz/metrics).",
     "verification": "ruff/mypy(backend) green, tsc/eslint/jest(frontend) green, pytest 906 passed (unit+integration), WebUI backend 8010 all endpoints OK",
     "remaining": {
@@ -4231,9 +4727,7 @@
       "P2": [
         "#48: commit-after-response 窓 / identity linking / audit chain (設計判断要)"
       ],
-      "docs": [
-        "README/HANDOVER update in progress"
-      ]
+      "docs": ["README/HANDOVER update in progress"]
     }
   },
   "loop35": {
@@ -4283,12 +4777,8 @@
   "loop38": {
     "name": "Issue #51 closeout and Issue #57 split",
     "completed_at": "2026-07-19",
-    "closed_issues": [
-      51
-    ],
-    "created_issues": [
-      57
-    ],
+    "closed_issues": [51],
+    "created_issues": [57],
     "summary": "Closed the umbrella ops gap issue after completing monitoring, alerting, backup, TLS renewal IaC, logging IaC, additional metrics, and incident/on-call labels. Split unhealthy auto-recovery to #57 for security-reviewed design.",
     "verification": "#51 comment posted and issue closed; Project 30 #51=Done; #57 exists and is Project 30 Todo.",
     "safety": "No production deploy, public DNS change, secret change, certificate issuance, git push, PR merge, release tag, destructive migration, or billing change executed."
@@ -4296,9 +4786,7 @@
   "loop39": {
     "name": "Issue #57 unhealthy recovery review and watchdog drill",
     "completed_at": "2026-07-19",
-    "closed_issues": [
-      57
-    ],
+    "closed_issues": [57],
     "summary": "Implemented docs/UNHEALTHY_RECOVERY_REVIEW.md, scripts/check_unhealthy_services.sh, and tests/test_unhealthy_watchdog.py. Default behavior is report-only; restart requires explicit human-approved command. Resident Docker socket autoheal daemon rejected for security reasons.",
     "verification": "pytest tests/test_unhealthy_watchdog.py -> 3 passed; bash -n watchdog script -> passed; real compose report-only -> OK no unhealthy services detected; docker compose base config -> passed; Issue #57 closed and Project 30 Done.",
     "safety": "No production deploy, host privilege change, Docker socket daemon, public DNS change, secret change, certificate issuance, git push, PR merge, release tag, destructive migration, or billing change executed."
@@ -5181,10 +5669,7 @@
       "version": "v0.1.12",
       "tag": "v0.1.12",
       "merge_commit": "89c39f21b30f2ee68b2a112a410bfa0526bc2bb3",
-      "prs": [
-        58,
-        59
-      ],
+      "prs": [58, 59],
       "github_release": "https://github.com/Kensan196948G/Construction-LegalOps-DX/releases/tag/v0.1.12",
       "released_at": "2026-07-20T04:48:52Z",
       "main_ci_run": "29717649214",
@@ -5201,12 +5686,7 @@
     "modes": "APP_ENV=production, SSO_MODE=stub+EDGE_AUTH_BOUNDARY=cloudflare-access, SHAREPOINT_MODE=disabled, NOTIFY_MODE=disabled, AI_REVIEW pending real CLAUDE_API_KEY",
     "smoke": "Access 302→login PASS, origin /healthz ok, /readyz db=ok, nginx→backend 200, tunnel 4 conns, 0 real errors",
     "version": "v0.1.12",
-    "prs": [
-      58,
-      59,
-      61,
-      62
-    ],
+    "prs": [58, 59, 61, 62],
     "known_issues": [
       "/api/v1/health version string hardcoded 0.1.0 (cosmetic, follow-up)",
       "local postgres container running but unused (backend uses Neon)",

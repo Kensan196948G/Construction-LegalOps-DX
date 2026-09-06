@@ -38,6 +38,9 @@ import {
   Construction,
   Handshake as JvIcon,
   ShieldAlert as PartnerRiskIcon,
+  Gavel,
+  Siren,
+  Fingerprint,
   type LucideIcon,
 } from "lucide-react";
 
@@ -88,12 +91,15 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { label: "労務費基準", href: "/labor-wage", icon: BadgeJapaneseYen, group: "legal" },
   { label: "取引先・協力会社管理", href: "/partners", icon: Building2, group: "legal" },
   { label: "紛争・クレーム管理", href: "/disputes", icon: Swords, group: "legal" },
+  { label: "証拠管理", href: "/evidence", icon: Fingerprint, group: "legal" },
+  { label: "内部通報・調査", href: "/whistleblower", icon: Siren, group: "legal" },
   // ── 知財 ─────────────────────────────────────────────────
   { label: "知財台帳", href: "/ip-assets", icon: BriefcaseBusiness, group: "ip" },
   { label: "競合出願ウォッチ", href: "/ip-watch", icon: Radar, group: "ip" },
   { label: "審査書類・AI解析", href: "/ip-documents", icon: Files, group: "ip" },
   // ── 品質・ナレッジ ────────────────────────────────────────
   { label: "コンプライアンスチェック", href: "/compliance", icon: ClipboardCheck, group: "quality" },
+  { label: "独禁法・入札談合", href: "/compliance/antitrust", icon: Gavel, group: "quality" },
   { label: "ひな形管理", href: "/templates", icon: FileText, group: "quality" },
   { label: "ナレッジベース", href: "/knowledge", icon: BookOpen, group: "quality" },
   { label: "レポート・分析", href: "/reports", icon: BarChart3, group: "quality" },
@@ -124,6 +130,21 @@ export function Sidebar({
     onToggleCollapsed?.(next);
   };
 
+  // 現在のパスに最も具体的に一致する項目だけをアクティブにする
+  // （例: "/compliance/antitrust" では "/compliance" と "/compliance/antitrust"
+  // の両方が startsWith 条件を満たすため、href が最長の項目のみを選ぶ）。
+  const activeHref = React.useMemo(() => {
+    if (!pathname) return null;
+    let best: string | null = null;
+    for (const item of sidebarNavItems) {
+      const isMatch = pathname === item.href || pathname.startsWith(item.href + "/");
+      if (isMatch && (best === null || item.href.length > best.length)) {
+        best = item.href;
+      }
+    }
+    return best;
+  }, [pathname]);
+
   // group が切り替わる地点でセクション見出しを挿入する
   const rendered: React.ReactNode[] = [];
   let lastGroup = "";
@@ -148,7 +169,7 @@ export function Sidebar({
       lastGroup = group;
     }
     const Icon = item.icon;
-    const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+    const active = item.href === activeHref;
     rendered.push(
       <li key={item.href}>
         <Link

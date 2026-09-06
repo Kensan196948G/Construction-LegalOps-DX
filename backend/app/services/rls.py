@@ -145,6 +145,167 @@ USING (
         "ALTER TABLE retention_rules ENABLE ROW LEVEL SECURITY",
         "ALTER TABLE audit_anchors ENABLE ROW LEVEL SECURITY",
         "ALTER TABLE external_forward_events ENABLE ROW LEVEL SECURITY",
+        # --- Issue #123: 内部通報・調査管理（migration 024 と同期） ---
+        # NOTE(CodeRabbit M6/N2): USING 句のみの CREATE POLICY は PostgreSQL では
+        # FOR ALL（SELECT/INSERT/UPDATE/DELETE 全て）に適用され、かつ同じ条件が
+        # WITH CHECK にも流用される。ACL 保有者が既存行を更新・削除できてしまう
+        # うえ、通報作成時（ACL 行がまだ無い段階）は admin/auditor 以外の INSERT
+        # が拒否される。そのため reports / reporter_profiles は FOR SELECT に
+        # 限定し、INSERT・UPDATE 用の別ポリシーを用意する。
+        #
+        # 実 PostgreSQL（テーブル所有者以外の DB ロールで接続する構成）での
+        # 検証で判明した残課題（このタスクの修正範囲外・フォローアップ Issue 化
+        # 対象）: SQLAlchemy の INSERT は既定で RETURNING を使い、また
+        # ``create_report`` は flush 後に ``session.refresh(report)`` で読み戻す
+        # ため、ACL 行がまだ無い時点でも自分が作成した行を SELECT できる必要が
+        # ある。非匿名通報は下記 ``created_by = actor_id`` 条件で救済されるが、
+        # 匿名通報（``created_by`` を意図的に NULL のまま保存する設計）はこの
+        # 条件でも救済できない。匿名性の隔離を緩めずに解決するには、匿名時のみ
+        # INSERT 直後の read-back を admin 相当のシステムコンテキストで行う、
+        # または RETURNING/refresh に依存しない ORM 経路へ変更する等の設計変更が
+        # 必要であり、本 PR の CodeRabbit 指摘対応の範囲を超えるため別 Issue とする。
+        # 現行の単一 DB ロール構成（アプリ = テーブル所有者）では所有者が RLS を
+        # バイパスするため、上記は実運用には影響しない（rls.py 冒頭の NOTE 参照）。
+        "ALTER TABLE whistleblower_reports ENABLE ROW LEVEL SECURITY",
+        "DROP POLICY IF EXISTS whistleblower_reports_case_access ON whistleblower_reports",
+        """CREATE POLICY whistleblower_reports_case_access ON whistleblower_reports
+FOR SELECT
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR whistleblower_reports.created_by = NULLIF(current_setting('app.actor_id', true), '')::bigint
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_reports.id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "DROP POLICY IF EXISTS whistleblower_reports_insert ON whistleblower_reports",
+        """CREATE POLICY whistleblower_reports_insert ON whistleblower_reports
+FOR INSERT
+WITH CHECK (
+    COALESCE(NULLIF(current_setting('app.role', true), ''), 'guest') <> 'guest'
+)""",
+        "DROP POLICY IF EXISTS whistleblower_reports_update ON whistleblower_reports",
+        """CREATE POLICY whistleblower_reports_update ON whistleblower_reports
+FOR UPDATE
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_reports.id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)
+WITH CHECK (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_reports.id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "ALTER TABLE whistleblower_reporter_profiles ENABLE ROW LEVEL SECURITY",
+        "DROP POLICY IF EXISTS whistleblower_reporter_profiles_identity_access "
+        "ON whistleblower_reporter_profiles",
+        """CREATE POLICY whistleblower_reporter_profiles_identity_access
+ON whistleblower_reporter_profiles
+FOR SELECT
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_reporter_profiles.report_id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.can_view_reporter_identity = true
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "DROP POLICY IF EXISTS whistleblower_reporter_profiles_insert "
+        "ON whistleblower_reporter_profiles",
+        """CREATE POLICY whistleblower_reporter_profiles_insert
+ON whistleblower_reporter_profiles
+FOR INSERT
+WITH CHECK (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_reports r
+        WHERE r.id = whistleblower_reporter_profiles.report_id
+          AND r.created_by = NULLIF(current_setting('app.actor_id', true), '')::bigint
+    )
+)""",
+        # 子テーブル・ACL テーブルは migration 024 と同一定義（N2: rls.py 未同期の解消）。
+        # これらは常に既存 ACL（investigator 等）保有者のみが INSERT する経路しか
+        # 無いため、FOR ALL のままでも「通報作成時に INSERT が拒否される」問題は
+        # 発生しない。ただし ACL 保有者が誤って既存行を更新・削除できる余地は残る
+        # ため、将来的な追加ハードニング対象として TODO 化する。
+        "ALTER TABLE whistleblower_case_access ENABLE ROW LEVEL SECURITY",
+        "DROP POLICY IF EXISTS whistleblower_case_access_self_or_admin "
+        "ON whistleblower_case_access",
+        """CREATE POLICY whistleblower_case_access_self_or_admin ON whistleblower_case_access
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+)""",
+        "ALTER TABLE whistleblower_evidence ENABLE ROW LEVEL SECURITY",
+        "DROP POLICY IF EXISTS whistleblower_evidence_case_access ON whistleblower_evidence",
+        """CREATE POLICY whistleblower_evidence_case_access ON whistleblower_evidence
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_evidence.report_id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "ALTER TABLE whistleblower_interviews ENABLE ROW LEVEL SECURITY",
+        "DROP POLICY IF EXISTS whistleblower_interviews_case_access ON whistleblower_interviews",
+        """CREATE POLICY whistleblower_interviews_case_access ON whistleblower_interviews
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_interviews.report_id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "ALTER TABLE whistleblower_timeline_events ENABLE ROW LEVEL SECURITY",
+        "DROP POLICY IF EXISTS whistleblower_timeline_events_case_access "
+        "ON whistleblower_timeline_events",
+        """CREATE POLICY whistleblower_timeline_events_case_access ON whistleblower_timeline_events
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_timeline_events.report_id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
+        "ALTER TABLE whistleblower_actions ENABLE ROW LEVEL SECURITY",
+        "DROP POLICY IF EXISTS whistleblower_actions_case_access ON whistleblower_actions",
+        """CREATE POLICY whistleblower_actions_case_access ON whistleblower_actions
+USING (
+    current_setting('app.role', true) IN ('admin', 'auditor')
+    OR EXISTS (
+        SELECT 1 FROM whistleblower_case_access wca
+        WHERE wca.report_id = whistleblower_actions.report_id
+          AND wca.user_id = NULLIF(current_setting('app.actor_id', true), '')::bigint
+          AND wca.revoked_at IS NULL
+          AND (wca.expires_at IS NULL OR wca.expires_at > now())
+    )
+)""",
     ]
 
 

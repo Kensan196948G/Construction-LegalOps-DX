@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import json as _json
 import os
+import re
 from typing import Final
 
 from sqlalchemy import BigInteger
@@ -129,15 +130,19 @@ def _compile_bigint_sqlite(_type_: object, _compiler: object, **_: object) -> st
 # ---------------------------------------------------------------------------
 
 
-_PG_DEFAULT_REWRITES: Final[dict[str, str]] = {
-    "'{}'::jsonb": "'{}'",
-    "'[]'::jsonb": "'[]'",
-    "'{}'::json": "'{}'",
-    "'[]'::json": "'[]'",
-    # Note: ARRAY(Text) columns use "'{}'", which is also a valid SQLite string.
-    # Do NOT add a "'{}'": "'[]'" mapping here — that would corrupt TEXT[] DEFAULT
-    # on PostgreSQL runs sharing the same Base.metadata singleton.
-}
+_PG_JSON_CAST_SUFFIX_RE: Final[re.Pattern[str]] = re.compile(r"::json(?:b)?\b\s*$")
+# Strips a trailing "::json"/"::jsonb" cast suffix regardless of the literal
+# value (e.g. "'{}'::jsonb", "'[]'::jsonb", "'[\"patent\"]'::jsonb"), so newly
+# added JSON-default columns never need a matching entry here.
+#
+# Anchored to the end of the string (``$``) so a literal JSON *value* that
+# happens to contain the substring "::jsonb" (e.g. a default whose payload is
+# itself the string ``'"cast::jsonb"'``) is not corrupted — only the actual
+# trailing cast operator is stripped.
+#
+# Note: ARRAY(Text) columns use "'{}'", which is also a valid SQLite string.
+# Do NOT rewrite bare "'{}'" (no cast suffix) — that would corrupt TEXT[]
+# DEFAULT on PostgreSQL runs sharing the same Base.metadata singleton.
 
 # Tracks columns already rewritten to prevent double-rewrite across multiple
 # create_all_for_tests() calls in one pytest session (Base.metadata is shared).
@@ -177,12 +182,8 @@ def _rewrite_pg_server_defaults() -> None:
                 text_val = getattr(arg, "text", None)
             if not isinstance(text_val, str):
                 continue
-            replacement: str | None = None
-            for needle, repl in _PG_DEFAULT_REWRITES.items():
-                if needle in text_val:
-                    replacement = text_val.replace(needle, repl)
-                    break
-            if replacement is not None and replacement != text_val:
+            replacement = _PG_JSON_CAST_SUFFIX_RE.sub("", text_val)
+            if replacement != text_val:
                 col.server_default = DefaultClause(_sql_text(replacement))
                 _rewrites_applied.add(key)
 
