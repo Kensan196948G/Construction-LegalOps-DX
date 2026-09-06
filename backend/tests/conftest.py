@@ -75,11 +75,25 @@ async def db_engine() -> AsyncGenerator[Any, None]:
 
     # Best-effort schema bootstrap. Don't fail collection if metadata is
     # not importable yet.
+    #
+    # NOTE: We deliberately go through ``create_all_for_tests`` (not a bare
+    # ``Base.metadata.create_all``) because several models declare
+    # PostgreSQL-flavoured ``server_default`` literals such as
+    # ``"'{}'::jsonb"``. SQLAlchemy 2.x renders a *plain string*
+    # ``server_default`` by quoting it verbatim, which turns that value into
+    # ``'''{}''::jsonb'`` — invalid input for a ``json``/``jsonb`` column on
+    # real PostgreSQL (``asyncpg.exceptions.InvalidTextRepresentationError``).
+    # ``create_all_for_tests`` wraps such string defaults in ``text()`` for
+    # PostgreSQL (and strips the ``::json`` cast for SQLite) so schema
+    # bootstrap succeeds under both ``PYTEST_USE_POSTGRES=1`` and the default
+    # SQLite engine. Without this, ``create_all`` fails for the *entire*
+    # schema and the exception below silently swallows it, leaving every
+    # ``db_session``-based unit test failing with "relation ... does not
+    # exist" against a fresh PostgreSQL database.
     try:
-        from app.db.base import Base  # type: ignore
+        from app.db.test_session import create_all_for_tests
 
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        await create_all_for_tests(engine)
     except Exception:
         pass
 
