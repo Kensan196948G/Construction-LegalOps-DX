@@ -159,21 +159,14 @@ async def test_legal_hold_release_approval_workflow(
     client: Any,
     auth_headers_admin: dict[str, str],
     auth_headers_legal: dict[str, str],
-    db_session: Any,
 ) -> None:
     """#230: Legal Hold 解除承認ワークフロー（申請者本人による決裁は 403）.
 
-    Legal Hold 自体は既存の ``POST /api/v1/legal-holds``（``app.api.v1.governance``）
-    ではなく ``db_session`` 経由で直接作成する。同エンドポイントは
-    ``LegalHold.started_at`` の ``server_default`` がプレーン文字列 "now()" と
-    定義されている既存の不具合により SQLite 上で 500 になるため（本 Issue の
-    スコープ外・証拠管理機能とは無関係）、Evidence 側のテストを阻害しない
-    ようにするための回避策である。
+    Legal Hold は正規の ``POST /api/v1/legal-holds``（``app.api.v1.governance``）
+    経由で作成する。Issue #125 で ``LegalHold.started_at`` の ``server_default``
+    がプレーン文字列 "now()" だった不具合（SQLite 上で 500 になる）を修正済み
+    のため、``db_session`` 直接作成の回避策は不要になった。
     """
-    from datetime import UTC, datetime
-
-    from app.models.access_control import LegalHold
-
     evidence = await _create_evidence(
         client,
         auth_headers_legal,
@@ -181,18 +174,18 @@ async def test_legal_hold_release_approval_workflow(
         seed=b"integration-hold",
     )
 
-    hold = LegalHold(
-        target_type="evidence",
-        target_id=evidence["id"],
-        reason="調査のため保全（統合テスト）",
-        status="active",
-        started_at=datetime.now(UTC),
-        evidence_ids=[evidence["id"]],
+    create_hold = await client.post(
+        "/api/v1/legal-holds",
+        json={
+            "target_type": "evidence",
+            "target_id": evidence["id"],
+            "reason": "調査のため保全（統合テスト）",
+            "evidence_ids": [evidence["id"]],
+        },
+        headers=auth_headers_admin,
     )
-    db_session.add(hold)
-    await db_session.flush()
-    await db_session.commit()
-    hold_id = hold.id
+    assert create_hold.status_code == 201, create_hold.text
+    hold_id = create_hold.json()["id"]
 
     r_link = await client.post(
         f"{EV}/{evidence['id']}/legal-hold",

@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -40,10 +41,10 @@ class AuditAnchor(IntPKMixin, Base):
     external_sink: Mapped[str | None] = mapped_column(String(256), nullable=True)
     external_ref: Mapped[str | None] = mapped_column(String(512), nullable=True)
     anchored_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default="now()"
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
     __table_args__ = (
