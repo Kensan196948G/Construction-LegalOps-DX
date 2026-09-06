@@ -1,13 +1,12 @@
 """独禁法・入札談合コンプライアンス API の疎通テスト（Issue #122）.
 
-``app.api.v1.antitrust.router`` はまだ ``app/api/v1/__init__.py`` へ登録
-されていない（並行実装との衝突回避のため、統合担当が後で
-``include_router`` する設計）。そのため本テストは共有アプリではなく、
-router を単体でマウントした自己完結の FastAPI インスタンスに対して
-認証・認可・スキーマ・監査ログ連携を検証する。
-
-``app/api/v1/__init__.py`` への登録後は、``tests/integration/conftest.py``
+``app.api.v1.antitrust.router`` は ``app/api/v1/__init__.py`` へ登録済み
+（``include_router(antitrust.router)``）なので、``tests/integration/conftest.py``
 の共有 ``client`` フィクスチャからも同じエンドポイントへ到達できる。
+
+本テストは、それとは別に router を単体でマウントした自己完結の FastAPI
+インスタンスに対して認証・認可・スキーマ・監査ログ連携を検証する
+（他ドメインのルーターと混在しない最小構成で確認するため）。
 """
 
 from __future__ import annotations
@@ -29,6 +28,7 @@ from app.deps import CurrentUser, get_current_user
 from app.models.contract import Contract
 from app.models.department import Department
 from app.models.user import User
+from app.services.antitrust_service import CONSULTATION_DISCLAIMER
 
 
 def _make_app() -> FastAPI:
@@ -251,6 +251,9 @@ async def test_consultation_returns_answer_and_disclaimer(antitrust_client: Asyn
     body = r.json()
     assert body["answer_text"]
     assert body["disclaimer"]
+    # 相談専用の免責文（チェック機能用の _CHECK_DISCLAIMER とは異なる）が返ること。
+    assert body["disclaimer"] == CONSULTATION_DISCLAIMER
+    assert "個別事案への当てはめ" in body["disclaimer"]
 
 
 async def test_training_create_and_list(antitrust_client: AsyncClient) -> None:
@@ -319,5 +322,43 @@ async def test_write_endpoint_requires_write_role(
         r = await client.post(
             "/api/v1/antitrust/checks",
             json={"check_type": "general", "subject": "権限テスト", "context": {}},
+        )
+        assert r.status_code == 403
+
+
+async def test_create_consultation_requires_write_role(
+    antitrust_engine: Any, seeded_ids: tuple[int, int]
+) -> None:
+    """viewer/auditor ロールでは AI 相談の作成（書き込み）が 403 になる。"""
+    user_id, _ = seeded_ids
+    app = _make_app()
+    Session = async_sessionmaker(bind=antitrust_engine, expire_on_commit=False, class_=AsyncSession)
+
+    async def _override_get_db() -> AsyncIterator[AsyncSession]:
+        session = Session()
+        try:
+            yield session
+            await session.commit()
+        finally:
+            await session.close()
+
+    async def _override_get_current_user() -> CurrentUser:
+        return CurrentUser(
+            id="viewer@example.com",
+            email="viewer@example.com",
+            role="viewer",
+            department_ids=(),
+            raw_claims={},
+            db_id=user_id,
+        )
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        r = await client.post(
+            "/api/v1/antitrust/consultations",
+            json={"query_text": "独占禁止法の不当な取引制限とは何ですか"},
         )
         assert r.status_code == 403

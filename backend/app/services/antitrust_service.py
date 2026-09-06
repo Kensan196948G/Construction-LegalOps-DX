@@ -32,6 +32,7 @@ from app.models.enums import (
     AntitrustCheckType,
 )
 from app.models.joint_venture import JointVenture
+from app.models.user import User
 from app.services import antitrust_checker
 from app.services.evidence_lookup import search_primary_sources
 
@@ -431,6 +432,8 @@ async def create_training(
         raise ValidationError("user_id または attendee_name のいずれかが必要です。")
     if score is not None and not (0 <= score <= 100):
         raise ValidationError("score は 0〜100 の範囲としてください。")
+    if user_id is not None and await session.get(User, user_id) is None:
+        raise NotFoundError(f"ユーザーが見つかりません（id={user_id}）")
 
     row = ComplianceTraining(
         user_id=user_id,

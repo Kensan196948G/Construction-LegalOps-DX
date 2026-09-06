@@ -286,6 +286,18 @@ async def test_create_training_requires_user_or_attendee(db_session) -> None:
         )
 
 
+async def test_create_training_missing_user_raises_not_found(db_session) -> None:
+    uid, _ = await _seed_user_and_contract(db_session)
+    with pytest.raises(NotFoundError):
+        await antitrust_service.create_training(
+            db_session,
+            actor_id=uid,
+            training_title="研修（テスト）",
+            completed_at=date(2026, 4, 1),
+            user_id=999999,
+        )
+
+
 async def test_list_trainings_filters_by_category(db_session) -> None:
     uid, _ = await _seed_user_and_contract(db_session)
     await antitrust_service.create_training(
