@@ -216,7 +216,7 @@ class WhistleblowerCaseAccess(IntPKMixin, TimestampMixin, Base):
     role_in_case: Mapped[str] = mapped_column(
         String(24), nullable=False, default=WhistleblowerCaseRole.INVESTIGATOR.value
     )
-    can_view_reporter_identity: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    can_view_reporter_identity: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     granted_by: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="SET NULL", use_alter=True),

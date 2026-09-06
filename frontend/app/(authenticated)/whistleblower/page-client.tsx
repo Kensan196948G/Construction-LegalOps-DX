@@ -38,12 +38,17 @@ import { ApiError, whistleblowerApi } from "@/lib/api";
 import { useCurrentUser } from "@/hooks/use-users";
 import type {
   WhistleblowerAction,
+  WhistleblowerActionCategory,
   WhistleblowerAggregate,
   WhistleblowerCaseAccess,
+  WhistleblowerCategory,
   WhistleblowerEvidence,
+  WhistleblowerEvidenceType,
   WhistleblowerInterview,
+  WhistleblowerIntervieweeType,
   WhistleblowerReport,
   WhistleblowerReporterProfile,
+  WhistleblowerSeverity,
   WhistleblowerTimelineEvent,
 } from "@/lib/api/schemas";
 
@@ -97,10 +102,10 @@ function formatDateTime(value: string | null | undefined): string {
 }
 
 interface CreateForm {
-  category: string;
+  category: WhistleblowerCategory;
   title: string;
   description: string;
-  severity: string;
+  severity: WhistleblowerSeverity;
   is_anonymous: boolean;
   reporter_name: string;
   contact_email: string;
@@ -115,6 +120,21 @@ const EMPTY_FORM: CreateForm = {
   reporter_name: "",
   contact_email: "",
 };
+
+interface EvidenceForm {
+  evidence_type: WhistleblowerEvidenceType;
+  description: string;
+}
+
+interface InterviewForm {
+  interviewee_type: WhistleblowerIntervieweeType;
+  summary: string;
+}
+
+interface ActionForm {
+  action_category: WhistleblowerActionCategory;
+  title: string;
+}
 
 export default function WhistleblowerPage() {
   const { data: currentUser } = useCurrentUser();
@@ -142,9 +162,18 @@ export default function WhistleblowerPage() {
   const [actions, setActions] = useState<WhistleblowerAction[]>([]);
 
   const [grantUserId, setGrantUserId] = useState("");
-  const [evidenceForm, setEvidenceForm] = useState({ evidence_type: "email", description: "" });
-  const [interviewForm, setInterviewForm] = useState({ interviewee_type: "witness", summary: "" });
-  const [actionForm, setActionForm] = useState({ action_category: "corrective", title: "" });
+  const [evidenceForm, setEvidenceForm] = useState<EvidenceForm>({
+    evidence_type: "email",
+    description: "",
+  });
+  const [interviewForm, setInterviewForm] = useState<InterviewForm>({
+    interviewee_type: "witness",
+    summary: "",
+  });
+  const [actionForm, setActionForm] = useState<ActionForm>({
+    action_category: "corrective",
+    title: "",
+  });
 
   const [aggregate, setAggregate] = useState<WhistleblowerAggregate | null>(null);
   const [aggregateOpen, setAggregateOpen] = useState(false);
@@ -245,13 +274,14 @@ export default function WhistleblowerPage() {
     setActionError(null);
     try {
       const created = await whistleblowerApi.create({
-        category: form.category as never,
+        category: form.category,
         title: form.title.trim(),
         description: form.description.trim(),
-        severity: form.severity as never,
+        severity: form.severity,
         is_anonymous: form.is_anonymous,
         reporter_name: form.is_anonymous ? null : form.reporter_name || null,
         contact_email: form.is_anonymous ? null : form.contact_email || null,
+        consent_identity_disclosure: false,
       });
       setRows((prev) => [created, ...prev]);
       setCreateOpen(false);
@@ -325,7 +355,7 @@ export default function WhistleblowerPage() {
     setActionError(null);
     try {
       await whistleblowerApi.addEvidence(report.id, {
-        evidence_type: evidenceForm.evidence_type as never,
+        evidence_type: evidenceForm.evidence_type,
         description: evidenceForm.description || null,
         preserved: true,
       });
@@ -342,7 +372,7 @@ export default function WhistleblowerPage() {
     setActionError(null);
     try {
       await whistleblowerApi.addInterview(report.id, {
-        interviewee_type: interviewForm.interviewee_type as never,
+        interviewee_type: interviewForm.interviewee_type,
         conducted_at: new Date().toISOString(),
         summary: interviewForm.summary || null,
       });
@@ -362,7 +392,7 @@ export default function WhistleblowerPage() {
     setActionError(null);
     try {
       await whistleblowerApi.addAction(report.id, {
-        action_category: actionForm.action_category as never,
+        action_category: actionForm.action_category,
         title: actionForm.title.trim(),
       });
       setActionForm({ action_category: "corrective", title: "" });
@@ -461,28 +491,25 @@ export default function WhistleblowerPage() {
               <TableHead>重大度</TableHead>
               <TableHead>匿名</TableHead>
               <TableHead>受付日時</TableHead>
+              <TableHead>操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" aria-hidden="true" />
                 </TableCell>
               </TableRow>
             ) : rowCount === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                   表示できる通報がありません。
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((r) => (
-                <TableRow
-                  key={String(r.id)}
-                  className="cursor-pointer"
-                  onClick={() => void openDetail(r)}
-                >
+                <TableRow key={String(r.id)}>
                   <TableCell className="font-mono text-xs">{r.report_no}</TableCell>
                   <TableCell>{CATEGORY_LABELS[r.category] ?? r.category}</TableCell>
                   <TableCell className="max-w-[280px] truncate">{r.title}</TableCell>
@@ -494,6 +521,13 @@ export default function WhistleblowerPage() {
                   <TableCell>{SEVERITY_LABELS[r.severity] ?? r.severity}</TableCell>
                   <TableCell>{r.is_anonymous ? "匿名" : "実名"}</TableCell>
                   <TableCell>{formatDateTime(r.received_at)}</TableCell>
+                  <TableCell>
+                    {/* M17（CodeRabbit）: TableRow の onClick はキーボード操作不可のため、
+                        フォーカス可能なボタンで詳細を開けるようにする。 */}
+                    <Button size="sm" variant="ghost" onClick={() => void openDetail(r)}>
+                      詳細
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -515,7 +549,9 @@ export default function WhistleblowerPage() {
               <Label htmlFor="wb-category">カテゴリ</Label>
               <Select
                 value={form.category}
-                onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, category: v as WhistleblowerCategory }))
+                }
               >
                 <SelectTrigger id="wb-category">
                   <SelectValue />
@@ -550,7 +586,9 @@ export default function WhistleblowerPage() {
               <Label htmlFor="wb-severity">重大度</Label>
               <Select
                 value={form.severity}
-                onValueChange={(v) => setForm((f) => ({ ...f, severity: v }))}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, severity: v as WhistleblowerSeverity }))
+                }
               >
                 <SelectTrigger id="wb-severity">
                   <SelectValue />
@@ -605,7 +643,10 @@ export default function WhistleblowerPage() {
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               キャンセル
             </Button>
-            <Button onClick={() => void createReport()} disabled={creating}>
+            <Button
+              onClick={() => void createReport()}
+              disabled={creating || !form.title.trim() || !form.description.trim()}
+            >
               {creating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "登録"}
             </Button>
           </DialogFooter>
@@ -757,7 +798,10 @@ export default function WhistleblowerPage() {
                       <Select
                         value={evidenceForm.evidence_type}
                         onValueChange={(v) =>
-                          setEvidenceForm((f) => ({ ...f, evidence_type: v }))
+                          setEvidenceForm((f) => ({
+                            ...f,
+                            evidence_type: v as WhistleblowerEvidenceType,
+                          }))
                         }
                       >
                         <SelectTrigger className="w-40">
@@ -797,7 +841,10 @@ export default function WhistleblowerPage() {
                       <Select
                         value={interviewForm.interviewee_type}
                         onValueChange={(v) =>
-                          setInterviewForm((f) => ({ ...f, interviewee_type: v }))
+                          setInterviewForm((f) => ({
+                            ...f,
+                            interviewee_type: v as WhistleblowerIntervieweeType,
+                          }))
                         }
                       >
                         <SelectTrigger className="w-40">
@@ -834,7 +881,10 @@ export default function WhistleblowerPage() {
                       <Select
                         value={actionForm.action_category}
                         onValueChange={(v) =>
-                          setActionForm((f) => ({ ...f, action_category: v }))
+                          setActionForm((f) => ({
+                            ...f,
+                            action_category: v as WhistleblowerActionCategory,
+                          }))
                         }
                       >
                         <SelectTrigger className="w-40">

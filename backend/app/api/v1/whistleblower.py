@@ -108,13 +108,19 @@ async def create_report(
         consent_identity_disclosure=body.consent_identity_disclosure,
         lead_investigator_id=body.lead_investigator_id,
     )
-    # 匿名通報時は actor_id を監査ログにも残さない（隔離の一貫性）。
-    await _audit(
+    # 匿名通報時は actor_id・target_id を監査ログに残さない（隔離の一貫性）。
+    # C2（CodeRabbit）: actor_id と target_id（report.id）の組み合わせで
+    # 投稿者が特定できてしまうため、匿名通報では両方とも記録しない。
+    # IP アドレス・User-Agent も request 由来で投稿者特定に使えるため、
+    # 匿名時は request 自体を audit_service.log へ渡さない。
+    await audit_service.log(
         session,
-        request,
-        current_user,
+        actor_id=None if body.is_anonymous else current_user.db_id,
         action="whistleblower.create",
-        target_id=report.id,
+        target_type="whistleblower_reports",
+        target_id=None if body.is_anonymous else report.id,
+        request=None if body.is_anonymous else request,
+        payload={"is_anonymous": body.is_anonymous},
     )
     return WhistleblowerReportOut.model_validate(report)
 

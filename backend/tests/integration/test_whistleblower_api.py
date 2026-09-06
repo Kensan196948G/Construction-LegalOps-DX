@@ -134,7 +134,14 @@ async def test_report_lifecycle_and_identity_isolation(wb_client: Any, db_sessio
     # admin が調査担当者 ACL を付与する。
     r_grant = await wb_client.post(
         f"/api/v1/whistleblower/reports/{report_id}/access",
-        json={"user_id": investigator_id, "role_in_case": "investigator"},
+        json={
+            "user_id": investigator_id,
+            "role_in_case": "investigator",
+            # M4（CodeRabbit）: can_view_reporter_identity のデフォルトは
+            # 最小権限（false）に変更したため、識別情報閲覧を検証するテストは
+            # 明示的に true を付与する。
+            "can_view_reporter_identity": True,
+        },
     )
     assert r_grant.status_code == 201, r_grant.text
 

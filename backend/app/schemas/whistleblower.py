@@ -101,7 +101,7 @@ class WhistleblowerCaseAccessGrantIn(BaseModel):
 
     user_id: int
     role_in_case: WhistleblowerCaseRole = Field(default=WhistleblowerCaseRole.INVESTIGATOR)
-    can_view_reporter_identity: bool = Field(default=True)
+    can_view_reporter_identity: bool = Field(default=False)
     expires_at: datetime | None = None
 
 

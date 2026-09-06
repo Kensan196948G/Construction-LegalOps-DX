@@ -67,6 +67,16 @@ async def _fetch_report(session: AsyncSession, *, report_id: int) -> Whistleblow
     return report
 
 
+def _grant_not_expired(grant: WhistleblowerCaseAccess, *, now: datetime) -> bool:
+    """ACL 付与が期限切れでないかを判定する（``_active_grant`` と共通ロジック）."""
+    expires_at = grant.expires_at
+    if expires_at is None:
+        return True
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    return expires_at > now
+
+
 async def _active_grant(
     session: AsyncSession, *, report_id: int, user_id: int
 ) -> WhistleblowerCaseAccess | None:
@@ -82,10 +92,7 @@ async def _active_grant(
     ).scalar_one_or_none()
     if row is None:
         return None
-    expires_at = row.expires_at
-    if expires_at is not None and expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=UTC)
-    if expires_at is not None and expires_at <= now:
+    if not _grant_not_expired(row, now=now):
         return None
     return row
 
@@ -265,10 +272,11 @@ async def list_reports(
     if role not in _PRIVILEGED_ROLES:
         if user_id is None:
             return [], 0
-        accessible_ids = (
+        now = _now()
+        grants = (
             (
                 await session.execute(
-                    select(WhistleblowerCaseAccess.report_id).where(
+                    select(WhistleblowerCaseAccess).where(
                         WhistleblowerCaseAccess.user_id == user_id,
                         WhistleblowerCaseAccess.revoked_at.is_(None),
                     )
@@ -277,6 +285,9 @@ async def list_reports(
             .scalars()
             .all()
         )
+        # M1（CodeRabbit）: revoked_at のみでなく expires_at も判定しないと、
+        # 期限切れ ACL でも一覧（title/description 含む）が閲覧できてしまう。
+        accessible_ids = [g.report_id for g in grants if _grant_not_expired(g, now=now)]
         if not accessible_ids:
             return [], 0
         stmt = stmt.where(WhistleblowerReport.id.in_(accessible_ids))
@@ -331,7 +342,7 @@ async def grant_case_access(
     actor_id: int | None,
     user_id: int,
     role_in_case: str = WhistleblowerCaseRole.INVESTIGATOR.value,
-    can_view_reporter_identity: bool = True,
+    can_view_reporter_identity: bool = False,
     expires_at: datetime | None = None,
 ) -> WhistleblowerCaseAccess:
     report = await _fetch_report(session, report_id=report_id)
