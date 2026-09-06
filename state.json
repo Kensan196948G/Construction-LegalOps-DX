@@ -65,7 +65,16 @@
     "merged_prs": [128, 130],
     "closed_issues": [125, 127, 129],
     "summary": "PR #126（Phase 3）マージ後に残った派生Issueを対応。PR #128（Issue #125）: LegalHold.started_at等4カラムのserver_default=\"now()\"（プレーン文字列）をfunc.now()に修正。PR #130（Issue #127/#129）: Issue #127（disputeの部署/契約スコープ認可欠如）の調査中に、PR #126のC1と同型のCritical脆弱性が既存の007_business_domain.py（disputes/contract_documents/change_orders/payment_records等8テーブル）にも存在することを新規発見（Issue #129）。各{table}_contract_scopeポリシーをRESTRICTIVE化するmigration 026で根治し、実PostgreSQLで修正前は部外者から他契約の紛争が見えること・修正後は見えなくなることを実測検証。アプリ層にもdispute_service.ensure_dispute_visibleを新設し多層防御を追加（Issue #127も同時解消）。",
-    "verification": "backend pytest SQLite全体1373 passed / PostgreSQL16(tests/integration/)258 passed / ruff・mypy clean / migration upgrade→downgrade→re-upgrade実PostgreSQL成功 / RLS遮断効果の実測検証済み",
+    "verification": {
+      "unit_integration_test": "PASS — backend pytest SQLite全体1373 passed, 2 skipped / PostgreSQL16(tests/integration/、CI同一コマンド)258 passed",
+      "lint_typecheck": "PASS — ruff check / mypy clean（backend全体214ファイル）",
+      "build": "NOT RUN — PR #128/#130 はbackendのみの変更でfrontend/production buildの対象範囲外。CI（Docker build / Frontend eslint+tsc+jest）はPR #128/#130ともにgreenを確認済み",
+      "security_scan": "PASS — CI Security(bandit/trivy)ジョブ green（PR #128/#130とも）。secret/PII/connection string露出なし",
+      "migration_verification": "PASS — alembic upgrade→downgrade→re-upgrade を実PostgreSQL 16の一時DBで検証（PR #128: DDL変更なしのため対象外、PR #130: migration 026を検証）",
+      "rls_penetration_check": "PASS — 実PostgreSQLで非オーナーロールを使い、修正前(migration 025まで)は部外者から他契約のdisputeが閲覧可能・修正後(migration 026)は閲覧不可になることを実測。契約所有者/adminからは引き続き閲覧可能であることも確認",
+      "code_review": "PASS（PR #128） / NOT RUN（PR #130、CodeRabbit APIレート制限により未実施・再トリガー済みだが解消せず。代替としてPR作成者自身による実PostgreSQL実測検証と新規回帰テストで代替確認）",
+      "ci_result": "全8ジョブgreen（Backend pytest PostgreSQL16 / alembic roundtrip / pytest+ruff+mypy、Frontend eslint+tsc+jest、Docker build、E2E Playwright smoke、Security bandit+trivy、CodeRabbit）— PR #128・#130とも"
+    },
     "human_gate_remaining": "本番デプロイは引き続き#23（Vault secrets投入）・#24（CSP enforce移行）・#50（Cloudflare/Neon本番構築）の人間ゲート待ち。いずれも組織ポリシー上、秘密情報投入・外部公開範囲変更・本番インフラ構築に該当し自律実行不可。"
   },
   "kpi": {
