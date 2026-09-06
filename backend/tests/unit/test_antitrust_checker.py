@@ -30,6 +30,17 @@ def test_check_bid_rigging_flags_competitor_contact_on_public_bid() -> None:
     assert antitrust_checker.overall_severity(findings) == "block"
 
 
+def test_check_bid_rigging_flags_competitor_contact_on_private_bid() -> None:
+    """民間入札（is_public_bid=False）でも競合接触の申告は所見として検出されるべき."""
+    findings = antitrust_checker.check_bid_rigging(
+        {"is_public_bid": False, "contacted_competitors": True}
+    )
+    codes = {f.code for f in findings}
+    assert "bid_rigging_competitor_contact" in codes
+    # 入札談合等関与行為防止法の対象外（公共入札ではない）なので BLOCK ではなく WARN
+    assert antitrust_checker.overall_severity(findings) == "warn"
+
+
 def test_check_bid_rigging_no_risk() -> None:
     findings = antitrust_checker.check_bid_rigging({"is_public_bid": True})
     assert [f.code for f in findings] == ["bid_rigging_none"]

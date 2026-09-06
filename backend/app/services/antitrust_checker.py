@@ -137,20 +137,32 @@ def check_bid_rigging(context: dict[str, Any]) -> list[AntitrustFinding]:
     contacted_competitors = bool(context.get("contacted_competitors", False))
     pre_bid_price_shared = bool(context.get("pre_bid_price_shared", False))
 
-    if contacted_competitors and is_public_bid:
+    if contacted_competitors:
+        # 公共入札は入札談合等関与行為防止法の適用対象となるため BLOCK、
+        # 民間入札は同法の対象外だが独占禁止法 3 条のリスクは残るため WARN とする。
+        if is_public_bid:
+            severity = AntitrustCheckSeverity.BLOCK
+            description = (
+                "公共入札に関連して競合他社との接触があったと申告されています。"
+                "入札談合等関与行為防止法・独占禁止法上のリスクが高い可能性があります。"
+            )
+            citation = (
+                "独占禁止法 3 条（不当な取引制限）/ 入札談合等関与行為の排除及び防止に関する法律"
+            )
+        else:
+            severity = AntitrustCheckSeverity.WARN
+            description = (
+                "民間入札に関連して競合他社との接触があったと申告されています。"
+                "入札談合等関与行為防止法の対象外ですが、独占禁止法上のリスクがある可能性があります。"
+            )
+            citation = "独占禁止法 3 条（不当な取引制限）"
         findings.append(
             AntitrustFinding(
                 code="bid_rigging_competitor_contact",
                 title="入札前の競合他社接触（談合リスク）",
-                severity=AntitrustCheckSeverity.BLOCK,
-                description=(
-                    "公共・民間入札に関連して競合他社との接触があったと申告されています。"
-                    "入札談合等関与行為防止法・独占禁止法上のリスクが高い可能性があります。"
-                ),
-                citation=(
-                    "独占禁止法 3 条（不当な取引制限）/ "
-                    "入札談合等関与行為の排除及び防止に関する法律"
-                ),
+                severity=severity,
+                description=description,
+                citation=citation,
                 suggestion="接触の経緯・内容を記録し、法務・コンプライアンス部門へ即時相談してください。",
             )
         )
