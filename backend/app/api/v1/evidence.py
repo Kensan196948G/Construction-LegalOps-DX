@@ -25,6 +25,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ForbiddenError
 from app.db.session import get_db
 from app.deps import CurrentUser, require_role
 from app.schemas.common import Page
@@ -49,6 +50,7 @@ router = APIRouter(prefix="/evidence", tags=["evidence"])
 _READ_ROLES = ("viewer", "drafter", "reviewer", "approver", "admin", "auditor")
 _WRITE_ROLES = ("drafter", "reviewer", "approver", "admin")
 _APPROVE_ROLES = ("approver", "admin")
+_PRIVILEGED_ROLES = ("admin", "auditor")
 
 
 @router.get("", response_model=Page[EvidenceOut], summary="証拠一覧（#217）")
@@ -61,7 +63,7 @@ async def list_evidence(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> Page[EvidenceOut]:
     items, total = await evidence_service.list_evidence(
         session,
@@ -73,6 +75,21 @@ async def list_evidence(
         page=page,
         size=size,
     )
+    # M10: PostgreSQL では RLS（migration 025）が既に行レベルで絞り込むが、
+    # RLS の効かない環境（SQLite・テスト）向けの多層防御としてアプリ層でも
+    # 案件 ACL・Legal Hold 倫理壁を確認する。ページ内の件数のみ絞り込み、
+    # `total` は DB 側の件数のまま返す（正確な total 算出は RLS 側に委ねる）。
+    if current_user.role not in _PRIVILEGED_ROLES:
+        visible_items = []
+        for item in items:
+            try:
+                await evidence_service.ensure_evidence_visible(
+                    session, evidence=item, viewer=current_user
+                )
+            except ForbiddenError:
+                continue
+            visible_items.append(item)
+        items = visible_items
     return Page[EvidenceOut](
         items=[EvidenceOut.model_validate(i) for i in items], total=total, page=page, size=size
     )
@@ -205,6 +222,8 @@ async def get_evidence(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> EvidenceOut:
+    evidence = await evidence_service.get_evidence(session, evidence_id=evidence_id)
+    await evidence_service.ensure_evidence_visible(session, evidence=evidence, viewer=current_user)
     row = await evidence_service.record_view(
         session, evidence_id=evidence_id, viewer_id=current_user.db_id
     )
@@ -219,9 +238,22 @@ async def get_evidence(
 async def get_duplicates(
     evidence_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> list[EvidenceOut]:
+    base = await evidence_service.get_evidence(session, evidence_id=evidence_id)
+    await evidence_service.ensure_evidence_visible(session, evidence=base, viewer=current_user)
     rows = await evidence_service.list_duplicates(session, evidence_id=evidence_id)
+    if current_user.role not in _PRIVILEGED_ROLES:
+        visible_rows = []
+        for r in rows:
+            try:
+                await evidence_service.ensure_evidence_visible(
+                    session, evidence=r, viewer=current_user
+                )
+            except ForbiddenError:
+                continue
+            visible_rows.append(r)
+        rows = visible_rows
     return [EvidenceOut.model_validate(r) for r in rows]
 
 
@@ -233,8 +265,10 @@ async def get_duplicates(
 async def get_timeline(
     evidence_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> list[EvidenceTimelineItem]:
+    evidence = await evidence_service.get_evidence(session, evidence_id=evidence_id)
+    await evidence_service.ensure_evidence_visible(session, evidence=evidence, viewer=current_user)
     items = await evidence_service.get_timeline(session, evidence_id=evidence_id)
     return [EvidenceTimelineItem.model_validate(i) for i in items]
 
@@ -249,8 +283,10 @@ async def get_view_history(
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> list[EvidenceViewHistoryItem]:
+    evidence = await evidence_service.get_evidence(session, evidence_id=evidence_id)
+    await evidence_service.ensure_evidence_visible(session, evidence=evidence, viewer=current_user)
     rows, _total = await evidence_service.get_view_history(
         session, evidence_id=evidence_id, page=page, size=size
     )
@@ -272,6 +308,8 @@ async def export_evidence(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> EvidenceExportBundle:
+    evidence = await evidence_service.get_evidence(session, evidence_id=evidence_id)
+    await evidence_service.ensure_evidence_visible(session, evidence=evidence, viewer=current_user)
     bundle = await evidence_service.export_evidence_bundle(
         session, evidence_id=evidence_id, actor_id=current_user.db_id
     )
@@ -286,8 +324,10 @@ async def export_evidence(
 async def list_custody(
     evidence_id: int,
     session: AsyncSession = Depends(get_db),
-    _current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> list[EvidenceCustodyEventOut]:
+    evidence = await evidence_service.get_evidence(session, evidence_id=evidence_id)
+    await evidence_service.ensure_evidence_visible(session, evidence=evidence, viewer=current_user)
     rows = await evidence_service.list_custody_events(session, evidence_id=evidence_id)
     return [EvidenceCustodyEventOut.model_validate(r) for r in rows]
 
