@@ -2,16 +2,10 @@
 antitrust_consultations / compliance_trainings）.
 
 Revision ID: 023_antitrust_compliance
-Revises: 021_labor_commitment
+Revises: 022_dispute_ext
 Create Date: 2026-09-06
 
 ロードマップ #113〜#124（Issue #122）/ Phase 3 §5.9。
-
-.. note::
-   このリポジトリでは複数の Issue が並行して migration を作成しているため、
-   ``down_revision`` は本ワークツリー上の最新ヘッド（``021_labor_commitment``）
-   を指す。022 系（別 Issue）が先にマージされた場合、統合担当が
-   ``down_revision`` を実際のヘッドへ張り替えること（内容の変更は不要）。
 """
 
 from __future__ import annotations

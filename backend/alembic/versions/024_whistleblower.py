@@ -1,7 +1,7 @@
 """内部通報・調査管理（whistleblower_*）.
 
 Revision ID: 024_whistleblower
-Revises: 021_labor_commitment
+Revises: 023_antitrust_compliance
 Create Date: 2026-09-06
 
 ロードマップ #125〜#135 / Issue #123（Phase 3 §5.10）。
@@ -11,11 +11,6 @@ Create Date: 2026-09-06
 調査担当者限定 ACL（``whistleblower_case_access``）を持つ利用者と
 admin/auditor のみがアクセスできるよう RLS ポリシーで強制する
 （PostgreSQL のみ・既存 migration 006/007 のパターンを踏襲）。
-
-NOTE: このリポジトリでは Issue #123 と並行して 022/023 番の migration が
-他ブランチで作成される想定のため、本ファイルは意図的に revision "024" を
-使用し、down_revision は現時点の worktree 上の head（021_labor_commitment）
-を指す。統合時に 022 → 023 → 024 の順で down_revision を繋ぎ直すこと。
 """
 
 from __future__ import annotations

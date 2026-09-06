@@ -397,7 +397,7 @@ async def create_consultation(
     body: AntitrustConsultationCreate,
     request: Request,
     session: AsyncSession = Depends(get_db),
-    current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
+    current_user: CurrentUser = Depends(require_role(*_WRITE_ROLES)),
 ) -> AntitrustConsultationOut:
     try:
         row = await antitrust_service.create_consultation(
@@ -483,6 +483,8 @@ async def create_training(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+    except NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     await audit_service.log(
         session,

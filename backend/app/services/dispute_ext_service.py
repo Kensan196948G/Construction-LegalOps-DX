@@ -733,7 +733,10 @@ async def add_proceeding_stage(
     for stage in active_stages:
         stage.status = DisputeProceedingStageStatus.COMPLETED.value
         if stage.ended_at is None:
-            stage.ended_at = started_at
+            # 遡及登録（新ステージの started_at が既存ステージの started_at より前）
+            # で ended_at < started_at という不整合レコードを作らないよう、
+            # 既存ステージ自身の started_at を下限にする。
+            stage.ended_at = max(started_at, stage.started_at)
         stage.updated_by = actor_id
 
     row = DisputeProceedingStage(

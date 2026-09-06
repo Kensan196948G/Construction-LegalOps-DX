@@ -130,10 +130,15 @@ def _compile_bigint_sqlite(_type_: object, _compiler: object, **_: object) -> st
 # ---------------------------------------------------------------------------
 
 
-_PG_JSON_CAST_SUFFIX_RE: Final[re.Pattern[str]] = re.compile(r"::json(?:b)?\b")
-# Strips any "::json"/"::jsonb" cast suffix regardless of the literal value
-# (e.g. "'{}'::jsonb", "'[]'::jsonb", "'[\"patent\"]'::jsonb"), so newly added
-# JSON-default columns never need a matching entry here.
+_PG_JSON_CAST_SUFFIX_RE: Final[re.Pattern[str]] = re.compile(r"::json(?:b)?\b\s*$")
+# Strips a trailing "::json"/"::jsonb" cast suffix regardless of the literal
+# value (e.g. "'{}'::jsonb", "'[]'::jsonb", "'[\"patent\"]'::jsonb"), so newly
+# added JSON-default columns never need a matching entry here.
+#
+# Anchored to the end of the string (``$``) so a literal JSON *value* that
+# happens to contain the substring "::jsonb" (e.g. a default whose payload is
+# itself the string ``'"cast::jsonb"'``) is not corrupted — only the actual
+# trailing cast operator is stripped.
 #
 # Note: ARRAY(Text) columns use "'{}'", which is also a valid SQLite string.
 # Do NOT rewrite bare "'{}'" (no cast suffix) — that would corrupt TEXT[]

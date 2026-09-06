@@ -235,10 +235,16 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
   ) => {
     const daysStr = eotStatus === "rejected" ? "0" : window.prompt("認容日数を入力してください", "0");
     if (daysStr === null) return;
+    const trimmed = daysStr.trim();
+    const days = trimmed === "" ? 0 : Number(trimmed);
+    if (!Number.isInteger(days) || days < 0) {
+      window.alert("認容日数は 0 以上の整数を入力してください。");
+      return;
+    }
     try {
       await disputesExtApi.updateDelayEventEot(delayEventId, {
         eot_status: eotStatus,
-        eot_days_granted: Number(daysStr || 0),
+        eot_days_granted: days,
       });
       await load();
     } catch {
@@ -731,22 +737,25 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
           {!noticeResult ? (
             <div className="grid gap-3">
               <div>
-                <Label>差出人名 *</Label>
+                <Label htmlFor="notice-sender-name">差出人名 *</Label>
                 <Input
+                  id="notice-sender-name"
                   value={noticeForm.sender_name}
                   onChange={(e) => setNoticeForm({ ...noticeForm, sender_name: e.target.value })}
                 />
               </div>
               <div>
-                <Label>宛先（未入力時は相手方名を使用）</Label>
+                <Label htmlFor="notice-recipient-name">宛先（未入力時は相手方名を使用）</Label>
                 <Input
+                  id="notice-recipient-name"
                   value={noticeForm.recipient_name}
                   onChange={(e) => setNoticeForm({ ...noticeForm, recipient_name: e.target.value })}
                 />
               </div>
               <div>
-                <Label>備考</Label>
+                <Label htmlFor="notice-extra-note">備考</Label>
                 <Textarea
+                  id="notice-extra-note"
                   value={noticeForm.extra_note}
                   onChange={(e) => setNoticeForm({ ...noticeForm, extra_note: e.target.value })}
                 />
@@ -786,16 +795,18 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
           </DialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label>起算日（事象発生日）*</Label>
+              <Label htmlFor="judge-event-date">起算日（事象発生日）*</Label>
               <Input
+                id="judge-event-date"
                 type="date"
                 value={judgeForm.event_date}
                 onChange={(e) => setJudgeForm({ ...judgeForm, event_date: e.target.value })}
               />
             </div>
             <div>
-              <Label>通知期間（日数・未入力なら種別の既定値）</Label>
+              <Label htmlFor="judge-override-days">通知期間（日数・未入力なら種別の既定値）</Label>
               <Input
+                id="judge-override-days"
                 type="number"
                 value={judgeForm.override_days}
                 onChange={(e) => setJudgeForm({ ...judgeForm, override_days: e.target.value })}
@@ -829,12 +840,12 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
           </DialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label>原因分類</Label>
+              <Label htmlFor="delay-cause-category">原因分類</Label>
               <Select
                 value={delayForm.cause_category}
                 onValueChange={(v) => setDelayForm({ ...delayForm, cause_category: v })}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="delay-cause-category"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(CAUSE_LABELS).map(([v, l]) => (
                     <SelectItem key={v} value={v}>{l}</SelectItem>
@@ -843,21 +854,27 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
               </Select>
             </div>
             <div>
-              <Label>件名 *</Label>
-              <Input value={delayForm.title} onChange={(e) => setDelayForm({ ...delayForm, title: e.target.value })} />
+              <Label htmlFor="delay-title">件名 *</Label>
+              <Input
+                id="delay-title"
+                value={delayForm.title}
+                onChange={(e) => setDelayForm({ ...delayForm, title: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>開始日 *</Label>
+                <Label htmlFor="delay-occurred-from">開始日 *</Label>
                 <Input
+                  id="delay-occurred-from"
                   type="date"
                   value={delayForm.occurred_from}
                   onChange={(e) => setDelayForm({ ...delayForm, occurred_from: e.target.value })}
                 />
               </div>
               <div>
-                <Label>終了日</Label>
+                <Label htmlFor="delay-occurred-to">終了日</Label>
                 <Input
+                  id="delay-occurred-to"
                   type="date"
                   value={delayForm.occurred_to}
                   onChange={(e) => setDelayForm({ ...delayForm, occurred_to: e.target.value })}
@@ -866,24 +883,27 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label>遅延日数</Label>
+                <Label htmlFor="delay-days">遅延日数</Label>
                 <Input
+                  id="delay-days"
                   type="number"
                   value={delayForm.delay_days}
                   onChange={(e) => setDelayForm({ ...delayForm, delay_days: e.target.value })}
                 />
               </div>
               <div>
-                <Label>追加費用（円）</Label>
+                <Label htmlFor="delay-additional-cost">追加費用（円）</Label>
                 <Input
+                  id="delay-additional-cost"
                   type="number"
                   value={delayForm.additional_cost_jpy}
                   onChange={(e) => setDelayForm({ ...delayForm, additional_cost_jpy: e.target.value })}
                 />
               </div>
               <div>
-                <Label>EOT 申請日数</Label>
+                <Label htmlFor="delay-eot-days-requested">EOT 申請日数</Label>
                 <Input
+                  id="delay-eot-days-requested"
                   type="number"
                   value={delayForm.eot_days_requested}
                   onChange={(e) => setDelayForm({ ...delayForm, eot_days_requested: e.target.value })}
@@ -911,17 +931,18 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
           <div className="grid gap-3">
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label>争点番号</Label>
+                <Label htmlFor="arg-issue-no">争点番号</Label>
                 <Input
+                  id="arg-issue-no"
                   type="number"
                   value={argForm.issue_no}
                   onChange={(e) => setArgForm({ ...argForm, issue_no: e.target.value })}
                 />
               </div>
               <div>
-                <Label>当事者</Label>
+                <Label htmlFor="arg-party">当事者</Label>
                 <Select value={argForm.party} onValueChange={(v) => setArgForm({ ...argForm, party: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="arg-party"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ours">自社</SelectItem>
                     <SelectItem value="counterparty">相手方</SelectItem>
@@ -929,9 +950,9 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
                 </Select>
               </div>
               <div>
-                <Label>立場</Label>
+                <Label htmlFor="arg-stance">立場</Label>
                 <Select value={argForm.stance} onValueChange={(v) => setArgForm({ ...argForm, stance: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="arg-stance"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="claim">主張</SelectItem>
                     <SelectItem value="rebuttal">反論</SelectItem>
@@ -941,15 +962,20 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
               </div>
             </div>
             <div>
-              <Label>争点名 *</Label>
+              <Label htmlFor="arg-issue-title">争点名 *</Label>
               <Input
+                id="arg-issue-title"
                 value={argForm.issue_title}
                 onChange={(e) => setArgForm({ ...argForm, issue_title: e.target.value })}
               />
             </div>
             <div>
-              <Label>内容 *</Label>
-              <Textarea value={argForm.content} onChange={(e) => setArgForm({ ...argForm, content: e.target.value })} />
+              <Label htmlFor="arg-content">内容 *</Label>
+              <Textarea
+                id="arg-content"
+                value={argForm.content}
+                onChange={(e) => setArgForm({ ...argForm, content: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -971,16 +997,18 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
           </DialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label>案の名称 *</Label>
+              <Label htmlFor="settlement-title">案の名称 *</Label>
               <Input
+                id="settlement-title"
                 value={settlementForm.title}
                 onChange={(e) => setSettlementForm({ ...settlementForm, title: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>和解金額（円）</Label>
+                <Label htmlFor="settlement-amount">和解金額（円）</Label>
                 <Input
+                  id="settlement-amount"
                   type="number"
                   value={settlementForm.settlement_amount_jpy}
                   onChange={(e) =>
@@ -989,8 +1017,9 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
                 />
               </div>
               <div>
-                <Label>成立確度（%）</Label>
+                <Label htmlFor="settlement-probability">成立確度（%）</Label>
                 <Input
+                  id="settlement-probability"
                   type="number"
                   min={0}
                   max={100}
@@ -1021,9 +1050,9 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
           </DialogHeader>
           <div className="grid gap-3">
             <div>
-              <Label>ステージ</Label>
+              <Label htmlFor="stage-name">ステージ</Label>
               <Select value={stageForm.stage} onValueChange={(v) => setStageForm({ ...stageForm, stage: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="stage-name"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(STAGE_LABELS).map(([v, l]) => (
                     <SelectItem key={v} value={v}>{l}</SelectItem>
@@ -1032,8 +1061,9 @@ export default function DisputeDetailPage({ disputeId }: DisputeDetailPageProps)
               </Select>
             </div>
             <div>
-              <Label>開始日 *</Label>
+              <Label htmlFor="stage-started-at">開始日 *</Label>
               <Input
+                id="stage-started-at"
                 type="date"
                 value={stageForm.started_at}
                 onChange={(e) => setStageForm({ ...stageForm, started_at: e.target.value })}

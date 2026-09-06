@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.services.antitrust_service import CONSULTATION_DISCLAIMER
+
 from .common import ORMModel
 
 _CHECK_DISCLAIMER = (
@@ -143,7 +145,7 @@ class AntitrustConsultationOut(ORMModel):
     citations: list[dict[str, Any]]
     contract_id: int | None
     created_at: datetime
-    disclaimer: str = _CHECK_DISCLAIMER
+    disclaimer: str = CONSULTATION_DISCLAIMER
 
 
 # ---------------------------------------------------------------------------

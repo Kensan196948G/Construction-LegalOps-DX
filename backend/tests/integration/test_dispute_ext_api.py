@@ -1,10 +1,9 @@
 """紛争・クレーム管理高度化 API の統合テスト（ロードマップ #97〜#112 / Issue #121）.
 
-``dispute_ext.router`` は本 Issue の作業ブランチではまだ
-``app.api.v1.__init__`` へ登録していない（並列作業ファイルのため・
-Issue 本文の指示）。そのため ``client``/``app.main`` 経由ではなく、
-このルーターのみをマウントした最小の FastAPI アプリで疎通確認する。
-統合（``__init__.py`` への登録）は別途コーディネーターが行う。
+``dispute_ext.router`` は ``app/api/v1/__init__.py`` へ登録済み
+（``include_router(dispute_ext.router)``）。本テストはそれとは別に、
+このルーターのみをマウントした最小の FastAPI アプリで疎通確認する
+（他ドメインのルーターと混在しない最小構成で確認するため）。
 """
 
 from __future__ import annotations
