@@ -130,6 +130,21 @@ export function Sidebar({
     onToggleCollapsed?.(next);
   };
 
+  // 現在のパスに最も具体的に一致する項目だけをアクティブにする
+  // （例: "/compliance/antitrust" では "/compliance" と "/compliance/antitrust"
+  // の両方が startsWith 条件を満たすため、href が最長の項目のみを選ぶ）。
+  const activeHref = React.useMemo(() => {
+    if (!pathname) return null;
+    let best: string | null = null;
+    for (const item of sidebarNavItems) {
+      const isMatch = pathname === item.href || pathname.startsWith(item.href + "/");
+      if (isMatch && (best === null || item.href.length > best.length)) {
+        best = item.href;
+      }
+    }
+    return best;
+  }, [pathname]);
+
   // group が切り替わる地点でセクション見出しを挿入する
   const rendered: React.ReactNode[] = [];
   let lastGroup = "";
@@ -154,7 +169,7 @@ export function Sidebar({
       lastGroup = group;
     }
     const Icon = item.icon;
-    const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+    const active = item.href === activeHref;
     rendered.push(
       <li key={item.href}>
         <Link
