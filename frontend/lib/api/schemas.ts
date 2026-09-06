@@ -2436,3 +2436,164 @@ export const partnerRiskScoreSchema = z.object({
   expiry_overdue_count: z.number().int(),
 });
 export type PartnerRiskScore = z.infer<typeof partnerRiskScoreSchema>;
+
+// ===========================================================================
+// 独禁法・入札談合コンプライアンス（Issue #122・ロードマップ #113〜#124）
+// ===========================================================================
+
+export const antitrustCheckTypeEnum = z.enum([
+  "general",
+  "bid_rigging",
+  "price_exchange",
+  "jv_formation",
+  "joint_research",
+]);
+export type AntitrustCheckType = z.infer<typeof antitrustCheckTypeEnum>;
+
+export const antitrustSeverityEnum = z.enum(["info", "warn", "block"]);
+export type AntitrustSeverity = z.infer<typeof antitrustSeverityEnum>;
+
+export const antitrustApplicationTypeEnum = z.enum([
+  "competitor_contact",
+  "meeting_social",
+  "entertainment_gift",
+  "public_official_contact",
+  "donation_sponsorship",
+]);
+export type AntitrustApplicationType = z.infer<typeof antitrustApplicationTypeEnum>;
+
+export const antitrustApplicationStatusEnum = z.enum([
+  "submitted",
+  "approved",
+  "rejected",
+  "completed",
+  "cancelled",
+]);
+export type AntitrustApplicationStatus = z.infer<typeof antitrustApplicationStatusEnum>;
+
+/** #113/#114/#117/#118/#119 チェック結果の finding */
+export const antitrustFindingSchema = z.object({
+  code: z.string(),
+  title: z.string(),
+  severity: antitrustSeverityEnum.or(z.string()),
+  description: z.string(),
+  citation: z.string(),
+  suggestion: z.string().nullable().optional(),
+  matched_keywords: z.array(z.string()).default([]),
+});
+export type AntitrustFinding = z.infer<typeof antitrustFindingSchema>;
+
+/** #113/#114/#117/#118/#119 決定論的ルールベースチェック結果 */
+export const antitrustCheckSchema = z.object({
+  id: idSchema,
+  check_no: z.string(),
+  check_type: antitrustCheckTypeEnum.or(z.string()),
+  severity: antitrustSeverityEnum.or(z.string()),
+  subject: z.string(),
+  contract_id: idSchema.nullable().optional(),
+  jv_id: idSchema.nullable().optional(),
+  input_context: z.record(z.string(), z.unknown()).default({}),
+  findings: z.array(antitrustFindingSchema).default([]),
+  checked_at: datetimeSchema,
+  notes: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+  disclaimer: z.string(),
+});
+export type AntitrustCheck = z.infer<typeof antitrustCheckSchema>;
+
+export const antitrustCheckCreateSchema = z.object({
+  check_type: z.string().min(1).max(32),
+  subject: z.string().min(1).max(256),
+  context: z.record(z.string(), z.unknown()).default({}),
+  contract_id: idSchema.nullish(),
+  jv_id: idSchema.nullish(),
+  notes: z.string().max(4000).nullish(),
+});
+export type AntitrustCheckCreate = z.infer<typeof antitrustCheckCreateSchema>;
+
+/** #115/#116/#121/#122/#123 事前申請 → 承認 → 記録 */
+export const antitrustApplicationSchema = z.object({
+  id: idSchema,
+  application_no: z.string(),
+  application_type: antitrustApplicationTypeEnum.or(z.string()),
+  status: antitrustApplicationStatusEnum.or(z.string()),
+  title: z.string(),
+  counterparty_name: z.string().nullable().optional(),
+  counterparty_organization: z.string().nullable().optional(),
+  purpose: z.string().nullable().optional(),
+  scheduled_at: datetimeSchema.nullable().optional(),
+  location: z.string().nullable().optional(),
+  amount_jpy: z.number().int().nullable().optional(),
+  attendees: z.array(z.string()).nullable().optional(),
+  contract_id: idSchema.nullable().optional(),
+  jv_id: idSchema.nullable().optional(),
+  approved_by: idSchema.nullable().optional(),
+  approved_at: datetimeSchema.nullable().optional(),
+  decision_note: z.string().nullable().optional(),
+  occurred_at: datetimeSchema.nullable().optional(),
+  outcome_note: z.string().nullable().optional(),
+  reported_at: datetimeSchema.nullable().optional(),
+  cancel_reason: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_by: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type AntitrustApplication = z.infer<typeof antitrustApplicationSchema>;
+
+export const antitrustApplicationCreateSchema = z.object({
+  application_type: z.string().min(1).max(32),
+  title: z.string().min(1).max(256),
+  counterparty_name: z.string().max(256).nullish(),
+  counterparty_organization: z.string().max(256).nullish(),
+  purpose: z.string().max(4000).nullish(),
+  scheduled_at: z.string().nullish(),
+  location: z.string().max(256).nullish(),
+  amount_jpy: z.number().int().min(0).nullish(),
+  attendees: z.array(z.string()).nullish(),
+  contract_id: idSchema.nullish(),
+  jv_id: idSchema.nullish(),
+});
+export type AntitrustApplicationCreate = z.infer<typeof antitrustApplicationCreateSchema>;
+
+/** #120 競争法 AI 相談 */
+export const antitrustConsultationSchema = z.object({
+  id: idSchema,
+  query_text: z.string(),
+  answer_text: z.string(),
+  citations: z.array(z.record(z.string(), z.unknown())).default([]),
+  contract_id: idSchema.nullable().optional(),
+  created_at: datetimeSchema,
+  disclaimer: z.string(),
+});
+export type AntitrustConsultation = z.infer<typeof antitrustConsultationSchema>;
+
+/** #124 コンプライアンス研修履歴 */
+export const complianceTrainingSchema = z.object({
+  id: idSchema,
+  user_id: idSchema.nullable().optional(),
+  attendee_name: z.string().nullable().optional(),
+  training_title: z.string(),
+  category: z.string(),
+  completed_at: dateSchema,
+  score: z.number().int().nullable().optional(),
+  certificate_url: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  created_at: datetimeSchema,
+  updated_at: datetimeSchema,
+});
+export type ComplianceTraining = z.infer<typeof complianceTrainingSchema>;
+
+export const complianceTrainingCreateSchema = z.object({
+  training_title: z.string().min(1).max(256),
+  completed_at: dateSchema,
+  user_id: idSchema.nullish(),
+  attendee_name: z.string().max(256).nullish(),
+  category: z.string().max(64).default("antitrust"),
+  score: z.number().int().min(0).max(100).nullish(),
+  certificate_url: z.string().max(512).nullish(),
+  notes: z.string().max(4000).nullish(),
+});
+export type ComplianceTrainingCreate = z.infer<typeof complianceTrainingCreateSchema>;

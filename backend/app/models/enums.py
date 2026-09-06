@@ -626,3 +626,47 @@ class DisputeProceedingStageStatus(StrEnum):
 
     ACTIVE = "active"  # 進行中
     COMPLETED = "completed"  # 完了
+
+
+class AntitrustCheckType(StrEnum):
+    """独禁法・入札談合コンプライアンス — ルールベースチェックの種別（Issue #122）.
+
+    決定論的なルールエンジン（``app.services.antitrust_checker``）が唯一の正で
+    あり、AI には最終法的判断をさせない。
+    """
+
+    GENERAL = "general"  # #113 独禁法チェック（契約書・取引文面の一般スクリーニング）
+    BID_RIGGING = "bid_rigging"  # #114 入札談合リスクチェック
+    PRICE_EXCHANGE = "price_exchange"  # #117 価格情報交換禁止チェック
+    JV_FORMATION = "jv_formation"  # #118 JV 形成時競争法チェック
+    JOINT_RESEARCH = "joint_research"  # #119 競合との共同研究チェック
+
+
+class AntitrustCheckSeverity(StrEnum):
+    """チェック結果の重大度（``ComplianceSeverity`` と同義の 3 段階）."""
+
+    INFO = "info"
+    WARN = "warn"
+    BLOCK = "block"
+
+
+class AntitrustApplicationType(StrEnum):
+    """事前申請 → 承認 → 記録ワークフローの種別（Issue #122）."""
+
+    COMPETITOR_CONTACT = "competitor_contact"  # #115 競合他社接触記録
+    MEETING_SOCIAL = "meeting_social"  # #116 会合・懇親会事前申請
+    ENTERTAINMENT_GIFT = "entertainment_gift"  # #121 贈収賄・接待管理
+    PUBLIC_OFFICIAL_CONTACT = "public_official_contact"  # #122 公務員接触記録
+    DONATION_SPONSORSHIP = "donation_sponsorship"  # #123 寄付・協賛審査
+    # 備考: #120（競争法 AI 相談）は AntitrustConsultation、
+    # #124（コンプライアンス研修履歴）は ComplianceTraining が別テーブルで担当する。
+
+
+class AntitrustApplicationStatus(StrEnum):
+    """事前申請の状態遷移."""
+
+    SUBMITTED = "submitted"  # 申請中（承認待ち）
+    APPROVED = "approved"  # 承認済み（実施可）
+    REJECTED = "rejected"  # 却下
+    COMPLETED = "completed"  # 実施済み（記録済み）
+    CANCELLED = "cancelled"  # 取下げ

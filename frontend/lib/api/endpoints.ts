@@ -13,6 +13,11 @@ import type { AxiosRequestConfig } from "axios";
 import { z } from "zod";
 
 import { apiClient, withIdempotencyKey } from "./client";
+import type {
+  AntitrustApplicationCreate,
+  AntitrustCheckCreate,
+  ComplianceTrainingCreate,
+} from "./schemas";
 import {
   // envelopes
   apiResponse,
@@ -92,6 +97,13 @@ import {
   publicWorksConsultationSchema,
   publicWorksDashboardSchema,
   standardClauseCheckSchema,
+  antitrustApplicationCreateSchema,
+  antitrustApplicationSchema,
+  antitrustCheckCreateSchema,
+  antitrustCheckSchema,
+  antitrustConsultationSchema,
+  complianceTrainingCreateSchema,
+  complianceTrainingSchema,
   jvAgreementSchema,
   jvCreateSchema,
   jvDashboardSchema,
@@ -1947,6 +1959,93 @@ export const partnerExtApi = {
     ),
 };
 
+// ===========================================================================
+// 独禁法・入札談合コンプライアンス（Issue #122・ロードマップ #113〜#124）
+// ===========================================================================
+
+export const antitrustApi = {
+  /** #113/#114/#117/#118/#119 チェック結果一覧 */
+  listChecks: (params?: {
+    check_type?: string;
+    severity?: string;
+    contract_id?: number | string;
+    jv_id?: number | string;
+    page?: number;
+    size?: number;
+  }) =>
+    getParsed(paginatedSchema(antitrustCheckSchema), "/antitrust/checks", {
+      params: buildParams(params),
+    }),
+
+  getCheck: (id: number | string) =>
+    getParsed(apiResponse(antitrustCheckSchema), `/antitrust/checks/${id}`),
+
+  /** ルールベースチェックを実行（決定論的・AI 不使用） */
+  runCheck: (data: AntitrustCheckCreate, opts?: { idempotencyKey?: string }) =>
+    postParsed(
+      antitrustCheckSchema,
+      "/antitrust/checks",
+      antitrustCheckCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** #115/#116/#121/#122/#123 事前申請一覧 */
+  listApplications: (params?: { type?: string; status?: string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(antitrustApplicationSchema), "/antitrust/applications", {
+      params: buildParams(params),
+    }),
+
+  getApplication: (id: number | string) =>
+    getParsed(apiResponse(antitrustApplicationSchema), `/antitrust/applications/${id}`),
+
+  createApplication: (data: AntitrustApplicationCreate, opts?: { idempotencyKey?: string }) =>
+    postParsed(
+      antitrustApplicationSchema,
+      "/antitrust/applications",
+      antitrustApplicationCreateSchema.parse(data),
+      withIdempotencyKey({}, opts?.idempotencyKey),
+    ),
+
+  /** submitted → approved/rejected */
+  decideApplication: (
+    id: number | string,
+    data: { decision: string; decision_note?: string | null },
+  ) => postParsed(antitrustApplicationSchema, `/antitrust/applications/${id}/decision`, data),
+
+  /** approved → completed（実施記録） */
+  completeApplication: (
+    id: number | string,
+    data: { outcome_note: string; occurred_at?: string | null },
+  ) => postParsed(antitrustApplicationSchema, `/antitrust/applications/${id}/complete`, data),
+
+  /** submitted/approved → cancelled */
+  cancelApplication: (id: number | string, data: { cancel_reason: string }) =>
+    postParsed(antitrustApplicationSchema, `/antitrust/applications/${id}/cancel`, data),
+
+  /** #120 競争法 AI 相談履歴 */
+  listConsultations: (params?: { contract_id?: number | string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(antitrustConsultationSchema), "/antitrust/consultations", {
+      params: buildParams(params),
+    }),
+
+  /** 一次情報引用付きの参考回答を生成（法的助言の断定はしない） */
+  consult: (data: { query_text: string; contract_id?: number | string | null }) =>
+    postParsed(antitrustConsultationSchema, "/antitrust/consultations", data),
+
+  /** #124 コンプライアンス研修履歴一覧 */
+  listTrainings: (params?: { user_id?: number | string; category?: string; page?: number; size?: number }) =>
+    getParsed(paginatedSchema(complianceTrainingSchema), "/antitrust/trainings", {
+      params: buildParams(params),
+    }),
+
+  createTraining: (data: ComplianceTrainingCreate) =>
+    postParsed(
+      complianceTrainingSchema,
+      "/antitrust/trainings",
+      complianceTrainingCreateSchema.parse(data),
+    ),
+};
+
 export const api = {
   auth: authApi,
   users: usersApi,
@@ -1991,5 +2090,6 @@ export const api = {
   publicWorks: publicWorksApi,
   jv: jvApi,
   partnerExt: partnerExtApi,
+  antitrust: antitrustApi,
 } as const;
 
