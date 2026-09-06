@@ -57,7 +57,7 @@ describe("AntitrustCompliancePage", () => {
   it("shows an offline alert when the API is down", async () => {
     render(<AntitrustCompliancePage />);
     await waitFor(() => {
-      expect(screen.getByText(/データを取得できませんでした/)).toBeInTheDocument();
+      expect(screen.getByText(/チェック結果を取得できませんでした/)).toBeInTheDocument();
     });
   });
 });

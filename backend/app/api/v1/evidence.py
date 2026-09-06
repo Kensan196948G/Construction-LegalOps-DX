@@ -65,23 +65,25 @@ async def list_evidence(
     session: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_role(*_READ_ROLES)),
 ) -> Page[EvidenceOut]:
-    items, total = await evidence_service.list_evidence(
-        session,
-        matter_id=matter_id,
-        contract_id=contract_id,
-        relevance=relevance,
-        is_duplicate=is_duplicate,
-        source_type=source_type,
-        page=page,
-        size=size,
-    )
-    # M10: PostgreSQL では RLS（migration 025）が既に行レベルで絞り込むが、
-    # RLS の効かない環境（SQLite・テスト）向けの多層防御としてアプリ層でも
-    # 案件 ACL・Legal Hold 倫理壁を確認する。ページ内の件数のみ絞り込み、
-    # `total` は DB 側の件数のまま返す（正確な total 算出は RLS 側に委ねる）。
+    # M10フォローアップ: PostgreSQL では RLS（migration 025）が既に行レベルで
+    # 絞り込むが、RLS の効かない環境（SQLite・テスト）向けの多層防御として
+    # アプリ層でも案件 ACL・Legal Hold 倫理壁を確認する。非特権ユーザーは
+    # フィルタ条件に一致する全件を取得してから認可フィルタを適用し、
+    # `total` と OFFSET/LIMIT を認可済みの集合に対して算出する（DB 側の
+    # 生件数をそのまま `total` にすると、除外された行の分だけページングが
+    # 実件数とずれる）。
     if current_user.role not in _PRIVILEGED_ROLES:
+        all_items, _ = await evidence_service.list_evidence(
+            session,
+            matter_id=matter_id,
+            contract_id=contract_id,
+            relevance=relevance,
+            is_duplicate=is_duplicate,
+            source_type=source_type,
+            paginate=False,
+        )
         visible_items = []
-        for item in items:
+        for item in all_items:
             try:
                 await evidence_service.ensure_evidence_visible(
                     session, evidence=item, viewer=current_user
@@ -89,7 +91,20 @@ async def list_evidence(
             except ForbiddenError:
                 continue
             visible_items.append(item)
-        items = visible_items
+        total = len(visible_items)
+        start = (page - 1) * size
+        items = visible_items[start : start + size]
+    else:
+        items, total = await evidence_service.list_evidence(
+            session,
+            matter_id=matter_id,
+            contract_id=contract_id,
+            relevance=relevance,
+            is_duplicate=is_duplicate,
+            source_type=source_type,
+            page=page,
+            size=size,
+        )
     return Page[EvidenceOut](
         items=[EvidenceOut.model_validate(i) for i in items], total=total, page=page, size=size
     )

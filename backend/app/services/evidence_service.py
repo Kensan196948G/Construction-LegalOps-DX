@@ -35,7 +35,7 @@ from email.utils import parsedate_to_datetime
 from hashlib import sha256
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError, ValidationError
@@ -472,7 +472,17 @@ async def list_evidence(
     source_type: str | None = None,
     page: int = 1,
     size: int = 50,
+    paginate: bool = True,
 ) -> tuple[list[Evidence], int]:
+    """証拠一覧を検索する。
+
+    ``paginate=False`` の場合はフィルタ条件に一致する全件を返す（
+    ``total`` はその件数）。呼び出し側（API層）が RLS の効かない環境向けに
+    アプリ層の認可フィルタ（``ensure_evidence_visible``）を適用したうえで
+    改めてページングする際に使う（M10フォローアップ: 認可前の DB 件数を
+    ``total`` として返すと、非特権ユーザーのページングが認可済み件数と
+    食い違う）。
+    """
     stmt = select(Evidence).where(Evidence.deleted_at.is_(None))
     if matter_id is not None:
         stmt = stmt.where(Evidence.matter_id == matter_id)
@@ -488,10 +498,14 @@ async def list_evidence(
         if source_type not in _ALLOWED_SOURCE:
             raise ValidationError(f"不正な入手経路です: {source_type!r}")
         stmt = stmt.where(Evidence.source_type == source_type)
+    stmt = stmt.order_by(Evidence.id.desc())
+    if not paginate:
+        rows = (await session.execute(stmt)).scalars().all()
+        return list(rows), len(rows)
     total = int(
         (await session.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     )
-    stmt = stmt.order_by(Evidence.id.desc()).offset((page - 1) * size).limit(size)
+    stmt = stmt.offset((page - 1) * size).limit(size)
     rows = (await session.execute(stmt)).scalars().all()
     return list(rows), total
 
@@ -1019,9 +1033,20 @@ async def decide_hold_release(
         # hold.status は Hold 全体を released にするため、同一 legal_hold_id を
         # 参照する他の Evidence（上記で処理済みの approval.evidence_id を除く）
         # も is_under_hold=False へ揃える。放置すると解除済み Hold を指したまま
-        # is_under_hold=True の証拠が残ってしまう。
+        # is_under_hold=True の証拠が残ってしまう。`hold.evidence_ids`
+        # （app.api.v1.governance.create_legal_hold が記録する配列）にも
+        # 同期漏れの ID が残っている可能性があるため、両方の集合を
+        # 重複なく合わせて処理する（多層防御）。
+        other_ids: set[int] = set()
+        for raw_id in hold.evidence_ids or []:
+            try:
+                other_ids.add(int(raw_id))
+            except (TypeError, ValueError):
+                continue
         other_stmt = select(Evidence).where(
-            Evidence.legal_hold_id == hold.id,
+            or_(Evidence.legal_hold_id == hold.id, Evidence.id.in_(other_ids))
+            if other_ids
+            else Evidence.legal_hold_id == hold.id,
             Evidence.deleted_at.is_(None),
         )
         if approval.evidence_id is not None:

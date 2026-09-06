@@ -129,31 +129,35 @@ def check_bid_rigging(context: dict[str, Any]) -> list[AntitrustFinding]:
     """#114 入札談合リスクチェック.
 
     ``context`` keys: ``is_public_bid`` (bool), ``contacted_competitors`` (bool),
-    ``pre_bid_price_shared`` (bool), ``text`` (str, optional free text).
+    ``procuring_agency_involvement`` (bool), ``pre_bid_price_shared`` (bool),
+    ``text`` (str, optional free text).
+
+    入札談合等関与行為防止法は「発注機関職員の関与」を規制対象とする法律であり、
+    競合他社との接触があっただけ（発注機関側の関与なし）では同法の対象にならない。
+    そのため同法の引用・BLOCK 判定は ``procuring_agency_involvement`` が真の場合に
+    限定し、それ以外は独占禁止法 3 条のリスクとして WARN にとどめる。
     """
     findings: list[AntitrustFinding] = []
     text = str(context.get("text") or "")
-    is_public_bid = bool(context.get("is_public_bid", False))
     contacted_competitors = bool(context.get("contacted_competitors", False))
+    procuring_agency_involvement = bool(context.get("procuring_agency_involvement", False))
     pre_bid_price_shared = bool(context.get("pre_bid_price_shared", False))
 
     if contacted_competitors:
-        # 公共入札は入札談合等関与行為防止法の適用対象となるため BLOCK、
-        # 民間入札は同法の対象外だが独占禁止法 3 条のリスクは残るため WARN とする。
-        if is_public_bid:
+        if procuring_agency_involvement:
             severity = AntitrustCheckSeverity.BLOCK
             description = (
-                "公共入札に関連して競合他社との接触があったと申告されています。"
-                "入札談合等関与行為防止法・独占禁止法上のリスクが高い可能性があります。"
+                "競合他社との接触に加えて、発注機関職員の関与があったと申告されています。"
+                "入札談合等関与行為防止法上のリスクが高い可能性があります。"
             )
             citation = (
-                "独占禁止法 3 条（不当な取引制限）/ 入札談合等関与行為の排除及び防止に関する法律"
+                "入札談合等関与行為の排除及び防止に関する法律 / 独占禁止法 3 条（不当な取引制限）"
             )
         else:
             severity = AntitrustCheckSeverity.WARN
             description = (
-                "民間入札に関連して競合他社との接触があったと申告されています。"
-                "入札談合等関与行為防止法の対象外ですが、独占禁止法上のリスクがある可能性があります。"
+                "競合他社との接触があったと申告されています。"
+                "発注機関職員の関与の申告はありませんが、独占禁止法上のリスクがある可能性があります。"
             )
             citation = "独占禁止法 3 条（不当な取引制限）"
         findings.append(

@@ -21,9 +21,14 @@ def test_check_general_detects_red_flag() -> None:
     assert antitrust_checker.overall_severity(findings) == "block"
 
 
-def test_check_bid_rigging_flags_competitor_contact_on_public_bid() -> None:
+def test_check_bid_rigging_flags_competitor_contact_with_agency_involvement() -> None:
+    """発注機関職員の関与がある場合のみ入札談合等関与行為防止法の対象として BLOCK."""
     findings = antitrust_checker.check_bid_rigging(
-        {"is_public_bid": True, "contacted_competitors": True}
+        {
+            "is_public_bid": True,
+            "contacted_competitors": True,
+            "procuring_agency_involvement": True,
+        }
     )
     codes = {f.code for f in findings}
     assert "bid_rigging_competitor_contact" in codes
@@ -37,7 +42,17 @@ def test_check_bid_rigging_flags_competitor_contact_on_private_bid() -> None:
     )
     codes = {f.code for f in findings}
     assert "bid_rigging_competitor_contact" in codes
-    # 入札談合等関与行為防止法の対象外（公共入札ではない）なので BLOCK ではなく WARN
+    # 発注機関職員の関与がないため、入札談合等関与行為防止法の対象外で WARN
+    assert antitrust_checker.overall_severity(findings) == "warn"
+
+
+def test_check_bid_rigging_public_bid_without_agency_involvement_is_warn() -> None:
+    """公共入札でも発注機関職員の関与が申告されていなければ BLOCK にしない."""
+    findings = antitrust_checker.check_bid_rigging(
+        {"is_public_bid": True, "contacted_competitors": True}
+    )
+    codes = {f.code for f in findings}
+    assert "bid_rigging_competitor_contact" in codes
     assert antitrust_checker.overall_severity(findings) == "warn"
 
 

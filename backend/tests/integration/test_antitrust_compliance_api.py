@@ -133,7 +133,11 @@ async def test_run_check_and_get(antitrust_client: AsyncClient) -> None:
         json={
             "check_type": "bid_rigging",
             "subject": "API テスト入札",
-            "context": {"is_public_bid": True, "contacted_competitors": True},
+            "context": {
+                "is_public_bid": True,
+                "contacted_competitors": True,
+                "procuring_agency_involvement": True,
+            },
         },
     )
     assert r.status_code == 201, r.text

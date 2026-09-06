@@ -162,6 +162,7 @@ export default function WhistleblowerPage() {
   const [actions, setActions] = useState<WhistleblowerAction[]>([]);
 
   const [grantUserId, setGrantUserId] = useState("");
+  const [grantCanViewIdentity, setGrantCanViewIdentity] = useState(false);
   const [evidenceForm, setEvidenceForm] = useState<EvidenceForm>({
     evidence_type: "email",
     description: "",
@@ -326,9 +327,12 @@ export default function WhistleblowerPage() {
       await whistleblowerApi.grantAccess(report.id, {
         user_id: grantUserId.trim(),
         role_in_case: "investigator",
-        can_view_reporter_identity: true,
+        // 最小権限（デフォルト付与では通報者識別情報を見せない）。閲覧を
+        // 許可するのは、担当者が明示的にチェックを入れて確認した場合のみ。
+        can_view_reporter_identity: grantCanViewIdentity,
       });
       setGrantUserId("");
+      setGrantCanViewIdentity(false);
       const accessRows = await whistleblowerApi.listAccess(report.id);
       setAccess(accessRows);
     } catch (err) {
@@ -745,16 +749,26 @@ export default function WhistleblowerPage() {
 
                   <TabsContent value="access" className="space-y-3">
                     {isPrivileged && (
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1">
-                          <Label htmlFor="wb-grant-user">調査担当者に付与する user id</Label>
-                          <Input
-                            id="wb-grant-user"
-                            value={grantUserId}
-                            onChange={(e) => setGrantUserId(e.target.value)}
-                          />
+                      <div className="space-y-2">
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <Label htmlFor="wb-grant-user">調査担当者に付与する user id</Label>
+                            <Input
+                              id="wb-grant-user"
+                              value={grantUserId}
+                              onChange={(e) => setGrantUserId(e.target.value)}
+                            />
+                          </div>
+                          <Button onClick={() => void grantAccess(detail)}>付与</Button>
                         </div>
-                        <Button onClick={() => void grantAccess(detail)}>付与</Button>
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={grantCanViewIdentity}
+                            onChange={(e) => setGrantCanViewIdentity(e.target.checked)}
+                          />
+                          通報者の識別情報（氏名・連絡先）の閲覧も許可する（最小権限が原則。通常は付与しない）
+                        </label>
                       </div>
                     )}
                     <Table>

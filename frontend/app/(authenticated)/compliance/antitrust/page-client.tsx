@@ -117,6 +117,7 @@ export default function AntitrustCompliancePage() {
     text: "",
     is_public_bid: false,
     contacted_competitors: false,
+    procuring_agency_involvement: false,
     pre_bid_price_shared: false,
     counterparty_is_competitor: false,
     is_competitor_jv: false,
@@ -158,6 +159,7 @@ export default function AntitrustCompliancePage() {
           text: checkForm.text || undefined,
           is_public_bid: checkForm.is_public_bid,
           contacted_competitors: checkForm.contacted_competitors,
+          procuring_agency_involvement: checkForm.procuring_agency_involvement,
           pre_bid_price_shared: checkForm.pre_bid_price_shared,
         };
       case "price_exchange":
@@ -223,16 +225,17 @@ export default function AntitrustCompliancePage() {
   const [cancelTarget, setCancelTarget] = useState<AntitrustApplication | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [appBusy, setAppBusy] = useState(false);
+  const [applicationsOffline, setApplicationsOffline] = useState(false);
 
   const loadApplications = useCallback(async () => {
     setApplicationsLoading(true);
     try {
       const result = await antitrustApi.listApplications({ page: 1, size: 100 });
       setApplications(result.items);
-      setOffline(false);
+      setApplicationsOffline(false);
     } catch {
       setApplications([]);
-      setOffline(true);
+      setApplicationsOffline(true);
     } finally {
       setApplicationsLoading(false);
     }
@@ -348,15 +351,16 @@ export default function AntitrustCompliancePage() {
   const [consultQuery, setConsultQuery] = useState("");
   const [consultRunning, setConsultRunning] = useState(false);
   const [latestAnswer, setLatestAnswer] = useState<AntitrustConsultation | null>(null);
+  const [consultationsOffline, setConsultationsOffline] = useState(false);
 
   const loadConsultations = useCallback(async () => {
     try {
       const result = await antitrustApi.listConsultations({ page: 1, size: 50 });
       setConsultations(result.items);
-      setOffline(false);
+      setConsultationsOffline(false);
     } catch {
       setConsultations([]);
-      setOffline(true);
+      setConsultationsOffline(true);
     }
   }, []);
 
@@ -393,15 +397,16 @@ export default function AntitrustCompliancePage() {
     completed_at: "",
     score: "",
   });
+  const [trainingsOffline, setTrainingsOffline] = useState(false);
 
   const loadTrainings = useCallback(async () => {
     try {
       const result = await antitrustApi.listTrainings({ page: 1, size: 100 });
       setTrainings(result.items);
-      setOffline(false);
+      setTrainingsOffline(false);
     } catch {
       setTrainings([]);
-      setOffline(true);
+      setTrainingsOffline(true);
     }
   }, []);
 
@@ -452,11 +457,12 @@ export default function AntitrustCompliancePage() {
         </p>
       </header>
 
+      {/* チェック実行タブの取得失敗（他タブは各 TabsContent 内で個別に表示） */}
       {offline && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" aria-hidden="true" />
           <AlertDescription>
-            データを取得できませんでした。バックエンド API の起動を確認してください。
+            チェック結果を取得できませんでした。バックエンド API の起動を確認してください。
           </AlertDescription>
         </Alert>
       )}
@@ -557,6 +563,14 @@ export default function AntitrustCompliancePage() {
 
         {/* ---- 事前申請 ---- */}
         <TabsContent value="applications">
+          {applicationsOffline && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              <AlertDescription>
+                事前申請データを取得できませんでした。バックエンド API の起動を確認してください。
+              </AlertDescription>
+            </Alert>
+          )}
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-6 py-4">
               <p className="text-sm font-semibold">
@@ -688,6 +702,14 @@ export default function AntitrustCompliancePage() {
         {/* ---- AI 相談 ---- */}
         <TabsContent value="consultations">
           <div className="space-y-4">
+            {consultationsOffline && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                <AlertDescription>
+                  相談履歴を取得できませんでした。バックエンド API の起動を確認してください。
+                </AlertDescription>
+              </Alert>
+            )}
             <AiDisclaimerInline>
               本回答は一次情報コーパスの検索結果に基づく参考情報です。個別事案への当てはめ・
               最終的な法的判断は法務担当者・顧問弁護士が行います。
@@ -747,6 +769,14 @@ export default function AntitrustCompliancePage() {
 
         {/* ---- 研修履歴 ---- */}
         <TabsContent value="trainings">
+          {trainingsOffline && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              <AlertDescription>
+                研修履歴を取得できませんでした。バックエンド API の起動を確認してください。
+              </AlertDescription>
+            </Alert>
+          )}
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-6 py-4">
               <p className="flex items-center gap-2 text-sm font-semibold">
@@ -868,6 +898,19 @@ export default function AntitrustCompliancePage() {
                     }
                   />
                   入札前に競合他社と接触した
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={checkForm.procuring_agency_involvement}
+                    onChange={(e) =>
+                      setCheckForm((f) => ({
+                        ...f,
+                        procuring_agency_involvement: e.target.checked,
+                      }))
+                    }
+                  />
+                  発注機関職員の関与があった（入札談合等関与行為防止法の対象）
                 </label>
                 <label className="flex items-center gap-2">
                   <input

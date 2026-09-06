@@ -77,6 +77,12 @@ describe("WhistleblowerPage", () => {
     expect(screen.queryByRole("button", { name: /経営報告匿名集計/ })).not.toBeInTheDocument();
   });
 
+  it("does not show the aggregate button while the user role is still unloaded", () => {
+    mockUseCurrentUser.mockReturnValue({ data: undefined });
+    render(<WhistleblowerPage />);
+    expect(screen.queryByRole("button", { name: /経営報告匿名集計/ })).not.toBeInTheDocument();
+  });
+
   it("shows the aggregate button for a privileged role (admin)", () => {
     mockUseCurrentUser.mockReturnValue({ data: { role: "admin" } });
     render(<WhistleblowerPage />);

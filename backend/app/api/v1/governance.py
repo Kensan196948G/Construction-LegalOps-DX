@@ -25,7 +25,7 @@ from app.schemas.business import (
     RetentionRunOut,
     SentinelStatusOut,
 )
-from app.services import audit_service, retention_service, sentinel_forwarder
+from app.services import audit_service, evidence_service, retention_service, sentinel_forwarder
 from app.services.audit_anchor import create_daily_anchor, verify_anchor
 
 router = APIRouter(tags=["governance"])
@@ -53,12 +53,16 @@ async def list_acl(
     _: None = Depends(_ADMIN_OR_AUDITOR),
 ) -> list[AccessControlEntryOut]:
     rows = (
-        await session.execute(
-            select(AccessControlEntry)
-            .where(AccessControlEntry.contract_id == contract_id)
-            .order_by(AccessControlEntry.id.asc())
+        (
+            await session.execute(
+                select(AccessControlEntry)
+                .where(AccessControlEntry.contract_id == contract_id)
+                .order_by(AccessControlEntry.id.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return [AccessControlEntryOut.model_validate(r) for r in rows]
 
 
@@ -196,6 +200,25 @@ async def create_legal_hold(
     )
     session.add(hold)
     await session.flush()
+
+    # target_type="evidence" の場合、evidence_ids は Issue #124 の証拠管理
+    # （app.models.evidence.Evidence）を指す。Evidence.legal_hold_id と
+    # is_under_hold を同期しておかないと、後続の Legal Hold 解除承認
+    # （evidence_service.decide_hold_release）の一括更新がこれらの証拠を
+    # 見逃す（CodeRabbit指摘）。
+    if payload.target_type == "evidence":
+        for raw_id in payload.evidence_ids:
+            try:
+                evidence_id = int(raw_id)
+            except (TypeError, ValueError):
+                continue
+            await evidence_service.link_legal_hold(
+                session,
+                evidence_id=evidence_id,
+                legal_hold_id=hold.id,
+                actor_id=current_user.db_id,
+            )
+
     await audit_service.log(
         session,
         actor_id=current_user.db_id,
@@ -262,8 +285,10 @@ async def list_retention_rules(
 ) -> list[RetentionRuleOut]:
     await retention_service.ensure_default_rules(session)
     rows = (
-        await session.execute(select(RetentionRule).order_by(RetentionRule.id.asc()))
-    ).scalars().all()
+        (await session.execute(select(RetentionRule).order_by(RetentionRule.id.asc())))
+        .scalars()
+        .all()
+    )
     return [RetentionRuleOut.model_validate(r) for r in rows]
 
 
