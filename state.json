@@ -41,6 +41,10 @@
     "summary": "docs/LEGALOPS_BUSINESS_OS_ROADMAP_2026-09.md Phase 3（ロードマップ#97-112・#113-124・#125-135・#217-230）を4並列worktreeエージェントで実装。紛争・クレーム管理高度化（Claim Notice/Time Bar/EOT/主張反論マトリクス/和解案比較等）、独禁法・入札談合コンプライアンス（ルールベースチェック/事前申請ワークフロー/AI相談/研修履歴）、内部通報・調査管理（通報者情報をRLSで別テーブル隔離）、証拠・eDiscovery管理（SHA-256ハッシュ/Chain of Custody/Legal Hold解除承認）を新設。",
     "verification": "backend pytest 1367 passed / ruff・mypy clean / alembic upgrade→downgrade→re-upgrade（実PostgreSQL 16）成功 / frontend typecheck・lint clean・jest 93 passed・production build成功（40ルート）",
     "found_issue": "Issue #125: 既存 LegalHold.started_at の server_default 文字列指定がSQLite環境で潜在バグの可能性（本Phaseスコープ外・別Issue化）",
+    "ci_fix": "test_session.py の _PG_DEFAULT_REWRITES を固定辞書から '::json'/'::jsonb' サフィックス除去の正規表現へ汎用化（既存 ip_watch_targets.ip_types の未登録パターンが CI PostgreSQL 16 ジョブでのみ顕在化した既存バグを同時に根治）。加えて test_antitrust_compliance_api.py の独自フィクスチャを共有 create_all_for_tests() 経由に修正。",
+    "pr": 126,
+    "pr_status": "ready_for_review",
+    "ci_result": "全8ジョブ green（Backend pytest PostgreSQL16 / alembic roundtrip / pytest+ruff+mypy / Frontend eslint+tsc+jest / Docker build / E2E Playwright smoke / Security bandit+trivy / CodeRabbit skipped→ready化後は再評価）",
     "safety": "No production deploy, secret injection, Cloudflare/Neon mutation, push to shared remote, rebase, merge, tag, release, or destructive migration executed by this session."
   },
   "kpi": {
@@ -58,7 +62,7 @@
     "same_error_limit": 2,
     "phase": "Verify",
     "last_session_summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/development 限定で fail-closed。backend pytest 1113 passed / ruff 0.16.1 / mypy 2.3.0 clean、frontend 43 passed、Docker build OK、公開 URL smoke 200。#60/#64 を検証の上クローズ。残は PR/CI/merge と #23/#24/#50 の本番人間ゲート。",
-    "last_stop_at": "2026-09-06T03:05:02.997Z",
+    "last_stop_at": "2026-09-06T04:19:15.571Z",
     "current_session_start_at": "2026-09-06T02:26:44.082Z",
     "last_trigger": "manual",
     "last_cron_session_id": "20260617-202313-Construction-LegalOps-DX"
@@ -234,6 +238,116 @@
   "learning": {
     "failure_patterns": [
       {
+        "at": "2026-09-06T04:19:15.650Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:18:09.834Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:16:15.853Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:13:31.230Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:11:52.185Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T04:09:53.051Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T03:59:04.167Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T03:58:28.890Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T03:56:10.549Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
+        "at": "2026-09-06T03:46:57.472Z",
+        "reasons": [
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing",
+          "verify_subagent_missing"
+        ],
+        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
+      },
+      {
         "at": "2026-09-06T03:05:03.022Z",
         "reasons": [
           "verify_subagent_missing",
@@ -342,116 +456,6 @@
           "verify_subagent_missing"
         ],
         "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-08-14T01:09:42.958Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 113 (2026-08-14): MVP/Prototype 自律完成。本番と分離した公開 MVP (legalops-mvp.mirai-dx-platform.com) を Cloudflare Tunnel + 独立 Compose で構築し、架空ダミーデータ（契約22/協力会社12/紛争6/支払32/変更契約6 等）を投入・保持。dev 認証バイパスは staging/deve"
-      },
-      {
-        "at": "2026-08-13T23:43:06.158Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-13T23:37:46.817Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-13T23:34:50.553Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-12T11:09:15.233Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-12T11:08:47.354Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-12T11:07:21.171Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-12T10:52:24.288Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-12T10:20:02.359Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
-      },
-      {
-        "at": "2026-08-11T21:20:52.084Z",
-        "reasons": [
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing",
-          "verify_subagent_missing"
-        ],
-        "summary": "Loop 26-30 (2026-07-14 Supervisor session)。Loop 29-30: 承認済み CD 経路新設・実走 (GHCR) + CI 内本番同等スタック検証を確立し潜在 P1 を 3 件根治 (alembic URL 解決 / uvicorn 全リクエスト 500 / migration JSONB DDL 破壊)。main で k6 smoke SUCCESS ("
       }
     ],
     "success_patterns": [
@@ -4070,6 +4074,421 @@
         "backend/app/services/public_works_service.py"
       ],
       "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:46:57.053Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:46:57.472Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 38 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/antitrust.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/antitrust_compliance.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/antitrust_compliance.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/antitrust_checker.py",
+        "backend/app/services/antitrust_service.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_antitrust_checker.py",
+        "backend/tests/unit/test_antitrust_service.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/compliance/antitrust/page-client.tsx",
+        "frontend/app/(authenticated)/compliance/antitrust/page.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:56:10.394Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:56:10.549Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 38 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/antitrust.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/antitrust_compliance.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/antitrust_compliance.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/antitrust_checker.py",
+        "backend/app/services/antitrust_service.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_antitrust_checker.py",
+        "backend/tests/unit/test_antitrust_service.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/compliance/antitrust/page-client.tsx",
+        "frontend/app/(authenticated)/compliance/antitrust/page.tsx"
+      ],
+      "truncated": true
+    },
+    {
+      "at": "2026-09-06T03:58:28.866Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:58:28.890Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T03:59:04.145Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T03:59:04.167Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:09:53.027Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:09:53.051Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:11:52.162Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:11:52.185Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:13:31.201Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:13:31.230Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 29 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/api/v1/whistleblower.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/models/whistleblower.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/schemas/whistleblower.py",
+        "backend/app/services/evidence_service.py",
+        "backend/app/services/matter_service.py",
+        "backend/app/services/rls.py",
+        "backend/app/services/whistleblower_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/integration/test_whistleblower_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "backend/tests/unit/test_whistleblower_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/app/(authenticated)/whistleblower/page-client.tsx",
+        "frontend/app/(authenticated)/whistleblower/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:16:15.783Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:16:15.853Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 20 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/db/test_session.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/services/evidence_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:18:09.811Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:18:09.834Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 20 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/db/test_session.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/services/evidence_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
+    },
+    {
+      "at": "2026-09-06T04:19:15.571Z",
+      "kind": "verify_subagent_missing",
+      "message": "Verify フェーズで qa / security-reviewer / e2e-runner SubAgent が一度も起動されませんでした。STABLE 判定の必要条件を満たしていない可能性があります。",
+      "phase": "Verify",
+      "required": ["qa", "security-reviewer", "e2e-runner"]
+    },
+    {
+      "at": "2026-09-06T04:19:15.650Z",
+      "kind": "tdd_required",
+      "message": "テスト未整備の変更が 20 件あります。/tdd または tdd-guide agent で対応してください。",
+      "files": [
+        "backend/alembic/versions/023_antitrust_compliance.py",
+        "backend/alembic/versions/024_whistleblower.py",
+        "backend/alembic/versions/025_evidence.py",
+        "backend/app/api/v1/__init__.py",
+        "backend/app/api/v1/evidence.py",
+        "backend/app/db/test_session.py",
+        "backend/app/models/__init__.py",
+        "backend/app/models/enums.py",
+        "backend/app/models/evidence.py",
+        "backend/app/schemas/evidence.py",
+        "backend/app/services/evidence_service.py",
+        "backend/tests/integration/test_antitrust_compliance_api.py",
+        "backend/tests/integration/test_evidence_api.py",
+        "backend/tests/unit/test_evidence_service.py",
+        "frontend/app/(authenticated)/evidence/page-client.tsx",
+        "frontend/app/(authenticated)/evidence/page.tsx",
+        "frontend/components/layout/sidebar.tsx",
+        "frontend/lib/api/endpoints.ts",
+        "frontend/lib/api/query-keys.ts",
+        "frontend/lib/api/schemas.ts"
+      ],
+      "truncated": false
     }
   ],
   "compact": {
