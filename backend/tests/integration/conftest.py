@@ -23,6 +23,15 @@ Key fixtures
   ``db_session`` cannot be used for that: its rows live inside a
   connection-level transaction that ``client``'s separate connection
   never sees, even after ``session.commit()``.
+
+``client`` and ``api_db_session`` commit directly to the shared
+``test_engine`` (unlike ``db_session``, which rolls back on teardown), so
+rows they commit remain visible to later tests in the same session.
+Per-test ``TRUNCATE`` of the full schema was measured (~2.5s/test — a
+~2.7x slowdown across the ~260 integration tests, from fsync cost on
+~60 tables) and rejected as disproportionate; affected tests instead
+scope assertions to their own rows (filter by the id they created, or
+compare before/after counts) — see individual test files.
 """
 
 from __future__ import annotations

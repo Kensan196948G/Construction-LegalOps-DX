@@ -82,6 +82,23 @@ def _coerce_string_defaults_to_text() -> None:
                 col.server_default = DefaultClause(_sql_text(arg))
 
 
+def _assert_safe_test_database(engine: AsyncEngine) -> None:
+    """Refuse to run a destructive schema reset against a non-test database.
+
+    ``PYTEST_DATABASE_URL`` accepts an arbitrary connection string; pointing
+    it at a shared/dev database by mistake would let ``drop_all`` erase real
+    data. Requiring "test" in the database name is a cheap guardrail against
+    that misconfiguration.
+    """
+    db_name = engine.url.database or ""
+    if "test" not in db_name.lower():
+        raise RuntimeError(
+            f"Refusing to reset schema against database {db_name!r}: "
+            "the test database name must contain 'test' "
+            "(check PYTEST_DATABASE_URL)."
+        )
+
+
 async def create_all_for_tests(engine: AsyncEngine) -> None:
     """Reset and (re)create the full schema against the test engine.
 
@@ -91,6 +108,8 @@ async def create_all_for_tests(engine: AsyncEngine) -> None:
     keeps PostgreSQL-specific ``server_default`` casts (``'{}'::jsonb``
     etc.) intact against SQLAlchemy 2.x's plain-string quoting behaviour.
     """
+    _assert_safe_test_database(engine)
+
     import app.models  # noqa: F401 — register all ORM models on Base.metadata
     from app.db.base import Base  # type: ignore
 
