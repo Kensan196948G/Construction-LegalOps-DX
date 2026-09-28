@@ -123,6 +123,52 @@ async def test_heatmap_matrix_total_matches_risks_list_total(
 
 
 # ---------------------------------------------------------------------------
+# GET /risks — category / probability / impact
+# ---------------------------------------------------------------------------
+
+
+async def test_list_risks_returns_category_probability_impact(
+    client, api_db_session, auth_headers_admin
+):
+    """frontend ``riskItemSchema`` が参照する 3 項目を返すこと.
+
+    以前は ``title``（= category の別名）しか返しておらず、リスク一覧の
+    スコアが severity 代替・カテゴリが常に「その他」になっていた。
+    """
+    from app.models.risk_item import RiskItem
+
+    contract_id = await _create_contract(
+        client, auth_headers_admin, title=f"リスク項目契約-{_SUFFIX}"
+    )
+    api_db_session.add(
+        RiskItem(
+            contract_id=contract_id,
+            category="契約条項",
+            severity="high",
+            probability="high",
+            impact="medium",
+            description="支払条件のリスク",
+            status="open",
+        )
+    )
+    await api_db_session.commit()
+
+    r = await client.get(
+        f"/api/v1/risks?contract_id={contract_id}", headers=auth_headers_admin
+    )
+    assert r.status_code == 200, r.text
+    items = r.json()["items"]
+    assert len(items) == 1, items
+
+    risk = items[0]
+    assert risk["category"] == "契約条項"
+    assert risk["probability"] == "high"
+    assert risk["impact"] == "medium"
+    # 後方互換: 既存 consumer 向けに title（= category の別名）も残っている
+    assert risk["title"] == "契約条項"
+
+
+# ---------------------------------------------------------------------------
 # GET /disputes/{id}
 # ---------------------------------------------------------------------------
 

@@ -2,6 +2,7 @@ import {
   contractSchema,
   legalReviewSchema,
   paymentComplianceSchema,
+  riskItemSchema,
   workflowApplicationSchema,
 } from "@/lib/api/schemas";
 
@@ -131,6 +132,51 @@ describe("API schema compatibility with backend payloads", () => {
         ],
       });
       expect(parsed.success).toBe(true);
+    }
+  });
+
+  /**
+   * Regression: backend `RiskItemStatus` は 7 値だが、frontend の
+   * `riskStatusEnum` は transferred / avoided が欠けていた。その状態のリスクが
+   * 1 件でもあると `GET /risks` の parse が全体失敗し、リスク一覧が空になる。
+   */
+  it("accepts every risk status the backend can emit", () => {
+    for (const status of [
+      "open",
+      "in_progress",
+      "accepted",
+      "transferred",
+      "mitigated",
+      "avoided",
+      "closed",
+    ]) {
+      const parsed = riskItemSchema.safeParse({
+        id: 1,
+        contract_id: 2,
+        title: "契約条項",
+        severity: "high",
+        status,
+      });
+      expect({ status, ok: parsed.success }).toEqual({ status, ok: true });
+    }
+  });
+
+  it("accepts the risk category / probability / impact returned by GET /risks", () => {
+    const parsed = riskItemSchema.safeParse({
+      id: 1,
+      contract_id: 2,
+      title: "契約条項",
+      category: "契約条項",
+      severity: "high",
+      probability: "high",
+      impact: "medium",
+      status: "open",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.category).toBe("契約条項");
+      expect(parsed.data.probability).toBe("high");
+      expect(parsed.data.impact).toBe("medium");
     }
   });
 });

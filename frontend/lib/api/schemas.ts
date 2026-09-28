@@ -103,7 +103,20 @@ export type Confidentiality = z.infer<typeof confidentialityEnum>;
 export const riskLevelEnum = z.enum(["low", "medium", "high", "critical"]);
 export type RiskLevel = z.infer<typeof riskLevelEnum>;
 
-export const riskStatusEnum = z.enum(["open", "in_progress", "mitigated", "accepted", "closed"]);
+// backend `app/models/enums.py::RiskItemStatus` は
+// open / in_progress / accepted / transferred / mitigated / avoided / closed の 7 値。
+// 旧 enum は transferred / avoided が欠けており、その状態のリスクが 1 件でもあると
+// `GET /risks` の parse が全体失敗してリスク一覧が空になっていた（潜在バグ。
+// MVP の現データは open のみのため未発現）。
+export const riskStatusEnum = z.enum([
+  "open",
+  "in_progress",
+  "mitigated",
+  "accepted",
+  "transferred",
+  "avoided",
+  "closed",
+]);
 export type RiskStatus = z.infer<typeof riskStatusEnum>;
 
 export const reviewStatusEnum = z.enum([

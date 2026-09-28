@@ -24,9 +24,14 @@ interface RisksPageProps {
   searchParams?: Promise<SearchParams>;
 }
 
+/**
+ * ヒートマップ 2 軸の目盛り。DB の CHECK 制約（`ck_risk_probability` /
+ * `ck_risk_impact`）が `low|medium|high` のため 3 段
+ * （`components/risks/risks-overview.tsx` の `HeatmapAxis` と一致させる）。
+ */
 interface HeatmapCell {
-  probability: 1 | 2 | 3 | 4;
-  impact: 1 | 2 | 3 | 4;
+  probability: 1 | 2 | 3;
+  impact: 1 | 2 | 3;
   count: number;
 }
 
@@ -65,6 +70,19 @@ const RISK_LEVELS: RiskLevel[] = ["low", "medium", "high", "critical"];
 
 function toNumericLevel(level: string | null | undefined): 1 | 2 | 3 | 4 {
   return LEVEL_NUM[level as RiskLevel] ?? 1;
+}
+
+/**
+ * ヒートマップ用の軸値変換（1–3）。
+ *
+ * `toNumericLevel` は `severity` 用に `critical`→4 を返すが、heatmap の 2 軸
+ * （`probability` / `impact`）は DB の CHECK 制約により `low|medium|high` のみで
+ * `critical` は存在しない。backend の `RiskHeatmapCell` も
+ * `RiskProbability` / `RiskImpact` で検証しているため、4 は渡ってこない。
+ */
+function toAxisLevel(level: string | null | undefined): 1 | 2 | 3 {
+  const numeric = toNumericLevel(level);
+  return numeric >= 3 ? 3 : numeric === 2 ? 2 : 1;
 }
 
 function deriveScore(
@@ -149,8 +167,8 @@ async function getRisks(params: SearchParams): Promise<RiskListResult> {
     const heatmapData: HeatmapCell[] =
       heatmapResult.status === "fulfilled"
         ? heatmapResult.value.matrix.map((cell) => ({
-            probability: toNumericLevel(cell.probability),
-            impact: toNumericLevel(cell.impact),
+            probability: toAxisLevel(cell.probability),
+            impact: toAxisLevel(cell.impact),
             count: cell.count,
           }))
         : [];

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { buildParams } from "@/lib/api/endpoints";
 import {
   contractSchema,
   disputeSchema,
@@ -93,4 +94,47 @@ describeLive("live backend contract compatibility", () => {
     }
     expect(failures).toEqual([]);
   }, 180_000);
+
+  /**
+   * `buildParams` が `page_size` を backend の `size` に写像し、指定件数が
+   * 実際に尊重されることを実 API で確認する（以前は無視され常に既定 20 件）。
+   */
+  it("honours the requested page size through buildParams", async () => {
+    const cases: Array<{ path: string; page_size: number }> = [
+      { path: "/contracts", page_size: 5 },
+      { path: "/contracts", page_size: 20 },
+      { path: "/contracts", page_size: 200 },
+      { path: "/reviews", page_size: 5 },
+      { path: "/risks", page_size: 20 },
+      { path: "/users", page_size: 5 },
+    ];
+
+    for (const testCase of cases) {
+      const query = new URLSearchParams(
+        Object.entries(buildParams({ page: 1, page_size: testCase.page_size })!).map(
+          ([k, v]) => [k, String(v)],
+        ),
+      );
+      const res = await fetch(`${BASE}${testCase.path}?${query}`);
+      expect({ path: testCase.path, status: res.status }).toEqual({
+        path: testCase.path,
+        status: 200,
+      });
+      const body = (await res.json()) as { total: number; items: unknown[] };
+      // total はページング前の全件数なので、期待件数は min(要求件数, total)
+      expect({
+        path: testCase.path,
+        page_size: testCase.page_size,
+        items: body.items.length,
+      }).toEqual({
+        path: testCase.path,
+        page_size: testCase.page_size,
+        items: Math.min(testCase.page_size, body.total),
+      });
+      // size が無視されていれば 20 件に張り付く（total > 20 のケースで検出できる）
+      if (testCase.page_size < 20) {
+        expect(body.items.length).toBeLessThanOrEqual(testCase.page_size);
+      }
+    }
+  }, 120_000);
 });

@@ -23,6 +23,14 @@ class RiskOut(ORMModel):
     severity: Annotated[str, Field(pattern="^(low|medium|high|critical)$")]
     status: Annotated[str, Field(max_length=32)]
     title: str
+    # ``title`` と同じ DB カラム（``risk_items.category``）を明示名でも返す。
+    # frontend ``riskItemSchema`` は ``category`` を参照するため、未返却だと
+    # リスク一覧のカテゴリが常に「その他」になっていた。
+    category: str | None = None
+    # 値域は DB の CHECK 制約（``ck_risk_probability`` / ``ck_risk_impact``）と
+    # 同じ low|medium|high。既存行・既存 consumer を壊さないよう ``None`` を許容する。
+    probability: RiskProbability | None = None
+    impact: RiskImpact | None = None
     description: str | None = None
     mitigation: str | None = None
     owner_id: int | None = None
