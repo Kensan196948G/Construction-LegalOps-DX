@@ -690,7 +690,7 @@ docker compose -f infra/docker/docker-compose.yml exec backend alembic upgrade h
 | -------------------------------------------- | ------------------------------------------------------ |
 | `https://legalops-mvp.mirai-dx-platform.com` | 🧪 MVP 公開 URL（計画済み・人間ゲート）                |
 | `http://127.0.0.1:8412/`                     | 🧪 MVP ローカル origin（UI + API、架空データ投入済み） |
-| `http://192.168.0.185:38100/`                | 🖥️ Standalone WebUI（静的デモ・補助）                  |
+| `http://<host>:38100/`（port は自動選択）    | 🖥️ Standalone WebUI（静的デモ・補助。実 URL は運用証跡で提示） |
 
 🎭 ダミーデータはすべて架空値で、`scripts/seed_demo_data.py` により再生成・削除が
 可能です（契約 22 / 協力会社 12 / 紛争 6 / 支払 32 / 変更契約 6 / レビュー 15 等）。
