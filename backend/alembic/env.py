@@ -8,6 +8,25 @@ The SQLAlchemy URL is taken from ``settings.DATABASE_URL`` if present (the
 Core team owns ``app.core.config``); otherwise from the standard
 ``sqlalchemy.url`` in ``alembic.ini``. Import-on-demand keeps this module
 runnable even before the Core team lands their config.
+
+Session role (``ALEMBIC_DB_ROLE``)
+----------------------------------
+Why this exists: the migrations must be *applied* by the schema owner
+(``legalops_mvp``), but that role's password lives in a root-only env file and
+is deliberately not available to operators. The pragmatic route is to connect
+with a DBA/superuser identity that is already reachable (e.g. unix-socket peer
+auth) and then downgrade the session to the owning role with ``SET ROLE``.
+
+This matters for correctness, not just privileges: PostgreSQL RLS is *bypassed*
+for a table's owner, so if DDL ran as the superuser the new tables would be
+owned by the wrong role and the application's row visibility would silently
+change. Running as the owner keeps every new object owned by ``legalops_mvp``.
+
+asyncpg exposes this through its connection ``server_settings``, which are
+applied as session ``SET`` parameters. ``async_engine_from_config()`` has no
+direct ``connect_args`` hook, so the mapping is built here and passed through
+explicitly. When ``ALEMBIC_DB_ROLE`` is unset (or the URL is not asyncpg) the
+return value is empty and behaviour is byte-for-byte the previous behaviour.
 """
 
 from __future__ import annotations
@@ -63,6 +82,29 @@ def _get_url() -> str:
     return config.get_main_option("sqlalchemy.url", "")
 
 
+def _get_session_role() -> str | None:
+    """Return the optional ``SET ROLE`` target, or ``None`` when unset."""
+    for name in ("ALEMBIC_DB_ROLE", "ALEMBIC_DATABASE_ROLE"):
+        value = os.getenv(name)
+        if value and value.strip():
+            return value.strip()
+    return None
+
+
+def _get_async_connect_args(url: str) -> dict[str, Any]:
+    """Build asyncpg ``connect_args`` that ``SET ROLE`` to the schema owner.
+
+    Returns ``{}`` unless ``ALEMBIC_DB_ROLE`` is set *and* the URL is asyncpg,
+    so callers that do not opt in keep the exact previous behaviour. Only
+    asyncpg is handled: it maps ``server_settings`` entries onto session
+    parameters, which is what ``SET ROLE`` needs.
+    """
+    role = _get_session_role()
+    if not role or "+asyncpg" not in url:
+        return {}
+    return {"server_settings": {"role": role}}
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode — emits SQL without a DB connection."""
     url = _get_url()
@@ -102,6 +144,7 @@ async def run_async_migrations() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
         future=True,
+        connect_args=_get_async_connect_args(configuration["sqlalchemy.url"]),
     )
 
     async with connectable.connect() as connection:

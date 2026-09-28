@@ -15,27 +15,48 @@
   - 監査ログ（append-only・削除不可）には demo フラグ付きで投入し、実監査と混同しない。
   - 主要画面（契約・レビュー・リスク・ワークフロー・協力会社・紛争・支払・変更契約・
     テンプレート・ナレッジ・通知）が空にならないよう主要テーブルを網羅する。
+  - Phase 3（内部通報 /whistleblower・証拠 /evidence・独禁法 /compliance/antitrust・
+    紛争高度化 /disputes・条項ライブラリ /templates・IP ウォッチ検知 /ip-watch・
+    Legal Hold・JV 詳細）も同様に網羅する。削除の判別は「タイトル等の末尾（デモ）」または
+    「DEMO- 等のデモ識別子」で行う。
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import os
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 from app.db.session import AsyncSessionLocal
+from app.models.access_control import AccessControlEntry, LegalHold
+from app.models.antitrust_compliance import (
+    AntitrustCheck,
+    AntitrustConsultation,
+    AntitrustPriorApplication,
+    ComplianceTraining,
+)
 from app.models.app_settings import AiProviderSetting
-from app.models.change_order import ChangeOrder
-from app.models.clause import Clause
+from app.models.attachment import Attachment
+from app.models.change_order import ChangeOrder, ChangeOrderEvidence
+from app.models.clause import Clause, ClauseLibrary
 from app.models.contract import Contract
 from app.models.contract_document import ContractDocument
 from app.models.contract_template import ContractTemplate
 from app.models.department import Department
-from app.models.dispute import Dispute
+from app.models.dispute import Dispute, DisputeEvidence, DisputeTimelineEvent
+from app.models.dispute_ext import (
+    DisputeArgumentPosition,
+    DisputeDelayEvent,
+    DisputeProceedingStage,
+    DisputeSettlementOption,
+)
 from app.models.enums import UserRole
+from app.models.evidence import Evidence, EvidenceCustodyEvent
 from app.models.ip_asset import IpAsset
 from app.models.ip_document import IpDocument
 from app.models.ip_watch import IpWatchEvent, IpWatchTarget
@@ -59,9 +80,28 @@ from app.models.signing import ESignatureEnvelope, ESignatureEvent
 from app.models.standard_duration import StandardWorkDuration
 from app.models.user import User
 from app.models.workflow import Workflow, WorkflowStep
-from app.services import audit_service, jv_service, partner_ext_service, price_consultation_service, public_works_service
+from app.models.whistleblower import (
+    WhistleblowerAction,
+    WhistleblowerCaseAccess,
+    WhistleblowerEvidence,
+    WhistleblowerInterview,
+    WhistleblowerReport,
+    WhistleblowerReporterProfile,
+    WhistleblowerTimelineEvent,
+)
+from app.services import (
+    antitrust_service,
+    audit_service,
+    dispute_ext_service,
+    evidence_service,
+    jv_service,
+    partner_ext_service,
+    price_consultation_service,
+    public_works_service,
+    whistleblower_service,
+)
 from app.services.rls_context import set_rls_context
-from sqlalchemy import delete, select, update
+from sqlalchemy import bindparam, delete, func, select, text, update
 
 BASE_DATE = date(2026, 5, 16)
 
@@ -142,6 +182,438 @@ WF_STEP_STATUS_MAP = {
     "waiting": "pending",
     "rejected": "rejected",
 }
+
+# ===========================================================================
+# Phase 3 デモデータ定義（whistleblower / evidence / antitrust / dispute 拡張 /
+# clause_library / ip_watch_events / legal_hold / JV 詳細）
+#
+# すべて架空の値。実在企業・実在人物・実在案件・実在の係争は一切使用しない。
+# 削除（--delete）は「タイトル等の末尾 DEMO_SUFFIX」または「デモ識別子
+# プレフィックス（DEMO- / AG-DEMO- 等）」で判別する。
+# ===========================================================================
+DEMO_SUFFIX = "（デモ）"
+
+
+def _demo_sha256(seed: str) -> str:
+    """デモ証拠用の決定的な SHA-256（実ファイルのハッシュではない）."""
+    return hashlib.sha256(f"legalops-demo-evidence::{seed}".encode()).hexdigest()
+
+
+# 内部通報（/whistleblower）。report_no はサービス層が WB-YYYY-NNNNNN で採番する。
+WB_REPORTS: list[dict[str, Any]] = [
+    {
+        "category": "harassment",
+        "severity": "high",
+        "title": f"【デモ】現場監督による継続的なパワーハラスメントの疑い{DEMO_SUFFIX}",
+        "description": "架空のデモ通報です。実在の人物・事案とは一切関係ありません。",
+        "is_anonymous": False,
+        "reporter": {
+            "name": "田中 太郎",
+            "email": "demo-wb-reporter1@example.invalid",
+            "phone": "000-0000-0001",
+            "department": "工事部",
+            "relationship": "同僚",
+            "consent": True,
+        },
+        "status": "investigating",
+        "access": [("investigator", False), ("observer", False)],
+        "evidence": [
+            ("document", "就業記録の写し（デモ・架空）", True),
+            ("testimony", "同僚2名の証言メモ（デモ・架空）", False),
+        ],
+        "interviews": [
+            ("witness", "鈴木 花子", "目撃状況のヒアリング（デモ・架空）。"),
+            ("subject", "佐藤 一郎", "事実確認のヒアリング（デモ・架空）。"),
+        ],
+        "notes": ["初動ヒアリングを実施し、調査計画書を作成した（デモ）。"],
+        "actions": [
+            ("corrective", f"現場監督の担当業務を一時変更{DEMO_SUFFIX}", "in_progress"),
+        ],
+    },
+    {
+        "category": "safety",
+        "severity": "critical",
+        "title": f"【デモ】法面工事の安全措置不足に関する匿名通報{DEMO_SUFFIX}",
+        "description": "架空のデモ通報です。匿名通報のため通報者識別情報は保存しません。",
+        "is_anonymous": True,
+        "reporter": None,
+        "status": "triage",
+        "access": [("investigator", False)],
+        "evidence": [("photo", "法面の状況写真（デモ・架空）", True)],
+        "interviews": [],
+        "notes": ["匿名通報のため、通報者識別情報は記録しない（デモ）。"],
+        "actions": [
+            ("preventive", f"安全パトロールの頻度引上げ{DEMO_SUFFIX}", "open"),
+        ],
+    },
+    {
+        "category": "compliance",
+        "severity": "medium",
+        "title": f"【デモ】資材発注における便宜供与の疑い{DEMO_SUFFIX}",
+        "description": "架空のデモ通報です。実在の取引先・担当者とは一切関係ありません。",
+        "is_anonymous": False,
+        "reporter": {
+            "name": "高橋 健二",
+            "email": "demo-wb-reporter3@example.invalid",
+            "phone": "000-0000-0003",
+            "department": "管理部",
+            "relationship": "部下",
+            "consent": False,
+        },
+        "status": "corrective_action",
+        "access": [("lead_investigator", True), ("investigator", True)],
+        "evidence": [("email", "発注経緯のメール写し（デモ・架空）", True)],
+        "interviews": [
+            ("reporter", "高橋 健二", "通報内容の詳細確認（デモ・架空）。"),
+        ],
+        "notes": ["調査の結果、手続漏れが認められたため再発防止策を起案した（デモ）。"],
+        "actions": [
+            ("corrective", f"発注承認フローの見直し{DEMO_SUFFIX}", "completed"),
+            ("preventive", f"コンプライアンス研修の追加実施{DEMO_SUFFIX}", "open"),
+        ],
+    },
+]
+
+# 証拠・eDiscovery（/evidence）。title 末尾 DEMO_SUFFIX で判別する。
+# (キー, タイトル, 説明, 入手経路, MIME, ファイル名, 重複用シード or None)
+EVIDENCES: list[tuple[str, str, str, str, str, str, str | None]] = [
+    (
+        "evd-01",
+        f"【デモ】工事請負契約書 最終版スキャン{DEMO_SUFFIX}",
+        "架空の契約書スキャンです。実在の契約ではありません。",
+        "scan",
+        "application/pdf",
+        "demo-contract-scan.pdf",
+        None,
+    ),
+    (
+        "evd-02",
+        f"【デモ】現場写真（法面崩れ・第3工区）{DEMO_SUFFIX}",
+        "架空の現場写真メタデータです。EXIF は保持しません。",
+        "photo",
+        "image/jpeg",
+        "demo-site-photo.jpg",
+        None,
+    ),
+    (
+        "evd-03",
+        f"【デモ】遅延に関する打合せメール{DEMO_SUFFIX}",
+        "架空のメール証拠です。実在の送受信者はいません。",
+        "email",
+        "message/rfc822",
+        "demo-delay-mail.eml",
+        None,
+    ),
+    (
+        "evd-04",
+        f"【デモ】工事請負契約書 最終版スキャン（重複取込）{DEMO_SUFFIX}",
+        "evd-01 と同一ハッシュの重複取込を再現する架空データです。",
+        "upload",
+        "application/pdf",
+        "demo-contract-scan-copy.pdf",
+        "evd-01",
+    ),
+]
+
+# 独禁法チェック（/compliance/antitrust）。subject 末尾 DEMO_SUFFIX で判別する。
+ANTITRUST_CHECKS: list[tuple[str, str, dict[str, object]]] = [
+    (
+        "general",
+        f"【デモ】下請契約書の独禁法一般スクリーニング{DEMO_SUFFIX}",
+        {"text": "価格を合わせる旨を記載した架空の条項（デモ）"},
+    ),
+    (
+        "bid_rigging",
+        f"【デモ】公共工事の入札前情報共有チェック{DEMO_SUFFIX}",
+        {
+            "pre_bid_price_shared": True,
+            "procuring_agency_involvement": True,
+            "contacted_competitors": 3,
+            "exchanged_topics": ["price", "schedule"],
+        },
+    ),
+    (
+        "price_exchange",
+        f"【デモ】競合他社との価格情報交換チェック{DEMO_SUFFIX}",
+        {
+            "with_competitor": True,
+            "exchanged_topics": ["price"],
+            "scope_covers_pricing": True,
+        },
+    ),
+    (
+        "jv_formation",
+        f"【デモ】JV 形成時の競争法チェック{DEMO_SUFFIX}",
+        {
+            "is_competitor_jv": True,
+            "combined_market_share_pct": 45,
+            "has_legitimate_business_reason": True,
+        },
+    ),
+    (
+        "joint_research",
+        f"【デモ】競合との共同研究チェック{DEMO_SUFFIX}",
+        {
+            "with_competitor": True,
+            "covers_pricing_or_output": False,
+            "covers_customer_allocation": False,
+        },
+    ),
+]
+
+# 事前申請（/compliance/antitrust）。title 末尾 DEMO_SUFFIX で判別する。
+ANTITRUST_APPLICATIONS: list[tuple[str, str, str, int | None, str]] = [
+    (
+        "competitor_contact",
+        f"【デモ】競合他社との業界団体接触記録{DEMO_SUFFIX}",
+        "ひかり資材(株)",
+        None,
+        "submitted",
+    ),
+    (
+        "meeting_social",
+        f"【デモ】業界懇親会への参加事前申請{DEMO_SUFFIX}",
+        "あおぞらコンサルタント(株)",
+        None,
+        "approved",
+    ),
+    (
+        "entertainment_gift",
+        f"【デモ】取引先との会食（接待）事前申請{DEMO_SUFFIX}",
+        "北信電設(株)",
+        12000,
+        "completed",
+    ),
+    (
+        "public_official_contact",
+        f"【デモ】発注者担当者との意見交換の事前申請{DEMO_SUFFIX}",
+        "架空公共発注者（デモ）",
+        None,
+        "approved",
+    ),
+    (
+        "donation_sponsorship",
+        f"【デモ】業界団体への協賛金審査{DEMO_SUFFIX}",
+        "架空業界団体（デモ）",
+        50000,
+        "rejected",
+    ),
+]
+
+# 競争法相談（/compliance/antitrust）。query_text 先頭 【デモ】で判別する。
+ANTITRUST_CONSULTATIONS: list[tuple[str, str]] = [
+    (
+        "【デモ】JV 組成時に競合他社と共有してよい情報の範囲を教えてください。",
+        (
+            "架空のデモ回答です。一次情報の引用は行わず、一般的な整理のみを示します。"
+            "市場・顧客・価格に関する情報共有は競争法上のリスクが高いため、"
+            "個別案件は法務担当者・顧問弁護士の確認が必要です（デモ）。"
+        ),
+    ),
+    (
+        "【デモ】入札前に下請業者へ概算価格を伝える場合の留意点は？",
+        (
+            "架空のデモ回答です。入札前の価格情報共有は談合リスクを高めます。"
+            "必要な範囲に限定し、記録を残す運用としてください（デモ）。"
+        ),
+    ),
+]
+
+# コンプライアンス研修（/compliance/antitrust）。training_title 末尾 DEMO_SUFFIX で判別する。
+COMPLIANCE_TRAININGS: list[tuple[str, str, int]] = [
+    (f"【デモ】独占禁止法基礎研修（全社員）{DEMO_SUFFIX}", "antitrust", 88),
+    (f"【デモ】入札談合防止研修（工事部門）{DEMO_SUFFIX}", "antitrust", 92),
+    (f"【デモ】贈収賄・接待管理研修（管理部門）{DEMO_SUFFIX}", "anti_bribery", 79),
+    (f"【デモ】下請法遵守研修（購買部門）{DEMO_SUFFIX}", "subcontract", 85),
+]
+
+# 遅延事象（/disputes 詳細）。cause_category は DisputeDelayCauseCategory の値。
+DISPUTE_DELAY_EVENTS: list[dict[str, Any]] = [
+    {
+        "cause_category": "design_change",
+        "title": f"【デモ】設計変更に伴う追加施工{DEMO_SUFFIX}",
+        "description": "架空の遅延事象です。実在の工事・発注者は登場しません。",
+        "occurred_from_offset": 10,
+        "occurred_to_offset": 25,
+        "delay_days": 15,
+        "responsible_party": "発注者（デモ）",
+        "additional_cost_jpy": 4200000,
+        "eot_days_requested": 15,
+        "eot_days_granted": 10,
+        "eot_status": "partial",
+    },
+    {
+        "cause_category": "weather",
+        "title": f"【デモ】長雨による土工事の中止{DEMO_SUFFIX}",
+        "description": "架空の気象遅延です（デモ）。",
+        "occurred_from_offset": 40,
+        "occurred_to_offset": 47,
+        "delay_days": 7,
+        "responsible_party": "不可抗力（デモ）",
+        "additional_cost_jpy": 850000,
+        "eot_days_requested": 7,
+        "eot_days_granted": None,
+        "eot_status": "pending",
+    },
+    {
+        "cause_category": "owner_caused",
+        "title": f"【デモ】資材支給の遅延{DEMO_SUFFIX}",
+        "description": "架空の支給遅延です（デモ）。",
+        "occurred_from_offset": 60,
+        "occurred_to_offset": 66,
+        "delay_days": 6,
+        "responsible_party": "発注者（デモ）",
+        "additional_cost_jpy": 1200000,
+        "eot_days_requested": 6,
+        "eot_days_granted": 6,
+        "eot_status": "approved",
+    },
+]
+
+# 主張・反論マトリクス（/disputes 詳細）
+DISPUTE_ARGUMENTS: list[dict[str, Any]] = [
+    {
+        "issue_no": 1,
+        "issue_title": f"【デモ】追加費用の負担範囲{DEMO_SUFFIX}",
+        "party": "ours",
+        "stance": "claim",
+        "content": "設計変更に起因する追加費用は発注者負担と解すべき旨の架空の主張（デモ）。",
+    },
+    {
+        "issue_no": 1,
+        "issue_title": f"【デモ】追加費用の負担範囲{DEMO_SUFFIX}",
+        "party": "counterparty",
+        "stance": "rebuttal",
+        "content": "契約単価に含まれる旨の架空の反論（デモ）。",
+    },
+    {
+        "issue_no": 2,
+        "issue_title": f"【デモ】工期延長日数{DEMO_SUFFIX}",
+        "party": "ours",
+        "stance": "claim",
+        "content": "15 日の工期延長が必要である旨の架空の主張（デモ）。",
+    },
+]
+
+# 和解案比較（/disputes 詳細）
+DISPUTE_SETTLEMENT_OPTIONS: list[dict[str, Any]] = [
+    {
+        "option_no": 1,
+        "title": f"【デモ】追加費用の半額を和解金として受領{DEMO_SUFFIX}",
+        "settlement_amount_jpy": 2100000,
+        "payment_terms": "一括・合意後30日以内（デモ）",
+        "pros": "早期解決により工事再開が可能（デモ）。",
+        "cons": "請求額の半額を放棄することになる（デモ）。",
+        "probability_score": 60,
+        "status": "proposed",
+    },
+    {
+        "option_no": 2,
+        "title": f"【デモ】工期延長のみ合意し費用は別途協議{DEMO_SUFFIX}",
+        "settlement_amount_jpy": 0,
+        "payment_terms": "別途協議（デモ）",
+        "pros": "費用請求権を留保できる（デモ）。",
+        "cons": "解決まで長期化する見込み（デモ）。",
+        "probability_score": 35,
+        "status": "draft",
+    },
+]
+
+# 訴訟・ADR ステージ（/disputes 詳細）
+DISPUTE_STAGES: list[dict[str, Any]] = [
+    {
+        "stage": "negotiation",
+        "started_offset": 5,
+        "ended_offset": 45,
+        "forum": "当事者間協議（デモ）",
+    },
+    {
+        "stage": "mediation",
+        "started_offset": 45,
+        "ended_offset": None,
+        "forum": "架空建設紛争調停センター（デモ）",
+    },
+]
+
+# 紛争の証拠・タイムライン（/disputes 詳細）
+DISPUTE_EVIDENCE_ITEMS: list[tuple[str, str]] = [
+    ("contract", f"【デモ】工事請負契約書（該当条項抜粋）{DEMO_SUFFIX}"),
+    ("daily_report", f"【デモ】作業日報（遅延期間）{DEMO_SUFFIX}"),
+    ("email", f"【デモ】設計変更指示メール{DEMO_SUFFIX}"),
+]
+DISPUTE_TIMELINE_ITEMS: list[tuple[str, str]] = [
+    ("fact", f"【デモ】設計変更指示を受領{DEMO_SUFFIX}"),
+    ("notice", f"【デモ】追加費用の請求書を送付{DEMO_SUFFIX}"),
+    ("hearing", f"【デモ】第1回調停期日{DEMO_SUFFIX}"),
+]
+
+# 条項ライブラリ（/templates の「条項ライブラリ」タブ）。code は DEMO- で判別。
+# (code, category, title, body, recommendation, tags)
+CLAUSE_LIBRARY: list[tuple[str, str, str, str, str, list[str]]] = [
+    (
+        "DEMO-CLB-001",
+        "支払条件",
+        f"出来高部分払いの支払条件{DEMO_SUFFIX}",
+        "出来高部分払いは、出来高の 3 分の 1 を超えない範囲で行うものとする。",
+        "recommended",
+        ["支払", "出来高"],
+    ),
+    (
+        "DEMO-CLB-002",
+        "変更",
+        f"設計変更時の協議義務{DEMO_SUFFIX}",
+        "設計図書の変更が必要となった場合、甲は速やかに乙と協議するものとする。",
+        "required",
+        ["変更", "協議"],
+    ),
+    (
+        "DEMO-CLB-003",
+        "遅延",
+        f"工期延長の請求手続{DEMO_SUFFIX}",
+        (
+            "天候その他やむを得ない事由により工期の延長が必要な場合、"
+            "乙は遅滞なく書面で申し出るものとする。"
+        ),
+        "recommended",
+        ["工期", "遅延"],
+    ),
+    (
+        "DEMO-CLB-004",
+        "解除",
+        f"一方的解除の制限{DEMO_SUFFIX}",
+        "甲は、乙に責めに帰すべき事由がない限り、本契約を一方的に解除することができない。",
+        "prohibited",
+        ["解除"],
+    ),
+    (
+        "DEMO-CLB-005",
+        "紛争",
+        f"紛争解決の段階的条項{DEMO_SUFFIX}",
+        "紛争が生じた場合、当事者はまず誠実に協議し、次いで調停、仲裁の順に解決を図るものとする。",
+        "recommended",
+        ["紛争", "仲裁"],
+    ),
+    (
+        "DEMO-CLB-006",
+        "秘密保持",
+        f"秘密保持義務の存続期間{DEMO_SUFFIX}",
+        "秘密保持義務は、本契約の終了後 3 年間存続するものとする。",
+        "optional",
+        ["秘密保持"],
+    ),
+]
+
+# IP ウォッチ検知イベント（/ip-watch）。デモ対象（notes に [DEMO]）に紐づける。
+IP_WATCH_EVENTS: list[tuple[str, str, str]] = [
+    ("new_application", "JP2026-000001", f"【デモ】競合他社の新規出願を検知{DEMO_SUFFIX}"),
+    ("status_change", "JP2025-000123", f"【デモ】審査状況の変化を検知{DEMO_SUFFIX}"),
+    ("registration", "JP2024-000456", f"【デモ】登録査定を検知{DEMO_SUFFIX}"),
+    ("publication", "JP2026-000789", f"【デモ】公開公報の発行を検知{DEMO_SUFFIX}"),
+]
+
+# ===========================================================================
+# ここまで Phase 3 デモデータ定義
+# ===========================================================================
 
 REVIEW_ISSUES = [
     {
@@ -401,6 +873,62 @@ async def _repair_invalid_demo_emails(session) -> int:
     return len(rows)
 
 
+async def repair_legacy_review_issues(session) -> int:
+    """Rewrite legacy ``legal_reviews.result.issues`` into the current shape.
+
+    The rows created by the 2026-08-01 bootstrap store each issue as
+    ``{"detail", "target", "summary", "severity"}``. The response model
+    ``ReviewIssue`` (``app/schemas/legal_review.py``) requires
+    ``clause_seq`` / ``risk_level`` / ``comment``, and ``review_service``
+    forwards ``result["issues"]`` verbatim, so any of those rows makes
+    ``GET /api/v1/reviews`` fail response validation with 500
+    (measured 2026-09-28: 15 such rows in both ``legalops_mvp`` and
+    ``legalops_prod``; the current seed shape is written correctly but
+    pre-existing rows were never migrated).
+
+    Only rows that still carry the legacy marker **and** whose contract is a demo
+    contract (``CTR-2026-%``, the same convention the rest of this script uses to
+    find and delete demo rows) are touched. The contract check matters: the
+    legacy rows carry no ``demo`` flag in ``result`` and use ``claude-opus-4-7``
+    as ``ai_model``, so the marker alone would also match a review a real user
+    had created against a real contract, and rewriting that with fictional
+    findings would be data corruption.
+
+    The replacement content is the canonical ``REVIEW_ISSUES`` data, keeping the
+    original issue count. Idempotent: re-running finds nothing to repair.
+
+    Note: the API read path is separately hardened (api-fixer, task-5 #6) so a
+    future shape drift degrades instead of returning 500; this function
+    converges the stored data itself.
+    """
+    demo_contract_ids = set(
+        (
+            await session.execute(
+                select(Contract.id).where(Contract.contract_no.like("CTR-2026-%"))
+            )
+        ).scalars()
+    )
+    rows = (await session.execute(select(LegalReview))).scalars().all()
+    repaired = 0
+    for review in rows:
+        if review.contract_id not in demo_contract_ids:
+            continue  # never rewrite a review attached to a non-demo contract
+        result = review.result or {}
+        issues = result.get("issues")
+        if not isinstance(issues, list) or not issues:
+            continue
+        legacy = [
+            i for i in issues if isinstance(i, dict) and "severity" in i and "risk_level" not in i
+        ]
+        if not legacy:
+            continue  # already the current shape
+        canonical = [dict(i) for i in REVIEW_ISSUES[: max(1, len(issues))]]
+        # Reassign (do not mutate in place) so SQLAlchemy flags the JSON column dirty.
+        review.result = {**result, "issues": canonical}
+        repaired += 1
+    return repaired
+
+
 async def ensure_demo_users(session, departments) -> dict[str, User]:
     """Seed one fictional user per RBAC role so the settings/users tab is operable."""
     by_oid: dict[str, User] = {}
@@ -454,6 +982,1060 @@ async def _log(session, user: User, action: str, target_type: str, target_id: in
         target_id=target_id,
         payload=_demo_payload(**payload),
     )
+
+
+async def seed_phase3(
+    session: Any,
+    *,
+    user: User,
+    demo_contracts: list[Contract],
+    counts: dict[str, int],
+) -> None:
+    """Phase 3 のデモデータを投入する（画面 35 項目が空にならないようにする）。
+
+    ``seed()`` のローカル変数と衝突しないよう独立した関数スコープに分離している
+    （同一関数内で ``row`` / ``spec`` 等を再代入すると mypy が型を混同するため）。
+    冪等: 各ブロックはデモ判別子で既存を確認してから追加する。
+    """
+
+    # =====================================================================
+    # Phase 3 デモデータ（画面 /whistleblower・/evidence・/compliance/antitrust・
+    # /disputes 詳細・/templates（条項ライブラリ）・/ip-watch・/settings・
+    # /joint-ventures 詳細・/change-orders 詳細 が空にならないよう投入する）
+    #
+    # 冪等性: 各ブロックはデモ判別子（DEMO_SUFFIX を含むタイトル／DEMO- プレフィックス
+    # ／デモ契約・紛争の ID）で既存を確認してから追加する。再実行しても重複しない。
+    # 実データの削除・改変は行わない（追加のみ）。
+    # =====================================================================
+    actor_role = str(user.role)
+
+    # ---- 条項ライブラリ（画面 /templates・code=DEMO-%）----
+    existing_clause_codes = set((await session.execute(select(ClauseLibrary.code))).scalars())
+    clause_library_count = 0
+    for code, category, title, body, recommendation, tags in CLAUSE_LIBRARY:
+        if code in existing_clause_codes:
+            continue
+        session.add(
+            ClauseLibrary(
+                code=code,
+                category=category,
+                title=title,
+                body=body,
+                recommendation=recommendation,
+                tags=tags,
+                version=1,
+                effective_from=BASE_DATE - timedelta(days=365),
+                created_by=user.id,
+                updated_by=user.id,
+            )
+        )
+        clause_library_count += 1
+        existing_clause_codes.add(code)
+    await session.flush()
+    counts["clause_library"] = clause_library_count
+
+    # ---- IP ウォッチ検知イベント（画面 /ip-watch・デモ対象に紐づける）----
+    demo_target_ids = list(
+        (
+            await session.execute(
+                select(IpWatchTarget.id).where(IpWatchTarget.notes.like("%[DEMO]%"))
+            )
+        ).scalars()
+    )
+    existing_event_codes = set((await session.execute(select(IpWatchEvent.event_code))).scalars())
+    ip_event_count = 0
+    if demo_target_ids:
+        for idx, (event_type, app_no, description) in enumerate(IP_WATCH_EVENTS):
+            event_code = f"DEMO-IPW-{idx + 1:02d}"
+            if event_code in existing_event_codes:
+                continue
+            session.add(
+                IpWatchEvent(
+                    watch_target_id=demo_target_ids[idx % len(demo_target_ids)],
+                    ip_asset_id=None,
+                    application_number=app_no,
+                    event_type=event_type,
+                    event_code=event_code,
+                    description=description,
+                    event_data={"demo": True},
+                    is_read=False,
+                    detected_at=datetime.now(UTC) - timedelta(days=idx * 3 + 1),
+                )
+            )
+            ip_event_count += 1
+            existing_event_codes.add(event_code)
+        await session.flush()
+    counts["ip_watch_events"] = ip_event_count
+
+    # ---- 契約添付ファイル（/contracts 詳細・証拠の紐付け先）----
+    existing_attachment_refs = set(
+        (await session.execute(select(Attachment.sharepoint_item_id))).scalars()
+    )
+    attachment_count = 0
+    demo_attachments: list[Attachment] = []
+    for idx, contract in enumerate(demo_contracts[:4]):
+        ref = f"DEMO-SP-{idx + 1:04d}"
+        if ref in existing_attachment_refs:
+            continue
+        attachment = Attachment(
+            contract_id=contract.id,
+            filename=f"demo-contract-{idx + 1:02d}.pdf",
+            mime_type="application/pdf",
+            size_bytes=120_000 + idx * 4_096,
+            sharepoint_item_id=ref,
+            storage="sharepoint",
+            checksum_sha256=_demo_sha256(ref),
+            version=1,
+            is_primary=(idx == 0),
+            uploaded_by=user.id,
+        )
+        session.add(attachment)
+        demo_attachments.append(attachment)
+        attachment_count += 1
+        existing_attachment_refs.add(ref)
+    await session.flush()
+    counts["attachments"] = attachment_count
+
+    # ---- 契約単位 ACL（/contracts 詳細のアクセス権タブ・UI から到達する）----
+    legal_dept_id = (
+        await session.execute(select(Department.id).where(Department.name == "法務部"))
+    ).scalar_one_or_none()
+    acl_contract_ids = [c.id for c in demo_contracts[:3]]
+    if acl_contract_ids:
+        existing_acl_contracts = set(
+            (
+                await session.execute(
+                    select(AccessControlEntry.contract_id).where(
+                        AccessControlEntry.contract_id.in_(acl_contract_ids)
+                    )
+                )
+            ).scalars()
+        )
+    else:
+        existing_acl_contracts = set()
+    acl_count = 0
+    acl_specs: list[tuple[str, str, str]] = [
+        ("user", str(user.id), "admin"),
+        ("role", "reviewer", "read"),
+        ("role", "auditor", "read"),
+        ("external_counsel", "demo-counsel@example.invalid", "read"),
+    ]
+    if legal_dept_id is not None:
+        acl_specs.append(("department", str(legal_dept_id), "write"))
+    for contract in demo_contracts[:3]:
+        if contract.id in existing_acl_contracts:
+            continue
+        for principal_type, principal_id, access_level in acl_specs:
+            session.add(
+                AccessControlEntry(
+                    contract_id=contract.id,
+                    principal_type=principal_type,
+                    principal_id=principal_id,
+                    access_level=access_level,
+                    granted_by=user.id,
+                    expires_at=None,
+                )
+            )
+            acl_count += 1
+    await session.flush()
+    counts["access_control_entries"] = acl_count
+
+    # ---- 変更契約の証拠（画面 /change-orders 詳細）----
+    demo_change_ids = [
+        row.id
+        for row in (
+            await session.execute(
+                select(ChangeOrder.id, ChangeOrder.change_no).where(
+                    ChangeOrder.change_no.like("CHG-2026-%")
+                )
+            )
+        ).all()
+    ]
+    if demo_change_ids:
+        existing_coe = set(
+            (
+                await session.execute(
+                    select(ChangeOrderEvidence.change_order_id).where(
+                        ChangeOrderEvidence.change_order_id.in_(demo_change_ids)
+                    )
+                )
+            ).scalars()
+        )
+    else:
+        existing_coe = set()
+    change_order_evidence_count = 0
+    for idx, change_id in enumerate(demo_change_ids):
+        if change_id in existing_coe:
+            continue
+        session.add(
+            ChangeOrderEvidence(
+                change_order_id=change_id,
+                evidence_type=["daily_report", "photo", "email", "minutes", "instruction", "other"][
+                    idx % 6
+                ],
+                description=f"【デモ】変更契約の根拠資料{DEMO_SUFFIX}",
+                occurred_at=BASE_DATE + timedelta(days=idx * 5),
+                attachment_id=demo_attachments[idx % len(demo_attachments)].id
+                if demo_attachments
+                else None,
+                created_by=user.id,
+                updated_by=user.id,
+            )
+        )
+        change_order_evidence_count += 1
+    await session.flush()
+    counts["change_order_evidence"] = change_order_evidence_count
+
+    # ---- Legal Hold（画面 /evidence・/settings の保全状況）----
+    existing_hold_reasons = set((await session.execute(select(LegalHold.reason))).scalars())
+    hold_count = 0
+    demo_holds: list[LegalHold] = []
+    for idx, contract in enumerate(demo_contracts[:2]):
+        reason = f"【デモ】{contract.contract_no} に係る証拠保全{DEMO_SUFFIX}"
+        if reason in existing_hold_reasons:
+            continue
+        hold = LegalHold(
+            target_type="contract",
+            target_id=contract.id,
+            reason=reason,
+            status="active",
+            started_by=user.id,
+            started_at=datetime.now(UTC) - timedelta(days=30 + idx * 10),
+            evidence_ids=[],
+            ethical_wall=(idx == 1),
+        )
+        session.add(hold)
+        demo_holds.append(hold)
+        hold_count += 1
+        existing_hold_reasons.add(reason)
+    await session.flush()
+    counts["legal_holds"] = hold_count
+
+    # ---- 証拠・eDiscovery（画面 /evidence・title 末尾 DEMO_SUFFIX で判別）----
+    existing_evidence_titles = set(
+        (
+            await session.execute(
+                select(Evidence.title).where(Evidence.title.like(f"%{DEMO_SUFFIX}"))
+            )
+        ).scalars()
+    )
+    new_evidence: list[Evidence] = []
+    evidence_count = 0
+    for key, title, description, source_type, mime, filename, duplicate_of in EVIDENCES:
+        if title in existing_evidence_titles:
+            continue
+        checksum_seed = duplicate_of or key
+        row = await evidence_service.create_evidence(
+            session,
+            actor_id=user.id,
+            title=title,
+            description=description,
+            source_type=source_type,
+            contract_id=demo_contracts[0].id if demo_contracts else None,
+            filename=filename,
+            mime_type=mime,
+            storage="sharepoint",
+            storage_ref=f"DEMO-EVD/{filename}",
+            checksum_sha256=_demo_sha256(checksum_seed),
+            collected_by=user.id,
+            collected_by_name="伊藤 直美",
+            collected_at=datetime.now(UTC) - timedelta(days=20),
+        )
+        new_evidence.append(row)
+        evidence_count += 1
+        existing_evidence_titles.add(title)
+    await session.flush()
+    counts["evidences"] = evidence_count
+
+    # Chain of Custody（追記専用）。新規証拠にのみ付与する（冪等）。
+    custody_count = 0
+    for row in new_evidence:
+        for step, custody_action in enumerate(["collected", "received", "analyzed"]):
+            await evidence_service.add_custody_event(
+                session,
+                evidence_id=row.id,
+                actor_id=user.id,
+                action=custody_action,
+                actor_name="伊藤 直美",
+                from_custodian="デモ現場事務所" if step == 0 else "デモ法務部",
+                to_custodian="デモ法務部",
+                notes=f"【デモ】Chain of Custody 記録（{custody_action}）{DEMO_SUFFIX}",
+            )
+            custody_count += 1
+    await session.flush()
+    counts["evidence_custody_events"] = custody_count
+
+    # 保全対象の証拠に Legal Hold を紐付ける（デモ行のみ）。
+    if demo_holds:
+        held = list(
+            (
+                await session.execute(
+                    select(Evidence)
+                    .where(Evidence.title.like(f"%{DEMO_SUFFIX}"))
+                    .order_by(Evidence.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for idx, row in enumerate(held[:2]):
+            row.legal_hold_id = demo_holds[idx % len(demo_holds)].id
+            row.is_under_hold = True
+        await session.flush()
+
+    # Legal Hold 解除承認。ORM モデル（TimestampMixin）は migration 025 に存在しない
+    # ``deleted_at`` を参照するため INSERT/SELECT できず、生 SQL で投入する
+    # （既知のスキーマ不整合。詳細は削除ブロックとタスク報告を参照）。
+    hold_release_count = 0
+    if demo_holds:
+        existing_hr = (
+            await session.execute(
+                text(
+                    "SELECT count(*) FROM evidence_hold_release_approvals "
+                    "WHERE reason LIKE :pat"
+                ),
+                {"pat": f"%{DEMO_SUFFIX}"},
+            )
+        ).scalar_one()
+        pending_evidence = list(
+            (
+                await session.execute(
+                    select(Evidence.id)
+                    .where(Evidence.title.like(f"%{DEMO_SUFFIX}"))
+                    .order_by(Evidence.id)
+                )
+            ).scalars()
+        )
+        if not existing_hr:
+            for idx, hold in enumerate(demo_holds):
+                await session.execute(
+                    text(
+                        "INSERT INTO evidence_hold_release_approvals "
+                        "(legal_hold_id, evidence_id, requested_by, requested_at, reason, status) "
+                        "VALUES (:hold_id, :evidence_id, :requested_by, "
+                        ":requested_at, :reason, :status)"
+                    ),
+                    {
+                        "hold_id": hold.id,
+                        "evidence_id": (
+                            pending_evidence[idx] if idx < len(pending_evidence) else None
+                        ),
+                        "requested_by": user.id,
+                        "requested_at": datetime.now(UTC) - timedelta(days=3 + idx),
+                        "reason": f"【デモ】保全目的の消滅に伴う解除申請{DEMO_SUFFIX}",
+                        "status": "pending" if idx == 0 else "rejected",
+                    },
+                )
+                hold_release_count += 1
+            await session.flush()
+    counts["evidence_hold_release_approvals"] = hold_release_count
+
+    # ---- 内部通報・調査（画面 /whistleblower）----
+    # report_no はサービス層が WB-YYYY-NNNNNN で採番するため、削除の判別は
+    # タイトル末尾の DEMO_SUFFIX で行う。
+    existing_wb_titles = set(
+        (
+            await session.execute(
+                select(WhistleblowerReport.title).where(
+                    WhistleblowerReport.title.like(f"%{DEMO_SUFFIX}")
+                )
+            )
+        ).scalars()
+    )
+    investigator_user_id = user.id
+    # 調査担当者 ACL は (report_id, user_id) が UNIQUE のため、案件ごとに
+    # 別ユーザーを割り当てて複数担当の状態を再現する。
+    grant_pool = list(
+        (
+            await session.execute(
+                select(User)
+                .where(User.email.like("%@legalops-mvp.example.com"))
+                .order_by(User.id)
+            )
+        ).scalars()
+    )
+    if user.id not in [u.id for u in grant_pool]:
+        grant_pool.insert(0, user)
+    wb_counts = {
+        "whistleblower_reports": 0,
+        "whistleblower_reporter_profiles": 0,
+        "whistleblower_case_access": 0,
+        "whistleblower_evidence": 0,
+        "whistleblower_interviews": 0,
+        "whistleblower_timeline_events": 0,
+        "whistleblower_actions": 0,
+    }
+    for spec in WB_REPORTS:
+        title = str(spec["title"])
+        if title in existing_wb_titles:
+            continue
+        reporter = spec.get("reporter")
+        report = await whistleblower_service.create_report(
+            session,
+            actor_id=user.id,
+            category=str(spec["category"]),
+            title=title,
+            description=str(spec["description"]),
+            severity=str(spec["severity"]),
+            is_anonymous=bool(spec["is_anonymous"]),
+            occurred_at=BASE_DATE - timedelta(days=45),
+            reporter_name=str(reporter["name"]) if isinstance(reporter, dict) else None,
+            contact_email=str(reporter["email"]) if isinstance(reporter, dict) else None,
+            contact_phone=str(reporter["phone"]) if isinstance(reporter, dict) else None,
+            department=str(reporter["department"]) if isinstance(reporter, dict) else None,
+            relationship_to_subject=str(reporter["relationship"])
+            if isinstance(reporter, dict)
+            else None,
+            consent_identity_disclosure=bool(reporter["consent"])
+            if isinstance(reporter, dict)
+            else False,
+            lead_investigator_id=investigator_user_id,
+        )
+        wb_counts["whistleblower_reports"] += 1
+        if isinstance(reporter, dict):
+            wb_counts["whistleblower_reporter_profiles"] += 1
+        # 調査ステータス（受付 → 調査中など）。create_report 直後は received。
+        report.status = str(spec["status"])
+        if report.status == "closed":
+            report.closed_at = datetime.now(UTC)
+            report.substantiated = True
+
+        for grant_idx, (role_in_case, can_view_identity) in enumerate(spec["access"]):
+            grantee = grant_pool[grant_idx % len(grant_pool)]
+            await whistleblower_service.grant_case_access(
+                session,
+                report_id=report.id,
+                actor_id=user.id,
+                user_id=grantee.id,
+                role_in_case=str(role_in_case),
+                can_view_reporter_identity=bool(can_view_identity),
+                expires_at=datetime.now(UTC) + timedelta(days=180),
+            )
+            wb_counts["whistleblower_case_access"] += 1
+        for evidence_type, description, preserved in spec["evidence"]:
+            await whistleblower_service.add_evidence(
+                session,
+                report_id=report.id,
+                role=actor_role,
+                user_id=user.id,
+                evidence_type=str(evidence_type),
+                description=str(description),
+                occurred_at=BASE_DATE - timedelta(days=40),
+                preserved=bool(preserved),
+                chain_of_custody=f"【デモ】保全手続の記録{DEMO_SUFFIX}",
+            )
+            wb_counts["whistleblower_evidence"] += 1
+        for interviewee_type, name, summary in spec["interviews"]:
+            await whistleblower_service.add_interview(
+                session,
+                report_id=report.id,
+                role=actor_role,
+                user_id=user.id,
+                interviewee_type=str(interviewee_type),
+                conducted_at=datetime.now(UTC) - timedelta(days=15),
+                interviewee_name=str(name),
+                summary=str(summary),
+            )
+            wb_counts["whistleblower_interviews"] += 1
+        for note in spec["notes"]:
+            await whistleblower_service.add_note(
+                session,
+                report_id=report.id,
+                role=actor_role,
+                user_id=user.id,
+                note=str(note),
+            )
+        for category, action_title, action_status in spec["actions"]:
+            action = await whistleblower_service.add_action(
+                session,
+                report_id=report.id,
+                role=actor_role,
+                user_id=user.id,
+                action_category=str(category),
+                title=str(action_title),
+                description=f"【デモ】是正・再発防止措置{DEMO_SUFFIX}",
+                owner_id=user.id,
+                due_date=BASE_DATE + timedelta(days=60),
+            )
+            action.status = str(action_status)
+            if action.status in {"completed", "verified"}:
+                action.completed_at = datetime.now(UTC) - timedelta(days=2)
+            wb_counts["whistleblower_actions"] += 1
+        existing_wb_titles.add(title)
+    await session.flush()
+    # タイムラインはサービス層が各操作で追記するため実測値を数える。
+    wb_timeline_total = 0
+    if wb_counts["whistleblower_reports"]:
+        new_report_ids = list(
+            (
+                await session.execute(
+                    select(WhistleblowerReport.id).where(
+                        WhistleblowerReport.title.like(f"%{DEMO_SUFFIX}")
+                    )
+                )
+            ).scalars()
+        )
+        wb_timeline_total = int(
+            (
+                await session.execute(
+                    select(func.count())
+                    .select_from(WhistleblowerTimelineEvent)
+                    .where(WhistleblowerTimelineEvent.report_id.in_(new_report_ids))
+                )
+            ).scalar_one()
+        )
+    wb_counts["whistleblower_timeline_events"] = wb_timeline_total
+    counts.update(wb_counts)
+
+    # ---- 独禁法・入札談合コンプライアンス（画面 /compliance/antitrust）----
+    existing_atc_subjects = set(
+        (
+            await session.execute(
+                select(AntitrustCheck.subject).where(AntitrustCheck.subject.like(f"%{DEMO_SUFFIX}"))
+            )
+        ).scalars()
+    )
+    antitrust_check_count = 0
+    for check_type, subject, context in ANTITRUST_CHECKS:
+        if subject in existing_atc_subjects:
+            continue
+        await antitrust_service.create_check(
+            session,
+            actor_id=user.id,
+            check_type=check_type,
+            subject=subject,
+            context=context,
+            contract_id=demo_contracts[0].id if demo_contracts else None,
+            notes=f"【デモ】決定論的ルールベース判定{DEMO_SUFFIX}",
+        )
+        antitrust_check_count += 1
+        existing_atc_subjects.add(subject)
+    await session.flush()
+    counts["antitrust_checks"] = antitrust_check_count
+
+    existing_apa_titles = set(
+        (
+            await session.execute(
+                select(AntitrustPriorApplication.title).where(
+                    AntitrustPriorApplication.title.like(f"%{DEMO_SUFFIX}")
+                )
+            )
+        ).scalars()
+    )
+    antitrust_app_count = 0
+    for idx, (app_type, app_title, counterparty, amount, app_status) in enumerate(
+        ANTITRUST_APPLICATIONS
+    ):
+        if app_title in existing_apa_titles:
+            continue
+        application = await antitrust_service.create_application(
+            session,
+            actor_id=user.id,
+            application_type=app_type,
+            title=app_title,
+            counterparty_name="田中 太郎",
+            counterparty_organization=counterparty,
+            purpose=f"【デモ】事前申請の目的（架空）{DEMO_SUFFIX}",
+            scheduled_at=datetime.now(UTC) + timedelta(days=7 + idx * 3),
+            location="架空本社会議室（デモ）",
+            amount_jpy=amount,
+            attendees=["田中 太郎", "鈴木 花子"],
+            contract_id=demo_contracts[0].id if demo_contracts else None,
+        )
+        application.status = app_status
+        if app_status in {"approved", "completed"}:
+            application.approved_by = user.id
+            application.approved_at = datetime.now(UTC) - timedelta(days=5)
+            application.decision_note = f"【デモ】承認（架空の決裁記録）{DEMO_SUFFIX}"
+        if app_status == "completed":
+            application.occurred_at = datetime.now(UTC) - timedelta(days=2)
+            application.outcome_note = f"【デモ】実施記録（架空）{DEMO_SUFFIX}"
+            application.reported_at = datetime.now(UTC) - timedelta(days=1)
+        if app_status == "rejected":
+            application.decision_note = f"【デモ】金額上限を超えるため却下{DEMO_SUFFIX}"
+        antitrust_app_count += 1
+        existing_apa_titles.add(app_title)
+    await session.flush()
+    counts["antitrust_prior_applications"] = antitrust_app_count
+
+    existing_consult_queries = set(
+        (
+            await session.execute(
+                select(AntitrustConsultation.query_text).where(
+                    AntitrustConsultation.query_text.like("%【デモ】%")
+                )
+            )
+        ).scalars()
+    )
+    antitrust_consult_count = 0
+    for query_text, answer_text in ANTITRUST_CONSULTATIONS:
+        if query_text in existing_consult_queries:
+            continue
+        await antitrust_service.create_consultation(
+            session,
+            actor_id=user.id,
+            query_text=query_text,
+            contract_id=demo_contracts[0].id if demo_contracts else None,
+        )
+        # create_consultation は引用付き回答を生成する。デモ回答で上書きする。
+        row = (
+            await session.execute(
+                select(AntitrustConsultation)
+                .where(AntitrustConsultation.query_text == query_text)
+                .order_by(AntitrustConsultation.id.desc())
+                .limit(1)
+            )
+        ).scalar_one()
+        row.answer_text = answer_text
+        antitrust_consult_count += 1
+        existing_consult_queries.add(query_text)
+    await session.flush()
+    counts["antitrust_consultations"] = antitrust_consult_count
+
+    existing_training_titles = set(
+        (
+            await session.execute(
+                select(ComplianceTraining.training_title).where(
+                    ComplianceTraining.training_title.like(f"%{DEMO_SUFFIX}")
+                )
+            )
+        ).scalars()
+    )
+    training_count = 0
+    for idx, (training_title, category, score) in enumerate(COMPLIANCE_TRAININGS):
+        if training_title in existing_training_titles:
+            continue
+        await antitrust_service.create_training(
+            session,
+            actor_id=user.id,
+            training_title=training_title,
+            completed_at=BASE_DATE - timedelta(days=20 + idx * 15),
+            user_id=user.id if idx % 2 == 0 else None,
+            attendee_name="伊藤 直美" if idx % 2 else None,
+            category=category,
+            score=score,
+            notes=f"【デモ】研修履歴（架空）{DEMO_SUFFIX}",
+        )
+        training_count += 1
+        existing_training_titles.add(training_title)
+    await session.flush()
+    counts["compliance_trainings"] = training_count
+
+    # ---- 紛争管理の高度化（画面 /disputes 詳細）----
+    # 対象はデモ紛争（DSP-2026-%）のみ。既存データには触れない。
+    demo_disputes = list(
+        (
+            await session.execute(
+                select(Dispute)
+                .where(Dispute.dispute_no.like("DSP-2026-%"))
+                .order_by(Dispute.dispute_no)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    dispute_ext_counts = {
+        "dispute_delay_events": 0,
+        "dispute_argument_positions": 0,
+        "dispute_settlement_options": 0,
+        "dispute_proceeding_stages": 0,
+        "dispute_evidence": 0,
+        "dispute_timeline_events": 0,
+    }
+    for dispute in demo_disputes:
+        # 既に遅延事象があるデモ紛争はスキップ（冪等）。
+        has_ext = (
+            await session.execute(
+                select(DisputeDelayEvent.id)
+                .where(DisputeDelayEvent.dispute_id == dispute.id)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if has_ext is not None:
+            continue
+
+        for spec in DISPUTE_DELAY_EVENTS:
+            occurred_from = BASE_DATE + timedelta(days=int(spec["occurred_from_offset"]))
+            occurred_to = BASE_DATE + timedelta(days=int(spec["occurred_to_offset"]))
+            delay_row = await dispute_ext_service.add_delay_event(
+                session,
+                dispute_id=dispute.id,
+                actor_id=user.id,
+                data={
+                    "cause_category": spec["cause_category"],
+                    "title": spec["title"],
+                    "description": spec["description"],
+                    "occurred_from": occurred_from,
+                    "occurred_to": occurred_to,
+                    "delay_days": spec["delay_days"],
+                    "responsible_party": spec["responsible_party"],
+                    "additional_cost_jpy": spec["additional_cost_jpy"],
+                    "eot_days_requested": spec["eot_days_requested"],
+                },
+            )
+            delay_row.eot_status = str(spec["eot_status"])
+            granted = spec["eot_days_granted"]
+            if granted is not None:
+                delay_row.eot_days_granted = int(granted)
+                delay_row.eot_decided_at = datetime.now(UTC) - timedelta(days=5)
+                delay_row.eot_decided_by = user.id
+                delay_row.eot_note = f"【デモ】工期延長の判定記録{DEMO_SUFFIX}"
+            dispute_ext_counts["dispute_delay_events"] += 1
+
+        for spec in DISPUTE_ARGUMENTS:
+            await dispute_ext_service.add_argument_position(
+                session,
+                dispute_id=dispute.id,
+                actor_id=user.id,
+                data={**spec, "evidence_refs": []},
+            )
+            dispute_ext_counts["dispute_argument_positions"] += 1
+
+        for spec in DISPUTE_SETTLEMENT_OPTIONS:
+            await dispute_ext_service.add_settlement_option(
+                session,
+                dispute_id=dispute.id,
+                actor_id=user.id,
+                data=dict(spec),
+            )
+            dispute_ext_counts["dispute_settlement_options"] += 1
+
+        for spec in DISPUTE_STAGES:
+            started = BASE_DATE + timedelta(days=int(spec["started_offset"]))
+            ended_offset = spec["ended_offset"]
+            ended_at = (
+                BASE_DATE + timedelta(days=int(ended_offset))
+                if ended_offset is not None
+                else None
+            )
+            await dispute_ext_service.add_proceeding_stage(
+                session,
+                dispute_id=dispute.id,
+                actor_id=user.id,
+                data={
+                    "stage": spec["stage"],
+                    "started_at": started,
+                    "ended_at": ended_at,
+                    "forum": spec["forum"],
+                    "notes": f"【デモ】進行ステージの記録{DEMO_SUFFIX}",
+                },
+            )
+            dispute_ext_counts["dispute_proceeding_stages"] += 1
+
+        for ev_type, description in DISPUTE_EVIDENCE_ITEMS:
+            session.add(
+                DisputeEvidence(
+                    dispute_id=dispute.id,
+                    evidence_type=ev_type,
+                    description=description,
+                    occurred_at=BASE_DATE + timedelta(days=12),
+                    preserved=True,
+                    created_by=user.id,
+                    updated_by=user.id,
+                )
+            )
+            dispute_ext_counts["dispute_evidence"] += 1
+
+        for ev_type, description in DISPUTE_TIMELINE_ITEMS:
+            session.add(
+                DisputeTimelineEvent(
+                    dispute_id=dispute.id,
+                    occurred_at=datetime.now(UTC) - timedelta(days=10),
+                    event_type=ev_type,
+                    description=description,
+                    created_by=user.id,
+                    updated_by=user.id,
+                )
+            )
+            dispute_ext_counts["dispute_timeline_events"] += 1
+    await session.flush()
+    counts.update(dispute_ext_counts)
+
+    # ---- JV 詳細（画面 /joint-ventures 詳細・デモ JV のみ）----
+    demo_jv_ids = list(
+        (
+            await session.execute(
+                select(JointVenture.id).where(JointVenture.jv_no.like("JV-DEMO-%"))
+            )
+        ).scalars()
+    )
+    jv_detail_counts = {"jv_agreements": 0, "jv_disputes": 0, "jv_settlements": 0}
+    if demo_jv_ids:
+        existing_jv_agreement_nos = set(
+            (await session.execute(select(JvAgreement.agreement_no))).scalars()
+        )
+        existing_jv_dispute_nos = set(
+            (await session.execute(select(JvDispute.dispute_no))).scalars()
+        )
+        existing_jv_settlement_nos = set(
+            (await session.execute(select(JvSettlement.settlement_no))).scalars()
+        )
+        for idx, jv_id in enumerate(demo_jv_ids):
+            agreement_no = f"JVA-DEMO-{idx + 1:03d}"
+            if agreement_no not in existing_jv_agreement_nos:
+                session.add(
+                    JvAgreement(
+                        jv_id=jv_id,
+                        agreement_no=agreement_no,
+                        status="signed",  # JvAgreementStatus.SIGNED
+                        title=f"【デモ】共同企業体協定書{DEMO_SUFFIX}",
+                        summary="架空の JV 協定です（デモ）。",
+                        signed_at=BASE_DATE - timedelta(days=120),
+                        created_by=user.id,
+                        updated_by=user.id,
+                    )
+                )
+                jv_detail_counts["jv_agreements"] += 1
+            dispute_no = f"JVD-DEMO-{idx + 1:03d}"
+            if dispute_no not in existing_jv_dispute_nos:
+                session.add(
+                    JvDispute(
+                        jv_id=jv_id,
+                        dispute_no=dispute_no,
+                        status="open",
+                        title=f"【デモ】出来高配分に関する意見相違{DEMO_SUFFIX}",
+                        claimant_name="デモ構成員A（架空）",
+                        respondent_name="デモ構成員B（架空）",
+                        amount_claimed_jpy=3_000_000 + idx * 500_000,
+                        detail="架空の JV 内部紛争です（デモ）。",
+                        raised_at=BASE_DATE - timedelta(days=30),
+                        created_by=user.id,
+                        updated_by=user.id,
+                    )
+                )
+                jv_detail_counts["jv_disputes"] += 1
+            settlement_no = f"JVS-DEMO-{idx + 1:03d}"
+            if settlement_no not in existing_jv_settlement_nos:
+                session.add(
+                    JvSettlement(
+                        jv_id=jv_id,
+                        settlement_no=settlement_no,
+                        status="settled",  # JvSettlementStatus.SETTLED
+                        title=f"【デモ】精算合意書{DEMO_SUFFIX}",
+                        settled_at=BASE_DATE - timedelta(days=10),
+                        settlement_amount_jpy=1_500_000 + idx * 250_000,
+                        detail="架空の JV 精算合意です（デモ）。",
+                        recorded_by=user.id,
+                        created_by=user.id,
+                        updated_by=user.id,
+                    )
+                )
+                jv_detail_counts["jv_settlements"] += 1
+        await session.flush()
+    counts.update(jv_detail_counts)
+
+
+
+async def delete_phase3_demo(session: Any, counts: dict[str, int]) -> None:
+    """Phase 3 のデモデータを削除する（契約・紛争削除より先に呼ぶこと）。
+
+    これらは契約・紛争・保全へ FK を持つため、先に消さないと SET NULL /
+    CASCADE で件数を正しく数えられない。
+    """
+
+    demo_contract_ids_for_phase3 = list(
+        (
+            await session.execute(
+                select(Contract.id).where(Contract.contract_no.like("CTR-2026-%"))
+            )
+        ).scalars()
+    )
+
+    # ------------------------------------------------------------------
+    # Phase 3 デモデータの削除（契約・紛争・JV の削除より先に処理する）
+    #
+    # これらは契約/紛争/保全へ FK を持つため、先に消さないと
+    # SET NULL や CASCADE で件数を正しく数えられない。
+    # ------------------------------------------------------------------
+
+    # 条項ライブラリ（code=DEMO-%）
+    counts["clause_library"] = (
+        await session.execute(delete(ClauseLibrary).where(ClauseLibrary.code.like("DEMO-%")))
+    ).rowcount
+
+    # IP ウォッチ検知イベント（event_code=DEMO-IPW-%）
+    counts["ip_watch_events"] = (
+        await session.execute(
+            delete(IpWatchEvent).where(IpWatchEvent.event_code.like("DEMO-IPW-%"))
+        )
+    ).rowcount
+
+    # 変更契約の証拠（デモ変更契約 CHG-2026-% 配下）
+    demo_change_ids = list(
+        (
+            await session.execute(
+                select(ChangeOrder.id).where(ChangeOrder.change_no.like("CHG-2026-%"))
+            )
+        ).scalars()
+    )
+    if demo_change_ids:
+        counts["change_order_evidence"] = (
+            await session.execute(
+                delete(ChangeOrderEvidence).where(
+                    ChangeOrderEvidence.change_order_id.in_(demo_change_ids)
+                )
+            )
+        ).rowcount
+    else:
+        counts["change_order_evidence"] = 0
+
+    # 証拠・eDiscovery（title 末尾 DEMO_SUFFIX で判別）
+    demo_evidence_ids = list(
+        (
+            await session.execute(
+                select(Evidence.id).where(Evidence.title.like(f"%{DEMO_SUFFIX}"))
+            )
+        ).scalars()
+    )
+    # evidence_hold_release_approvals は ORM モデルが migration に存在しない
+    # ``deleted_at`` を参照するため ORM では削除できない（生 SQL で削除）。
+    if demo_evidence_ids:
+        counts["evidence_hold_release_approvals"] = (
+            await session.execute(
+                text(
+                    "DELETE FROM evidence_hold_release_approvals "
+                    "WHERE reason LIKE :pat OR evidence_id IN :evidence_ids"
+                ).bindparams(bindparam("evidence_ids", expanding=True)),
+                {"pat": f"%{DEMO_SUFFIX}", "evidence_ids": demo_evidence_ids},
+            )
+        ).rowcount
+        counts["evidence_custody_events"] = (
+            await session.execute(
+                delete(EvidenceCustodyEvent).where(
+                    EvidenceCustodyEvent.evidence_id.in_(demo_evidence_ids)
+                )
+            )
+        ).rowcount
+        counts["evidences"] = (
+            await session.execute(delete(Evidence).where(Evidence.id.in_(demo_evidence_ids)))
+        ).rowcount
+    else:
+        counts["evidence_hold_release_approvals"] = (
+            await session.execute(
+                text(
+                    "DELETE FROM evidence_hold_release_approvals WHERE reason LIKE :pat"
+                ),
+                {"pat": f"%{DEMO_SUFFIX}"},
+            )
+        ).rowcount
+        counts["evidence_custody_events"] = 0
+        counts["evidences"] = 0
+
+    # Legal Hold（reason 末尾 DEMO_SUFFIX で判別）
+    counts["legal_holds"] = (
+        await session.execute(delete(LegalHold).where(LegalHold.reason.like(f"%{DEMO_SUFFIX}")))
+    ).rowcount
+
+    # 内部通報（title 末尾 DEMO_SUFFIX で判別・子 → 親の順）
+    demo_wb_ids = list(
+        (
+            await session.execute(
+                select(WhistleblowerReport.id).where(
+                    WhistleblowerReport.title.like(f"%{DEMO_SUFFIX}")
+                )
+            )
+        ).scalars()
+    )
+    if demo_wb_ids:
+        for wb_model in (
+            WhistleblowerAction,
+            WhistleblowerTimelineEvent,
+            WhistleblowerInterview,
+            WhistleblowerEvidence,
+            WhistleblowerCaseAccess,
+            WhistleblowerReporterProfile,
+        ):
+            report_filter = wb_model.report_id.in_(demo_wb_ids)  # type: ignore[attr-defined]
+            counts[wb_model.__tablename__] = (
+                await session.execute(delete(wb_model).where(report_filter))
+            ).rowcount
+        counts["whistleblower_reports"] = (
+            await session.execute(
+                delete(WhistleblowerReport).where(WhistleblowerReport.id.in_(demo_wb_ids))
+            )
+        ).rowcount
+    else:
+        counts["whistleblower_actions"] = 0
+        counts["whistleblower_timeline_events"] = 0
+        counts["whistleblower_interviews"] = 0
+        counts["whistleblower_evidence"] = 0
+        counts["whistleblower_case_access"] = 0
+        counts["whistleblower_reporter_profiles"] = 0
+        counts["whistleblower_reports"] = 0
+
+    # 独禁法・入場談合コンプライアンス（デモ判別子で削除）
+    counts["antitrust_checks"] = (
+        await session.execute(
+            delete(AntitrustCheck).where(AntitrustCheck.subject.like(f"%{DEMO_SUFFIX}"))
+        )
+    ).rowcount
+    counts["antitrust_prior_applications"] = (
+        await session.execute(
+            delete(AntitrustPriorApplication).where(
+                AntitrustPriorApplication.title.like(f"%{DEMO_SUFFIX}")
+            )
+        )
+    ).rowcount
+    counts["antitrust_consultations"] = (
+        await session.execute(
+            delete(AntitrustConsultation).where(
+                AntitrustConsultation.query_text.like("%【デモ】%")
+            )
+        )
+    ).rowcount
+    counts["compliance_trainings"] = (
+        await session.execute(
+            delete(ComplianceTraining).where(
+                ComplianceTraining.training_title.like(f"%{DEMO_SUFFIX}")
+            )
+        )
+    ).rowcount
+
+    # 紛争管理の高度化（デモ紛争 DSP-2026-% 配下）
+    demo_dispute_ids = list(
+        (
+            await session.execute(
+                select(Dispute.id).where(Dispute.dispute_no.like("DSP-2026-%"))
+            )
+        ).scalars()
+    )
+    for disp_model in (
+        DisputeDelayEvent,
+        DisputeArgumentPosition,
+        DisputeSettlementOption,
+        DisputeProceedingStage,
+        DisputeEvidence,
+        DisputeTimelineEvent,
+    ):
+        if demo_dispute_ids:
+            dispute_filter = disp_model.dispute_id.in_(  # type: ignore[attr-defined]
+                demo_dispute_ids
+            )
+            counts[disp_model.__tablename__] = (
+                await session.execute(delete(disp_model).where(dispute_filter))
+            ).rowcount
+        else:
+            counts[disp_model.__tablename__] = 0
+
+    # 契約単位 ACL（デモ契約 CTR-2026-% 配下・contracts の CASCADE 前に消す）
+    if demo_contract_ids_for_phase3:
+        counts["access_control_entries"] = (
+            await session.execute(
+                delete(AccessControlEntry).where(
+                    AccessControlEntry.contract_id.in_(demo_contract_ids_for_phase3)
+                )
+            )
+        ).rowcount
+    else:
+        counts["access_control_entries"] = 0
+
+    # 添付（sharepoint_item_id=DEMO-SP-%・change_order_evidence 削除後に消す）
+    counts["attachments"] = (
+        await session.execute(
+            delete(Attachment).where(Attachment.sharepoint_item_id.like("DEMO-SP-%"))
+        )
+    ).rowcount
+
 
 
 async def seed(session, *, dry_run: bool) -> dict[str, int]:
@@ -619,6 +2201,7 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         .where(LegalReview.ai_model == "demo-ai-model")
         .values(ai_model="deepseek-chat")
     )
+    counts["reviews_repaired"] = await repair_legacy_review_issues(session)
 
     risk_count = 0
     for idx, review in enumerate(reviews):
@@ -1625,12 +3208,28 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         if idx == 0:
             # 期限切れ例（アラート表示用）
             partner_row.permit_expiry = date.today() - timedelta(days=10)
+        # 冪等: 同一協力会社・同一タイトルの再審査が既にあれば再投入しない。
+        # 旧実装は無条件に create_review していたため、再実行のたびに
+        # partner_reviews が 3 件ずつ増えていた（2026-09-28 実測: 2 回目で +3）。
+        review_title = f"定期再審査（デモ）— {partner_row.name}"
+        already_seeded = (
+            await session.execute(
+                select(PartnerReview.id).where(
+                    PartnerReview.partner_id == partner_row.id,
+                    PartnerReview.title == review_title,
+                )
+            )
+        ).first()
+        if already_seeded is not None:
+            # Risk Score は毎回再計算しても同値（決定論的）なので冪等に再実行する。
+            await partner_ext_service.refresh_risk_score(session, partner_id=partner_row.id)
+            continue
         review = await partner_ext_service.create_review(
             session,
             actor_id=user.id,
             partner_id=partner_row.id,
             review_type="periodic",
-            title=f"定期再審査（デモ）— {partner_row.name}",
+            title=review_title,
         )
         await partner_ext_service.complete_review(
             session,
@@ -1689,6 +3288,9 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
     await session.flush()
     counts["labor_commitments"] = commitment_count
 
+    # Phase 3 デモデータ（whistleblower / evidence / antitrust / dispute 拡張 /
+    # 条項ライブラリ / IP ウォッチ検知 / Legal Hold / JV 詳細）は seed_phase3() に集約。
+    await seed_phase3(session, user=user, demo_contracts=demo_contracts, counts=counts)
     # --- 監査ログ（デモフラグ付き・append-only）---
     # 新規投入した行についてのみ記録する（冪等性維持）。
     audit_count = 0
@@ -1843,6 +3445,8 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
 
 async def delete_demo(session) -> dict[str, int]:
     counts: dict[str, int] = {}
+
+    await delete_phase3_demo(session, counts)
     demo_contract_ids = list(
         (await session.execute(select(Contract.id).where(Contract.contract_no.like("CTR-2026-%")))).scalars()
     )
@@ -1943,7 +3547,7 @@ async def delete_demo(session) -> dict[str, int]:
         counts["ip_documents"] = (
             await session.execute(delete(IpDocument).where(IpDocument.ip_asset_id.in_(demo_asset_ids)))
         ).rowcount
-        counts["ip_watch_events"] = (
+        counts["ip_watch_events"] = counts.get("ip_watch_events", 0) + (
             await session.execute(delete(IpWatchEvent).where(IpWatchEvent.ip_asset_id.in_(demo_asset_ids)))
         ).rowcount
         counts["ip_assets"] = (
@@ -1951,7 +3555,7 @@ async def delete_demo(session) -> dict[str, int]:
         ).rowcount
     else:
         counts["ip_documents"] = 0
-        counts["ip_watch_events"] = 0
+        counts["ip_watch_events"] = counts.get("ip_watch_events", 0)
         counts["ip_assets"] = 0
     counts["ip_watch_targets"] = (
         await session.execute(

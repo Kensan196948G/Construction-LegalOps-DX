@@ -360,6 +360,18 @@ class DisputeExposureOut(BaseModel):
     deadlines_within_180d: int = 0
 
 
+class DisputeDetailOut(DisputeOut):
+    """``GET /disputes/{id}`` の詳細レスポンス.
+
+    frontend ``lib/api/schemas.ts`` の ``disputeDetailSchema``
+    （``disputeSchema`` + ``timeline`` + ``evidence``）と同形。関連は
+    ``dispute_service.get_dispute`` が ``selectinload`` 済みのものを返す。
+    """
+
+    timeline: list[DisputeTimelineEventOut] = Field(default_factory=list)
+    evidence: list[DisputeEvidenceOut] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------------------
 # P0-6: ACL / Legal Hold / Retention / 監査アンカー / Sentinel
 # ---------------------------------------------------------------------------
@@ -531,6 +543,7 @@ __all__ = [
     "ContractDocumentOut",
     "ContractDocumentUpdate",
     "DisputeCreate",
+    "DisputeDetailOut",
     "DisputeEvidenceCreate",
     "DisputeEvidenceOut",
     "DisputeExposureOut",

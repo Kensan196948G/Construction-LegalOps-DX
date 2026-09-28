@@ -179,16 +179,16 @@ export default function PaymentsPage() {
               </CardTitle>
               <Badge
                 variant={
-                  result.overall_status === "block"
+                  result.overall_status === "fail"
                     ? "destructive"
-                    : result.overall_status === "warn"
+                    : result.overall_status === "warning"
                       ? "secondary"
                       : "default"
                 }
               >
                 {result.overall_status === "pass"
                   ? "適合"
-                  : result.overall_status === "warn"
+                  : result.overall_status === "warning"
                     ? "要確認"
                     : "不適合"}
               </Badge>
@@ -255,8 +255,14 @@ export default function PaymentsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm font-medium">{f.title}</p>
-                            <p className="text-xs text-muted-foreground">{f.description}</p>
+                            <p className="text-sm font-medium">{f.message}</p>
+                            {Object.keys(f.detail).length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                {Object.entries(f.detail)
+                                  .map(([key, value]) => `${key}: ${String(value)}`)
+                                  .join(" / ")}
+                              </p>
+                            )}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">{f.citation}</TableCell>
                         </TableRow>

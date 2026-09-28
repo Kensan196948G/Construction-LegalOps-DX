@@ -34,13 +34,21 @@ def _to_dict(risk: RiskItem) -> dict[str, Any]:
     ``category`` is exposed as ``title`` because the API schema uses that field
     name (RiskOut.title) while the DB column is named ``category``.
     ``department_id`` is not stored on RiskItem; we return ``None``.
+
+    併せて ``category`` / ``probability`` / ``impact`` をそのまま返す
+    （frontend ``riskItemSchema`` はこの 3 項目を参照するが、以前は返しておらず
+    リスク一覧のスコアが severity 代替・カテゴリが常に「その他」になっていた）。
+    ``title`` は既存 consumer のため残す（後方互換）。
     """
     return {
         "id": risk.id,
         "contract_id": risk.contract_id,
         "severity": risk.severity,
         "status": risk.status,
-        "title": risk.category,  # category -> title mapping
+        "title": risk.category,  # category -> title mapping (legacy)
+        "category": risk.category,
+        "probability": risk.probability,
+        "impact": risk.impact,
         "description": risk.description,
         "mitigation": risk.mitigation,
         "owner_id": risk.owner_id,

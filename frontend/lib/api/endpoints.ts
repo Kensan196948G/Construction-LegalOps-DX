@@ -197,17 +197,62 @@ import {
 
 export interface ListParams {
   page?: number;
+  /**
+   * ページサイズ。**backend の実パラメータ名は `size`**
+   * （`page_size` を受け付ける一覧エンドポイントは 0 件）。
+   */
+  size?: number;
+  /**
+   * 旧名のページサイズ指定。backend には送られず、`buildParams` が
+   * `size` に写像する（既存呼び出しを壊さないための後方互換）。
+   */
   page_size?: number;
   q?: string;
   sort?: string;
   [key: string]: unknown;
 }
 
-function buildParams(params?: ListParams): Record<string, unknown> | undefined {
+/**
+ * ページサイズの上限。`app/schemas/common.py::Pagination.page_size` と同じ値。
+ *
+ * backend の `size` はエンドポイントごとに `le=100` / `le=200` / `le=500` と
+ * 幅があるため、ここでは 200 に丸める。ページ側が URL クエリ（`?perPage=`）を
+ * そのまま渡す箇所があり、手入力の巨大値で 422 になるのを防ぐ。
+ * 実際の呼び出し元が要求する値はすべて 200 以下。
+ */
+const MAX_PAGE_SIZE = 200;
+
+/** `page_size` を backend が受け取れる正整数へ正規化する（不能なら undefined）。 */
+function normalisePageSize(value: unknown): number | undefined {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+    return undefined;
+  }
+  return Math.min(parsed, MAX_PAGE_SIZE);
+}
+
+/**
+ * クエリパラメータを組み立てる。
+ *
+ * `page_size` は backend の `size` に写像する。以前は素通ししていたため、
+ * frontend が指定した件数（例: dashboard の「直近レビュー 5 件」）が backend に
+ * 無視され、常に既定値（多くは 20 件）が返っていた。呼び出し側を個別に直すより、
+ * この 1 箇所に寄せる方が drift に強い。
+ *
+ * 明示的に `size` が渡された場合はそちらを優先する。
+ */
+export function buildParams(params?: ListParams): Record<string, unknown> | undefined {
   if (!params) return undefined;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined || v === null || v === "") continue;
+    if (k === "page_size") {
+      // 明示的な `size` があればそちらを優先し、`page_size` は送らない。
+      if (params.size !== undefined && params.size !== null) continue;
+      const size = normalisePageSize(v);
+      if (size !== undefined) out.size = size;
+      continue;
+    }
     out[k] = v;
   }
   return Object.keys(out).length ? out : undefined;
@@ -911,8 +956,8 @@ export const governanceApi = {
       params: buildParams(params),
     }),
 
-  /** 保持期間 */
-  retentionRules: () => getParsed(z.array(retentionRuleSchema), "/retention"),
+  /** 保持期間（backend は `/retention` を名前空間とし、リソースは `/retention/rules`） */
+  retentionRules: () => getParsed(z.array(retentionRuleSchema), "/retention/rules"),
 };
 
 export const legalAiApi = {

@@ -1,4 +1,10 @@
-import { contractSchema, legalReviewSchema, workflowApplicationSchema } from "@/lib/api/schemas";
+import {
+  contractSchema,
+  legalReviewSchema,
+  paymentComplianceSchema,
+  riskItemSchema,
+  workflowApplicationSchema,
+} from "@/lib/api/schemas";
 
 /**
  * Regression: backend serializes Decimal as strings and ReviewStatus includes
@@ -46,5 +52,131 @@ describe("API schema compatibility with backend payloads", () => {
       risk_score: 70,
     });
     expect(parsed.success).toBe(true);
+  });
+
+  /**
+   * Regression (/payments が全契約で「API 未接続」):
+   * backend `PaymentFindingOut` は {code, severity, message, citation, detail} を
+   * 返すが、旧 frontend schema は {code, title, severity, description, citation} を
+   * 要求していたため、zod parse が必ず失敗し offline 表示になっていた。
+   * `overall_status` も backend は fail | warning | pass の 3 値（旧 schema は
+   * warn | block という存在しない値域だった）。
+   */
+  it("accepts real backend payment-compliance payload (fail/warning/pass)", () => {
+    // MVP `GET /contracts/44/payment-compliance` の実レスポンス（2026-09-28 実測）
+    const parsed = paymentComplianceSchema.safeParse({
+      contract_id: 44,
+      order_date: null,
+      receipt_date: null,
+      inspection_date: null,
+      payment_date: null,
+      transaction_kind: null,
+      is_public_work: false,
+      law_version: "unknown",
+      applicable_threshold_days: 60,
+      days_receipt_to_payment: null,
+      days_inspection_to_payment: null,
+      late_interest_jpy: "0",
+      overall_status: "warning",
+      findings: [
+        {
+          code: "payment_order_date_unknown",
+          severity: "warn",
+          message: "発注日が未設定のため新旧法（取適法/旧下請法）の適用判定ができません。",
+          citation: "取適法 附則（2026-01-01 施行）",
+          detail: {},
+        },
+      ],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.overall_status).toBe("warning");
+      expect(parsed.data.findings[0]?.message).toContain("発注日が未設定");
+      expect(parsed.data.findings[0]?.detail).toEqual({});
+    }
+  });
+
+  it("accepts every payment overall_status the backend can emit", () => {
+    for (const overall_status of ["pass", "warning", "fail"] as const) {
+      const parsed = paymentComplianceSchema.safeParse({
+        contract_id: 1,
+        law_version: "toritekihou",
+        applicable_threshold_days: 60,
+        late_interest_jpy: "0",
+        overall_status,
+      });
+      expect(parsed.success).toBe(true);
+    }
+    // 旧 schema の値域（warn / block）は backend には存在しないので拒否される
+    expect(
+      paymentComplianceSchema.safeParse({
+        contract_id: 1,
+        law_version: "toritekihou",
+        applicable_threshold_days: 60,
+        late_interest_jpy: "0",
+        overall_status: "block",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts every payment finding severity the backend can emit", () => {
+    for (const severity of ["block", "warn", "info"] as const) {
+      const parsed = paymentComplianceSchema.safeParse({
+        contract_id: 1,
+        law_version: "toritekihou",
+        applicable_threshold_days: 60,
+        late_interest_jpy: "0",
+        overall_status: "pass",
+        findings: [
+          { code: "x", severity, message: "m", citation: "c", detail: { k: 1 } },
+        ],
+      });
+      expect(parsed.success).toBe(true);
+    }
+  });
+
+  /**
+   * Regression: backend `RiskItemStatus` は 7 値だが、frontend の
+   * `riskStatusEnum` は transferred / avoided が欠けていた。その状態のリスクが
+   * 1 件でもあると `GET /risks` の parse が全体失敗し、リスク一覧が空になる。
+   */
+  it("accepts every risk status the backend can emit", () => {
+    for (const status of [
+      "open",
+      "in_progress",
+      "accepted",
+      "transferred",
+      "mitigated",
+      "avoided",
+      "closed",
+    ]) {
+      const parsed = riskItemSchema.safeParse({
+        id: 1,
+        contract_id: 2,
+        title: "契約条項",
+        severity: "high",
+        status,
+      });
+      expect({ status, ok: parsed.success }).toEqual({ status, ok: true });
+    }
+  });
+
+  it("accepts the risk category / probability / impact returned by GET /risks", () => {
+    const parsed = riskItemSchema.safeParse({
+      id: 1,
+      contract_id: 2,
+      title: "契約条項",
+      category: "契約条項",
+      severity: "high",
+      probability: "high",
+      impact: "medium",
+      status: "open",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.category).toBe("契約条項");
+      expect(parsed.data.probability).toBe("high");
+      expect(parsed.data.impact).toBe("medium");
+    }
   });
 });

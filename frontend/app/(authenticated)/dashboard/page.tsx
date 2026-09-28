@@ -12,7 +12,7 @@ import { PendingApprovalsList } from "@/components/dashboard/pending-approvals-l
 import { RecentReviewsList } from "@/components/dashboard/recent-reviews-list";
 import { RiskDistributionChart } from "@/components/dashboard/risk-distribution-chart";
 import { bindServerSession } from "@/lib/auth/session-bridge.server";
-import { dashboardApi, reviewsApi, risksApi, contractsApi } from "@/lib/api/endpoints";
+import { dashboardApi, reviewsApi, risksApi, workflowsApi } from "@/lib/api/endpoints";
 import type { DashboardSummary } from "@/lib/api/schemas";
 
 export const metadata: Metadata = {
@@ -66,17 +66,28 @@ const RISK_LEVELS: RiskLevel[] = ["low", "medium", "high", "critical"];
 async function getDashboardData(): Promise<PageData> {
   const cleanup = await bindServerSession();
   try {
-    const [summaryResult, reviewsResult, heatmapResult, contractsResult] =
+    const [summaryResult, reviewsResult, heatmapResult, applicationsResult] =
       await Promise.allSettled([
         dashboardApi.summary(),
-        reviewsApi.list({ page: 1, page_size: 5 }),
+        reviewsApi.list({ page: 1, size: 5 }),
         risksApi.heatmap(),
-        contractsApi.list({ status: "pending_approval", page: 1, page_size: 5 }),
+        // 「承認待ち」は workflow_step の pending が実体。contracts の status に
+        // pending_approval という値は存在しない（ContractStatus は draft /
+        // in_review / approved / signed / archived / rejected のみ）ため、
+        // contractsApi.list({status:"pending_approval"}) は常に 0 件だった。
+        // 稟議一覧 API（workflow_step × contract 結合ビュー）が正しい取得元。
+        // 注意: backend のページサイズ param は `size`（`page_size` は無視される）。
+        workflowsApi.applications({ status: "pending", page: 1, size: 5 }),
       ]);
 
+    // このバナーは「そのページの指標が実際に取れなかった」ことを示す。
+    // heatmap（→ riskDistribution）と applications（→ pendingApprovals）も
+    // 失敗時は 0 件/空として描画されてしまうため、degraded に含める。
     const degraded =
       summaryResult.status === "rejected" ||
-      reviewsResult.status === "rejected";
+      reviewsResult.status === "rejected" ||
+      heatmapResult.status === "rejected" ||
+      applicationsResult.status === "rejected";
 
     // KPI summary
     const summary =
@@ -114,15 +125,15 @@ async function getDashboardData(): Promise<PageData> {
       count: riskCountMap[level],
     }));
 
-    // Pending approvals from contracts with pending_approval status
+    // 承認待ち = workflow_step が pending の稟議（contract_id を詳細リンクに使う）
     const pendingApprovals: ApprovalItem[] =
-      contractsResult.status === "fulfilled"
-        ? contractsResult.value.items.map((c) => ({
-            id: String(c.id),
-            contractTitle: c.title,
-            route: c.contract_type ?? "—",
-            waitingFor: c.drafter?.display_name ?? "承認待ち",
-            dueDate: formatDate(c.end_date),
+      applicationsResult.status === "fulfilled"
+        ? applicationsResult.value.items.map((a) => ({
+            id: String(a.contract_id),
+            contractTitle: a.title,
+            route: a.contract_type,
+            waitingFor: a.applicant ?? a.step_name,
+            dueDate: formatDate(a.due_at),
           }))
         : [];
 

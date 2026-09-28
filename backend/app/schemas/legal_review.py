@@ -7,14 +7,27 @@ defined in :class:`AIReviewResult` and stored in ``legal_reviews.result``
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Annotated, Any
 
-from pydantic import BaseModel, Field
+import structlog
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from app.models.enums import ReviewStatus, ReviewType, RiskLevel
 
 from .common import ORMModel, TimestampsMixin
+
+logger = structlog.get_logger(__name__)
+
+# 旧形式 finding（2026-08-01 以前に投入されたデモデータ）は
+# ``{"detail", "target", "summary", "severity"}`` を持ち、現行の
+# ``ReviewIssue`` が必須とする ``clause_seq`` / ``risk_level`` / ``comment``
+# を持たない。``legal_reviews.result``（JSONB）に残っているこの形を読み取り時に
+# 正規化する（下の ``_normalize_finding`` / ``ReviewDetail._coerce_findings``）。
+# データ側 backfill に依存せず API が 500 を返さないようにするための後方互換層。
+_CLAUSE_SEQ_RE = re.compile(r"第\s*([0-9]+)\s*条")
+_VALID_RISK_LEVELS: frozenset[str] = frozenset(level.value for level in RiskLevel)
 
 
 class SuggestedAction(BaseModel):
@@ -53,6 +66,75 @@ class ReviewIssue(BaseModel):
         pattern="^(finding|compliant|needs_human_review|unverifiable)$",
     )
     suggested_actions: list[SuggestedAction] = Field(default_factory=list)
+
+
+def _extract_clause_seq(target: Any) -> int:
+    """``target``（例 ``"第3条 契約金額"``）から条番号を取り出す。
+
+    抽出できない場合は ``0`` を返す。``ReviewIssue.clause_seq`` は非負整数で、
+    frontend の ``reviewFindingSchema`` も ``nonnegative`` を要求するため
+    ``-1`` は使えない。``0`` は「特定の条項に紐付かない指摘」を表す。
+    """
+    if isinstance(target, int) and not isinstance(target, bool):
+        return target
+    if isinstance(target, str):
+        matched = _CLAUSE_SEQ_RE.search(target)
+        if matched is not None:
+            return int(matched.group(1))
+    return 0
+
+
+def _normalize_finding(raw: Any) -> dict[str, Any] | None:
+    """1 件の finding を ``ReviewIssue`` が検証できる形へ寄せる。
+
+    旧形式キー → 現行キーの対応:
+
+    ==================  ==================
+    旧形式              現行
+    ==================  ==================
+    ``severity``        ``risk_level``
+    ``detail``          ``comment``
+    ``summary``         ``title``
+    ``target``          ``clause_seq``（``第N条`` を抽出。不能なら ``0``）
+    ==================  ==================
+
+    現行形式のキーが既にあればそれを優先する（新形式データは無変更で通る）。
+    dict でも ``ReviewIssue`` でもない要素は ``None`` を返す。
+
+    **採用可否の最終判定はここでは行わない。** 必須項目だけでなく任意項目
+    （``citations`` / ``suggested_actions`` / ``ai_confidence`` など）の型違反も
+    同列に扱うため、呼び出し側 ``ReviewDetail._coerce_findings`` が
+    ``ReviewIssue.model_validate`` で検証し、失敗した要素を読み飛ばす。
+    """
+    if isinstance(raw, ReviewIssue):
+        return raw.model_dump()
+    if isinstance(raw, BaseModel):
+        raw = raw.model_dump()
+    if not isinstance(raw, dict):
+        return None
+
+    item: dict[str, Any] = dict(raw)
+
+    if item.get("risk_level") not in _VALID_RISK_LEVELS:
+        severity = item.get("severity")
+        if isinstance(severity, str) and severity in _VALID_RISK_LEVELS:
+            item["risk_level"] = severity
+
+    if not isinstance(item.get("comment"), str):
+        detail = item.get("detail")
+        if isinstance(detail, str):
+            item["comment"] = detail
+
+    if not isinstance(item.get("title"), str):
+        summary = item.get("summary")
+        if isinstance(summary, str):
+            item["title"] = summary
+
+    clause_seq = item.get("clause_seq")
+    if not isinstance(clause_seq, int) or isinstance(clause_seq, bool) or clause_seq < 0:
+        item["clause_seq"] = _extract_clause_seq(item.get("target"))
+
+    return item
 
 
 class AIReviewResult(BaseModel):
@@ -104,6 +186,56 @@ class ReviewDetail(ReviewRead):
     findings: list[ReviewIssue] = Field(default_factory=list)
     suggested_actions: list[SuggestedAction] = Field(default_factory=list)
     disclaimer: str | None = None
+
+    @field_validator("findings", mode="before")
+    @classmethod
+    def _coerce_findings(cls, value: Any) -> list[ReviewIssue]:
+        """``findings`` を読み取り時に正規化し、壊れた要素で 500 にしない。
+
+        ``legal_reviews.result`` は JSONB で、スキーマ変更前のデータ
+        （旧形式 ``severity`` / ``detail`` / ``summary`` / ``target``）や
+        部分的に壊れた要素が残り得る。
+
+        正規化した候補は **必ず ``ReviewIssue`` として検証してから採用する**。
+        必須項目だけを見て採用すると、``citations: "不正な値"`` のような
+        *任意項目*の型違反が素通りし、呼び出し元のレスポンス検証で 500 に
+        なってしまう（＝データ起因の 500 を防ぐという目的を達成できない）。
+
+        読み飛ばした要素は **黙って握り潰さない**: 件数を warning で記録する。
+        """
+        if value is None:
+            return []
+        if not isinstance(value, (list, tuple)):
+            logger.warning(
+                "legal_review.findings.not_a_list",
+                value_type=type(value).__name__,
+            )
+            return []
+
+        normalized: list[ReviewIssue] = []
+        dropped = 0
+        for raw in value:
+            candidate = _normalize_finding(raw)
+            if candidate is None:
+                dropped += 1
+                continue
+            try:
+                normalized.append(ReviewIssue.model_validate(candidate))
+            except ValidationError:
+                # 必須項目は補えたが、任意項目（citations / suggested_actions /
+                # verdict / ai_confidence 等）の型・値域が壊れているケース。
+                # Pydantic のスキーマ違反は必ず ValidationError になるため、
+                # ここだけを捕捉する（それ以外の例外は実装バグとして表面化させる）。
+                dropped += 1
+                continue
+
+        if dropped:
+            logger.warning(
+                "legal_review.findings.dropped",
+                dropped=dropped,
+                kept=len(normalized),
+            )
+        return normalized
 
 
 class ReviewActionRequest(BaseModel):

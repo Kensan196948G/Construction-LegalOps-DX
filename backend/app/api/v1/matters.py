@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -261,7 +263,9 @@ async def list_contracts(
     from app.models.matter import matter_contracts_table
 
     await matter_service.get_matter(session, matter_id=matter_id)
-    link_rows = (
+    # SQLAlchemy 2.1 no longer lets mypy infer the element type of
+    # ``.scalars().all()``; the annotation is required to keep `mypy app` clean.
+    link_rows: Sequence[int] = (
         (
             await session.execute(
                 select(matter_contracts_table.c.contract_id).where(

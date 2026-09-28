@@ -103,7 +103,20 @@ export type Confidentiality = z.infer<typeof confidentialityEnum>;
 export const riskLevelEnum = z.enum(["low", "medium", "high", "critical"]);
 export type RiskLevel = z.infer<typeof riskLevelEnum>;
 
-export const riskStatusEnum = z.enum(["open", "in_progress", "mitigated", "accepted", "closed"]);
+// backend `app/models/enums.py::RiskItemStatus` は
+// open / in_progress / accepted / transferred / mitigated / avoided / closed の 7 値。
+// 旧 enum は transferred / avoided が欠けており、その状態のリスクが 1 件でもあると
+// `GET /risks` の parse が全体失敗してリスク一覧が空になっていた（潜在バグ。
+// MVP の現データは open のみのため未発現）。
+export const riskStatusEnum = z.enum([
+  "open",
+  "in_progress",
+  "mitigated",
+  "accepted",
+  "transferred",
+  "avoided",
+  "closed",
+]);
 export type RiskStatus = z.infer<typeof riskStatusEnum>;
 
 export const reviewStatusEnum = z.enum([
@@ -578,12 +591,16 @@ export type DisputeProceedingStage = z.infer<typeof disputeProceedingStageSchema
 // 支払・出来高・検収コンプライアンス
 // ---------------------------------------------------------------------------
 
+// backend `app/schemas/business.py::PaymentFindingOut` と一致させること。
+// 旧スキーマは {title, description} を要求していたが backend は
+// {message, detail} を返すため、全契約で parse に失敗し /payments が
+// 「API 未接続」表示になっていた（2026-09-28 実測）。
 export const paymentFindingSchema = z.object({
   code: z.string(),
-  title: z.string(),
   severity: z.enum(["block", "warn", "info"]),
-  description: z.string(),
+  message: z.string(),
   citation: z.string(),
+  detail: z.record(z.string(), z.unknown()).default({}),
 });
 export type PaymentFinding = z.infer<typeof paymentFindingSchema>;
 
@@ -600,7 +617,8 @@ export const paymentComplianceSchema = z.object({
   days_receipt_to_payment: z.number().int().nullable().optional(),
   days_inspection_to_payment: z.number().int().nullable().optional(),
   late_interest_jpy: z.string(),
-  overall_status: z.enum(["pass", "warn", "block"]),
+  // backend `payment_compliance.to_dict()` は fail / warning / pass の 3 値。
+  overall_status: z.enum(["pass", "warning", "fail"]),
   findings: z.array(paymentFindingSchema).default([]),
 });
 export type PaymentCompliance = z.infer<typeof paymentComplianceSchema>;

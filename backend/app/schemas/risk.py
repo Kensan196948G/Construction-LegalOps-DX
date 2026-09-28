@@ -10,6 +10,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from app.models.enums import RiskImpact, RiskProbability
+
 from .common import ORMModel
 
 
@@ -21,6 +23,14 @@ class RiskOut(ORMModel):
     severity: Annotated[str, Field(pattern="^(low|medium|high|critical)$")]
     status: Annotated[str, Field(max_length=32)]
     title: str
+    # ``title`` と同じ DB カラム（``risk_items.category``）を明示名でも返す。
+    # frontend ``riskItemSchema`` は ``category`` を参照するため、未返却だと
+    # リスク一覧のカテゴリが常に「その他」になっていた。
+    category: str | None = None
+    # 値域は DB の CHECK 制約（``ck_risk_probability`` / ``ck_risk_impact``）と
+    # 同じ low|medium|high。既存行・既存 consumer を壊さないよう ``None`` を許容する。
+    probability: RiskProbability | None = None
+    impact: RiskImpact | None = None
     description: str | None = None
     mitigation: str | None = None
     owner_id: int | None = None
@@ -59,4 +69,40 @@ class RiskAggregate(BaseModel):
     )
 
 
-__all__ = ["RiskAggregate", "RiskOut", "RiskUpdate"]
+class RiskHeatmapCell(BaseModel):
+    """発生可能性 × 影響度の 1 セルと、その件数。
+
+    ``probability`` / ``impact`` は ``risk_items`` の CHECK 制約
+    （``ck_risk_probability`` / ``ck_risk_impact``）と同じ
+    :class:`~app.models.enums.RiskProbability` /
+    :class:`~app.models.enums.RiskImpact`（``low`` / ``medium`` / ``high``）
+    を取る。frontend の ``riskHeatmapCellSchema`` は
+    ``low`` / ``medium`` / ``high`` / ``critical`` の 4 値を許容する上位集合
+    であり、本 3 値はその部分集合としてそのまま妥当する（frontend 側の
+    スキーマを緩める必要はない）。
+    """
+
+    probability: RiskProbability
+    impact: RiskImpact
+    count: int = Field(ge=0)
+
+
+class RiskHeatmap(BaseModel):
+    """Response of ``GET /risks/heatmap``.
+
+    frontend ``lib/api/schemas.ts`` の ``riskHeatmapSchema``
+    （``{ matrix: [{ probability, impact, count }] }``）と同形。
+    発生件数が 0 のセルは返さない（frontend は ``find()`` の未ヒットを 0 として
+    描画する）。
+    """
+
+    matrix: list[RiskHeatmapCell] = Field(default_factory=list)
+
+
+__all__ = [
+    "RiskAggregate",
+    "RiskHeatmap",
+    "RiskHeatmapCell",
+    "RiskOut",
+    "RiskUpdate",
+]

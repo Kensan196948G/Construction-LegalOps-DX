@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -212,7 +213,9 @@ async def create_matter(
 
 async def matter_contract_ids(session: AsyncSession, *, matter_id: int) -> list[int]:
     """関係契約リンク id 一覧（async 安全・association 直接参照）."""
-    rows = (
+    # SQLAlchemy 2.1 no longer lets mypy infer the element type of
+    # ``.scalars().all()``; the annotation is required to keep `mypy app` clean.
+    rows: Sequence[int] = (
         (
             await session.execute(
                 select(matter_contracts_table.c.contract_id).where(
