@@ -17,12 +17,15 @@
 #
 #   BASE_URL            既定: https://legalops-mvp.mirai-dx-platform.com
 #                       ローカルは http://127.0.0.1:3013 / http://127.0.0.1:8412 など。
-#   --timeout SEC       1 ルートあたりのナビゲーション timeout（既定 45）
-#   --settle MS         描画後の追加待ち時間（既定 2500）
+#   --timeout SEC       1 ルートあたりのナビゲーション timeout 秒（既定 45、0 以上の整数）
+#   --settle MS         描画後の追加待ち時間ミリ秒（既定 2500、0 以上の整数）
 #   --json              判定結果を JSON でも出力する
-#   --self-test         ネットワークに出ずに判定ロジックの自己テストを実行する
+#   --self-test         引数解析と判定ロジックの自己テストをネットワークに出ず実行する
 #   --list-routes       抽出したルート一覧を表示して終了する
 #   -h | --help         ヘルプ
+#
+#   `--timeout 30` と `--timeout=30` の両方を受け付ける。値が無い / 数値でない場合は
+#   使用方法を stderr に出して exit 64（無限ループしない）。
 #
 # 環境変数:
 #   ALLOW_NON_MVP_HOST=1  許可リスト外のホストを明示的に許可する（既定は拒否 = fail-closed）
@@ -35,11 +38,12 @@
 #   1  FAIL または UNKNOWN が 1 件以上
 #   2  前提条件エラー（本番ホスト指定・依存欠如など）
 #   3  自己テスト失敗
+#   64 コマンドライン引数の誤り（値の欠落・不正値・未知のオプション）
 #
 # 厳守事項:
 #   - 本番 https://legalops.mirai-dx-platform.com（Cloudflare Access 配下）には絶対に向けない。
 #     既定ターゲットは公開 MVP。許可リスト外ホストは既定で拒否する。
-#   - 空データ・判定不能を合格にしない。
+#   - 空データ・判定不能を合格にしない。ログイン画面へのリダイレクトも合格にしない。
 #
 set -uo pipefail
 
@@ -61,18 +65,38 @@ JSON_OUT=0
 SELF_TEST=0
 LIST_ROUTES=0
 
-usage() { sed -n '3,45p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'; }
+# ヘッダのコメントブロック（3 行目以降の連続する '#' 行）をそのまま使用方法として出す。
+# 行番号を固定しないので、ヘッダに説明を足しても壊れない。
+usage() { awk 'NR > 2 { if ($0 !~ /^#/) exit; sub(/^# ?/, ""); print }' "$0"; }
+
+# 引数誤りは使用方法を stderr に出して exit 64（無限ループ・暗黙続行を防ぐ）。
+usage_error() {
+  printf 'ERROR: %s\n\n' "$*" >&2
+  usage >&2
+  exit 64
+}
+
+# 値を 1 つ取るオプションの値検証。値が無い / 空 / 非数を弾く。
+need_uint() {
+  case "${2:-}" in
+    '') usage_error "$1 には値が必要です（例: $1=30）" ;;
+    *[!0-9]*) usage_error "$1 には 0 以上の整数が必要です: ${2}" ;;
+  esac
+}
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --timeout)   TIMEOUT_SEC="${2:-}"; shift 2 ;;
-    --settle)    SETTLE_MS="${2:-}"; shift 2 ;;
-    --json)      JSON_OUT=1; shift ;;
-    --self-test) SELF_TEST=1; shift ;;
+    --timeout)    need_uint "$1" "${2:-}" ; TIMEOUT_SEC="$2"; shift 2 ;;
+    --timeout=*)  need_uint "--timeout" "${1#*=}"; TIMEOUT_SEC="${1#*=}"; shift ;;
+    --settle)     need_uint "$1" "${2:-}" ; SETTLE_MS="$2"; shift 2 ;;
+    --settle=*)   need_uint "--settle" "${1#*=}"; SETTLE_MS="${1#*=}"; shift ;;
+    --json)       JSON_OUT=1; shift ;;
+    --self-test)  SELF_TEST=1; shift ;;
     --list-routes) LIST_ROUTES=1; shift ;;
-    -h|--help)   usage; exit 0 ;;
-    -*)          echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
-    *)           BASE_URL="$1"; shift ;;
+    -h|--help)    usage; exit 0 ;;
+    --)           shift; break ;;
+    -*)           usage_error "未知のオプションです: $1" ;;
+    *)            BASE_URL="$1"; shift ;;
   esac
 done
 
@@ -275,29 +299,59 @@ export function classifyDom(dom) {
     .map((m) => Number(m[1].replace(/,/g, "")))
     .filter((n) => Number.isFinite(n) && n >= 1);
 
+  // カード型レイアウト（KPI カード等）は <table> を持たないため、
+  // 「数値だけを描画しているリーフ要素」をデータ痕跡として数える。
+  // ページネーション/ナビ/操作部品はブラウザ側で除外済み。
+  const numLeaves = Number(dom.numLeaves || 0);
+  const numLeafSamples = Array.isArray(dom.numLeafSamples) ? dom.numLeafSamples : [];
+
   const evidence = [];
   if (dom.dataRows >= 1) evidence.push(`表データ行 ${dom.dataRows}`);
   if (dom.articles >= 1) evidence.push(`article ${dom.articles}`);
   if (countHits.length >= 1) evidence.push(`「N 件」表記 ${countHits.length} 個 (max=${Math.max(...countHits)})`);
+  if (numLeaves >= 1) {
+    evidence.push(`数値表示要素 ${numLeaves} 個（カード/KPI 等。例: ${numLeafSamples.slice(0, 3).join(", ")}）`);
+  }
 
   return {
     errorHit: firstMatch(text, ERROR_RE),
     emptyHit: firstMatch(text, EMPTY_RE),
     countHits,
+    numLeaves,
+    numLeafSamples,
+    cards: Number(dom.cards || 0),
     dataEvidence: evidence,
     hasCollection: dom.dataRows > 0 || dom.rows > 0 || dom.tables > 0 || dom.articles > 0,
     text,
   };
 }
 
+/** N-A / UNKNOWN の理由に添える観測値（判定を甘くしないため根拠を残す）。 */
+function domContext(sig) {
+  const d = sig.dom || {};
+  const r = sig.domRaw || {};
+  const num = (v) => (v === undefined || v === null ? "-" : v);
+  return `table=${num(r.tables)} rows=${num(r.rows)} dataRows=${num(r.dataRows)} `
+    + `article=${num(r.articles)} card=${num(d.cards)} numLeaf=${num(d.numLeaves)} textLen=${num(r.textLen)}`;
+}
+
 /**
  * 1 ルート分の観測シグナルから PASS / FAIL / UNKNOWN / N-A を決める。
  * 優先順位:
- *   hard error (HTML/static/API) > エラー表示 > DOM のデータ実証 >
- *   API が空 > API のデータ実証 > 空表示 > N-A > UNKNOWN
+ *   ログインリダイレクト / hard error (HTML/static/API) > エラー表示 >
+ *   DOM のデータ実証 > API が空 > API のデータ実証 > 空表示 > N-A > UNKNOWN
  */
 export function judgeRoute(sig) {
   const hard = [];
+  const redirectNote = sig.redirected
+    ? `要求 ${sig.requestedPath ?? "-"} → 最終 ${sig.finalPath ?? "-"}`
+    : null;
+
+  // 認証が壊れて全ルートがログインへ飛ぶ状況を「データが無い = N-A」で
+  // 見逃さない。リダイレクトの事実を理由に必ず残す。
+  if (sig.loginRedirect) {
+    hard.push(`ログインへリダイレクト（認証が必要な画面に到達できていない: ${redirectNote}）`);
+  }
   if (sig.docStatus !== 200) {
     hard.push(`HTML ${sig.docStatus === 0 ? "取得失敗(status不明)" : sig.docStatus}`);
   }
@@ -307,9 +361,13 @@ export function judgeRoute(sig) {
   if (sig.apiErrors.length > 0) {
     hard.push(`API エラー ${sig.apiErrors.map((e) => `${e.status} ${e.path}`).join(", ")}`);
   }
-  if (hard.length > 0) return { verdict: "FAIL", detail: hard.join(" / ") };
 
-  if (sig.dom.errorHit) return { verdict: "FAIL", detail: `エラー表示: 「${sig.dom.errorHit}」` };
+  // ログイン以外へのリダイレクトでも事実は出力に残す。
+  const note = (!sig.loginRedirect && redirectNote) ? ` [リダイレクト: ${redirectNote}]` : "";
+
+  if (hard.length > 0) return { verdict: "FAIL", detail: hard.join(" / ") + note };
+
+  if (sig.dom.errorHit) return { verdict: "FAIL", detail: `エラー表示: 「${sig.dom.errorHit}」${note}` };
 
   const pageApis = sig.apiResults.filter((r) => !r.shell);
   const apiData = pageApis.filter((r) => r.classification.verdict === "DATA");
@@ -318,26 +376,30 @@ export function judgeRoute(sig) {
   if (sig.dom.dataEvidence.length > 0) {
     const detail = [...sig.dom.dataEvidence];
     if (apiData.length > 0) detail.push(`API データ ${apiData.map((e) => `${e.path}(${e.classification.detail})`).join(", ")}`);
-    return { verdict: "PASS", detail: detail.join(" / ") };
+    return { verdict: "PASS", detail: detail.join(" / ") + note };
   }
 
   if (apiEmpty.length > 0) {
-    return { verdict: "FAIL", detail: `API が空: ${apiEmpty.map((e) => `${e.path}(${e.classification.detail})`).join(", ")}` };
+    return { verdict: "FAIL", detail: `API が空: ${apiEmpty.map((e) => `${e.path}(${e.classification.detail})`).join(", ")}${note}` };
   }
 
   if (apiData.length > 0) {
-    return { verdict: "PASS", detail: `API データ ${apiData.map((e) => `${e.path}(${e.classification.detail})`).join(", ")}（DOM データ要素なし）` };
+    return { verdict: "PASS", detail: `API データ ${apiData.map((e) => `${e.path}(${e.classification.detail})`).join(", ")}（DOM データ要素なし）${note}` };
   }
 
-  if (sig.dom.emptyHit) return { verdict: "FAIL", detail: `空表示: 「${sig.dom.emptyHit}」` };
+  if (sig.dom.emptyHit) return { verdict: "FAIL", detail: `空表示: 「${sig.dom.emptyHit}」${note}` };
 
   if (pageApis.length === 0 && !sig.dom.hasCollection) {
-    return { verdict: "N-A", detail: "API 呼び出しなし・データ構造なし（静的画面/入力待ち画面）" };
+    return {
+      verdict: "N-A",
+      detail: `ページ自身の API 呼び出しなし・表/article/カード数値いずれも無し（静的画面または入力待ち画面） [${domContext(sig)}]${note}`,
+    };
   }
 
   return {
     verdict: "UNKNOWN",
-    detail: `データ有無の根拠なし (pageAPI=${pageApis.length}, table=${sig.dom.tables}, rows=${sig.dom.rows}, articles=${sig.dom.articles})`,
+    detail: `データ有無の根拠なし (pageAPI=${pageApis.length}`
+      + `${pageApis.length > 0 ? `: ${pageApis.map((e) => e.path).join(", ")}` : ""}, ${domContext(sig)})${note}`,
   };
 }
 
@@ -401,7 +463,7 @@ export async function runPageCheck(page, url, opts) {
   try { await page.waitForLoadState("networkidle", { timeout: 15000 }); } catch { /* 継続 */ }
   await page.waitForTimeout(opts.settleMs);
 
-  let dom = { text: "", rows: 0, dataRows: 0, tables: 0, listItems: 0, articles: 0, textLen: 0 };
+  let dom = { text: "", rows: 0, dataRows: 0, tables: 0, listItems: 0, articles: 0, cards: 0, numLeaves: 0, numLeafSamples: [], textLen: 0 };
   let domError = null;
   try {
     dom = await page.evaluate(() => {
@@ -413,6 +475,27 @@ export async function runPageCheck(page, url, opts) {
         const kept = cells.filter((c) => c && c !== "—" && c !== "-" && c !== "–");
         return kept.length >= 2;
       }).length;
+
+      // カード型レイアウト（KPI カード等）のデータ痕跡:
+      // 「数値のみ」を描画しているリーフ要素を数える。操作部品・ナビ・
+      // ページネーション・日付/単位付きの数値は除外する。
+      const BARE_NUM_RE = /^\d[\d,]*$/;
+      const SKIP_TAGS = new Set(["A", "BUTTON", "SELECT", "OPTION", "INPUT", "TEXTAREA", "LABEL", "SCRIPT", "STYLE", "NAV"]);
+      const SKIP_CLOSEST = "nav,[role='navigation'],[class*='pagination'],[class*='breadcrumb'],[aria-hidden='true']";
+      const numLeafSamples = [];
+      let numLeaves = 0;
+      for (const el of main.querySelectorAll("*")) {
+        if (el.children.length > 0) continue;
+        if (SKIP_TAGS.has(el.tagName)) continue;
+        if (el.closest(SKIP_CLOSEST)) continue;
+        const t = (el.innerText || "").trim();
+        if (!BARE_NUM_RE.test(t)) continue;
+        const n = Number(t.replace(/,/g, ""));
+        if (!Number.isFinite(n) || n < 1) continue;
+        numLeaves += 1;
+        if (numLeafSamples.length < 3) numLeafSamples.push(t);
+      }
+
       return {
         text: text.slice(0, 30000),
         rows: rows.length,
@@ -420,6 +503,9 @@ export async function runPageCheck(page, url, opts) {
         tables: main.querySelectorAll("table").length,
         listItems: main.querySelectorAll("li").length,
         articles: main.querySelectorAll("article").length,
+        cards: main.querySelectorAll("[class*='card'],[class*='Card'],[class*='stat'],[class*='kpi'],[class*='metric']").length,
+        numLeaves,
+        numLeafSamples,
         textLen: text.length,
       };
     });
@@ -441,6 +527,23 @@ export async function runPageCheck(page, url, opts) {
     .filter((e) => e.statuses.some((s) => s >= 400))
     .map((e) => ({ path: e.path, status: Math.max(...e.statuses) }));
 
+  // リダイレクト後の最終 URL を観測する（認証切れで /login に飛ぶ状況を FAIL にする）。
+  let finalUrl = "";
+  try { finalUrl = page.url(); } catch { /* ignore */ }
+  const norm = (u) => {
+    try {
+      const p = new URL(u);
+      // ナビゲーション失敗時は chrome-error:// 等になる。パス扱いせず事実を残す。
+      if (p.protocol !== "http:" && p.protocol !== "https:") return `(${p.protocol}//${p.host})`;
+      const path = p.pathname.replace(/\/+$/, "") || "/";
+      return path + p.search;
+    } catch { return String(u); }
+  };
+  const requestedPath = norm(url);
+  const finalPath = finalUrl ? norm(finalUrl) : "";
+  const redirected = Boolean(finalPath) && finalPath !== requestedPath;
+  const loginRedirect = Boolean(finalPath) && (finalPath === "/login" || finalPath.startsWith("/login/") || finalPath.startsWith("/login?"));
+
   return {
     docStatus,
     staticErrors,
@@ -449,6 +552,11 @@ export async function runPageCheck(page, url, opts) {
     dom: classifyDom(dom),
     domRaw: dom,
     domError,
+    finalUrl,
+    requestedPath,
+    finalPath,
+    redirected,
+    loginRedirect,
   };
 }
 
@@ -497,6 +605,62 @@ async function selfTest(chromium, log) {
 
   const domDisclaimer = classifyDom({ text: "AI 出力は法的助言ではありません。最終判断は法務担当者が行います。", dataRows: 5, rows: 5, tables: 1, listItems: 0, articles: 0 });
   check("免責文「ではありません」を emptyHit にしない", !domDisclaimer.emptyHit, JSON.stringify(domDisclaimer.emptyHit));
+
+  log("[self-test] 2b) カード型レイアウトのデータ実証（/dashboard 相当）");
+  const domKpi = classifyDom({
+    text: "レビュー中 8 承認待ちを除く 承認待ち 3 自分宛含む全体 今月完了 0 直近 30 日 高リスク案件 7 未対応のみ",
+    dataRows: 0, rows: 0, tables: 0, listItems: 0, articles: 0, cards: 5,
+    numLeaves: 3, numLeafSamples: ["8", "3", "7"],
+  });
+  check("カードの数値表示をデータ根拠として検出", domKpi.dataEvidence.some((e) => e.includes("数値表示要素")), JSON.stringify(domKpi.dataEvidence));
+  check("カード型 KPI ありは PASS", judgeRoute({
+    docStatus: 200, staticErrors: [], apiErrors: [], apiResults: [],
+    dom: domKpi, domRaw: { tables: 0, rows: 0, dataRows: 0, articles: 0, textLen: 60 },
+    requestedPath: "/dashboard", finalPath: "/dashboard", redirected: false, loginRedirect: false,
+  }).verdict === "PASS");
+  const domKpiZero = classifyDom({
+    text: "レビュー中 0 承認待ち 0 高リスク案件 0", dataRows: 0, rows: 0, tables: 0,
+    listItems: 0, articles: 0, cards: 3, numLeaves: 0, numLeafSamples: [],
+  });
+  check("数値が 0 のみのカードはデータ根拠にならない", domKpiZero.dataEvidence.length === 0, JSON.stringify(domKpiZero.dataEvidence));
+  check("数値 0 のみのカード画面は PASS にしない", judgeRoute({
+    docStatus: 200, staticErrors: [], apiErrors: [], apiResults: [],
+    dom: domKpiZero, domRaw: { tables: 0, rows: 0, dataRows: 0, articles: 0, textLen: 30 },
+    requestedPath: "/dashboard", finalPath: "/dashboard", redirected: false, loginRedirect: false,
+  }).verdict !== "PASS");
+
+  log("[self-test] 2c) ログインリダイレクトを合格扱いにしない");
+  const loginSig = judgeRoute({
+    docStatus: 200, staticErrors: [], apiErrors: [], apiResults: [],
+    dom: classifyDom({ text: "ログイン メールアドレス パスワード", dataRows: 0, rows: 0, tables: 0, listItems: 0, articles: 0 }),
+    domRaw: { tables: 0, rows: 0, dataRows: 0, articles: 0, textLen: 30 },
+    requestedPath: "/contracts", finalPath: "/login", redirected: true, loginRedirect: true,
+  });
+  check("最終 URL が /login なら FAIL", loginSig.verdict === "FAIL", `${loginSig.verdict}: ${loginSig.detail}`);
+  check("リダイレクトの事実（要求→最終）を理由に残す",
+    /\/contracts/.test(loginSig.detail) && /\/login/.test(loginSig.detail), loginSig.detail);
+  const loginSig2 = judgeRoute({
+    docStatus: 200, staticErrors: [], apiErrors: [], apiResults: [],
+    dom: classifyDom({ text: "ログイン", dataRows: 0, rows: 0, tables: 0, listItems: 0, articles: 0 }),
+    domRaw: { tables: 0, rows: 0, dataRows: 0, articles: 0, textLen: 10 },
+    requestedPath: "/matters", finalPath: "/login?next=%2Fmatters", redirected: true, loginRedirect: true,
+  });
+  check("/login?... へのリダイレクトも FAIL", loginSig2.verdict === "FAIL", `${loginSig2.verdict}: ${loginSig2.detail}`);
+  const otherRedirect = judgeRoute({
+    docStatus: 200, staticErrors: [], apiErrors: [], apiResults: [],
+    dom: classifyDom({ text: "ダッシュボード", dataRows: 4, rows: 4, tables: 1, listItems: 0, articles: 0 }),
+    domRaw: { tables: 1, rows: 4, dataRows: 4, articles: 0, textLen: 20 },
+    requestedPath: "/", finalPath: "/dashboard", redirected: true, loginRedirect: false,
+  });
+  check("ログイン以外へのリダイレクトは FAIL にしないが事実は残す",
+    otherRedirect.verdict === "PASS" && /リダイレクト/.test(otherRedirect.detail), `${otherRedirect.verdict}: ${otherRedirect.detail}`);
+  const naSig = judgeRoute({
+    docStatus: 200, staticErrors: [], apiErrors: [], apiResults: [],
+    dom: classifyDom({ text: "契約検索 全文検索", dataRows: 0, rows: 0, tables: 0, listItems: 0, articles: 0 }),
+    domRaw: { tables: 0, rows: 0, dataRows: 0, articles: 0, textLen: 12 },
+    requestedPath: "/search", finalPath: "/search", redirected: false, loginRedirect: false,
+  });
+  check("N-A の理由に観測値を含める", naSig.verdict === "N-A" && /table=0/.test(naSig.detail) && /numLeaf=0/.test(naSig.detail), naSig.detail);
 
   log("[self-test] 3) judgeRoute の優先順位");
   const baseSig = (over = {}) => ({
@@ -625,6 +789,74 @@ async function selfTest(chromium, log) {
       check("mock: 空状態行のみ → FAIL", v.verdict === "FAIL", `${v.verdict}: ${v.detail}`);
       await page.close();
     }
+
+    // (g) ログインへリダイレクト → FAIL（N-A にしない）
+    // 注: Playwright の route.fulfill は 3xx を実リダイレクトとして追従しないため、
+    // ブラウザが最終的に /login に到達する状況をクライアント側遷移で再現する。
+    // サーバ側 302/307 の場合は judgeRoute 単体テスト（2c）で検証している。
+    {
+      const page = await mk((route) => {
+        const u = route.request().url();
+        if (u.endsWith("/login")) {
+          return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html("<h1>ログイン</h1>") });
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: "text/html; charset=utf-8",
+          body: "<!doctype html><html lang='ja'><body><main>認証を確認しています</main>"
+            + "<script>location.replace('/login');</script></body></html>",
+        });
+      });
+      const sig = await runPageCheck(page, "http://mock.local/contracts", { base: "http://mock.local", timeoutMs: 10000, settleMs: 1200 });
+      const v = judgeRoute(sig);
+      check("mock: /login へリダイレクト → FAIL", v.verdict === "FAIL", `${v.verdict}: ${v.detail}`);
+      check("mock: リダイレクト元→先を理由に残す",
+        /\/contracts/.test(v.detail) && /\/login/.test(v.detail), v.detail);
+      await page.close();
+    }
+
+    // (g2) 3xx を fulfill した場合（ブラウザが追従できず到達不能）も FAIL にする
+    {
+      const page = await mk((route) => {
+        const u = route.request().url();
+        if (u.endsWith("/login")) {
+          return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html("<h1>ログイン</h1>") });
+        }
+        return route.fulfill({ status: 302, headers: { Location: "/login" }, contentType: "text/html", body: "" });
+      });
+      const sig = await runPageCheck(page, "http://mock.local/contracts", { base: "http://mock.local", timeoutMs: 10000, settleMs: 500 });
+      const v = judgeRoute(sig);
+      check("mock: 追従できない 3xx でも FAIL（合格にしない）", v.verdict === "FAIL", `${v.verdict}: ${v.detail}`);
+      await page.close();
+    }
+
+    // (h) カード型 KPI 画面 → PASS（表が無くてもデータを実証できる）
+    {
+      const page = await mk((route) => route.fulfill({
+        status: 200, contentType: "text/html; charset=utf-8",
+        body: html("<div class='rounded-lg border bg-card'><p>レビュー中</p><p class='mt-2 text-3xl font-bold'>8</p></div>"
+          + "<div class='rounded-lg border bg-card'><p>承認待ち</p><p class='mt-2 text-3xl font-bold'>3</p></div>"
+          + "<div class='rounded-lg border bg-card'><p>今月完了</p><p class='mt-2 text-3xl font-bold'>0</p></div>"),
+      }));
+      const sig = await runPageCheck(page, "http://mock.local/dashboard", { base: "http://mock.local", timeoutMs: 10000, settleMs: 300 });
+      const v = judgeRoute(sig);
+      check("mock: カード型 KPI 画面 → PASS", v.verdict === "PASS", `${v.verdict}: ${v.detail}`);
+      await page.close();
+    }
+
+    // (i) 全部 0 のカード + ページネーションの数字だけ → PASS にしない
+    {
+      const page = await mk((route) => route.fulfill({
+        status: 200, contentType: "text/html; charset=utf-8",
+        body: html("<div class='rounded-lg border bg-card'><p>登録出願</p><p class='mt-2 text-3xl font-bold'>0</p></div>"
+          + "<nav aria-label='ページ'><a href='?page=1'>1</a><a href='?page=2'>2</a><a href='?page=3'>3</a></nav>"
+          + "<select><option>2</option></select>"),
+      }));
+      const sig = await runPageCheck(page, "http://mock.local/ip-assets", { base: "http://mock.local", timeoutMs: 10000, settleMs: 300 });
+      const v = judgeRoute(sig);
+      check("mock: 0 のカード + ナビ/選択肢の数字はデータ根拠にしない", v.verdict !== "PASS", `${v.verdict}: ${v.detail}`);
+      await page.close();
+    }
   } finally {
     await browser.close();
   }
@@ -741,10 +973,50 @@ log ""
 
 NODE_ARGS=(--base "$BASE_URL" --timeout "$TIMEOUT_SEC" --settle "$SETTLE_MS")
 [ "$JSON_OUT" -eq 1 ] && NODE_ARGS+=(--json)
+
+# 引数解析の自己テスト。値欠落で無限ループしないこと・不正値を弾くことを
+# 実際に自分自身を再帰起動して exit code で確認する。
+arg_self_test() {
+  local failures=0 out code
+  run_case() {
+    local name="$1" exp="$2"; shift 2
+    out="$("$0" "$@" 2>&1)"; code=$?
+    if [ "$code" -eq "$exp" ]; then
+      printf '  ok   %s (exit %s)\n' "$name" "$code"
+    else
+      printf '  NG   %s: exit %s (expected %s)\n' "$name" "$code" "$exp"
+      failures=$((failures + 1))
+    fi
+  }
+  log "[self-test] 0) 引数解析（値欠落・不正値は exit 64、無限ループしない）"
+  run_case "--timeout 単独（値なし）" 64 "$BASE_URL" --timeout
+  run_case "--settle 単独（値なし）" 64 "$BASE_URL" --settle
+  run_case "--timeout 30 形式" 0 "$BASE_URL" --timeout 30 --list-routes
+  run_case "--timeout=30 形式" 0 "$BASE_URL" --timeout=30 --list-routes
+  run_case "--settle=100 形式" 0 "$BASE_URL" --settle=100 --list-routes
+  run_case "--timeout= （空値）" 64 "$BASE_URL" --timeout=
+  run_case "--timeout abc（不正値）" 64 "$BASE_URL" --timeout abc --list-routes
+  run_case "--timeout=abc（不正値）" 64 "$BASE_URL" --timeout=abc
+  run_case "--settle -1（負値）" 64 "$BASE_URL" --settle -1
+  run_case "未知のオプション" 64 "$BASE_URL" --bogus
+  run_case "--help" 0 --help
+  return "$failures"
+}
+
 if [ "$SELF_TEST" -eq 1 ]; then
+  arg_failures=0
+  arg_self_test || arg_failures=$?
+  log ""
   PW_ENTRY="$PW_ENTRY" node "$NODE_SCRIPT" --self-test
-  exit $?
+  node_rc=$?
+  if [ "$arg_failures" -ne 0 ] || [ "$node_rc" -ne 0 ]; then
+    log ""
+    log "[self-test] FAILED（引数解析: ${arg_failures} 件 / 判定ロジック: exit ${node_rc}）"
+    exit 3
+  fi
+  exit 0
 fi
+
 NODE_ARGS+=(--routes "$ROUTES_FILE")
 
 PW_ENTRY="$PW_ENTRY" node "$NODE_SCRIPT" "${NODE_ARGS[@]}"
