@@ -578,12 +578,16 @@ export type DisputeProceedingStage = z.infer<typeof disputeProceedingStageSchema
 // 支払・出来高・検収コンプライアンス
 // ---------------------------------------------------------------------------
 
+// backend `app/schemas/business.py::PaymentFindingOut` と一致させること。
+// 旧スキーマは {title, description} を要求していたが backend は
+// {message, detail} を返すため、全契約で parse に失敗し /payments が
+// 「API 未接続」表示になっていた（2026-09-28 実測）。
 export const paymentFindingSchema = z.object({
   code: z.string(),
-  title: z.string(),
   severity: z.enum(["block", "warn", "info"]),
-  description: z.string(),
+  message: z.string(),
   citation: z.string(),
+  detail: z.record(z.string(), z.unknown()).default({}),
 });
 export type PaymentFinding = z.infer<typeof paymentFindingSchema>;
 
@@ -600,7 +604,8 @@ export const paymentComplianceSchema = z.object({
   days_receipt_to_payment: z.number().int().nullable().optional(),
   days_inspection_to_payment: z.number().int().nullable().optional(),
   late_interest_jpy: z.string(),
-  overall_status: z.enum(["pass", "warn", "block"]),
+  // backend `payment_compliance.to_dict()` は fail / warning / pass の 3 値。
+  overall_status: z.enum(["pass", "warning", "fail"]),
   findings: z.array(paymentFindingSchema).default([]),
 });
 export type PaymentCompliance = z.infer<typeof paymentComplianceSchema>;

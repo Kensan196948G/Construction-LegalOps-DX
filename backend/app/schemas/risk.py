@@ -10,6 +10,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from app.models.enums import RiskImpact, RiskProbability
+
 from .common import ORMModel
 
 
@@ -59,4 +61,40 @@ class RiskAggregate(BaseModel):
     )
 
 
-__all__ = ["RiskAggregate", "RiskOut", "RiskUpdate"]
+class RiskHeatmapCell(BaseModel):
+    """発生可能性 × 影響度の 1 セルと、その件数。
+
+    ``probability`` / ``impact`` は ``risk_items`` の CHECK 制約
+    （``ck_risk_probability`` / ``ck_risk_impact``）と同じ
+    :class:`~app.models.enums.RiskProbability` /
+    :class:`~app.models.enums.RiskImpact`（``low`` / ``medium`` / ``high``）
+    を取る。frontend の ``riskHeatmapCellSchema`` は
+    ``low`` / ``medium`` / ``high`` / ``critical`` の 4 値を許容する上位集合
+    であり、本 3 値はその部分集合としてそのまま妥当する（frontend 側の
+    スキーマを緩める必要はない）。
+    """
+
+    probability: RiskProbability
+    impact: RiskImpact
+    count: int = Field(ge=0)
+
+
+class RiskHeatmap(BaseModel):
+    """Response of ``GET /risks/heatmap``.
+
+    frontend ``lib/api/schemas.ts`` の ``riskHeatmapSchema``
+    （``{ matrix: [{ probability, impact, count }] }``）と同形。
+    発生件数が 0 のセルは返さない（frontend は ``find()`` の未ヒットを 0 として
+    描画する）。
+    """
+
+    matrix: list[RiskHeatmapCell] = Field(default_factory=list)
+
+
+__all__ = [
+    "RiskAggregate",
+    "RiskHeatmap",
+    "RiskHeatmapCell",
+    "RiskOut",
+    "RiskUpdate",
+]

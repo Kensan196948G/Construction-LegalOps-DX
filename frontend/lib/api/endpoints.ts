@@ -911,8 +911,8 @@ export const governanceApi = {
       params: buildParams(params),
     }),
 
-  /** 保持期間 */
-  retentionRules: () => getParsed(z.array(retentionRuleSchema), "/retention"),
+  /** 保持期間（backend は `/retention` を名前空間とし、リソースは `/retention/rules`） */
+  retentionRules: () => getParsed(z.array(retentionRuleSchema), "/retention/rules"),
 };
 
 export const legalAiApi = {

@@ -20,6 +20,7 @@ from app.schemas.business import (
     ContractDocumentOut,
     ContractDocumentUpdate,
     DisputeCreate,
+    DisputeDetailOut,
     DisputeEvidenceCreate,
     DisputeEvidenceOut,
     DisputeExposureOut,
@@ -181,6 +182,30 @@ async def update_change_order(
         request=request,
     )
     return ChangeOrderOut.model_validate(order)
+
+
+@change_orders_router.get(
+    "/{change_order_id}/evidence",
+    response_model=list[ChangeOrderEvidenceOut],
+    summary="変更契約の証拠一覧",
+)
+async def list_change_order_evidence(
+    change_order_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> list[ChangeOrderEvidenceOut]:
+    """変更契約に紐付く証拠（日報・写真・メール等）の一覧を返す。
+
+    ``change_order_service.get_order`` が契約 ACL に基づく可視性チェックと
+    ``evidence`` の ``selectinload`` を行うため、それを再利用する。
+    存在しない / 可視でない変更契約は 404。
+    """
+    order = await change_order_service.get_order(
+        session, order_id=change_order_id, viewer=current_user
+    )
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="change order not found")
+    return [ChangeOrderEvidenceOut.model_validate(e) for e in order.evidence]
 
 
 @change_orders_router.post(
@@ -602,6 +627,30 @@ async def disputes_exposure(
     current_user: CurrentUser = Depends(get_current_user),
 ) -> DisputeExposureOut:
     return DisputeExposureOut(**await dispute_service.exposure_summary(session))
+
+
+@disputes_router.get(
+    "/{dispute_id}",
+    response_model=DisputeDetailOut,
+    summary="紛争案件詳細",
+)
+async def get_dispute_detail(
+    dispute_id: int,
+    session: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> DisputeDetailOut:
+    """紛争案件の詳細（timeline / evidence を含む）を返す。
+
+    可視性は一覧（``list_disputes``）と同じで、RLS に加えて
+    ``dispute_service.ensure_dispute_visible`` のアプリ層チェックが
+    権限外アクセスを 403 にする。存在しない ID は 404。
+    """
+    dispute = await dispute_service.get_dispute(
+        session, dispute_id=dispute_id, viewer=current_user
+    )
+    if dispute is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dispute not found")
+    return DisputeDetailOut.model_validate(dispute)
 
 
 @disputes_router.post(
