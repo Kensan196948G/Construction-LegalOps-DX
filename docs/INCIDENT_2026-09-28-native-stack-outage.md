@@ -214,51 +214,94 @@ Evidence（実測・2026-09-28）:
 拒否する。また `/etc` は **読み取り専用マウント**（`ro,nosuid,relatime`）で `sudo` も使用不可。
 したがって以下は実行できず、**人間（root）作業**として残る。
 
-### 5.1 アプリ層の復旧（RC-1 / RC-2 の解消）
+> ⚠️ **実施順序: ①バックアップ → ②DB 移行 → ③アプリ再起動 → ④検証。**
+> 現行コードは migration 012 以降のテーブル／列を前提としているため、DB が 009 のままアプリを
+> 再起動すると `column contracts.auto_renewal does not exist` で **主要 API が 500 になる**
+> （2026-09-28 実測: `/api/v1/contracts` `/matters` `/obligations` `/joint-ventures` = 500）。
+> `/healthz` と `/api/health` は **DB スキーマ状態を検証しない**ので、health が 200 でも移行完了の
+> 証拠にはならない。MVP は Cloudflare Access 保護外で常時公開のため、移行は短時間で終わらせる
+> （窓が必要なら `legalops-mvp-cloudflared` を一時停止して外部流入を止める）。
+
+### 5.1 事前バックアップ（必須・移行の前提条件）
+
+移行前バックアップは取得済み（2026-09-28 20:21 / 所有者保持 / PG16 クライアント固定）:
+`/home/kensan/legalops-backups/{legalops_prod,legalops_mvp}_pre026_20260928T112138Z.dump`
++ `SHA256SUMS`（`pg_restore --list` で 39 TABLE DATA を確認済み）。
+移行直前に再取得する場合:
 
 ```bash
-# 1) unit をこのチェックアウトのパスで再描画してインストール（旧パスは描画時に置換される）
-cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX
-sudo bash infra/native/install.sh --check   # 事前確認（読み取り専用。STALE が 6 件出るのが現状）
-sudo bash infra/native/install.sh           # unit 再配置 + app tier 再起動 + health 確認
+sudo -i bash -c '
+  set -a; . /etc/legalops/prod-backend.env; set +a
+  export PGPASSWORD="$POSTGRES_PASSWORD"
+  cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX
+  for db in legalops_prod legalops_mvp; do
+    BACKUP_DIR=/var/backups/legalops POSTGRES_USER="$db" POSTGRES_DB="$db" \
+      POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=5432 bash scripts/backup_db.sh
+  done
+'
+```
 
-# 2) 正常性の確認（install.sh 内でも実施される）
-curl -fsS http://127.0.0.1:8011/healthz
-curl -fsS http://127.0.0.1:8013/healthz
-curl -fsS http://127.0.0.1:3011/api/health
-curl -fsS http://127.0.0.1:3013/api/health
+### 5.2 データベース移行（RC-3 の解消 / 009 → 026）
+
+§4.3 のドリルで 009→026 は**冪等・可逆・データ保全**を実証済み。ロール権限が必要。
+
+```bash
+cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX/backend
+# DSN は systemd と同じ EnvironmentFile から取る（DSN をコマンドライン履歴に残さない）
+sudo -i bash -c '
+  for e in prod mvp; do
+    set -a; . /etc/legalops/${e}-backend.env; set +a
+    cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX/backend
+    APP_ENV=production .venv/bin/python -m alembic upgrade head
+  done
+'
+
+# 検証（スキーマ状態まで見る。health では代替できない）
+for db in legalops_prod legalops_mvp; do
+  psql -d "$db" -Atc "select '${db} alembic='||version_num from alembic_version"   # 026_rls_restrictive_scope
+  psql -d "$db" -Atc "select '${db} tables='||count(*) from information_schema.tables where table_schema='public'"  # 80
+  psql -d "$db" -Atc "select '${db} contracts='||count(*) from contracts"            # 22（不変であること）
+done
+```
+
+### 5.3 アプリ層の復旧（unit 再配置 + 再起動 / RC-1・RC-2 の恒久対応）
+
+```bash
+cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX
+sudo bash infra/native/install.sh --check   # 読み取り専用の事前確認
+sudo bash infra/native/install.sh           # unit を実パスで再描画 → staging → app tier 再起動 + health 確認
+curl -fsS http://127.0.0.1:8011/healthz; curl -fsS http://127.0.0.1:8013/healthz
 ```
 
 > ⚠️ **`npm run build` を単独で実行しないこと。** 実行した場合は必ず
 > `bash scripts/stage_frontend_standalone.sh` を続けて実行し、その後 frontend unit を再起動する。
 > staging を忘れると RC-2 が再発する（HTML 200 / 資産 404）。
 
-### 5.2 データベース移行（RC-3 の解消）
+### 5.4 Standalone WebUI の unit 更新（同種の旧パス残存）
+
+`~/.config/systemd/user/construction-legalops-standalone-webui.service` も
+`WorkingDirectory` / `ExecStart` が旧パス（`Mirai-DX-Project`）のまま。現在は互換 symlink で
+`http://192.168.0.185:38100/` は 200 を返しているが、`reports/webui/standalone-webui.json` の
+`html_path` は旧パスのままなので `scripts/verify_standalone_webui_runtime.sh` は失敗する。
 
 ```bash
-# 事前バックアップ（スクリプトがサーバ major と一致する pg_dump を自動選択する）
 cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX
-BACKUP_DIR=/var/backups/legalops POSTGRES_USER=legalops_prod POSTGRES_DB=legalops_prod \
-POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=5432 PGPASSWORD="$(...)" bash scripts/backup_db.sh
-
-# 移行（ロール権限が必要。§4.3 のドリルで 009→026 は冪等・可逆・データ保全を実証済み）
-# DSN は systemd と同じ EnvironmentFile から取る（リポジトリ・ログに DSN を書かない）。
-# 1 つの DB を移行している間、他方のサービスは稼働したままでよい。
-cd backend
-set -a; . /etc/legalops/prod-backend.env; set +a   # DB_URL / JWT_SECRET 等を供給
-APP_ENV=production alembic upgrade head
-
-# legalops_mvp も同様（mvp-backend.env を使う）
-set -a; . /etc/legalops/mvp-backend.env; set +a
-APP_ENV=production alembic upgrade head
-
-# 検証
-psql -d legalops_prod -Atc "select version_num from alembic_version"   # 026_rls_restrictive_scope
-psql -d legalops_prod -Atc "select count(*) from information_schema.tables where table_schema='public'"  # 80
-psql -d legalops_prod -Atc "select count(*) from contracts"            # 22（不変であること）
+bash scripts/install_standalone_webui_systemd.sh   # REPO_ROOT から unit を再生成
+systemctl --user daemon-reload && systemctl --user restart construction-legalops-standalone-webui.service
+bash scripts/verify_standalone_webui_runtime.sh    # 0 failed を確認
 ```
 
-### 5.3 セキュリティスキャンの再実行
+### 5.5 backend unit の enable 化（再起動耐性）
+
+`legalops-{prod,mvp}-backend` は現在 **`disabled`** のため、ホスト再起動後に起動しない
+（今回の 5 日間停止の一因でもある。`install.sh` は `enable` するが、手動 `start` だけでは
+`disabled` のまま残る）。恒久対応として `install.sh` の実行（§5.3）で `enable` される。
+
+```bash
+systemctl is-enabled legalops-prod-backend legalops-mvp-backend   # enabled であることを確認
+```
+
+### 5.6 セキュリティスキャンの再実行
 
 ```bash
 gh workflow run security.yml --ref main
@@ -269,13 +312,62 @@ gh workflow run load-test.yml --ref main
 
 ## 6. Rollback
 
+### 6.1 変更点ごとの戻し方
+
 | 対象 | 手順 |
 | --- | --- |
 | 互換 symlink（M-1） | `rm /home/kensan/Projects/Mirai-DX-Project/Construction-LegalOps-DX`（unit を新パスへ描画済みなら不要。削除すると旧パス参照は再び壊れる点に注意） |
 | unit（M-2） | `git checkout -- infra/native/install.sh` → `sudo bash infra/native/install.sh`（旧テンプレートのまま戻るため、旧パス symlink を維持すること） |
-| DB 移行（RC-3） | `alembic downgrade 009_ip_management`（§4.3 で 009 へ戻しデータ保全を実証済み）。完全復旧は §5.2 のバックアップから `scripts/backup_db.sh --restore <file>` |
+| DB 移行（RC-3） | **§6.2 / §6.3 を参照。`downgrade` はデータを失うため本番 rollback には使わない。** |
 | 依存（M-5/M-6） | `git checkout -- backend/pyproject.toml frontend/package.json frontend/package-lock.json` → `pip install -e .[dev]` / `npm ci --legacy-peer-deps` **（セキュリティ修正が戻るため非推奨）** |
 | staging（M-3） | 影響なし（追加のみ）。frontend unit 再起動で元の状態に戻る |
+| seed 冪等化（M-8） | 影響なし（再実行時の重複が止まるだけ）。`--delete` で従来どおり削除可能 |
+| secret scan（M-9） | `git checkout -- scripts/scan_secrets.sh`（ただし PR #89 以降ずっと失敗していた状態に戻る） |
+
+### 6.2 `downgrade` は「データ保全を伴う rollback」ではない
+
+`alembic downgrade` は**スキーマを戻すだけ**で、新規テーブル／列に書かれたデータは失われる。
+`backend/alembic/versions` を実測して `op.drop_table` / `op.drop_column` を列挙した結果:
+
+| revision | downgrade が削除するもの |
+| --- | --- |
+| `001_initial` | 全 13 テーブル（contracts / users / audit_logs / clauses / departments / … ）= base まで戻すと初期構築前 |
+| `002` / `004` / `005` / `006` / `009` | knowledge_articles / ai_provider_settings / contract_templates / audit_export_jobs・contract_access_grants・legal_hold_cases・security_settings / ip_assets・ip_documents・ip_watch_events・ip_watch_targets |
+| `007_business_domain` | contracts・partners・disputes・change_orders・payment_records・contract_documents・dispute_evidence・dispute_timeline_events・change_order_evidence・legal_holds・access_control_entries・audit_anchors・retention_rules・document_consistency_results・external_forward_events（+ 一部列） |
+| `010_signing` | esignature_envelopes / esignature_events |
+| `011_negotiation` | clause_negotiation_events + `clauses.{clause_owner,negotiated_text,negotiation_status}` |
+| `012_obligations` | contract_obligations + `contracts.{auto_renewal,renewal_notice_days}` |
+| `013_matters` | legal_matters / matter_events / matter_contracts |
+| `014_outside_counsel` | law_firms / counsel_lawyers / legal_engagements |
+| `015`〜`018` | labor_wage_standards / price_consultation_logs / standard_work_durations / contracting_agencies・owner_notifications・public_works_consultations |
+| `019_joint_venture` | joint_ventures / jv_members / jv_agreements / jv_disputes / jv_settlements |
+| `020_partner_ext` | partner_reviews + `partners.{insurance_expiry,next_review_due,risk_score,self_registered}` |
+| `021`〜`025` | labor_commitments / dispute_{delay_events,argument_positions,settlement_options,proceeding_stages} / antitrust_{checks,prior_applications,consultations}・compliance_trainings / whistleblower_*（7 テーブル）/ evidences・evidence_custody_events・evidence_hold_release_approvals |
+| `026_rls_restrictive_scope` | テーブルは消さない。`*_contract_scope` ポリシーを **PERMISSIVE に戻す** ＝ 契約可視性チェックが `tenant_isolation` との OR で実質迂回される**セキュリティ後退**（Issue #129 の再発） |
+| `003` / `008` | インデックス追加・契約種別正規化のみ（構造のデータ損失なし） |
+
+> §4.3 の 4 テーブル（contracts / users / departments / audit_logs）の行数比較は
+> 「既存業務データが 010〜026 の downgrade で消えない」ことの証明にはなるが、
+> **本番 rollback 全体のデータ保全の証明にはならない**。上の表のとおり、010 以降に
+> 追加されたテーブルのデータは downgrade で失われる。
+
+### 6.3 本番 rollback の手順（推奨）
+
+1. **`alembic downgrade` を本番では使わない。** 010 以降はすべて新規テーブル／列を落とす。
+2. 戻す場合は §5.1 の**移行前バックアップから復元**する:
+   ```bash
+   cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX
+   POSTGRES_USER=legalops_prod POSTGRES_DB=legalops_prod POSTGRES_HOST=127.0.0.1 \
+     POSTGRES_PORT=5432 bash scripts/backup_db.sh --restore \
+     /home/kensan/legalops-backups/legalops_prod_pre026_20260928T112138Z.dump
+   ```
+   （`--restore` は DB を DROP→CREATE するため、**先に該当 backend を停止**し、
+   復元後に再起動する。確認プロンプトで `yes` を入力する。）
+3. 復元後は `alembic_version` が `009_ip_management` に戻る。現行コードは 026 前提のため、
+   そのままでは再び `column contracts.auto_renewal does not exist` で 500 になる
+   ＝ **DB 復元とコードの版は必ずセットで戻す**。
+4. `026` のみを戻す必要がある場合（RLS を意図的に緩める）は `alembic downgrade 025_evidence` を使うが、
+   **セキュリティ後退であることを承認記録に残す**。
 
 ---
 
@@ -302,8 +394,17 @@ gh workflow run load-test.yml --ref main
 ## 8. 未実施・未確認（正直な記録）
 
 - `legalops_prod` / `legalops_mvp` への**移行適用**（§5.2）。実データドリルで安全性は実証済みだが、
-  RLS 権限変更を含むため承認ゲートとした。
-- `systemctl` による**サービス再起動**（§5.1）。ポリシーゲートで拒否。
+  RLS 権限変更（026）を含むため承認ゲートとした。**現時点で本番 API はこの未適用により 500**。
+  なお `legalops_mvp` ロールのパスワードは `/etc/legalops/mvp-backend.env`（root のみ読取可）にあり、
+  エージェントからは接続できない（`legalops_prod` は `.env.production` の資格情報で接続可）。
+- `systemctl` による**サービス再起動／unit 再配置**（§5.3〜§5.5）。ポリシーゲートで拒否
+  （2026-09-28 に**ユーザが手動で frontend 再起動 + backend 起動を実施し、WebUI と API は復旧**）。
+- Standalone WebUI の unit 更新（§5.4）。稼働中・配信 200 だが unit と status JSON は旧パスのまま。
+- `reports/webui/standalone-webui.json` は 2026-08-27 の生成物で `html_path` が旧パス。
+- `Trivy (fs / config / secret)` と `Trivy (container image)` の失敗原因（ローカルに trivy が無く未再現）。
+- `Bandit` はローカル未インストールのため pre_deploy_check 上は失敗（CI では success）。
+- `Alembic roundtrip` / `Standalone WebUI` の pre_deploy_check 失敗は上記の環境・旧パス要因。
+  Alembic の roundtrip 自体は CI ジョブおよび §4.3 の実データドリルで成功している。
 - frontend の**再ビルド**。稼働中の本番プロセスが同一 `.next/standalone` を参照しているため、
   無停止で再ビルドすると配信物が混在する危険があると判断し、分離ビルドでの検証に留めた。
 - `Trivy (fs / config / secret)` と `Trivy (container image)` の失敗原因（ローカルに trivy が無く未再現）。

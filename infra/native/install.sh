@@ -23,25 +23,49 @@ BUILD=0; INGRESS=0; CHECK=0
 for a in "$@"; do case "$a" in --build) BUILD=1;; --with-ingress) INGRESS=1;; --check) CHECK=1;; *) echo "unknown arg $a" >&2; exit 2;; esac; done
 
 # Any absolute checkout root baked into a template: /home/<user>/Projects/<parent>/Construction-LegalOps-DX
+# NOTE: this pattern also matches the *current* path, so every comparison must be an exact
+# match against $REPO (never "does the pattern match at all").
 STALE_ROOT_RE='/home/[^/[:space:]]+/Projects/[^/[:space:]]+/Construction-LegalOps-DX'
 
 UNIT_NAMES="legalops-prod-backend legalops-prod-celery-worker legalops-prod-celery-beat legalops-prod-frontend legalops-mvp-backend legalops-mvp-frontend legalops-nginx legalops-prod-cloudflared legalops-mvp-cloudflared"
+# Units that reference the checkout itself (WorkingDirectory / ExecStart / PYTHONPATH) and
+# therefore must resolve to $REPO.
+CHECKOUT_UNITS="legalops-prod-backend legalops-prod-celery-worker legalops-prod-celery-beat legalops-prod-frontend legalops-mvp-backend legalops-mvp-frontend"
+
+# Echo the unique checkout roots a unit file implies (any absolute path ending in
+# /backend or /frontend, with that suffix stripped). Deliberately NOT anchored to
+# STALE_ROOT_RE: a unit pointing at an unrelated checkout (/opt/other/frontend) must be
+# reported, not silently treated as OK (2026-09-28 review finding).
+unit_checkout_roots() {
+  grep -hoE '/[^[:space:]]*/(backend|frontend)(/[^[:space:]]*)?' "$1" 2>/dev/null \
+    | sed -E 's#/(backend|frontend)(/.*)?$##' | sort -u
+}
 
 # --check: assert the units already installed on this host target THIS checkout. No writes.
-# NOTE: STALE_ROOT_RE deliberately matches ANY parent directory, so it also matches the
-# *correct* path. Every comparison must therefore be against $REPO exactly (grep -vxF),
-# never "does the pattern match at all".
 if [ "$CHECK" = 1 ]; then
   rc=0
   for u in $UNIT_NAMES; do
     f="/etc/systemd/system/$u.service"
-    [ -f "$f" ] || { echo "MISSING  $f"; rc=1; continue; }
-    stale="$(grep -Eo "$STALE_ROOT_RE" "$f" | sort -u | grep -vxF "$REPO" || true)"
-    if [ -n "$stale" ]; then
-      echo "STALE    $u -> $(echo "$stale" | tr '\n' ' ')  (expected $REPO)"
+    [ -f "$f" ] || { echo "MISSING    $f"; rc=1; continue; }
+    roots="$(unit_checkout_roots "$f")"
+    if [ -z "$roots" ]; then
+      case " $CHECKOUT_UNITS " in
+        *" $u "*)
+          # Fail closed: a unit that should point at the checkout but carries no
+          # resolvable checkout path cannot be verified — report it, never "OK".
+          echo "UNVERIFIED $u -> no checkout path found (expected $REPO)"
+          rc=1
+          ;;
+        *) echo "OK         $u (no checkout reference by design)" ;;
+      esac
+      continue
+    fi
+    bad="$(printf '%s\n' "$roots" | grep -vxF "$REPO" || true)"
+    if [ -n "$bad" ]; then
+      echo "STALE      $u -> $(echo "$bad" | tr '\n' ' ')  (expected $REPO)"
       rc=1
     else
-      echo "OK       $u"
+      echo "OK         $u"
     fi
   done
   [ "$rc" = 0 ] && echo "[install --check] all units target $REPO" || echo "[install --check] stale units detected" >&2
@@ -85,15 +109,30 @@ for u in $UNIT_NAMES; do
   [ -f "$src" ] || { echo "unit template missing: $src" >&2; exit 1; }
   rendered="$(mktemp)"
   sed -E "s|$STALE_ROOT_RE|$REPO|g" "$src" > "$rendered"
-  # Fail closed: never install a unit that still resolves outside this checkout.
-  # STALE_ROOT_RE matches $REPO itself too, so compare the extracted matches against
-  # $REPO exactly instead of just testing for a pattern hit.
+  # Fail closed: never install a unit that resolves outside this checkout.
+  # (a) any other /home/*/Projects/*/Construction-LegalOps-DX root left behind
   leftover="$(grep -Eo "$STALE_ROOT_RE" "$rendered" | sort -u | grep -vxF "$REPO" || true)"
   if [ -n "$leftover" ]; then
     echo "refusing to install $u: unresolved checkout path remains:" >&2
     echo "$leftover" >&2
     rm -f "$rendered"; exit 1
   fi
+  # (b) units that must reference the checkout have to resolve to exactly $REPO
+  case " $CHECKOUT_UNITS " in
+    *" $u "*)
+      roots="$(unit_checkout_roots "$rendered")"
+      if [ -z "$roots" ]; then
+        echo "refusing to install $u: no checkout path found in the rendered unit" >&2
+        rm -f "$rendered"; exit 1
+      fi
+      bad="$(printf '%s\n' "$roots" | grep -vxF "$REPO" || true)"
+      if [ -n "$bad" ]; then
+        echo "refusing to install $u: rendered unit points outside this checkout:" >&2
+        echo "$bad" >&2
+        rm -f "$rendered"; exit 1
+      fi
+      ;;
+  esac
   install -m 644 "$rendered" "/etc/systemd/system/$u.service"
   rm -f "$rendered"
 done
