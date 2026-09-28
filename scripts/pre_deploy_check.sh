@@ -149,6 +149,12 @@ else
   check "scan_secrets.sh missing (fail-closed)" 1
 fi
 
+if [ -x "./scripts/verify_alembic_revision_ids.sh" ]; then
+  ./scripts/verify_alembic_revision_ids.sh >/dev/null && check "alembic revision id length / chain preflight" 0 || check "alembic revision id length / chain preflight" 1
+else
+  check "verify_alembic_revision_ids.sh missing (fail-closed)" 1
+fi
+
 if [ -x "./scripts/verify_nginx_auth_routing.sh" ]; then
   ./scripts/verify_nginx_auth_routing.sh >/dev/null && check "nginx /api/auth routing preflight" 0 || check "nginx /api/auth routing preflight" 1
 else
