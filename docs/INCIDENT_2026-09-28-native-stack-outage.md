@@ -24,7 +24,7 @@
 
 ---
 
-## 2. Root Cause（4 件・すべて実測で確定）
+## 2. Root Cause（5 件・すべて実測で確定）
 
 ### RC-1【Critical】リポジトリ移設に systemd unit と venv shebang が追随していない
 
@@ -231,7 +231,29 @@ Evidence（2026-09-28 実測）:
 
 ---
 
-## 5. 残る人間ゲート（特権操作・1 件）
+### 4.7 UI/UX と性能（公開 MVP 実測 / 2026-09-28）
+
+| 項目 | 実測 |
+| --- | --- |
+| Desktop `/` | HTML 200 / 静的資産 404 **0** / h1「ダッシュボード」/ サイドバーあり / `bodyBg=rgb(255,255,255)` / `Noto Sans JP` 適用 |
+| Desktop `/contracts` | 200 / 静的資産 404 0 |
+| Desktop `/matters` | HTML 200（API `/api/v1/matters` は 500 だが**ページは描画され、エラー通知を表示**） |
+| Empty / Error Flow | ダッシュボードに「一部の指標を取得できませんでした。最新値ではない可能性があります。」を表示（**白画面にならない**） |
+| Keyboard | Tab 順序が論理的（サイドバー開閉 → ナビリンク）。フォーカスリング可視（`outline: solid 2px` + box-shadow） |
+| Responsive 390×844 | HTTP 200 / `document.scrollWidth=390` = viewport（**横スクロールなし**） |
+| FCP / DOMContentLoaded / load | **180ms / 236ms / 312ms** |
+| 初回転送 | 67 requests / **1,028 KB**（JS 225KB・CSS 102KB・**フォント 700KB / 34 ファイル**） |
+| TTFB（nginx 直） | `/` 6.6ms、`/api/v1/ping` 1.7ms、静的 chunk 174KB 21ms |
+| 公開 URL（Cloudflare 経由 5 回計測） | `/` 0.20〜0.27s、`/api/v1/ping` 0.16〜0.23s、`/healthz` 0.16〜0.30s |
+| 静的資産ヘッダ | `Content-Encoding: gzip` + `Cache-Control: public, max-age=31536000, immutable` |
+
+- 初回転送の最大要因は **フォント**（Noto Sans JP のサブセット 34 ファイル・700KB）。再訪時は
+  静的資産が immutable キャッシュされるため実質 HTML + API のみ。**性能上の重大問題は検出されず**。
+- `console error` として Auth.js の `AuthError` が全ページで発生していた（RC-5 の症状、修正済み）。
+
+
+
+## 5. 残る人間ゲート（特権操作）
 
 本セッションのポリシーゲートは `systemctl start|stop|restart` を **INFRA_CHANGE(critical=常時拒否)**、
 `.github/workflows/**` および `**/systemd/**` への書き込みを **DEPLOY / INFRA_CHANGE(critical=常時拒否)** として
