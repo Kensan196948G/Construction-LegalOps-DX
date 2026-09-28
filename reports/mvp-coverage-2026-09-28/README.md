@@ -5,18 +5,20 @@
 
 ## 結論
 
-修正後のスタック（新 backend + 新 frontend ビルド）を**同一オリジン構成で再現**して検証した結果:
+**修正後のスタック**（新 backend + 新 frontend ビルド）と**現行のライブ MVP**を同一の検証器で比較した:
 
-```
-total=35  PASS=32  FAIL=0  UNKNOWN=0  N-A=3
-RESULT: OK (FAIL 0 / UNKNOWN 0)
-```
+| 環境 | 構成 | PASS | FAIL | UNKNOWN | N-A | 判定 |
+| --- | --- | --- | --- | --- | --- | --- |
+| **ライブ MVP** | 旧 frontend ビルド + 旧 backend コード（未反映） | 32 | **1**（`/payments`） | 0 | 2 | NG |
+| **検証スタック** | 新 frontend ビルド + 新 backend コード | **33** | **0** | 0 | 2 | **OK** |
 
-- `PASS` = 描画 DOM にデータ行/件数があり、当該 API も 200 でデータあり
-- `N-A` = ページ自身が API を呼ばず表構造も無い静的画面（`/search` `/settings`）。
-  および `/dashboard`（カード型レイアウト + RSC 取得のため検証器が機械判定できない。
-  **人手確認ではデータ表示を確認済み**＝下記）
-- `FAIL` / `UNKNOWN` は 0
+- ライブ側の唯一の FAIL `/payments` は、**フロントの zod スキーマが旧版のまま**で
+  `overall_status:"warning"` / `findings[].message` を parse できず `catch → setOffline(true)`
+  になるため（依存 API は両方 200 であることを実測で確認済み）。
+  **frontend をカットオーバーすれば解消する**ことを検証スタックで実証した
+  （同ページが `表データ行 2 / API データ findings=2` で PASS）。
+- `N-A` は `/search` と `/settings`（ページ自身が API を呼ばず表構造も無い静的画面）。
+  `/dashboard` は検証器の改善（カード型の数値表示要素を数える方式）により **PASS** になった。
 
 ## 検証方法（本番を変更せずに本番相当を再現）
 
