@@ -886,17 +886,33 @@ async def repair_legacy_review_issues(session) -> int:
     ``legalops_prod``; the current seed shape is written correctly but
     pre-existing rows were never migrated).
 
-    Only rows that still carry the legacy marker are touched, and the
-    replacement content is the canonical ``REVIEW_ISSUES`` data, keeping the
+    Only rows that still carry the legacy marker **and** whose contract is a demo
+    contract (``CTR-2026-%``, the same convention the rest of this script uses to
+    find and delete demo rows) are touched. The contract check matters: the
+    legacy rows carry no ``demo`` flag in ``result`` and use ``claude-opus-4-7``
+    as ``ai_model``, so the marker alone would also match a review a real user
+    had created against a real contract, and rewriting that with fictional
+    findings would be data corruption.
+
+    The replacement content is the canonical ``REVIEW_ISSUES`` data, keeping the
     original issue count. Idempotent: re-running finds nothing to repair.
 
     Note: the API read path is separately hardened (api-fixer, task-5 #6) so a
     future shape drift degrades instead of returning 500; this function
     converges the stored data itself.
     """
+    demo_contract_ids = set(
+        (
+            await session.execute(
+                select(Contract.id).where(Contract.contract_no.like("CTR-2026-%"))
+            )
+        ).scalars()
+    )
     rows = (await session.execute(select(LegalReview))).scalars().all()
     repaired = 0
     for review in rows:
+        if review.contract_id not in demo_contract_ids:
+            continue  # never rewrite a review attached to a non-demo contract
         result = review.result or {}
         issues = result.get("issues")
         if not isinstance(issues, list) or not issues:

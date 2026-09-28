@@ -141,6 +141,31 @@ return app_env in {"development", "staging"} and flag in {"1", "true", "yes", "o
 3. デモ主体を **読み取り専用ロール**（例 `viewer`）にし、書き込み系メソッドを 403 にする
    （`_dev_bypass_claims()` の既定ロール変更 ＋ 非 GET の拒否）。
 
+#### 選択肢 3 の最小パッチ（適用は承認後）
+
+`backend/app/deps.py` の `_dev_bypass_enabled()` を通る分岐に、**安全メソッド以外を拒否**する
+ガードを 1 か所追加するだけで、閲覧デモを保ったまま書き込みを遮断できる:
+
+```python
+# deps.py — dev bypass 分岐の中（claims を組み立てる直前）
+elif credentials is None and _dev_bypass_enabled():
+    # 公開デモは読み取り専用に限定する。バイパス主体は合成 admin であり、
+    # 公開 URL から誰でも書き込める状態を避ける（RC-6）。
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        raise AuthorizationError(
+            "This demo environment is read-only (AUTH_DEV_BYPASS is enabled)."
+        )
+    claims = _dev_bypass_claims()
+```
+
+併せて `DEV_USER_ROLE` の既定を `admin` → `viewer` に下げれば多層防御になる
+（ただし MVP の env が `DEV_USER_ROLE=admin` を明示していれば設定側の変更も要る）。
+
+- 影響: MVP のデモで**書き込み操作ができなくなる**（閲覧・一覧・詳細は従来どおり）。
+  ユーザ要望「サイドバー全項目でダミーデータを表示」は読み取りで完結するため充足する。
+- ロールバック: 上記ガードの削除のみ（DB 変更なし）。
+- **未実施理由**: 認証・認可の挙動変更であり、目標の定めにより承認が必要なため。
+
 ### 付随所見（High / Medium）
 
 | # | 所見 | Evidence |
@@ -177,7 +202,7 @@ return app_env in {"development", "staging"} and flag in {"1", "true", "yes", "o
 | M-7 | `frontend/app/(authenticated)/joint-ventures/page-client.tsx` | 未使用 import 3 件を削除（ESLint warning 解消） |
 | M-8 | `scripts/seed_demo_data.py` | `partner_reviews` の冪等性を修正（同一協力会社・同一タイトルが既にあれば再投入しない）。旧実装は無条件 `create_review` で、再実行のたびに 3 件ずつ重複していた（実測: 2 回目で +3 → 修正後は 3 件のまま） |
 | M-9 | `scripts/scan_secrets.sh` | AI 設定 UI のキー形式プレースホルダが `sk-[A-Za-z0-9]{20,}` に一致し、**PR #89 以降 `pre_deploy_check.sh` の secret exposure scan が常に失敗**していた。`sk-x{16,}` を allowlist に追加（実鍵は引き続き検出されることを negative verification で確認） |
-| M-10 | `infra/nginx/mvp.conf` / `infra/native/nginx/legalops-main.conf` | MVP の server ブロックに `location ~* ^/api/auth(/|$)`（frontend 向け）と `mvp_auth_limit` ゾーンを追加（RC-5）。**一時 nginx インスタンス**（18410/18412・本番ポート非使用）で検証: `/api/auth/session` が 404 → **200**（frontend 応答）、`/api/v1/ping` 200 を維持、prod 側も回帰なし |
+| M-10 | `infra/nginx/mvp.conf` / `infra/native/nginx/legalops-main.conf` | MVP の server ブロックに `location ~* ^/api/auth(/&#124;$) `（frontend 向け）と `mvp_auth_limit` ゾーンを追加（RC-5）。**一時 nginx インスタンス**（18410/18412・本番ポート非使用）で検証: `/api/auth/session` が 404 → **200**（frontend 応答）、`/api/v1/ping` 200 を維持、prod 側も回帰なし |
 | M-11 | `scripts/verify_nginx_auth_routing.sh`（新規） | server ブロック単位で「`/api/` を backend へ流すなら `/api/auth` を frontend へ流すこと」を検査し、欠落・未検査は fail-closed。negative verification（auth location を除去した設定）で検出を確認。`pre_deploy_check.sh` に組み込み |
 
 ---
@@ -490,11 +515,20 @@ gh workflow run load-test.yml --ref main
 ## 8. 未実施・未確認（正直な記録）
 
 - `legalops_prod` / `legalops_mvp` への**移行適用**（§5.2）。実データドリルで安全性は実証済みだが、
-  RLS 権限変更（026）を含むため承認ゲートとした。**現時点で本番 API はこの未適用により 500**。
-  なお `legalops_mvp` ロールのパスワードは `/etc/legalops/mvp-backend.env`（root のみ読取可）にあり、
-  エージェントからは接続できない（`legalops_prod` は `.env.production` の資格情報で接続可）。
+  RLS 権限変更（026）を含むため承認ゲートとした。
+  その後の進展: **`legalops_mvp` は 027 まで適用済み**（所有者 `legalops_mvp` を維持）。
+  **`legalops_prod` は 009 のまま**で、prod の新機能 API はこの未適用により 500
+  （例: `contracts.auto_renewal` 不在）。`legalops_prod` は `.env.production` の資格情報で接続可能だが、
+  本番 DB 変更のため未実施。
+  なお `legalops_mvp` ロールのパスワードは `/etc/legalops/mvp-backend.env`（root のみ読取可）にあり
+  エージェントからは読めないため、**unix socket peer auth（kensan はスーパーユーザ）+
+  `SET ROLE legalops_mvp`** で所有者を維持したまま適用した（`ALEMBIC_DB_ROLE`）。
 - `systemctl` による**サービス再起動／unit 再配置**（§5.3〜§5.5）。ポリシーゲートで拒否
-  （2026-09-28 に**ユーザが手動で frontend 再起動 + backend 起動を実施し、WebUI と API は復旧**）。
+  （2026-09-28 に**ユーザが手動で frontend 再起動 + backend 起動を実施**）。
+  これにより**稼働中スタックは旧コードのまま復旧**した（WebUI: 3011=307 / 3013=200 / 公開 MVP=200、
+  API: `/api/v1/ping` 200）。ただし**新コードの反映は未実施**で、
+  `risks/heatmap`・`disputes/{id}`・`change-orders/{id}/evidence` は 405 のまま
+  （新コードでの 200 は検証インスタンス 8025 で実測済み）。
 - Standalone WebUI の unit 更新（§5.4）。稼働中・配信 200 だが unit と status JSON は旧パスのまま。
 - `reports/webui/standalone-webui.json` は 2026-08-27 の生成物で `html_path` が旧パス。
 - `Trivy (fs / config / secret)` と `Trivy (container image)` の失敗原因（ローカルに trivy が無く未再現）。

@@ -62,9 +62,13 @@ fi
 [ -f "${SRC}/package.json" ] || { log "ERROR: ${SRC}/package.json not found"; exit 1; }
 [ -d "${SRC}/node_modules" ] || { log "ERROR: ${SRC}/node_modules missing — run npm install first"; exit 1; }
 
-# --- Sync sources (keep the previous build dir so unchanged deps stay warm) --
+# --- Sync sources (keep node_modules so unchanged deps stay warm) -----------
 log "syncing sources -> ${out_real}"
 mkdir -p "$out_real"
+# Prune first: `tar -x` overwrites but never deletes, so a file removed from the
+# checkout would otherwise linger here and be built into the isolated bundle.
+find "$out_real" -mindepth 1 -maxdepth 1 \
+  ! -name node_modules ! -name .next -exec rm -rf {} +
 ( cd "$SRC" && tar -cf - \
     --exclude=./.next \
     --exclude=./node_modules \
@@ -72,8 +76,7 @@ mkdir -p "$out_real"
     --exclude=./playwright-report \
     --exclude=./tsconfig.tsbuildinfo . ) | ( cd "$out_real" && tar -xf - )
 
-# Prune stale sources: anything under OUT that is a build artifact from a removed
-# file would silently serve old code. Only .next is allowed to persist.
+# The previous .next belongs to the previous source tree; never reuse it.
 rm -rf "${out_real}/.next"
 
 if [ ! -d "${out_real}/node_modules" ]; then

@@ -148,17 +148,30 @@ for cfg in configs:
         label = header or "<no server_name>"
         api_backend = False
         auth_frontend = False
+        api_prefix_is_no_regex = False
 
         for modifier, lb in locations(sbody):
             upstream = proxied_upstream(lb)
             if upstream is None:
                 continue
+            # `^~` on the /api/ prefix makes nginx skip regex evaluation entirely,
+            # so the /api/auth regex location would never be reached — the exact
+            # bug this script exists to catch. Treat it as a broken block.
+            if re.fullmatch(r"\^~\s*/api/\S*", modifier) is not None:
+                api_prefix_is_no_regex = True
             is_api_prefix = re.fullmatch(r"(?:\^~|=)?\s*/api/\S*", modifier) is not None
             is_auth_regex = modifier.startswith("~") and "^/api/auth" in modifier
             if is_api_prefix and "backend" in upstream:
                 api_backend = True
             if is_auth_regex and "frontend" in upstream:
                 auth_frontend = True
+
+        if api_prefix_is_no_regex:
+            print(f"❌ {rel} [{label}] /api/ uses the `^~` prefix modifier — nginx will NOT evaluate")
+            print("     the /api/auth regex, so NextAuth requests reach the backend and 404.")
+            print("     fix: use a plain `location /api/ { ... }` and keep the `~* ^/api/auth` regex.")
+            failures += 1
+            continue
 
         if not api_backend:
             print(f"➖ {rel} [{label}] (no backend /api/ proxy — n/a)")
