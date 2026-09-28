@@ -82,6 +82,28 @@ Evidence（実測・2026-09-28）:
   （`ci.yml` 最終成功は 2026-09-06 = SQLAlchemy 2.1.1 登場前。同一 main で再実行すれば backend / migrations ジョブも落ちる状態だった）
 - ローカル既存 venv は `sqlalchemy 2.0.52` のため影響を受けず、差異が隠れていた
 
+### RC-5【High】MVP の nginx に `/api/auth` の振り分けが無く、認証エンドポイントが 404
+
+`/api/auth/*` は NextAuth（**frontend**）のルートで、backend の認証は `/api/v1/auth/*`。
+nginx は正規表現 location が prefix location より優先されるため、`/api/` を backend へ流す
+server ブロックには必ず `location ~* ^/api/auth(/|$)` を frontend 向けに置く必要がある。
+
+prod の設定（`infra/nginx/default.conf` と native の prod ブロック）には
+「backend へ誤送すると 404 になりログイン不能」というコメント付きで存在したが、
+**MVP 側（`infra/nginx/mvp.conf` と native の mvp ブロック）には欠落**していた。
+
+Evidence（2026-09-28 実測）:
+
+| 経路 | `/api/auth/session` |
+| --- | --- |
+| nginx（MVP 8412） | **404**（backend の problem+json を返す） |
+| frontend 直（3013） | 200 |
+| backend 直（8013） | 404 |
+
+影響: MVP（Cloudflare Access 保護外の公開デモ）で **NextAuth の session / providers / csrf が到達不能**。
+ブラウザは全ページで `AuthError`（`https://errors.authjs.dev#autherror`）を投げ、
+ユーザーメニューが「ユーザー」へフォールバックする。実測: ダッシュボードで console error 6 件。
+
 ### 付随所見（High / Medium）
 
 | # | 所見 | Evidence |
@@ -118,6 +140,8 @@ Evidence（実測・2026-09-28）:
 | M-7 | `frontend/app/(authenticated)/joint-ventures/page-client.tsx` | 未使用 import 3 件を削除（ESLint warning 解消） |
 | M-8 | `scripts/seed_demo_data.py` | `partner_reviews` の冪等性を修正（同一協力会社・同一タイトルが既にあれば再投入しない）。旧実装は無条件 `create_review` で、再実行のたびに 3 件ずつ重複していた（実測: 2 回目で +3 → 修正後は 3 件のまま） |
 | M-9 | `scripts/scan_secrets.sh` | AI 設定 UI のキー形式プレースホルダが `sk-[A-Za-z0-9]{20,}` に一致し、**PR #89 以降 `pre_deploy_check.sh` の secret exposure scan が常に失敗**していた。`sk-x{16,}` を allowlist に追加（実鍵は引き続き検出されることを negative verification で確認） |
+| M-10 | `infra/nginx/mvp.conf` / `infra/native/nginx/legalops-main.conf` | MVP の server ブロックに `location ~* ^/api/auth(/|$)`（frontend 向け）と `mvp_auth_limit` ゾーンを追加（RC-5）。**一時 nginx インスタンス**（18410/18412・本番ポート非使用）で検証: `/api/auth/session` が 404 → **200**（frontend 応答）、`/api/v1/ping` 200 を維持、prod 側も回帰なし |
+| M-11 | `scripts/verify_nginx_auth_routing.sh`（新規） | server ブロック単位で「`/api/` を backend へ流すなら `/api/auth` を frontend へ流すこと」を検査し、欠落・未検査は fail-closed。negative verification（auth location を除去した設定）で検出を確認。`pre_deploy_check.sh` に組み込み |
 
 ---
 
@@ -301,7 +325,20 @@ bash scripts/verify_standalone_webui_runtime.sh    # 0 failed を確認
 systemctl is-enabled legalops-prod-backend legalops-mvp-backend   # enabled であることを確認
 ```
 
-### 5.6 セキュリティスキャンの再実行
+### 5.6 nginx 設定の反映（RC-5 の恒久対応）
+
+`/etc/nginx/legalops-main.conf` も読み取り専用領域にあり、反映には root と nginx のリロードが必要
+（`infra/native/install.sh` が config を配置し、`--with-ingress` で nginx を再起動する）。
+
+```bash
+cd /home/kensan/Projects/Mirai-Admin-Platform/Construction-LegalOps-DX
+bash scripts/verify_nginx_auth_routing.sh          # 事前確認（fail-closed）
+sudo bash infra/native/install.sh --with-ingress   # config 配置 + nginx 再起動
+# 反映確認: 404 だった認証エンドポイントが 200 になること
+curl -s -o /dev/null -w '%{http_code}\n' https://legalops-mvp.mirai-dx-platform.com/api/auth/session   # 200
+```
+
+### 5.7 セキュリティスキャンの再実行
 
 ```bash
 gh workflow run security.yml --ref main

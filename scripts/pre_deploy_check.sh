@@ -149,6 +149,12 @@ else
   check "scan_secrets.sh missing (fail-closed)" 1
 fi
 
+if [ -x "./scripts/verify_nginx_auth_routing.sh" ]; then
+  ./scripts/verify_nginx_auth_routing.sh >/dev/null && check "nginx /api/auth routing preflight" 0 || check "nginx /api/auth routing preflight" 1
+else
+  check "verify_nginx_auth_routing.sh missing (fail-closed)" 1
+fi
+
 if [ -x "./scripts/verify_cloudflare_legalops.sh" ]; then
   ./scripts/verify_cloudflare_legalops.sh >/dev/null && check "Cloudflare legalops subdomain preflight" 0 || check "Cloudflare legalops subdomain preflight" 1
 else
