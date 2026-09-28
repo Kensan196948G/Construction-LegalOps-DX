@@ -156,3 +156,88 @@ def test_findings_accepts_review_issue_instances() -> None:
 
     assert detail.findings[0].clause_seq == 1
     assert detail.findings[0].comment == "c"
+
+
+def _current_finding(**overrides: Any) -> dict[str, Any]:
+    """現行形式の必須項目を満たす finding（任意項目だけを差し替えて使う）."""
+    finding: dict[str, Any] = {"clause_seq": 1, "risk_level": "high", "comment": "c"}
+    finding.update(overrides)
+    return finding
+
+
+def test_broken_optional_fields_are_dropped() -> None:
+    """**任意項目**の型・値域違反も読み飛ばす（データ起因の 500 を防ぐ）.
+
+    必須項目だけを見て採用すると、``citations: "不正な値"`` のような違反が
+    素通りし、呼び出し元のレスポンス検証で 500 になる（CodeRabbit 指摘）。
+    """
+    detail = _validate(
+        [
+            _current_finding(citations="不正な値"),  # list[str] のはず
+            _current_finding(citations=[1, 2]),  # 要素の型が違う
+            _current_finding(ai_confidence="abc"),  # float 0..1 のはず
+            _current_finding(ai_confidence=1.5),  # 値域外
+            _current_finding(suggested_actions="x"),  # list[dict] のはず
+            _current_finding(suggested_actions=[{"description": "d"}]),  # action 欠落
+            _current_finding(verdict="bogus"),  # pattern 違反
+            _current_finding(source_page="three"),  # int のはず
+            # 正しい要素は残る
+            _current_finding(
+                clause_seq=9,
+                citations=["建設業法第19条の3"],
+                ai_confidence=0.8,
+                verdict="needs_human_review",
+                suggested_actions=[
+                    {"action": "counter_proposal", "description": "修正案を提示"}
+                ],
+            ),
+        ]
+    )
+
+    assert len(detail.findings) == 1
+    kept = detail.findings[0]
+    assert kept.clause_seq == 9
+    assert kept.citations == ["建設業法第19条の3"]
+    assert kept.ai_confidence == 0.8
+    assert kept.verdict == "needs_human_review"
+    assert kept.suggested_actions[0].action == "counter_proposal"
+
+
+def test_legacy_finding_with_broken_optional_field_is_dropped() -> None:
+    """旧形式でも任意項目が壊れていれば読み飛ばす（救済は必須項目が健全な場合のみ）."""
+    detail = _validate(
+        [
+            {
+                "detail": "d",
+                "target": "第3条 x",
+                "summary": "s",
+                "severity": "high",
+                "citations": "不正な値",
+            },
+            {"detail": "d2", "target": "第4条 y", "summary": "s2", "severity": "medium"},
+        ]
+    )
+
+    assert [f.comment for f in detail.findings] == ["d2"]
+    assert detail.findings[0].clause_seq == 4
+
+
+def test_optional_field_type_violation_would_500_without_validation() -> None:
+    """回帰の核: 候補を ``ReviewIssue`` で検証しないと 500 になることの証明.
+
+    正規化（旧形式→現行形式の写像）だけでは型違反を検出できないため、
+    ``_coerce_findings`` が最終検証している。ここでは「検証を挟まなければ
+    落ちる」ことを直接示して、テストが有意義であることを固定する。
+    """
+    import pytest
+    from pydantic import ValidationError
+
+    from app.schemas.legal_review import ReviewIssue, _normalize_finding
+
+    candidate = _normalize_finding(_current_finding(citations="不正な値"))
+    assert candidate is not None  # 正規化は通過してしまう
+    with pytest.raises(ValidationError):
+        ReviewIssue.model_validate(candidate)
+
+    # 正規化 + 検証を通す `_validate` 経由では落ちず、要素だけが読み飛ばされる
+    assert _validate([_current_finding(citations="不正な値")]).findings == []

@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Annotated, Any
 
 import structlog
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from app.models.enums import ReviewStatus, ReviewType, RiskLevel
 
@@ -99,9 +99,12 @@ def _normalize_finding(raw: Any) -> dict[str, Any] | None:
     ==================  ==================
 
     現行形式のキーが既にあればそれを優先する（新形式データは無変更で通る）。
-    必須項目（``clause_seq`` / ``risk_level`` / ``comment``）を補えない要素、
-    および dict でも ``ReviewIssue`` でもない要素は ``None`` を返す。呼び出し側
-    （``ReviewDetail._coerce_findings``）がその件数をログに残して読み飛ばす。
+    dict でも ``ReviewIssue`` でもない要素は ``None`` を返す。
+
+    **採用可否の最終判定はここでは行わない。** 必須項目だけでなく任意項目
+    （``citations`` / ``suggested_actions`` / ``ai_confidence`` など）の型違反も
+    同列に扱うため、呼び出し側 ``ReviewDetail._coerce_findings`` が
+    ``ReviewIssue.model_validate`` で検証し、失敗した要素を読み飛ばす。
     """
     if isinstance(raw, ReviewIssue):
         return raw.model_dump()
@@ -131,13 +134,6 @@ def _normalize_finding(raw: Any) -> dict[str, Any] | None:
     if not isinstance(clause_seq, int) or isinstance(clause_seq, bool) or clause_seq < 0:
         item["clause_seq"] = _extract_clause_seq(item.get("target"))
 
-    clause_seq = item.get("clause_seq")
-    if not isinstance(clause_seq, int) or isinstance(clause_seq, bool) or clause_seq < 0:
-        return None
-    if item.get("risk_level") not in _VALID_RISK_LEVELS:
-        return None
-    if not isinstance(item.get("comment"), str):
-        return None
     return item
 
 
@@ -193,13 +189,19 @@ class ReviewDetail(ReviewRead):
 
     @field_validator("findings", mode="before")
     @classmethod
-    def _coerce_findings(cls, value: Any) -> list[Any]:
+    def _coerce_findings(cls, value: Any) -> list[ReviewIssue]:
         """``findings`` を読み取り時に正規化し、壊れた要素で 500 にしない。
 
         ``legal_reviews.result`` は JSONB で、スキーマ変更前のデータ
         （旧形式 ``severity`` / ``detail`` / ``summary`` / ``target``）や
-        部分的に壊れた要素が残り得る。正規化できない要素は読み飛ばすが、
-        **黙って握り潰さない**: 読み飛ばした件数を warning で記録する。
+        部分的に壊れた要素が残り得る。
+
+        正規化した候補は **必ず ``ReviewIssue`` として検証してから採用する**。
+        必須項目だけを見て採用すると、``citations: "不正な値"`` のような
+        *任意項目*の型違反が素通りし、呼び出し元のレスポンス検証で 500 に
+        なってしまう（＝データ起因の 500 を防ぐという目的を達成できない）。
+
+        読み飛ばした要素は **黙って握り潰さない**: 件数を warning で記録する。
         """
         if value is None:
             return []
@@ -210,14 +212,22 @@ class ReviewDetail(ReviewRead):
             )
             return []
 
-        normalized: list[Any] = []
+        normalized: list[ReviewIssue] = []
         dropped = 0
         for raw in value:
-            item = _normalize_finding(raw)
-            if item is None:
+            candidate = _normalize_finding(raw)
+            if candidate is None:
                 dropped += 1
                 continue
-            normalized.append(item)
+            try:
+                normalized.append(ReviewIssue.model_validate(candidate))
+            except ValidationError:
+                # 必須項目は補えたが、任意項目（citations / suggested_actions /
+                # verdict / ai_confidence 等）の型・値域が壊れているケース。
+                # Pydantic のスキーマ違反は必ず ValidationError になるため、
+                # ここだけを捕捉する（それ以外の例外は実装バグとして表面化させる）。
+                dropped += 1
+                continue
 
         if dropped:
             logger.warning(
