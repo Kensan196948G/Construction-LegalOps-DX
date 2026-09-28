@@ -92,6 +92,16 @@ Evidence（実測・2026-09-28）:
 | F-4 | 週次 `Security (weekly deep scan)` が 2026-09-07 / 09-14 / 09-21 と 3 回連続 failure | `gh run list --workflow security.yml` |
 | F-5 | `backend/dev_legalops.db`（SQLite 残骸）が残置。テスト基盤は PostgreSQL 単一化済み（#132） | ファイル存在 |
 | F-6 | frontend の未使用 import による ESLint warning 3 件 | `npm run lint` |
+| F-7 | `scripts/seed_demo_data.py` は CI の lint / type ゲート対象外（CI は `backend/` 内で `ruff check .` / `mypy app` を実行）。同ファイルは ruff 107 / mypy 39 の指摘を抱えたまま運用されている | `.github/workflows/ci.yml` の実行範囲 |
+| F-8 | seed のカバレッジが Phase 3（migration 022〜025: dispute 高度化 / 独禁法 / 内部通報 / 証拠）に未対応。当該画面はデモ投入後も空のまま | seed 実行結果（`whistleblower_*` / `evidences` / `antitrust_*` が 0 件） |
+
+> **確認して「問題なし」と判断した項目（誤検知の記録）**: seed `--delete` 実行時、
+> `partner_reviews` と `labor_commitments` の削除件数が **0 と報告される**一方で実際には
+> 削除されていた。当初これを報告件数の不具合と疑ったが、FK を実測したところ
+> `partner_reviews.partner_id → partners ON DELETE CASCADE` および
+> `labor_commitments.contract_id → contracts ON DELETE CASCADE` であり、
+> 先に実行される親行（partners / contracts）の削除で **すでにカスケード削除済み**だった。
+> 報告値 0 は正しい。**不具合ではない**（誤って不具合として報告しないよう記録する）。
 
 ---
 
@@ -106,6 +116,8 @@ Evidence（実測・2026-09-28）:
 | M-5 | `backend/pyproject.toml` | `sqlalchemy[asyncio]>=2.0.36` へ修正（RC-4 の恒久修正） |
 | M-6 | `frontend/package.json` / lock | `next` 15.5.22→**15.5.26**（critical RCE 修正）、`sharp`→0.35.5、`js-yaml@3`→3.15.2 / `js-yaml@4`→4.3.2、`browserslist`→4.29.2、`baseline-browser-mapping`→2.11.x、`postcss-selector-parser`→6.1.4 |
 | M-7 | `frontend/app/(authenticated)/joint-ventures/page-client.tsx` | 未使用 import 3 件を削除（ESLint warning 解消） |
+| M-8 | `scripts/seed_demo_data.py` | `partner_reviews` の冪等性を修正（同一協力会社・同一タイトルが既にあれば再投入しない）。旧実装は無条件 `create_review` で、再実行のたびに 3 件ずつ重複していた（実測: 2 回目で +3 → 修正後は 3 件のまま） |
+| M-9 | `scripts/scan_secrets.sh` | AI 設定 UI のキー形式プレースホルダが `sk-[A-Za-z0-9]{20,}` に一致し、**PR #89 以降 `pre_deploy_check.sh` の secret exposure scan が常に失敗**していた。`sk-x{16,}` を allowlist に追加（実鍵は引き続き検出されることを negative verification で確認） |
 
 ---
 

@@ -1625,12 +1625,28 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         if idx == 0:
             # 期限切れ例（アラート表示用）
             partner_row.permit_expiry = date.today() - timedelta(days=10)
+        # 冪等: 同一協力会社・同一タイトルの再審査が既にあれば再投入しない。
+        # 旧実装は無条件に create_review していたため、再実行のたびに
+        # partner_reviews が 3 件ずつ増えていた（2026-09-28 実測: 2 回目で +3）。
+        review_title = f"定期再審査（デモ）— {partner_row.name}"
+        already_seeded = (
+            await session.execute(
+                select(PartnerReview.id).where(
+                    PartnerReview.partner_id == partner_row.id,
+                    PartnerReview.title == review_title,
+                )
+            )
+        ).first()
+        if already_seeded is not None:
+            # Risk Score は毎回再計算しても同値（決定論的）なので冪等に再実行する。
+            await partner_ext_service.refresh_risk_score(session, partner_id=partner_row.id)
+            continue
         review = await partner_ext_service.create_review(
             session,
             actor_id=user.id,
             partner_id=partner_row.id,
             review_type="periodic",
-            title=f"定期再審査（デモ）— {partner_row.name}",
+            title=review_title,
         )
         await partner_ext_service.complete_review(
             session,
