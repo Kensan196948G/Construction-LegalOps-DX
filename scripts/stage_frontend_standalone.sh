@@ -27,16 +27,21 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FRONTEND="${REPO_ROOT}/frontend"
-STANDALONE="${FRONTEND}/.next/standalone"
 
 MODE="stage"
-for a in "$@"; do
-  case "$a" in
-    --verify) MODE="verify" ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --verify) MODE="verify"; shift ;;
+    # Stage an isolated build tree instead of the repo checkout. The live
+    # frontend unit serves .next/standalone from the checkout, so a rebuild
+    # there corrupts what the running process is serving; isolated builds
+    # (scripts/build_frontend_isolated.sh) live elsewhere and are staged with this.
+    --frontend) FRONTEND="${2:?--frontend needs a directory}"; shift 2 ;;
     -h | --help) sed -n '2,22p' "${BASH_SOURCE[0]}"; exit 0 ;;
-    *) echo "unknown arg $a" >&2; exit 64 ;;
+    *) echo "unknown arg $1" >&2; exit 64 ;;
   esac
 done
+STANDALONE="${FRONTEND}/.next/standalone"
 
 log() { printf '[stage-standalone] %s\n' "$*"; }
 
