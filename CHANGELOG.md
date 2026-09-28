@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (2026-09-28: native stack 障害復旧 — 4 件の Root Cause を修正)
+
+詳細は [`docs/INCIDENT_2026-09-28-native-stack-outage.md`](./docs/INCIDENT_2026-09-28-native-stack-outage.md)。
+
+- **🔴 リポジトリ移設で全 unit が 203/EXEC になっていた（Critical）**: 2026-09-23 の
+  チェックアウト移動後も `/etc/systemd/system/legalops-*.service` と
+  `backend/.venv/bin/uvicorn` の shebang が旧パスを指し続け、prod/mvp backend が
+  約 5 日間 `inactive (dead)`、frontend は `MODULE_NOT_FOUND` で 500 を返していた。
+  - `infra/native/install.sh`: unit を**インストール時に実パスへ描画**し、旧パスが残れば
+    fail-closed で拒否。読み取り専用の `--check` を追加（実機で STALE 6 件を検出）
+  - 緊急緩和として旧パス → 新パスの互換 symlink を作成（移設慣行と同一方式）
+- **🟠 Next.js standalone に `public/` と `.next/static/` が未配置（High）**: `next build` は
+  これらを複製しないため、HTML は 200 でも全 JS/CSS が 404 になっていた。
+  - `scripts/stage_frontend_standalone.sh`（新規）に staging を一元化し、
+    BUILD_ID 一致・参照 chunk 全数・public 全数を検証して fail-closed
+- **🔴 本番/MVP DB が 17 マイグレーション遅延（Critical）**: `legalops_prod` / `legalops_mvp` が
+  `009_ip_management` のまま（コードは `026_rls_restrictive_scope`）で 40 テーブルが欠落。
+  実データのドリル（本番バックアップ→隔離 DB で 009→026）で**冪等・可逆・データ保全**を実証。
+  本番 DB への適用は承認ゲート（手順は障害報告書 §5.2）
+- **🔴 依存未固定で CI が新規インストール時に壊れる（Critical）**: SQLAlchemy 2.1 で greenlet が
+  `extra == "asyncio"` へ移動したため、extra 無しの `sqlalchemy>=2.0.36` では greenlet が入らず
+  `sqlalchemy.ext.asyncio` の import が失敗。k6 Load Test が "Apply migrations" で失敗していた。
+  - `backend/pyproject.toml`: `sqlalchemy[asyncio]>=2.0.36`（最新依存で pytest 1375 passed /
+    alembic upgrade head 成功を検証）
+- **🟠 復元不能バックアップ（High）**: PATH 先頭の `pg_dump` 17.10 のアーカイブを
+  `pg_restore` 16.14 が読めず、バックアップが復元不能だった。
+  - `scripts/backup_db.sh`: サーバ major を検出し `/usr/lib/postgresql/<major>/bin/` の
+    実バイナリを選択（`/usr/bin/pg_dump` は Debian の `pg_wrapper` で `--version` が環境依存）。
+    一致が無ければ書き込まずに失敗。restore 側の `psql` も固定。**実リストア 0 error / 80 テーブル**を検証
+- **🔐 依存脆弱性（Critical）**: `npm audit` が critical 1 + high 4 を検出（週次 Security スキャンが
+  3 週連続 failure）。`next` 15.5.22→15.5.26（RCE 修正）、`sharp` 0.35.5、`js-yaml` 3.15.2 / 4.3.2、
+  `browserslist` 4.29.2、`baseline-browser-mapping` 2.11.x へ更新 → **audit 0 vulnerabilities**
+- **🧹 frontend**: `/joint-ventures` の未使用 import 3 件を削除（ESLint warning 0）
+
 ### Added / Changed (2026-09-05: 見積様式生成・コミットメント条項 — Phase 2 完結)
 
 - **📄 見積書様式生成（#27）**: `POST /labor-wage/estimate-form`

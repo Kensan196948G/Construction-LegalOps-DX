@@ -12,7 +12,15 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "pydantic[email]>=2.9.0",
     "pydantic-settings>=2.6.0",
-    "sqlalchemy>=2.0.36",
+    # The [asyncio] extra is REQUIRED, not cosmetic: SQLAlchemy 2.0 shipped
+    # greenlet as a hard dependency, but 2.1 moved it behind
+    # `extra == "asyncio"`. Without the extra a fresh install (CI installs with
+    # `pip install -e ".[dev]"` and no lockfile) omits greenlet, so
+    # `sqlalchemy.ext.asyncio` raises ImportError at import time and both
+    # `alembic/env.py` and the whole test suite fail to load. Observed
+    # 2026-09-28 against SQLAlchemy 2.1.1: k6 load-test job failed at
+    # "Apply migrations"; a fresh backend env failed pytest collection.
+    "sqlalchemy[asyncio]>=2.0.36",
     "alembic>=1.14.0",
     "asyncpg>=0.30.0",
     "psycopg[binary]>=3.2.3",
