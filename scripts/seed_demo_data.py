@@ -873,6 +873,46 @@ async def _repair_invalid_demo_emails(session) -> int:
     return len(rows)
 
 
+async def repair_legacy_review_issues(session) -> int:
+    """Rewrite legacy ``legal_reviews.result.issues`` into the current shape.
+
+    The rows created by the 2026-08-01 bootstrap store each issue as
+    ``{"detail", "target", "summary", "severity"}``. The response model
+    ``ReviewIssue`` (``app/schemas/legal_review.py``) requires
+    ``clause_seq`` / ``risk_level`` / ``comment``, and ``review_service``
+    forwards ``result["issues"]`` verbatim, so any of those rows makes
+    ``GET /api/v1/reviews`` fail response validation with 500
+    (measured 2026-09-28: 15 such rows in both ``legalops_mvp`` and
+    ``legalops_prod``; the current seed shape is written correctly but
+    pre-existing rows were never migrated).
+
+    Only rows that still carry the legacy marker are touched, and the
+    replacement content is the canonical ``REVIEW_ISSUES`` data, keeping the
+    original issue count. Idempotent: re-running finds nothing to repair.
+
+    Note: the API read path is separately hardened (api-fixer, task-5 #6) so a
+    future shape drift degrades instead of returning 500; this function
+    converges the stored data itself.
+    """
+    rows = (await session.execute(select(LegalReview))).scalars().all()
+    repaired = 0
+    for review in rows:
+        result = review.result or {}
+        issues = result.get("issues")
+        if not isinstance(issues, list) or not issues:
+            continue
+        legacy = [
+            i for i in issues if isinstance(i, dict) and "severity" in i and "risk_level" not in i
+        ]
+        if not legacy:
+            continue  # already the current shape
+        canonical = [dict(i) for i in REVIEW_ISSUES[: max(1, len(issues))]]
+        # Reassign (do not mutate in place) so SQLAlchemy flags the JSON column dirty.
+        review.result = {**result, "issues": canonical}
+        repaired += 1
+    return repaired
+
+
 async def ensure_demo_users(session, departments) -> dict[str, User]:
     """Seed one fictional user per RBAC role so the settings/users tab is operable."""
     by_oid: dict[str, User] = {}
@@ -2145,6 +2185,7 @@ async def seed(session, *, dry_run: bool) -> dict[str, int]:
         .where(LegalReview.ai_model == "demo-ai-model")
         .values(ai_model="deepseek-chat")
     )
+    counts["reviews_repaired"] = await repair_legacy_review_issues(session)
 
     risk_count = 0
     for idx, review in enumerate(reviews):
