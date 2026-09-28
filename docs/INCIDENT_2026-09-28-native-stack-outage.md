@@ -24,7 +24,7 @@
 
 ---
 
-## 2. Root Cause（5 件・すべて実測で確定）
+## 2. Root Cause（6 件・すべて実測で確定）
 
 ### RC-1【Critical】リポジトリ移設に systemd unit と venv shebang が追随していない
 
@@ -103,6 +103,43 @@ Evidence（2026-09-28 実測）:
 影響: MVP（Cloudflare Access 保護外の公開デモ）で **NextAuth の session / providers / csrf が到達不能**。
 ブラウザは全ページで `AuthError`（`https://errors.authjs.dev#autherror`）を投げ、
 ユーザーメニューが「ユーザー」へフォールバックする。実測: ダッシュボードで console error 6 件。
+
+影響量（backend の Prometheus メトリクス実測 / 2026-09-28）:
+```
+http_requests_total{path="/api/auth/session",status="404"}   41
+http_requests_total{path="/api/auth/providers",status="404"}  3
+http_requests_total{path="/api/auth/csrf",status="404"}       2
+```
+
+### RC-6【High・要判断】公開 MVP は無認証で **admin 権限**の API を提供している
+
+MVP backend は `AUTH_DEV_BYPASS` により、トークン無しのリクエストへデモ主体を合成する。
+実装（`backend/app/deps.py`）は 2 条件 AND で本番では決して有効化しない、という点は正しく設計されている:
+
+```python
+app_env = (os.getenv("APP_ENV", settings.app_env) or "").lower()
+return app_env in {"development", "staging"} and flag in {"1", "true", "yes", "on"}
+```
+
+しかし MVP は **Cloudflare Access 保護外の公開 URL**で提供されているため、次の状態になる:
+
+| 検証 | prod backend (8011) | mvp backend (8013 / 公開 URL) |
+| --- | --- | --- |
+| `GET /api/v1/auth/me`（トークン無し） | **401** | **200**（`role: "admin"` / `d837…` デモ主体） |
+| `GET /api/v1/users` | 401 | **200** |
+| `GET /api/v1/audit-logs` | 401 | **200** |
+| `POST /api/v1/matters`（不正 body） | — | **422**（＝認可は通過し検証で失敗） |
+| `GET /api/v1/auth/me`（不正トークン） | 401 | 401（トークン検証自体は機能） |
+
+＝ **インターネット上の誰でも、MVP に対して admin として読み書きできる**。
+データはすべて架空（デモ）であり「認証不要のデモシナリオ」は文書化された意図ではあるが、
+**書き込み可能な admin 相当の権限が公開されている**点は明示的なリスク受容か緩和が必要。
+
+緩和の選択肢（いずれも設計判断のため未実施）:
+1. MVP も Cloudflare Access 配下に置く（Issue #50 の本番リソース判断と同枠）。
+2. MVP で `AUTH_DEV_BYPASS` を無効化し、Access 経由のデモにする。
+3. デモ主体を **読み取り専用ロール**（例 `viewer`）にし、書き込み系メソッドを 403 にする
+   （`_dev_bypass_claims()` の既定ロール変更 ＋ 非 GET の拒否）。
 
 ### 付随所見（High / Medium）
 
