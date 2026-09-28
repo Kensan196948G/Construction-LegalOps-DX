@@ -230,10 +230,15 @@ BACKUP_DIR=/var/backups/legalops POSTGRES_USER=legalops_prod POSTGRES_DB=legalop
 POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=5432 PGPASSWORD="$(...)" bash scripts/backup_db.sh
 
 # 移行（ロール権限が必要。§4.3 のドリルで 009→026 は冪等・可逆・データ保全を実証済み）
+# DSN は systemd と同じ EnvironmentFile から取る（リポジトリ・ログに DSN を書かない）。
+# 1 つの DB を移行している間、他方のサービスは稼働したままでよい。
 cd backend
-DB_URL='postgresql+asyncpg://legalops_prod:<password>@127.0.0.1:5432/legalops_prod' \
+set -a; . /etc/legalops/prod-backend.env; set +a   # DB_URL / JWT_SECRET 等を供給
 APP_ENV=production alembic upgrade head
-# legalops_mvp についても同様に実施
+
+# legalops_mvp も同様（mvp-backend.env を使う）
+set -a; . /etc/legalops/mvp-backend.env; set +a
+APP_ENV=production alembic upgrade head
 
 # 検証
 psql -d legalops_prod -Atc "select version_num from alembic_version"   # 026_rls_restrictive_scope

@@ -12,6 +12,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -453,7 +454,9 @@ async def list_for_user(
         .offset(offset)
         .limit(size)
     )
-    rows = (await session.execute(items_statement)).scalars().all()
+    # SQLAlchemy 2.1 no longer lets mypy infer the element type of
+    # ``.scalars().all()``; the annotation is required to keep `mypy app` clean.
+    rows: Sequence[Notification] = (await session.execute(items_statement)).scalars().all()
     return ([_to_out(row) for row in rows], total)
 
 

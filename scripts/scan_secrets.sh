@@ -12,7 +12,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT}"
 
 PATTERN='AKIA[0-9A-Z]{16}|-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----|postgresql://[^[:space:]]+:[^[:space:]@]+@|postgresql\+asyncpg://[^[:space:]]+:[^[:space:]@]+@|mysql://[^[:space:]]+:[^[:space:]@]+@|mongodb(\+srv)?://[^[:space:]]+:[^[:space:]@]+@|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{20,}|CLOUDFLARE_TUNNEL_TOKEN=[^[:space:]]+'
-ALLOW_PATTERN='legalops:legalops_dev|legalops:legalops_mvp|ci:ci|dummy:dummy|user:password|<user>:<password>|<NEON_USER>:<NEON_PASSWORD>|\$\{POSTGRES_USER:-legalops\}:\$\{POSTGRES_PASSWORD:-legalops_dev\}|\$\{POSTGRES_USER\}:\$\{POSTGRES_PASSWORD\}|\$\{CLOUDFLARE_TUNNEL_TOKEN:\?required after human approval\}|CLOUDFLARE_TUNNEL_TOKEN=dummy|PATTERN='
+# ALLOW_PATTERN filters matches that are known-benign by construction.
+# `sk-x{16,}` was added 2026-09-28: the AI-settings UI renders a literal key-format
+# placeholder ("sk-" + repeated "x"), which the generic `sk-[A-Za-z0-9]{20,}` rule
+# matched. That made this scanner — and therefore pre_deploy_check.sh's
+# "secret exposure scan" step — fail on every run since PR #89, i.e. a release gate
+# that could never pass. A real key never consists of 16+ identical characters.
+ALLOW_PATTERN='legalops:legalops_dev|legalops:legalops_mvp|ci:ci|dummy:dummy|user:password|<user>:<password>|<NEON_USER>:<NEON_PASSWORD>|\$\{POSTGRES_USER:-legalops\}:\$\{POSTGRES_PASSWORD:-legalops_dev\}|\$\{POSTGRES_USER\}:\$\{POSTGRES_PASSWORD\}|\$\{CLOUDFLARE_TUNNEL_TOKEN:\?required after human approval\}|CLOUDFLARE_TUNNEL_TOKEN=dummy|PATTERN=|sk-x{16,}'
 
 EXCLUDES=(
   --glob '!.git/**'

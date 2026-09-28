@@ -13,6 +13,7 @@ Role-scope rules
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -192,7 +193,10 @@ async def search(
         data_q = await session.execute(
             base.order_by(Contract.id).limit(max(0, size - len(results)))
         )
-        for c in data_q.scalars().all():
+        # SQLAlchemy 2.1 no longer lets mypy infer the element type of
+        # ``.scalars().all()``; the annotation is required to keep `mypy app` clean.
+        contract_rows: Sequence[Contract] = data_q.scalars().all()
+        for c in contract_rows:
             results.append(
                 KnowledgeSearchResult(
                     id=c.id,
