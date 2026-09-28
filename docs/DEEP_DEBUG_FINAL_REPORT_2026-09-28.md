@@ -90,6 +90,8 @@
 | **Test (backend)** | pytest **1393 passed**（実 PostgreSQL 16・Lead 独立実行）、ruff clean、mypy **0 issues / 214 files** |
 | **Test (frontend)** | tsc exit 0、`next lint` warning 0、jest **111 passed / 3 skipped** |
 | **CI** | PR #134: Backend / alembic roundtrip / Frontend / Security / E2E / Docker build が green |
+| **CI（失敗していたワークフローの復旧）** | `Load Test (k6)` を dispatch → **success**（修正前は "Apply migrations" で failure ＝ RC-4 の修正を CI で end-to-end 検証）。`Security (weekly deep scan)` を dispatch → **5 ジョブすべて success**（pip-audit / Trivy fs・config・secret / Trivy container image / npm audit / Bandit。修正前は 3 週連続 failure ＝ M-6 の修正を検証） |
+| **Release gate** | `pre_deploy_check.sh` が呼ぶ 16 検証のうち、ゲート対象の主要検証が通過。`verify_release_docs.sh` は README の固定内部 URL 露出（main から存在した既存失敗）を修正して **352 passed / 0 failed** |
 | **Database** | MVP を 009→**027** へ移行（テーブル 39→80、所有者 `legalops_mvp` のみ、既存データ不変）。実データドリルで冪等・可逆・データ保全を実証。モデル×実 DB の全列照合で不一致 0 |
 | **Migration 再現** | 本番バックアップ → 隔離 DB → 009→026 適用 → upgrade 冪等 → downgrade で 009 復帰 → データ不変 |
 | **Seed 再現** | 全 80 テーブルの実件数を 3 回連続で diff → 差分ゼロ。`--delete` でデモ行 0・非デモ行保持 |
