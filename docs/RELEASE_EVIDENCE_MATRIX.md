@@ -2,7 +2,7 @@
 
 > **最終更新: 2026-08-05 / Loop 109**
 > 本書は `/goal` の完了条件を、現在の証拠・検証コマンド・未解決ゲートへ対応付ける CTO 監査表です。  
-> 本番 deploy / 公開 DNS 変更 / secret 投入 / PR merge / release tag は、本書の対象外ではなく **人間承認後の実行項目** として扱います。
+> 本番 deploy / 公開 DNS 変更 / secret 投入 / GitHub Release / release tag は、本書の対象外ではなく **人間承認後の実行項目** として扱います。PR のマージは Required Checks 全成功かつ merge conflict なしで自動（`gh pr merge --auto --squash`、`--admin` 迂回禁止）とし、人間承認の対象外です。
 > 最終報告は [`docs/FINAL_RELEASE_STOP_REPORT.md`](./FINAL_RELEASE_STOP_REPORT.md) を正とする。
 
 ---
@@ -127,5 +127,5 @@ Loop 94〜107 差分は PR #59 で正本化済み。Issue #63 の Access JWT gua
 - Cloudflare Tunnel / Access application 作成
 - Cloudflare / Neon secret / token / connection string 投入
 - CSP enforce 切替
-- Git push / PR merge / release tag
+- GitHub Release / release tag 作成（作業ブランチの push と PR のマージは対象外: PR は Required Checks 全成功かつ merge conflict なしで `gh pr merge --auto --squash` により自動マージ。`--admin` 迂回と main への直接 push は禁止。正本: 中央ポリシー `GITHUB_POLICY.md` v2）
 - 本番データ削除 / 破壊的 migration / 課金変更
