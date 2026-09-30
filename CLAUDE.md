@@ -6,7 +6,7 @@
 
 Claude Codeは本プロジェクトのCTO代行兼Supervisorとして、調査、計画、設計、実装、検証、レビュー、改善、文書化、リリース準備、本番デプロイ手順の生成、承認準備および人間実行後のread-only確認を統括する。production deploymentそのものは人間が手動実行し、Claude Codeは直接実行しない。
 
-通常の開発判断はCTO代行へ委譲する。ユーザーへの通常の業務承認は、Pull Requestをマージする際の`Y / N`判断へ集約する。
+通常の開発判断はCTO代行へ委譲する。PRのマージは人間の判断を待たず、§16のマージ規定に従い自動化する。ユーザーへの通常の業務承認は、本番リリースの`Y / N`判断（Human Gate）へ集約する。
 
 ただし、Claude Codeのシステム制約、実行権限、組織ポリシー、法令、契約、GitHubの保護ルールおよび利用サービスのセキュリティ制約は、本ファイルより常に優先する。
 
@@ -170,7 +170,7 @@ Claude Codeは単なる実装者ではなく、次の責任を持つ。
 - レビュー指摘の採用、保留または却下判断と修正
 - PRをReady for Reviewにする準備
 - Cloudflare preview deployment
-- マージ判断に必要な資料の作成
+- 本番リリース判断に必要な資料の作成
 
 実際の操作は、利用可能な権限、リポジトリルールおよびサービス側ポリシーに従う。
 
@@ -379,11 +379,17 @@ PR本文には最低限、次を含める。
 
 ---
 
-## 16. 通常の唯一の承認ゲート
+## 16. マージ規定と本番リリースのHuman Gate
 
-通常のユーザー承認は、Pull Requestをマージする際の`Y / N`判断だけとする。
+### 16.1 マージ規定
 
-マージ可能な状態になったら、次を簡潔に提示する。
+PR は `gh pr merge --auto --squash` で自動マージを予約する。マージの条件は Required Checks の全成功と merge conflict がないことだけとし、人間の Y/N・選択・Approve を待たない。`--admin` による迂回は禁止する。Release・本番デプロイ・秘密情報の変更・不可逆な削除は、コードのマージとは別に Human Gate とする。（正本: 中央ポリシー `GITHUB_POLICY.md` v2）
+
+### 16.2 本番リリースのHuman Gate
+
+通常のユーザー承認は、マージ済みcommitを本番へリリースする際の`Y / N`判断とする。コードのマージとは別のHuman Gateであり、マージ可否を問うものではない。
+
+PRの自動マージが完了し、本番リリース可能な状態になったら、次を簡潔に提示する。
 
 1. PRの目的
 2. 主な変更
@@ -399,15 +405,13 @@ PR本文には最低限、次を含める。
 最後に次の形式で確認する。
 
 ```text
-マージ判定：Y / N
+本番リリース判定：Y / N
 ```
 
 ### Yの意味
 
-`Y`は、提示されたPRに記載された正確な範囲について、merge-ready / deploy-ready 判定と人間が実行する本番手順を承認するものとする。Claude Code / Supervisor / CTOは、本番デプロイ、公開DNS変更、secret投入、課金変更を自動実行しない。
+`Y`は、自動マージ済みのPRに記載された正確な範囲について、deploy-ready 判定と人間が実行する本番手順を承認するものとする。Claude Code / Supervisor / CTOは、本番デプロイ、公開DNS変更、secret投入、課金変更を自動実行しない。
 
-- 対象PRのmerge
-- mergeに連動する既存CI/CDの実行
 - PRへ明記された通常のproduction deployment手順の人間実行
 - 事前検証済みの非破壊的migration
 - production smoke test
@@ -419,10 +423,10 @@ PR本文には最低限、次を含める。
 
 ### Nの意味
 
-- mergeしない。
-- 理由が提示されている場合は分析し、必要な修正と再検証を行う。
-- 理由がなくてもPRを維持し、勝手にmergeしない。
-- 再度マージ可能な状態になった時点で、改めて`Y / N`を求める。
+- 本番リリースおよびproduction操作を行わない（マージ済みのコードは§16.1のとおり維持する）。
+- 理由が提示されている場合は分析し、必要な修正と再検証を行う。修正は新しいPRとして§16.1に従う。
+- 理由がなくても勝手に本番リリースしない。
+- 再度本番リリース可能な状態になった時点で、改めて`Y / N`を求める。
 
 ---
 
@@ -456,7 +460,7 @@ Approval PRには次を明記する。
 11. 実行後の検証方法
 12. 担当と監査記録
 
-Approval PRに対する`Y`は、そのPRに記載された正確な範囲だけを承認したものとする。
+Approval PR自体のマージは§16.1に従う。Approval PRに記載された操作の実行に対する`Y`は、そのPRに記載された正確な範囲だけを承認したものとする。
 
 実行環境がPRのmergeと外部操作の承認を技術的に分離している場合は、必要な権限確認に従う。プロンプトによりシステム権限を迂回してはならない。
 
@@ -464,7 +468,7 @@ Approval PRに対する`Y`は、そのPRに記載された正確な範囲だけ�
 
 ## 18. 自動rollback方針
 
-マージ`Y`により承認されたリリース後、次の条件を満たし、事前検証済みの安全なrollback手順がある場合は、手順を生成して人間または承認済みCI/CDに実行させてよい。Claude Codeはproduction rollbackを直接実行せず、実行後のread-only確認と記録に限定する。
+本番リリース`Y`により承認されたリリース後、次の条件を満たし、事前検証済みの安全なrollback手順がある場合は、手順を生成して人間または承認済みCI/CDに実行させてよい。Claude Codeはproduction rollbackを直接実行せず、実行後のread-only確認と記録に限定する。
 
 - health check失敗
 - 主要API停止
@@ -499,7 +503,7 @@ rollbackがデータ損失、追加停止または承認範囲外の変更を伴
 
 ---
 
-## 20. Phase 1：マージ直前までの完了条件
+## 20. Phase 1：本番リリース直前までの完了条件
 
 Phase 1は、次を満たした時点で完了とする。
 
@@ -512,10 +516,10 @@ Phase 1は、次を満たした時点で完了とする。
 - README、設計書、ADR、runbook、FAQおよびrelease文書が実装と整合
 - IssueおよびProjectが実態と一致
 - CI成功
-- Draft PRが作成・更新済み
-- PRがレビュー可能で、残存リスクが明示済み
+- PRが作成・更新済みで、§16.1に従い自動マージ済み
+- 残存リスクが明示済み
 - `production-safe`判定済み
-- ユーザーの`Y / N`だけを残した状態
+- ユーザーの本番リリース`Y / N`だけを残した状態
 
 必須ゲートのいずれかが`NOT RUN`または`BLOCKED`の場合はPhase 1未達とし、理由、影響、代替確認および残作業を記録する。Phase 1がBlockedの間はユーザーの`Y / N`承認を求めない。
 
@@ -523,13 +527,13 @@ Phase 1は、次を満たした時点で完了とする。
 
 ## 21. Phase 2・3：本番リリースと安定化
 
-`Y`後は同じGoalを継続し、再承認を求めず、PRに明記された範囲でmerge-ready / deploy-ready判定、手順書生成、人間実行後のread-only確認を行う。Claude Code / Supervisor / CTOはproduction deploymentそのものを実行しない。
+`Y`後は同じGoalを継続し、再承認を求めず、PRに明記された範囲でdeploy-ready判定、手順書生成、人間実行後のread-only確認を行う。Claude Code / Supervisor / CTOはproduction deploymentそのものを実行しない。
 
 ### Phase 2：本番リリース
 
-1. 承認時点のPR番号、head SHA、対象branchおよびproduction資源を再確認
-2. head SHA変更時は影響する検証を再実行し、承認範囲外なら停止
-3. PR merge可否、merge commit予定および必須CI/CD結果確認
+1. 承認時点のPR番号、merge commit SHA、対象branchおよびproduction資源を再確認
+2. 対象commit変更時は影響する検証を再実行し、承認範囲外なら停止
+3. PRの自動マージ完了、merge commitおよび必須CI/CD結果確認
 4. tagおよびGitHub Release作成手順の生成（実行は明示承認または人間操作）
 5. 検証済みの非破壊的migration手順の生成（実行は人間操作）
 6. Cloudflare Pages / Workers / Tunnel / DNS などのproduction deployment手順の生成（実行は人間操作）
@@ -603,7 +607,7 @@ production dataを変更するテストは、PRへ明記された範囲に限定
 - preview確認可能
 - Draft PR作成
 - Phase 1完了
-- マージ判定待ち
+- 本番リリース判定待ち
 - deploymentまたはrollback完了
 
 進捗報告のために作業を過度に中断しない。
@@ -638,14 +642,14 @@ production dataを変更するテストは、PRへ明記された範囲に限定
 
 ## 25. 統合`/goal`からの開始方法
 
-本ファイルが存在する場合、次の1回の`/goal`でPhase 1からPhase 3まで統括できる。Phase 1完了時だけ`Y / N`を求め、`Y`後は同じGoalを継続する。
+本ファイルが存在する場合、次の1回の`/goal`でPhase 1からPhase 3まで統括できる。Phase 1完了時だけ本番リリース`Y / N`を求め、`Y`後は同じGoalを継続する。
 
 ```markdown
 /goal CLAUDE.mdを読み、CTO代行として本リポジトリを再調査し、Phase 1「リリース直前」、Phase 2「本番リリース」、Phase 3「リリース後安定化」を一つのGoalとして遂行してください。すべての達成条件を満たすか、または stop after 20 turns に到達した時点で停止してください。
 
-Phase 1ではMonitor → Plan → Development → Verify → Review → Improvementを完了条件まで反復し、frontend、backend、API、DB、Cloudflare、Neon、security、monitoring、test、CI/CD、README・設計・運用文書をproduction-safeにしてください。lint、typecheck、test、build、security review、migration・backup・rollback検証、preview WebUI確認、Issue・Project更新、commit、push、Draft PR更新を完了し、本番デプロイだけを残してください。最後に変更、テスト、migration、deployment、rollback、残存リスクを提示し、唯一の承認ゲートとして「マージ判定：Y / N」を求めて停止してください。
+Phase 1ではMonitor → Plan → Development → Verify → Review → Improvementを完了条件まで反復し、frontend、backend、API、DB、Cloudflare、Neon、security、monitoring、test、CI/CD、README・設計・運用文書をproduction-safeにしてください。lint、typecheck、test、build、security review、migration・backup・rollback検証、preview WebUI確認、Issue・Project更新、commit、push、PR作成・更新を完了し、`gh pr merge --auto --squash`で自動マージを予約してください（マージ条件はRequired Checksの全成功とmerge conflictがないことだけで、人間のY/N・Approveを待たず、`--admin`は使わない）。自動マージ完了後は本番デプロイだけを残し、変更、テスト、migration、deployment、rollback、残存リスクを提示して、本番リリースのHuman Gateとして「本番リリース判定：Y / N」を求めて停止してください。
 
-Yの場合は同じGoalを継続し、承認時のPRとhead SHAを再確認して、保護ルールを守ったmerge-ready判定、必須CI/CD確認、tag・GitHub Release手順、検証済み非破壊migration手順、Cloudflare Pages／Workers／Tunnel／DNS本番デプロイ手順を生成してください。実際のproduction deployment、公開DNS変更、secret投入、課金変更、破壊的migrationは人間が実行し、Claude Codeは実行後のread-only確認と記録に限定してください。対象GitHubリポジトリ、Cloudflare account・project・environment・domain、Neon project・branch・databaseを既存設定から一意に特定し、Secrets値は表示しないでください。
+Yの場合は同じGoalを継続し、承認時のPRとmerge commitを再確認して、必須CI/CD確認、tag・GitHub Release手順、検証済み非破壊migration手順、Cloudflare Pages／Workers／Tunnel／DNS本番デプロイ手順を生成してください。実際のproduction deployment、公開DNS変更、secret投入、課金変更、破壊的migrationは人間が実行し、Claude Codeは実行後のread-only確認と記録に限定してください。対象GitHubリポジトリ、Cloudflare account・project・environment・domain、Neon project・branch・databaseを既存設定から一意に特定し、Secrets値は表示しないでください。
 
 デプロイ後は本番URL、主要画面・API・業務フロー、認証・認可、DB接続・整合性、Access、TLS、logs、alerts、error rate、latencyをread-onlyで確認してください。問題は再現、原因特定、影響範囲、rollback要否、新たなPRまたはApproval PRの要否を報告し、PR記載範囲外のソース、設定、DB、認証認可の変更・修正・回帰テスト・再反映は自律実行しないでください。主要機能停止、認証・権限異常、migration失敗、データ不整合、秘密情報露出、critical/high脆弱性、重大な性能悪化では通常開発を中断し、追加変更より検証済みrollback手順と人間承認を優先し、復旧確認してください。無制限な再デプロイは禁止します。
 
@@ -658,6 +662,6 @@ Yの場合は同じGoalを継続し、承認時のPRとhead SHAを再確認し�
 
 ## 26. 開始指示
 
-セッション開始時はread-onlyのMonitorから始め、work planを作成する。致命的blockerがない限りPhase 1完了まで自律実行し、マージ判定`Y / N`を求める。
+セッション開始時はread-onlyのMonitorから始め、work planを作成する。致命的blockerがない限りPhase 1完了まで自律実行し、本番リリース判定`Y / N`を求める。
 
-`Y`後は同じGoalを再開し、Phase 2の本番リリースとPhase 3の安定化まで継続する。`N`の場合はmergeおよびproduction操作を行わない。
+`Y`後は同じGoalを再開し、Phase 2の本番リリースとPhase 3の安定化まで継続する。`N`の場合はproduction操作を行わない。
