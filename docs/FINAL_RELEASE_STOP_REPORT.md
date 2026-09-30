@@ -192,5 +192,5 @@ Loop 94〜107 差分は PR #59 で正本化済み。Issue #63 の Access JWT gua
 - Cloudflare Tunnel / Access application 作成
 - Cloudflare / Neon secret / token / connection string 投入
 - CSP enforce 切替
-- Git push / PR merge / release tag
+- GitHub Release / release tag 作成（作業ブランチの push と PR のマージは対象外: PR は Required Checks 全成功かつ merge conflict なしで `gh pr merge --auto --squash` により自動マージ。`--admin` 迂回と main への直接 push は禁止。正本: 中央ポリシー `GITHUB_POLICY.md` v2）
 - 本番データ削除 / 破壊的 migration / 課金変更

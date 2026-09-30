@@ -143,5 +143,5 @@ curl -fsSI https://legalops.mirai-dx-platform.com/healthz
 - 本番 deploy を自動実行しない
 - 公開 DNS を自動変更しない
 - secret / token / 接続文字列を README / Issue / log に出さない
-- `git push` / PR merge / release tag は明示承認なしに実行しない
+- GitHub Release / release tag は明示承認なしに作成しない（PR のマージは Required Checks 全成功かつ merge conflict なしで `gh pr merge --auto --squash` により自動。`--admin` 迂回と main への直接 push は禁止。正本: 中央ポリシー `GITHUB_POLICY.md` v2）
 - 本番データ削除・破壊的 migration は単独判断で実行しない
